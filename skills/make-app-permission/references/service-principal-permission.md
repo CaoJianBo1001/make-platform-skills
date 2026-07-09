@@ -143,7 +143,7 @@ Return IAM data to the UI in the host Service envelope. The UI model expects the
   "permissions": [
     {
       "permissionKey": "data.record.update",
-      "resource": "make://<tenantId>/meta/app/<appKey>/entity/<entityKey>",
+      "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
       "effect": "allow",
       "fieldAccess": {
         "name": "editable"
@@ -154,6 +154,8 @@ Return IAM data to the UI in the host Service envelope. The UI model expects the
 ```
 
 Preserve unknown fields if useful, but normalize at the UI boundary before checks.
+
+IAM may return permission resources in wildcard namespace form such as `make://<tenantId>/*/app/<appKey>`. Service should preserve the value; UI permission matching must treat it as the same current App resource represented by response scope `make://<tenantId>/meta/app/<appKey>`.
 
 ## Failure behavior
 

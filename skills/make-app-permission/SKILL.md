@@ -2,7 +2,7 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission management and frontend permission enforcement. Triggered by 权限, 单应用权限, app 权限, /principal/permission, /api/make/app/principal/permission, 按钮权限, 菜单权限, 路由权限, 字段可编辑, read/create/update/delete, data.record.*, route guard, refresh permission, or preventing URL permission bypass. Covers the default required permission chain for Make projects: Service proxy to Make IAM, app-scope permission payloads, schema-vs-permission separation, route/menu guards, operation buttons, cell edit, form field filtering, refresh reload, tests, and audit. Does not own platform-admin permissions, auth mechanics, generic Service APIs, UI layout, CanvasTable internals, DSL modeling, Make CLI deploy, or runtime packaging."
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # make-app-permission
@@ -28,6 +28,7 @@ This skill owns the permission contract. Use `make-app-auth` for login/session, 
 - Use `/api/make/app/principal/permission` as the published browser-facing Service endpoint for Service-fronted Apps. Legacy `/api/principal/permission` may exist only as compatibility.
 - Have Service call Make IAM through make-gateway at `/api/make/iam/v1/principal/permission` with `X-Make-Target: MakeService.GetResource`.
 - Send app scope by default: `make://<tenantId>/meta/app/<appKey>`. Do not default to tenant root scope and do not add a platform permission filter.
+- Match IAM permission resources in both legacy App scope form `make://<tenantId>/meta/app/<appKey>` and current wildcard namespace form `make://<tenantId>/*/app/<appKey>`, including entity suffixes.
 - Preserve the browser login context from UI to Service to make-gateway. Do not drop Cookie or trusted forwarded host/proto context.
 - Use schema for authorized menus, objects, and visible fields. Use `/principal/permission` for operations and field editability.
 - Add App/router guards. Hiding menus is not enough: direct URL access must not enter unauthorized Apps, objects, or fixed business routes.

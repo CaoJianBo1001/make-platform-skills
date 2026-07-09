@@ -41,7 +41,7 @@
 - 权限组接口走 `/console/v1/permissions/groups/*`。
 - 对象候选接口走 `/meta/v1/entity`，`X-Make-Target: MakeService.ListResources`。
 - 权限策略是 `Make.IAM.Policy`，保存时按 `appKey`、`key`、`rules`、`subjects.users`、`subjects.departments` 组织。
-- 单个对象 resource 是 `make://<tenantId>/meta/app/<appKey>/entity/<entityKey>`。
+- 单个对象 resource 可能是 `make://<tenantId>/meta/app/<appKey>/entity/<entityKey>`，也可能是 IAM 返回的 `make://<tenantId>/*/app/<appKey>/entity/<entityKey>`。
 - 操作 permissionKey 包括：
   - `data.record.read`
   - `data.record.create`
@@ -108,7 +108,7 @@ Service 访问 IAM 的关键规则：
 - `canEditEntityField(access, entityKey, fieldKey, permissionKey)` 判断字段能否编辑。
 - `editableFieldKeysForEntity(access, entityKey, fields, permissionKey)` 计算创建或编辑可编辑字段集合。
 - permissionKey 匹配支持精确匹配、`data.record.*`、`*.*.*` 和三段式通配。
-- resource 匹配按优先级选择：实体精确资源、实体通配、app 级 resource、父级 resource、`*`。
+- resource 匹配按优先级选择：实体精确资源、实体通配、IAM namespace wildcard app resource、app 级 resource、父级 resource、`*`。
 - 存在 deny 时优先 deny。
 - allow 且没有 fieldAccess 约束时表示字段不受限；有 fieldAccess 时只有 `editable` 才允许编辑。
 
@@ -152,6 +152,9 @@ scope: make://<tenantId>/meta/app/<appKey>
 make://<tenantId>/meta/app/<appKey>
 make://<tenantId>/meta/app/<appKey>/entity/<entityKey>
 make://<tenantId>/meta/app/<appKey>/entity/*
+make://<tenantId>/*/app/<appKey>
+make://<tenantId>/*/app/<appKey>/entity/<entityKey>
+make://<tenantId>/*/app/<appKey>/entity/*
 *
 ```
 
@@ -249,7 +252,7 @@ frontmatter：
 name: make-app-permission
 description: Use when generating, refactoring, reviewing, or debugging Make App single-app permission management and frontend permission enforcement. Covers /api/make/app/principal/permission Service proxy, Make IAM /api/make/iam/v1/principal/permission calls, app-scope permission payloads, schema-vs-permission separation, route/menu gating, read/create/update/delete button gating, field editability, cell-edit and form payload filtering, refresh-time permission reload, and tests. Does not own platform-admin permissions, auth mechanics, generic Service routes, UI layout, CanvasTable internals, DSL modeling, Make CLI deploy, or runtime packaging.
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 ---
 ```
 
@@ -496,6 +499,8 @@ apps/ui/src/features/dictionaries/* 或其他自定义业务页
 
 - exact entity resource allow。
 - app resource allow 作用到 entity。
+- IAM namespace wildcard app resource allow 作用到 entity，例如 `make://<tenantId>/*/app/<appKey>`。
+- IAM namespace wildcard entity resource allow，例如 `make://<tenantId>/*/app/<appKey>/entity/<entityKey>`。
 - `*` resource allow。
 - `entity/*` resource allow。
 - deny 优先于 allow。

@@ -54,8 +54,13 @@ Common resources:
 make://<tenantId>/meta/app/<appKey>
 make://<tenantId>/meta/app/<appKey>/entity/<entityKey>
 make://<tenantId>/meta/app/<appKey>/entity/*
+make://<tenantId>/*/app/<appKey>
+make://<tenantId>/*/app/<appKey>/entity/<entityKey>
+make://<tenantId>/*/app/<appKey>/entity/*
 *
 ```
+
+The `*` segment in `make://<tenantId>/*/app/<appKey>` is an IAM namespace wildcard for the current App resource shape. Treat it as equivalent to the current App scope resource before matching entity suffixes. Do not treat it as tenant-wide platform permission.
 
 Common operation keys:
 
