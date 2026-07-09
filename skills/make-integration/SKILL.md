@@ -1,6 +1,8 @@
 ---
 name: make-integration
 description: Use when the user asks to recognize invoices, bills, receipts, tickets, or other voucher files with Make Integration services. Also triggered by requests like "发票内容", "识别发票", "票据 OCR", "ocr 这张图片", or "验真发票". Does not manage Make resources (use makecli), design DSL schemas (makedsl), build UI (makeui), implement auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), or perform non-Make OCR outside makecli integration commands.
+metadata:
+  version: 0.2.4
 ---
 
 # make-integration

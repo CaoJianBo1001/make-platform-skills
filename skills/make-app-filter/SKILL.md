@@ -1,6 +1,8 @@
 ---
 name: make-app-filter
 description: "Use when integrating, generating, refactoring, or reviewing Make App record-list filtering with @qfei-design/make-filter, CanvasTable header linkage, and Service filter.expression payloads. Triggered by 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, CEL/DNF expressions, system variables, empty filters, field-type operators, DateRange/File/Lookup support, candidate values, URL echo, and tests. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, auth, runtime packaging, DSL modeling, Make CLI execution, or table cell editing."
+metadata:
+  version: 0.1.0
 ---
 
 # make-app-filter

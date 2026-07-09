@@ -1,6 +1,8 @@
 ---
 name: canvas-table-integration
 description: "Use when integrating `@qfei-design/canvas-table` into an existing app or page. Covers consumer-side local or virtual tables, public props/methods/events, row-head suffix actions, selection, drag, fixed columns, summary rows, empty states, async latest rows synchronization, lightweight `render + TextShape + shape click` interactions, host-side cell-edit architecture, schema-driven Make field editors, mandatory ExpensePoc-derived cell-edit standards, `customEdit`, `commit/cancel`, object `autoClose`, `relatedElements`, `overlayOptions`, `editApplyMode: controlled`, attachment editors, and Make field-display columns with value normalization, ExpensePoc-derived field renderers, and overflow-only tooltip behavior. Only supports `@qfei-design/canvas-table`, never UI-library tables. Read package AI docs first, choose Track A, B, or C, use documented public APIs, and do not modify the table library itself."
+metadata:
+  version: 0.1.0
 ---
 
 # canvas-table-integration

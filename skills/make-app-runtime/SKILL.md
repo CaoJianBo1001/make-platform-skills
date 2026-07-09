@@ -1,6 +1,8 @@
 ---
 name: make-app-runtime
 description: Use when generating, refactoring, reviewing, or debugging Make App project runtime structure, workspace manifests, Service runtime, local/dev scripts, build outputs, Docker/K8s image entrypoints, publish readiness, or packaging errors such as missing `apps/service/dist/server.js`. Covers `apps/` workspace contracts, `apps/ui/dist`, `apps/service` port/build/start contracts, runtime config file location, runtime artifact tests, forwarded host/proto header preservation, and publish gates that include auth and required permission audits. Does not cover UI layout, authentication implementation, permission logic, Make adapter env semantics, DSL modeling, Make CLI resource deployment, or canvas-table internals.
+metadata:
+  version: 0.1.0
 ---
 
 # make-app-runtime

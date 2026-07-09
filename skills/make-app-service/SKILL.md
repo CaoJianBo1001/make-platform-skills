@@ -1,6 +1,8 @@
 ---
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service API code and UI-Service contracts. Covers Service route design, apps/docs/api.md, layered source structure, make-client adapters, schema normalization APIs, record CRUD through Make gateway /make/data/v1/record, record list filter parsing and { expression } pass-through, user/department/lookup/file proxy APIs, Make adapter config, request login-context forwarding, validation, logging, and Service API tests. For generated Make Apps, coordinate the required /api/make/app/principal/permission Service proxy through make-app-permission. Does not cover UI layout, auth implementation, permission logic, build output, runtime, DSL modeling, Make CLI deployment, or canvas-table internals."
+metadata:
+  version: 0.1.0
 ---
 
 # make-app-service

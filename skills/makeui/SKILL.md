@@ -1,11 +1,11 @@
 ---
 name: makeui
 description: Use when designing, generating, refactoring, or reviewing Make App frontend UI and `apps/ui` React UI code. Triggered by makeui, UI, 界面, app shell, layout, component structure, responsive behavior, dynamic object routes, field-metadata rendering, list pages, create/edit/detail drawers, controlled form fields, user/department selectors, and UI states. Requires Make record tables to use `canvas-table-integration`, advanced filters to use `make-app-filter`, and generated Make App permission gates to use `make-app-permission`. Does not own auth, build/publish, Service runtime, business API design, permission logic, persistence, DSL, canvas-table internals, or filter package internals.
+metadata:
+  version: 0.3.46
 ---
 
 # makeui
-
-Current skill revision: 0.3.46.
 
 Use this skill for Make App frontend UI work in `apps/ui`. The default stack is React + Vite + React Router, but `makeui` only owns UI structure and presentation decisions.
 

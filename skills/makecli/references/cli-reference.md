@@ -1,6 +1,6 @@
 # makecli CLI Reference
 
-> Documents makecli **v0.5.3**. Verify locally with `makecli version`.
+> Verify locally with `makecli version` before relying on command output.
 
 ## Global Flags (all commands)
 

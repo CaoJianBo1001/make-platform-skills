@@ -1,0 +1,25 @@
+name: Skill Metadata Lint
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  skill-metadata:
+    name: Validate skill metadata
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Validate skill metadata
+        run: node scripts/lint-skill-metadata.mjs

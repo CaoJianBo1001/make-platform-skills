@@ -1,12 +1,14 @@
 ---
 name: makecli
 description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, entities, relations, records, inspect resources, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
+metadata:
+  version: 0.5.4
 ---
 
 # makecli — Make Platform CLI
 
 makecli is the CLI for the Make agentic development platform.
-It manages Apps, Entities, Relations, Records, and code deployment. Documents makecli **v0.5.3+**.
+It manages Apps, Entities, Relations, Records, and code deployment.
 
 ## Installation
 
