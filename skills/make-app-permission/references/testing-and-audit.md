@@ -25,6 +25,8 @@ Cover permission matching:
 
 - exact entity resource allow
 - app-level resource allow
+- IAM namespace-wildcard App resource allow, such as `make://<tenantId>/*/app/<appKey>`
+- IAM namespace-wildcard entity resource allow, such as `make://<tenantId>/*/app/<appKey>/entity/<entityKey>`
 - `*` resource allow
 - entity wildcard resource allow
 - parent resource fallback

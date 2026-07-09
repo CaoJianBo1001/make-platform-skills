@@ -74,9 +74,12 @@ Resource matching should prefer the most specific match:
 
 1. Exact entity resource.
 2. Entity wildcard such as `/entity/*`.
-3. App-level resource.
-4. Parent resource.
-5. `*`.
+3. IAM namespace-wildcard App resource such as `make://<tenantId>/*/app/<appKey>`, normalized to the current App resource.
+4. App-level resource.
+5. Parent resource.
+6. `*`.
+
+The UI may derive `appResource` from response scope `make://<tenantId>/meta/app/<appKey>`, but permission rows may return resources such as `make://<tenantId>/*/app/<appKey>`. Normalize or segment-match that `*` namespace before evaluating operation and field access.
 
 Deny must win over allow when both match. Allow without fieldAccess means no field restriction. When fieldAccess exists, only `editable` permits editing.
 

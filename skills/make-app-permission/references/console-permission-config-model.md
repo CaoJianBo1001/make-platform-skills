@@ -121,15 +121,17 @@ Entity resource:
 
 ```text
 make://<tenantId>/meta/app/<appKey>/entity/<entityKey>
+make://<tenantId>/*/app/<appKey>/entity/<entityKey>
 ```
 
 App resource:
 
 ```text
 make://<tenantId>/meta/app/<appKey>
+make://<tenantId>/*/app/<appKey>
 ```
 
-The frontend runtime must match app-level resources and wildcard resources, not only exact entity resources.
+The frontend runtime must match app-level resources, IAM namespace-wildcard App resources, and wildcard resources, not only exact entity resources.
 
 ## Field condition
 
@@ -166,4 +168,4 @@ permissionKeys: ["*.*.*"]
 fieldCondition.fields: [{ fieldKey: "*", access: "editable" | "readonly" }]
 ```
 
-Do not treat `*` or app-level resource as platform permission. In App scope, they are valid single-app permission matches.
+Do not treat `*`, `make://<tenantId>/*/app/<appKey>`, or app-level resource as platform permission. In App scope, they are valid single-app permission matches.
