@@ -2,13 +2,13 @@
 name: setup-make-poc
 description: Use when preparing or updating a Make POC environment before development, including checking latest versions of Node, pnpm, git, makecli, Make platform skills, makecli login/verify, and Make environment selection. Triggered by Make POC, POC 环境安装, 更新 Make POC 环境, makecli 登录校验, or PoC 前置环境. Trigger matching is case-insensitive.
 metadata:
-   version: 0.1.0
+   version: 0.1.1
    homepage: https://github.com/qfeius/make-platform-skills
 ---
 
 # setup-make-poc
 
-Prepare the local environment for a Make POC before any PRD, DSL, Service, UI, apply, deploy, or git work.
+Prepare the local environment and initialize the project folder for a Make POC before any PRD, DSL, Service, UI, apply, deploy, or git work.
 
 Core rule: installed is not ready. Always check whether each required tool is current through its stable install channel. If it is outdated, update it first, then verify versions and login state again.
 
@@ -23,12 +23,12 @@ Trigger examples include:
 - `makecli 登录校验`, `MAKECLI 登录校验`
 - `更新 Make POC 环境`, `更新 make poc 环境`
 
-Use this skill only for environment readiness. For PRD, DSL, Service, UI, table integration, apply, deploy, or feature coding, stop after environment setup and switch to the appropriate Make skill.
+Use this skill only for environment readiness and `makecli app init` project initialization. For PRD, DSL, Service, UI, table integration, apply, deploy, or feature coding, stop after project initialization and switch to the appropriate Make skill.
 
 ## Safety Rules
 
 - Do not print or store tokens, cookies, Authorization headers, passwords, or secrets.
-- Do not create PRD, DSL, Service, or UI files.
+- Do not manually create PRD, DSL, Service, or UI files; only run `makecli app init` in the selected PoC directory.
 - Interactive secret entry must be completed by the user. Do not ask the user to paste secrets into chat.
 - "Latest" means the latest stable version available from the current install channel, not nightly, beta, or a hard-coded version.
 
@@ -124,7 +124,7 @@ If `makecli version` is below `0.4.5`, stop and report that the CLI is too old a
 
 ## Final Interactive Make Gate
 
-Run the Make environment selection and token verification at the end, after the system gate, toolchain update, version verification, and skills update are complete.
+Run the Make environment selection, token verification, and project folder initialization at the end, after the system gate, toolchain update, version verification, and skills update are complete.
 
 ### Select Make Environment
 
@@ -167,7 +167,7 @@ After the environment is configured successfully, check the current token:
 makecli configure verify --output=json
 ```
 
-If verification succeeds, continue to completion.
+If verification succeeds, continue to project folder initialization.
 
 If verification fails because the token is missing, expired, invalid, or belongs to the wrong environment:
 
@@ -176,7 +176,7 @@ If verification fails because the token is missing, expired, invalid, or belongs
    makecli login
    ```
 2. Wait up to 20 seconds for the command to receive the login callback and exit successfully.
-3. If `makecli login` exits successfully within 20 seconds, continue to completion.
+3. If `makecli login` exits successfully within 20 seconds, continue to project folder initialization.
 4. If 20 seconds pass without a callback and `makecli login` is still waiting, terminate the running `makecli login` process with Ctrl-C or SIGINT to close the callback listener, then tell the user:
    ```text
    请在浏览器或终端中完成 makecli 登录。完成后回复“已经完成登录”。
@@ -193,15 +193,55 @@ makecli configure token
 
 The user must complete interactive secret entry in their own terminal. After the user finishes, return to the guided `makecli login` flow above instead of running token verification after their reply.
 
+### Initialize PoC Project Folder
+
+Run this step only after environment selection succeeds and either the initial token verification passed or a `makecli login` command completed successfully.
+
+Ask the user exactly:
+
+```text
+是否使用当前目录作为 PoC 目录？请回复“是”或“否”。
+```
+
+If the user replies `是`, run:
+
+```bash
+pwd
+```
+
+Use that absolute current directory as `<project-folder>`.
+
+If the user replies `否`, ask exactly:
+
+```text
+请输入 PoC 目录地址：
+```
+
+Wait for the user to provide the directory address. Do not infer a directory from previous messages. Accept either an absolute path or a relative path as provided by the user.
+
+If the user replies anything other than `是` or `否` to the first prompt, ask again with the exact prompt above.
+
+After `<project-folder>` is selected, run:
+
+```bash
+makecli app init <project-folder>
+```
+
+Quote or escape `<project-folder>` safely when executing the command, especially if the path contains spaces or shell metacharacters.
+
+If `makecli app init <project-folder>` fails, report the error and ask the user whether to retry the same directory or enter another directory. Continue only after `makecli app init <project-folder>` succeeds.
+
 ## Completion Output
 
-End only after environment selection succeeds and either the initial token verification passed or a `makecli login` command completed successfully. Use a concise readiness report:
+End only after environment selection succeeds, either the initial token verification passed or a `makecli login` command completed successfully, and `makecli app init <project-folder>` succeeds. Use a concise readiness report:
 
 - OS path used: macOS or WSL.
 - Tool versions: Node, pnpm, git, makecli.
 - Make skills result.
 - Make environment: selected value, `dev` or `test`.
 - Login status: already valid or refreshed with `makecli login`.
+- PoC project folder: selected `<project-folder>`.
+- Project initialization: `makecli app init` completed.
 
 Keep the completion output concise and next-step focused. Omit negative summaries about actions not performed.
 
