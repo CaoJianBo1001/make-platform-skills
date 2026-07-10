@@ -96,6 +96,8 @@ npx skills update canvas-table-integration
 **使用场景**
 - 在页面里接入 `@qfei-design/canvas-table`
 - 接普通表格；分页表格、虚拟加载、分组表格仅在用户明确要求时添加
+- 从 `package.ai.json.readOrder` 动态读取当前 CanvasTable 包文档，不硬编码包内 `docs/`、`examples/` 或 monorepo 路径
+- 非 Make 表格使用 Track A 基础；Make schema 表格使用 Track C 展示基础；需要单元格编辑时在对应基础上叠加 Track B
 - 把 JSON meta 转成 `IColumn[]`
 - Make schema 表格默认按字段类型使用 ExpensePoc 风格渲染，包含附件、lookup、下拉标签、人员、部门，以及内容溢出时显示省略号并展示 tooltip
 - 切换左侧对象或动态路由时，canvas-table 默认重置滚动位置和对象级临时状态

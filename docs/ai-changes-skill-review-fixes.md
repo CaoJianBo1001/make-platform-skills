@@ -21,3 +21,25 @@
 
 - 先更新合同测试并确认其在文档修复前失败。
 - 待文档和元数据修复后，重新运行 review 和合同测试。
+
+## 2026-07-10 三个前端 Skill 边界优化
+
+### 修改内容
+
+- 将 `canvas-table-integration` 调整为 Track A/Track C 展示基础加可叠加 Track B 编辑增强，明确 Make schema 可编辑表格必须使用 Track C + Track B。
+- 将 CanvasTable 包文档发现改为动态读取 `package.ai.json.readOrder`，去除固定 `docs/`、`examples/` 和 monorepo 路径。
+- 收紧宿主 `make-field-types.ts` 的职责，只负责表单、详情、CanvasTable 展示和宿主单元格编辑提示；高级筛选操作符、默认值、校验和值编辑器继续由 `@qfei-design/make-filter` 公共 API 决定。
+- 将用户/部门候选接口的精确 UI 合同集中到 `makeui/references/component-usage.md`，CanvasTable 和高级筛选 Skill 只消费宿主候选源并交接到 `makeui` / `make-app-service`。
+- 压缩 `canvas-table-integration/SKILL.md` 的重复 Track 描述和 `makeui` 的重复当前用户视觉说明，详细规则继续保留在直接可发现的引用文档中。
+- 更新 Skill metadata：`canvas-table-integration` 为 `0.1.1`、`make-app-filter` 为 `0.1.2`、`makeui` 为 `0.3.47`。
+
+### 防回归
+
+- 更新 `test-field-type-registry-contract.mjs`，禁止宿主 registry 接管高级筛选语义，并确保候选接口精确合同只有一个所有者。
+- 更新 `test-canvas-table-data-sync-contract.mjs`，校验动态 `readOrder`、Track C + Track B 组合规则，并禁止恢复固定包文档路径。
+
+### 验证结果
+
+- 8 个 CanvasTable、筛选、MakeUI 相关契约测试全部通过。
+- 三个 Skill 的结构、frontmatter、引用和跨 Skill 机械检查通过。
+- `git diff --check` 通过。

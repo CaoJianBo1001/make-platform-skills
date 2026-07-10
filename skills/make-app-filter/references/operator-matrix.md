@@ -67,10 +67,9 @@ Hide package-unsupported fields from field selectors and hide header "按该字�
 
 ## Candidate sources
 
-User and department selectors must use remote candidate sources:
-
-- users: `GET /api/users?keyword=&page=&size=` or host equivalent
-- departments: `GET /api/departments?keyword=&page=&size=` or host equivalent
+User and department selectors must use host-provided remote candidate sources.
+Use `makeui` for the canonical generated-app candidate UI contract and
+`make-app-service` for route implementation. A host-documented equivalent wins.
 
 Pass normalized options through package `candidateSources`:
 

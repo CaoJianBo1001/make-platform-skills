@@ -2,7 +2,7 @@
 name: make-app-filter
 description: "Use when integrating, generating, refactoring, or reviewing Make App record-list filtering with @qfei-design/make-filter, CanvasTable header linkage, and Service filter.expression payloads. Triggered by 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, CEL/DNF expressions, system variables, empty filters, field-type operators, DateRange/File/Lookup support, candidate values, URL echo, and tests. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, auth, runtime packaging, DSL modeling, Make CLI execution, or table cell editing."
 metadata:
-  version: 0.1.1
+  version: 0.1.2
 ---
 
 # make-app-filter
@@ -80,8 +80,9 @@ Required read procedure for installed `0.2.5+` packages:
 - Do not send `filter: []`, `filter: {}`, `{ expression: "" }`, blank raw filter strings, or old object-array DSL.
 - Do not filter Make record lists locally. List filtering goes through Service/backend filter APIs.
 - Filter fields come from normalized runtime object/field metadata. Do not read `apps/dsl/**`, copied YAML, row samples, or hardcoded demo data as runtime filter metadata.
+- A host field-type registry may help normalize shared runtime metadata, but it must not decide filter operators or value editors. Pass fields to the package and use its capability APIs as the filter source of truth.
 - For Lookup filtering, resolve `relationKey`, the opposite Entity, and `targetFieldKey` from the complete runtime schema before passing field metadata to the package. Keep the source Lookup field key in Filter IR and CEL expressions; target field metadata only controls operators, values, and validation.
-- User and department filter values are identities, not display names. Candidate sources must use host UI-Service routes such as `/api/users` and `/api/departments` or documented equivalents.
+- User and department filter values are identities, not display names. Candidate sources come from the host contract owned by `makeui`/`make-app-service`; do not define transport routes in this Skill.
 - Do not source user/department options from field schema `options`, current table rows, local arrays, or display labels. Current applied values may be merged only to keep labels visible while remote candidates load.
 - Backend Record filters support DateRange, File, and Lookup semantics, but the UI may expose a field only when `@qfei-design/make-filter` public APIs support that field/operator combination. If backend docs and package capabilities differ, stop to upgrade/fix the package or report the mismatch; do not hand-write CEL or guess package internals.
 - Unsupported package fields must be hidden from field selectors and header "按该字段筛选"; do not call `openWithField` for unknown fields, invalid field keys, or package-unsupported field/operator combinations.
@@ -101,7 +102,7 @@ Required read procedure for installed `0.2.5+` packages:
 
 ## Collaboration rules
 
-- With `makeui`: use `makeui` for toolbar placement, page shell, and surrounding layout; this skill owns filter behavior and package integration.
+- With `makeui`: use `makeui` for toolbar placement, page shell, surrounding layout, and the canonical user/department candidate-source UI contract; this skill owns filter behavior and package integration.
 - With `canvas-table-integration`: use that skill for CanvasTable `suffixRender` and header menu mechanics; this skill owns how the host "按该字段筛选" action talks to the package-backed advanced-filter controller.
 - With `make-app-service`: this skill defines filter query shape; Service route validation, adapter logging, and Make request details stay in service.
 - With `makedsl`: read `EntityDataFilterUsage.md` to confirm backend filter semantics such as DNF, system variables, DateRange/File/Lookup, empty filter handling, and error cases. Do not generate DSL from this skill.

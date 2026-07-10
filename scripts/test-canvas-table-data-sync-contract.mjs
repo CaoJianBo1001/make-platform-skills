@@ -68,4 +68,30 @@ assert.doesNotMatch(
   'docs must not require visible rows > 0 merely because records > 0',
 );
 
+assert.match(
+  skill,
+  /package\.ai\.json\.readOrder[\s\S]*(source of truth|唯一|为准)/i,
+  'canvas-table-integration must use package.ai.json.readOrder as the package documentation source of truth',
+);
+assert.doesNotMatch(
+  skill,
+  /node_modules\/<pkg>\/docs\/agent-usage\.md|packages\/table\/(?:docs\/agent-usage\.md|recipes\.json|capabilities\.json|PUBLIC_API\.md)/,
+  'canvas-table-integration must not hardcode package documentation paths',
+);
+assert.match(
+  skill,
+  /Track C[\s\S]*(base|基础)[\s\S]*Track B[\s\S]*(enhancement|增强|叠加|layer)/i,
+  'Make schema editable tables must use Track C as the display base and layer Track B editing on top',
+);
+assert.doesNotMatch(
+  skill,
+  /Choose exactly one primary track/i,
+  'Track B must be composable with the selected base track instead of being mutually exclusive',
+);
+assert.match(
+  workflows,
+  /(Make schema|Make 字段)[\s\S]*Track C[\s\S]*Track B/i,
+  'Track B workflow must explicitly preserve the Track C display baseline for Make schema tables',
+);
+
 console.log('canvas table data sync contract passed');

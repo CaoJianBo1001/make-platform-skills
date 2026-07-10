@@ -48,9 +48,11 @@ Componentization is a readiness blocker for new Make POC UI and non-trivial gene
 
 ## Shared Make field type registry
 
-For new Make POC projects, create a shared field type registry at `apps/ui/src/lib/make-field-types.ts` unless the host already has an equivalent file. This registry is the source of truth for field-type semantics across form controls, detail display, CanvasTable table columns/renderers, advanced filter value editors, and cell editor selection. Do not duplicate `Make.Field.*` string lists in each feature module.
+For new Make POC projects, create a shared field type registry at `apps/ui/src/lib/make-field-types.ts` unless the host already has an equivalent file. This registry is the source of truth for host-owned field-type semantics across form controls, detail display, CanvasTable table columns/renderers, and cell editor selection. Do not duplicate `Make.Field.*` string lists in each feature module.
 
-The registry should cover all current Make field types and expose small metadata that downstream modules can reuse, such as `fieldType`, `displayGroup`, `renderKind`, `multiple`, default `width`, `align`, form/detail layout hints, and editor/filter support flags. Keep business role overrides, such as making a primary code clickable, in thin feature config layered on top of the registry.
+The registry should cover all current Make field types and expose small metadata that downstream modules can reuse, such as `fieldType`, `displayGroup`, `renderKind`, `multiple`, default `width`, `align`, form/detail layout hints, and host editor hints. Keep business role overrides, such as making a primary code clickable, in thin feature config layered on top of the registry.
+
+Advanced filtering is the explicit exception: pass normalized runtime fields to `make-app-filter`, and let `@qfei-design/make-filter` choose filter support, operators, defaults, validation, and value editors. Do not mirror those package contracts in the host registry.
 
 ## Default module boundaries
 

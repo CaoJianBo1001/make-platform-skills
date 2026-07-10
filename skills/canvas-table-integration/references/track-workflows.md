@@ -1,10 +1,11 @@
 # Track workflows and checklists
 
-Use this reference after selecting Track A, B, or C from `SKILL.md`.
+Use this reference after selecting base Track A or Track C from `SKILL.md`. Add
+Track B as an enhancement layer when cell editing is in scope.
 
 ## Contents
 
-- [Choose a primary path first](#choose-a-primary-path-first)
+- [Choose a display base first](#choose-a-display-base-first)
 - [Track B pragmatic host-edit guidance](#track-b-pragmatic-host-edit-guidance)
 - [Track A workflow](#track-a-workflow)
 - [Track B workflow](#track-b-workflow)
@@ -14,39 +15,38 @@ Use this reference after selecting Track A, B, or C from `SKILL.md`.
 - [Deferred topics](#deferred-topics)
 - [Required output](#required-output)
 
-## Choose a primary path first
+## Choose a display base first
 
-Choose one primary path before coding.
+Choose Track A for non-Make columns or Track C for Make schema fields before
+coding. Track B may be layered onto either base and never replaces it.
 
 ### Track A / `basic local table`
 
 Use when the page already has all rows in client memory and is still using `@qfei-design/canvas-table`.
 
-Start from:
-
-- `recipes.json` -> `basic-local-table`
-- `examples/react/basic-canvas-table.tsx`
+Start from the basic-local-table recipe/example discovered through the installed
+package's `package.ai.json.readOrder` documentation.
 
 ### Track A / `virtual remote table`
 
 Use only when the user explicitly asks for pagination, virtual loading, or paginated backend integration, and still use `@qfei-design/canvas-table`. Do not choose this path just because the page contains a table.
 
-Start from:
-
-- `recipes.json` -> `virtual-remote-table`
-- `examples/react/virtual-canvas-table.tsx`
-- `references/virtual-table-patterns.md`
+Start from the virtual-remote-table recipe/example discovered through the
+installed package documentation, then read `references/virtual-table-patterns.md`.
 
 ### Track A / `meta -> columns`
 
 Use when column configuration comes from JSON/meta instead of handwritten `IColumn[]`.
 
 Treat this as a supporting path, not the primary first-pass path, unless the page is clearly meta-driven.
-If the JSON/meta is Make schema field metadata, use Track C as the primary path and treat column conversion as one step inside the Make field-display workflow.
+If the JSON/meta is Make schema field metadata, use Track C as the display base and treat column conversion as one step inside the Make field-display workflow.
 
 ### Track B / `host cell-edit architecture`
 
 Use when the page must edit business fields in-place or through editor overlays.
+For Make schema fields, complete the Track C display workflow first and then add
+Track B; keep Track C normalization, renderers, and registry-derived display
+metadata intact.
 
 Before changing code, identify:
 
@@ -89,7 +89,7 @@ Use these defaults for first-pass editable-list work. Adapt them to the host pro
 1. Check whether the package is installed.
 2. If missing, install it with the lockfile-based package-manager rule in `SKILL.md`.
 3. Read the package docs in the required order.
-4. Choose the primary path.
+4. Choose the local or virtual Track A variant.
 5. Open the corresponding recipe and minimal example.
 6. Adapt that example to the current project with the smallest reasonable diff.
 7. Preserve the local framework and state-management patterns.
@@ -99,8 +99,8 @@ Use these defaults for first-pass editable-list work. Adapt them to the host pro
 
 ## Track B workflow
 
-1. Check whether the package is installed.
-2. Read package editing docs and the edit-related source entry points.
+1. Check whether the package is installed and read package editing docs through `package.ai.json.readOrder`.
+2. Select and preserve the display base. For Make schema fields, complete Track C before adding Track B.
 3. Identify the host framework, component library, and existing field-editor components.
 4. Identify the field metadata that drives editability and field type.
 5. Identify the stable row identity used by backend reads, saves, dirty state, and detail routes.
@@ -108,13 +108,11 @@ Use these defaults for first-pass editable-list work. Adapt them to the host pro
 7. Classify supported field types into text, number, date, option, identity, attachment, and read-only groups before coding editors.
 8. For date, user, department, select, file, and lookup fields, choose a type-appropriate editor, read-only display, or explicit documented fallback before implementation.
 9. Apply `make-cell-edit-defaults.md`: double-click enters edit, clipped cells scroll fully into view before editor mount, popup editors open immediately, inline editors fill the cell, current values echo on entry, and unchanged commits do not call save APIs.
-10. Design or reuse a host edit controller layer before writing field-specific code.
-11. Design or reuse a single editor-container abstraction before writing individual field editors.
-12. Implement or reuse field editors through a common editor interface.
-13. Distinguish submit-style editors from realtime-style editors.
-14. For attachment fields, identify whether upload requires a saved record id and where the data-source / Service API adapter upload/delete/download boundary lives.
-15. Validate positioning, scroll-into-view, post-edit scroll preservation, scroll-follow behavior, click-outside close, and rollback behavior.
-16. Verify at least one real editable field flow in the target project.
+10. Design or reuse a host edit controller and common editor-container abstraction before field-specific code.
+11. Implement or reuse field editors through a common editor interface and distinguish submit-style from realtime-style editors.
+12. For attachment fields, identify whether upload requires a saved record id and where the data-source / Service API adapter upload/delete/download boundary lives.
+13. Validate positioning, scroll-into-view, post-edit scroll preservation, scroll-follow behavior, click-outside close, and rollback behavior.
+14. Verify at least one real editable field flow in the target project.
 
 ## Track C workflow
 
@@ -187,7 +185,7 @@ Track C common capabilities:
 - lookup renderer with clickable valid references, muted deleted references, strikethrough, and fallback label extraction
 - row-head defaults: `showSN` and `bodyRowHeadSuffixOptions`
 - object/entity/schema switch resets table scroll and transient state; same-object data refresh may preserve scroll
-- user/department edit candidates come from host candidate sources; generated Make App UI-Service defaults are `/api/users` and `/api/departments`, or host equivalent routes, normalized to `userId/userName` and `departmentId/departmentName`
+- user/department edit candidates come from host candidate sources using the canonical `makeui` identity/label mapping; route implementation belongs to `make-app-service`
 
 ## What to avoid
 
@@ -246,7 +244,7 @@ If the user explicitly needs those, treat them as a later enhancement path and r
 
 For Track A, report:
 
-- which primary path was selected
+- which display base was selected and whether Track B was layered on it
 - which recipe and example were used
 - which files were changed
 - which core capabilities were added

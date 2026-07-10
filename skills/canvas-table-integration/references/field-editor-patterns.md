@@ -197,12 +197,9 @@ Typical concerns:
 - auxiliary render mapping data for avatars/names
 - candidate source: host user API or existing people picker data source; current row values are only for echoing existing selections
 
-For generated Make App projects, the default people candidate source is a UI-Service contract; use the host equivalent route when the host project requires it:
-
-- `GET /api/users?keyword=&page=&size=` -> `{ users, total }`
-- option value: `userId`
-- option label: `userName`
-- optional avatar: `avatar`
+For generated Make App projects, consume the host-provided people candidate
+source. Use `makeui` for the canonical option identity/label/avatar mapping and
+`make-app-service` for route implementation; a host-documented equivalent wins.
 
 For Make identity values, tolerate both record-style values and current identity-service values. Read ids from `recordID`, `userId`, or `id`, and labels from `name`, `userName`, `displayName`, or `label`. For multi-user fields, normalize arrays with the same priority before dirty comparison and submit conversion.
 
@@ -227,12 +224,10 @@ Typical concerns:
 - extra mapped render data for downstream cell rendering
 - candidate source: real department API or host department selector data; current cell values are only for echoing existing selections
 
-For generated Make App projects, the default department candidate source is a UI-Service contract; use the host equivalent route when the host project requires it:
-
-- `GET /api/departments?keyword=&page=&size=` -> `{ departments, total }`
-- option value: `departmentId`
-- option label: `departmentName`
-- flatten nested department trees before showing selector options
+For generated Make App projects, consume the host-provided department candidate
+source. Use `makeui` for the canonical option identity/label and tree-flattening
+rules and `make-app-service` for route implementation; a host-documented
+equivalent wins.
 
 For Make department values, tolerate both record-style values and current department-service values. Read ids from `recordID`, `departmentId`, or `id`, and labels from `name`, `departmentName`, `displayName`, or `label`. For multi-department fields, normalize arrays with the same priority before dirty comparison and submit conversion.
 
