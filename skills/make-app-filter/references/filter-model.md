@@ -4,61 +4,19 @@ Use this reference when designing advanced filter state and interactions.
 
 ## Filter IR
 
-Default Filter IR:
+The package owns Filter IR types and immutable update helpers. Import them from
+the public core entrypoint instead of declaring local equivalents:
 
 ```ts
-type AdvancedFilterLogic = "and" | "or";
-
-type AdvancedFilterOperator =
-  | "eq"
-  | "neq"
-  | "gt"
-  | "gte"
-  | "lt"
-  | "lte"
-  | "contains"
-  | "not_contains"
-  | "is_any_of"
-  | "is_none_of"
-  | "has_any"
-  | "has_all"
-  | "has_none"
-  | "is_within"
-  | "is_not_within"
-  | "contains_date"
-  | "not_contains_date"
-  | "fully_contains"
-  | "is_contained_by"
-  | "is_empty"
-  | "is_not_empty";
-
-type DateRangeValue = {
-  begin: string;
-  end: string;
-};
-
-type AdvancedFilterValue =
-  | string
-  | number
-  | boolean
-  | DateRangeValue
-  | Array<string | number | boolean>;
-
-type AdvancedFilterCondition = {
-  id: string;
-  fieldKey: string;
-  operator: AdvancedFilterOperator;
-  value?: AdvancedFilterValue;
-};
-
-type AdvancedFilterGroup = {
-  id: string;
-  logic: AdvancedFilterLogic;
-  children: Array<AdvancedFilterGroup | AdvancedFilterCondition>;
-};
+import type {
+  AdvancedFilterCondition,
+  AdvancedFilterGroup,
+  AdvancedFilterNode,
+} from "@qfei-design/make-filter";
 ```
 
-Use stable generated ids for React keys and condition updates. Keep immutable helpers for:
+Use package-generated stable ids for React keys and package helpers for immutable
+condition updates:
 
 - `createEmptyFilterGroup`
 - `createDefaultCondition`
@@ -68,13 +26,16 @@ Use stable generated ids for React keys and condition updates. Keep immutable he
 - `removeNodeFromGroup`
 - `updateGroupLogic`
 
+Do not copy operator unions, value shapes, condition/group types, or update helpers
+into the host. Those contracts change with package capabilities such as Lookup.
+
 ## Draft and submit behavior
 
 Advanced filter uses draft editing:
 
 - applied value lives in page state
 - opening the popover copies applied value into draft
-- if applied value has no children and filterable fields exist, add one default empty condition to the draft
+- if applied value has no children and filterable fields exist, `beginDraft` adds one default condition row; the package selects the first supported field and its default operator, while a required value remains unfilled
 - editing, adding, removing, and clearing affect only draft
 - `确认` validates draft and commits it
 - outside click or trigger re-click closes the popover and resets draft to the applied value
@@ -117,23 +78,15 @@ Default active trigger style is green-tinted, matching ExpensePoc:
 
 Toolbar keyword search is separate from advanced filter.
 
-Default search behavior:
+Keep search text separate from `AdvancedFilterGroup` state and pass both to
+`compileListFilter({ fields, searchText, advancedFilter })`. The package decides
+which fields are searchable, omits blank search text, creates the search group,
+and owns all boolean grouping and CEL serialization.
 
-- searchable field types: `Make.Field.ID`, `Make.Field.Text`, `Make.Field.TextArea`, `Make.Field.URL`
-- each searchable field becomes `field.contains(keyword)`
-- searchable fields are grouped with `OR`
-- search group and advanced filter group are merged as DNF
-
-Do not include empty search text in the compiled expression.
-
-Do not emit `(A || B) && C`. Make Data API currently accepts DNF: outer `OR`, inner `AND`. When keyword search and advanced filter both exist, distribute the `AND`:
-
-```text
-(title.contains("客户") && status == "open")
-|| (description.contains("客户") && status == "open")
-```
-
-If both sides already have multiple `OR` branches, combine them as a cartesian product of clauses and keep a practical expansion limit in the host implementation. If the limit is exceeded, require the user to narrow the search fields or simplify the filter instead of sending unsupported nested boolean syntax.
+Submit the returned `{ expression }` without parsing, redistributing, or rewriting
+it in the host. Do not implement host-side DNF conversion or expression expansion.
+If package output and the backend contract diverge, fix or upgrade the package
+before integration instead of compensating in each host.
 
 ## Reset on object switch
 

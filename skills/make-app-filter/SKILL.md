@@ -2,7 +2,7 @@
 name: make-app-filter
 description: "Use when integrating, generating, refactoring, or reviewing Make App record-list filtering with @qfei-design/make-filter, CanvasTable header linkage, and Service filter.expression payloads. Triggered by 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, CEL/DNF expressions, system variables, empty filters, field-type operators, DateRange/File/Lookup support, candidate values, URL echo, and tests. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, auth, runtime packaging, DSL modeling, Make CLI execution, or table cell editing."
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # make-app-filter
@@ -22,13 +22,13 @@ This skill owns the consumer-side package integration contract, advanced-filter 
 
 1. Treat any Make record-list request containing "筛选", "高级筛选", "条件筛选", "表格筛选", "表头筛选", "列头筛选", or "按字段筛选" as the same integrated filtering requirement. Implement both the package-backed toolbar advanced filter and the host-owned CanvasTable header filter linkage.
 2. Locate the host UI package, usually `apps/ui/package.json`. If no UI package exists, stop and report the missing host package.
-3. Ensure `@qfei-design/make-filter@^0.2.2` is installed. If missing or older, install/upgrade with the host package manager.
+3. Ensure `@qfei-design/make-filter@^0.2.5` is installed. If missing or older, install/upgrade with the host package manager.
 4. Read package docs before designing code. Prefer installed package docs; if the host is working in the package repo, read source docs.
 5. Import `@qfei-design/make-filter/styles.css` once in the host UI entry.
 6. Use package APIs for filter core, panel, controller, adapter, validation, and CEL compile/parse. Do not copy or hand-write these capabilities in the host.
 7. Keep host responsibilities outside the package: toolbar trigger, Popover/Drawer/Modal container, scroll sizing, applied state, candidate APIs, Service request adapter, and CanvasTable header filter UI/menu.
 8. Wire header "按该字段筛选" to the same package controller/panel; do not create separate header-only state or a local filter implementation.
-9. Align with the backend Record list filter contract: Service sends `filter: { expression }`, blank expressions mean no filter, expressions must stay in the supported CEL/DNF subset, and field support must match runtime metadata plus package public APIs.
+9. Align with the backend Record list filter contract: Service sends `filter: { expression }`, blank expressions mean no filter, and field support must match runtime metadata plus package public APIs. Submit `compileListFilter` output unchanged; never rewrite CEL/DNF in the host.
 10. Preserve the BizFinancePoc fixed advanced-filter panel layout: top fixed header, scrollable condition body, and bottom fixed footer. Header/footer controls must remain visible while condition rows scroll.
 11. Before finishing, verify tests or deterministic checks for package source usage, fixed panel layout, empty filter omission, search merge, draft confirm/discard, candidate sources, header linkage, package/backend field-support drift, and Service payload shape.
 
@@ -36,24 +36,21 @@ This skill owns the consumer-side package integration contract, advanced-filter 
 
 If `@qfei-design/make-filter` is missing:
 
-- `pnpm-lock.yaml` -> `pnpm add @qfei-design/make-filter@^0.2.2`
-- `yarn.lock` -> `yarn add @qfei-design/make-filter@^0.2.2`
-- `package-lock.json` -> `npm install @qfei-design/make-filter@^0.2.2`
-- no lockfile -> default to `npm install @qfei-design/make-filter@^0.2.2`
+- `pnpm-lock.yaml` -> `pnpm add @qfei-design/make-filter@^0.2.5`
+- `yarn.lock` -> `yarn add @qfei-design/make-filter@^0.2.5`
+- `package-lock.json` -> `npm install @qfei-design/make-filter@^0.2.5`
+- no lockfile -> default to `npm install @qfei-design/make-filter@^0.2.5`
 
-If a different advanced-filter package name is already used, stop and ask before changing the dependency. If `@qfei-design/make-filter` is installed but older than `0.2.2`, upgrade before integrating.
+If a different advanced-filter package name is already used, stop and ask before changing the dependency. If `@qfei-design/make-filter` is installed but older than `0.2.5`, upgrade before integrating. If `0.2.5` is not available from the configured registry yet, report that the Lookup-capable release is pending; do not fall back to an older package.
 
-Required read order for installed `0.2.2+` packages:
+Required read procedure for installed `0.2.5+` packages:
 
 1. `node_modules/@qfei-design/make-filter/package.ai.json`
-2. `node_modules/@qfei-design/make-filter/docs/agent-usage.md`
-3. `node_modules/@qfei-design/make-filter/recipes.json`
-4. `node_modules/@qfei-design/make-filter/capabilities.json`
-5. `node_modules/@qfei-design/make-filter/PUBLIC_API.md`
-6. `node_modules/@qfei-design/make-filter/README.md`
-7. `node_modules/@qfei-design/make-filter/docs/api.md`
+2. Parse `package.ai.json.readOrder` and resolve every entry relative to `node_modules/@qfei-design/make-filter`.
+3. Verify each referenced file exists in the installed package before relying on it.
+4. Read the remaining entries in the declared order, skipping the already-read `package.ai.json` entry.
 
-When working directly in the package repo, use the same root-relative paths. If the installed package is older than `0.2.2`, upgrade first instead of relying on older package docs or inferred internals.
+`package.ai.json.readOrder` is the source of truth. Do not hardcode `docs/`, `examples/`, or other package-internal documentation paths. When working directly in the package repo, resolve the same entries from the repository root. If the installed package is older than `0.2.5`, upgrade first instead of relying on older package docs or inferred internals.
 
 ## Topic reference map
 
@@ -61,7 +58,7 @@ When working directly in the package repo, use the same root-relative paths. If 
 | --- | --- |
 | Package install, imports, host/package boundary | `references/package-integration.md` |
 | Filter IR, controller draft/confirm semantics, search merge, URL echo | `references/filter-model.md` |
-| Make field type to operator/value-editor matrix and candidate values | `references/operator-matrix.md` |
+| Runtime field capability, operator/value-editor APIs, and candidate values | `references/operator-matrix.md` |
 | Host Popover/container, trigger, panel sizing, validation visuals | `references/ui-style.md` |
 | CanvasTable header more menu and advanced filter linkage | `references/header-table-linkage.md` |
 | Service filter contract and CEL expression payload | `references/service-translation.md` |
@@ -78,10 +75,12 @@ When working directly in the package repo, use the same root-relative paths. If 
 - New integrations must import package APIs from `@qfei-design/make-filter`, `@qfei-design/make-filter/react`, and optional `@qfei-design/make-filter/adapters/antd`.
 - New integrations must import `@qfei-design/make-filter/styles.css` once. Host CSS may style the outer overlay/container, but must not fork package internals unless fixing a host-specific containment issue.
 - New filter output uses `filter: { expression: string }`. If `compileListFilter` returns `undefined`, omit `filter`.
+- `compileListFilter` is the only host-facing search/advanced-filter compiler. Send its result unchanged; do not parse, redistribute, or rewrite CEL/DNF in host code.
 - The backend Record list handler reads only `filter.expression` from the `Expression` object and treats missing, `null`, or blank expressions as no filter.
 - Do not send `filter: []`, `filter: {}`, `{ expression: "" }`, blank raw filter strings, or old object-array DSL.
 - Do not filter Make record lists locally. List filtering goes through Service/backend filter APIs.
 - Filter fields come from normalized runtime object/field metadata. Do not read `apps/dsl/**`, copied YAML, row samples, or hardcoded demo data as runtime filter metadata.
+- For Lookup filtering, resolve `relationKey`, the opposite Entity, and `targetFieldKey` from the complete runtime schema before passing field metadata to the package. Keep the source Lookup field key in Filter IR and CEL expressions; target field metadata only controls operators, values, and validation.
 - User and department filter values are identities, not display names. Candidate sources must use host UI-Service routes such as `/api/users` and `/api/departments` or documented equivalents.
 - Do not source user/department options from field schema `options`, current table rows, local arrays, or display labels. Current applied values may be merged only to keep labels visible while remote candidates load.
 - Backend Record filters support DateRange, File, and Lookup semantics, but the UI may expose a field only when `@qfei-design/make-filter` public APIs support that field/operator combination. If backend docs and package capabilities differ, stop to upgrade/fix the package or report the mismatch; do not hand-write CEL or guess package internals.

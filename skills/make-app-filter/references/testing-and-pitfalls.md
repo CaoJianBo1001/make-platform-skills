@@ -6,10 +6,10 @@ Use this reference before finishing package-backed advanced filter work.
 
 Package source:
 
-- `apps/ui/package.json` depends on `@qfei-design/make-filter@^0.2.2` or newer
+- `apps/ui/package.json` depends on `@qfei-design/make-filter@^0.2.5` or newer
 - UI entry imports `@qfei-design/make-filter/styles.css`
 - local advanced-filter shim, if any, imports from `@qfei-design/make-filter`
-- host code does not contain copied operator matrix, CEL compiler/parser, validator, or `AdvancedFilterPanel` clone
+- host code does not contain copied Filter IR types, operator matrix, CEL compiler/parser, validator, or `AdvancedFilterPanel` clone
 
 Filter model and operators:
 
@@ -21,15 +21,13 @@ Filter model and operators:
 - DateRange, File, and Lookup follow package public support; if backend docs support them but the installed package does not, the UI hides them and reports the mismatch instead of compiling host-only CEL
 - invalid field keys and unknown types are skipped
 
-Expression compiler:
+Compiler integration:
 
-- string escaping
-- numeric comparisons
-- nested group parentheses
-- DNF output: outer `OR`, inner `AND`; `(A || B) && C` is distributed or rejected before request
-- collection `has_any`, `not_contains`, `eq`, `neq`
-- empty and not-empty for collection fields
-- DateRange/File/Lookup expressions are covered when supported by the package
+- host code calls package `compileListFilter` for search-only, advanced-only, and combined search/advanced-filter cases
+- the returned filter object reaches Service unchanged, without host-side DNF conversion, expression rewriting, or a local serializer
+- representative scalar, collection, DateRange, File, and resolved Lookup conditions pass through the package compiler path; exact CEL syntax stays covered by package tests
+- The Lookup source field key is used in Filter IR and CEL expressions; resolved target-field metadata only selects operators, values, and validation
+- Lookup expression echo passes the same resolved field metadata to `parseCelToAdvancedFilter`
 - system variables are emitted only as right-hand values
 - empty condition rows do not compile
 - invalid field identifiers do not compile

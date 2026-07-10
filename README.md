@@ -128,12 +128,12 @@ npx skills update make-app-filter
 
 **使用场景**
 - 设计或修改完整筛选能力：高级筛选弹窗、筛选条件组、`且 / 或` 关系、确认提交交互和 CanvasTable 表头“按该字段筛选”入口
-- 接入或升级 `@qfei-design/make-filter@^0.2.2`，并读取包内 `package.ai.json`、`docs/agent-usage.md`、`recipes.json`、`capabilities.json`、`PUBLIC_API.md`
+- 接入或升级 `@qfei-design/make-filter@^0.2.5`，先读取 `package.ai.json`，再动态按 `package.ai.json.readOrder` 读取实际发布的包文档，不硬编码 `docs/` 或 `examples/` 内部路径
 - 使用包内 core、React panel、controller、AntD adapter 和 `styles.css`；禁止复制或手写本地筛选模型、操作符矩阵、校验器、CEL compiler/parser 或高级筛选面板
 - 根据 Make 字段类型使用包内筛选操作符和值编辑器
 - 通过包内 `compileListFilter` 把搜索和高级筛选合并为 Service 可消费的 `filter.expression`
 - 对齐后端 Record 列表筛选：新请求使用 `filter: { expression }`，无有效表达式时省略 `filter`，不生成 `[]`、`{}`、空表达式或旧对象 DSL
-- 后端支持 DateRange、File、Lookup、系统变量和 DNF；UI 是否展示对应字段仍以 `@qfei-design/make-filter` 公开能力为准，能力不一致时先升级/修复包而不是宿主手写 CEL
+- `0.2.5` 基线支持 DateRange、File 和已解析 Lookup；字段展示、操作符、CEL 与布尔分组全部以 `@qfei-design/make-filter` 公开能力为准，宿主不得手写或重排表达式
 - 做 CanvasTable 表头更多菜单与高级筛选的联动：点击“按该字段筛选”调用同一个 package controller 追加草稿条件并打开高级筛选
 - 不允许只做高级筛选或只做表头筛选；Make 记录列表里的筛选能力要么完整交付，要么不交付
 - 约束空筛选、未完成条件、unsupported 字段、人员/部门筛选值和测试
