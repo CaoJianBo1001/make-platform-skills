@@ -41,18 +41,20 @@ Invalid empty values:
 ## CEL subset
 
 The package owns CEL output. Do not hand-concatenate expression strings in the host.
+Treat `compileListFilter` as the sole compiler and send its returned filter object
+unchanged to Service/backend. Do not parse, distribute, normalize, or otherwise
+rewrite boolean expressions in the host. If the backend rejects current package
+output, report a package/backend contract mismatch and fix that shared boundary.
 
-Backend Record list currently accepts a constrained CEL subset parsed as DNF: outer `OR` groups, inner `AND` predicates. Do not emit `(A || B) && C`; distribute to `(A && C) || (B && C)` through package helpers.
+Host integration checks should verify that the same normalized fields and applied
+state are passed to `compileListFilter`, and that its result reaches Service
+unchanged. Exact comparison, collection, range, empty-check, and boolean-grouping
+syntax belongs to package tests and published package documentation.
 
-Important current shapes:
-
-- scalar comparisons: `field == value`, `field != value`, `field > value`
-- text contains: `field.contains(value)`
-- collection `has_any`: `(field != null && [values].exists(x, x in field))`
-- collection empty checks are parenthesized before joining with other conditions
-- search OR groups are parenthesized before merging with advanced filter through `AND`
-- system variables are right-hand values such as `_currentUser`, `_currentUserDepartment`, `_today`, or `_now`; do not use them as field keys
-- DateRange, File, and Lookup are backend-supported when the package emits supported field/operator expressions
+System variables remain right-hand values such as `_currentUser`,
+`_currentUserDepartment`, `_today`, or `_now`; do not use them as field keys.
+DateRange, File, and resolved Lookup fields are supported by the `0.2.5` package
+baseline through the same compiler path.
 
 Use `parseCelToAdvancedFilter` only for supported expression echo or deep-link compatibility. Unsupported CEL should remain backend-only fallback, not fake UI conditions.
 

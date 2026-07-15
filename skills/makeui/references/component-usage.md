@@ -80,7 +80,7 @@ Form and field components should consume normalized UI field metadata, not raw b
 
 If no field metadata exists, stop and call out the missing UI dependency instead of inventing static form controls.
 
-For new Make POC projects, create or reuse a shared field type registry at `apps/ui/src/lib/make-field-types.ts` before implementing field-driven UI. The registry is the shared source for form controls, detail display, CanvasTable table display, advanced filter value editors, and table cell editors; these consumers should resolve `Make.Field.*` behavior from the registry instead of carrying separate local mappings.
+For new Make POC projects, create or reuse a shared field type registry at `apps/ui/src/lib/make-field-types.ts` before implementing field-driven UI. The registry is the shared source for host-owned form controls, detail display, CanvasTable table display, and table cell editors; these consumers should resolve common `Make.Field.*` presentation behavior from the registry instead of carrying separate local mappings. Advanced-filter controls resolve support and editor behavior through `make-app-filter` package APIs, not this registry.
 
 Use type-appropriate controls:
 
@@ -172,7 +172,7 @@ This candidate-source rule applies to every user or department selector UI. For 
 
 - create/edit Drawer forms and route forms
 - table cell editors and any canvas-table popup selector
-- advanced filter value editors and table-header "filter by this field" flows
+- candidate selectors rendered inside the advanced-filter package panel and table-header filter flow
 - reusable business selectors embedded in custom panels
 
 Do not read user/department candidates from field schema `options`, `meta.options`, current table rows, static fixtures, or hardcoded demo data. Those sources may not represent the current org. Current record values may be merged into the selector options only so existing selections keep readable labels while `/api/users` or `/api/departments` is loading or returns no matching page.

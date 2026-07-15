@@ -54,7 +54,7 @@ Form layout:
 - derive fields and control types from host-provided field metadata
 - use type-appropriate controls; date, select, user, department, file, and lookup fields must not silently become plain text inputs
 - custom form field controls must follow the host-form controlled field contract from `component-usage.md`; forward `value/onChange/onBlur/id/disabled` through user, department, lookup, select, date, file, and relation adapters so the visual selection matches the submitted form value
-- user and department selectors use the host-provided candidate source and must include search/loading/empty/error UI states. Generated Make App UI-Service defaults use `GET /api/users?keyword=&page=&size=` and `GET /api/departments?keyword=&page=&size=`, unless the host project documents equivalent Service/API routes; normalize results to `{ label, value }` options with `userId/userName` and `departmentId/departmentName`
+- user and department selectors use the host-provided candidate source and must include search/loading/empty/error UI states; use the canonical identity/label and generated-app transport contract in `component-usage.md`
 - create pages must omit attachment upload fields when upload requires a saved record identity; edit pages may show attachments only when the persisted record identity exists
 - one-column layout on small screens
 - section headings rather than deeply nested cards

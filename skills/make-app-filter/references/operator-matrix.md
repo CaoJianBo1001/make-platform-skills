@@ -20,43 +20,36 @@ Use package APIs:
 
 Do not duplicate the operator matrix in host code. If an old project keeps local helpers, they must delegate to the package and be covered by tests.
 
-## Current package baseline
+## Runtime capability resolution
 
-The package owns the exact UI matrix. The current package baseline is:
+The installed package owns the exact field/operator labels, order, default value,
+and value-editor kind. `getOperatorsForField(field)` is the source of truth for
+the effective operator set; do not preserve a copied matrix in this Skill or in
+host code.
 
-| Make field type | Filter kind | Operators | Value editor |
-| --- | --- | --- | --- |
-| `Make.Field.ID` | text | `contains`, `not_contains`, `eq`, `neq` | text input |
-| `Make.Field.Text` | text | `contains`, `not_contains`, `eq`, `neq` | text input |
-| `Make.Field.TextArea` | text | `contains`, `not_contains`, `eq`, `neq` | text input |
-| `Make.Field.URL` | text | `contains`, `not_contains`, `eq`, `neq` | text input |
-| `Make.Field.Number` | number | `eq`, `neq`, `gt`, `gte`, `lt`, `lte` | number input |
-| `Make.Field.Currency` | number | `eq`, `neq`, `gt`, `gte`, `lt`, `lte` | number input |
-| `Make.Field.Percent` | number | `eq`, `neq`, `gt`, `gte`, `lt`, `lte` | number input |
-| `Make.Field.SingleSelect` | singleSelect | `eq`, `neq`, `in` | select |
-| `Make.Field.MultiSelect` | multiSelect | `has_any`, `not_contains`, `eq`, `neq`, `is_empty`, `is_not_empty` | multi select |
-| `Make.Field.SingleUser`, `Make.Field.User` | singlePerson | `eq`, `neq` | remote user select |
-| `Make.Field.MultiUser` | multiPerson | `has_any`, `not_contains`, `eq`, `neq`, `is_empty`, `is_not_empty` | remote multi-user select |
-| `Make.Field.SingleDepartment`, `Make.Field.Department` | singleDepartment | `eq`, `neq` | remote department select |
-| `Make.Field.MultiDepartment` | multiDepartment | `has_any`, `not_contains`, `eq`, `neq`, `is_empty`, `is_not_empty` | remote multi-department select |
-| `Make.Field.Date` | date | `eq`, `neq`, `lt`, `gt` | date picker |
-| `Make.Field.DateTime` | dateTime | `eq`, `neq`, `lt`, `gt` | date-time picker |
+For each normalized runtime field:
 
-Backend-supported but package-gated field types:
+1. Call `isAdvancedFilterFieldSupported(field)` or `getFilterableFields(fields)`
+   to decide whether the field may be shown.
+2. Call `getOperatorsForField(field)` for the displayed operator list and
+   `getDefaultOperator(field)` for a newly created row.
+3. Use `getFieldFilterKind(field)`, `getDefaultFilterValue(field, operator)`,
+   `operatorNeedsValue(operator)`, and `operatorUsesArrayValue(operator)` to
+   select and initialize the value editor.
+4. Use package operator labels unchanged. Do not rename conditions in the host.
 
-- `Make.Field.File`
-- `Make.Field.DateRange`
-- `Make.Field.Lookup`
+The `@qfei-design/make-filter@^0.2.5` baseline includes File, DateRange, and
+Lookup filtering. Lookup remains supported only when the host passes a valid
+source Lookup key together with resolved `relationKey` and non-Lookup target
+field metadata. The package derives Lookup operators and value behavior from
+that target field while keeping the source Lookup key in Filter IR and CEL.
 
-The backend Record list filter supports these field types through `filter.expression`:
+For an unresolved Lookup, disabled field, unknown type, or invalid field key,
+`getOperatorsForField(field)` returns no usable capability and the field stays
+hidden. If backend and installed package capabilities differ, upgrade or fix the
+package; do not add a host-only operator matrix, value normalizer, or CEL compiler.
 
-- File: filename contains/not-contains, attachment count comparison, empty/not-empty
-- DateRange: contains date, does not contain date, fully contains, is contained by, equals, empty/not-empty
-- Lookup: expression references the current Entity's Lookup field key, then backend validates operators and values against the configured `targetFieldKey` type
-
-Expose these fields in advanced filter UI only when the installed `@qfei-design/make-filter` public APIs support the field and operator combination. If the backend supports a field but the package does not, upgrade or fix the package before exposing it; do not hand-write a host-only operator matrix, value normalizer, or CEL compiler.
-
-Still unsupported:
+Always unsupported:
 
 - unknown field types
 - fields with invalid CEL identifiers
@@ -74,10 +67,9 @@ Hide package-unsupported fields from field selectors and hide header "按该字�
 
 ## Candidate sources
 
-User and department selectors must use remote candidate sources:
-
-- users: `GET /api/users?keyword=&page=&size=` or host equivalent
-- departments: `GET /api/departments?keyword=&page=&size=` or host equivalent
+User and department selectors must use host-provided remote candidate sources.
+Use `makeui` for the canonical generated-app candidate UI contract and
+`make-app-service` for route implementation. A host-documented equivalent wins.
 
 Pass normalized options through package `candidateSources`:
 

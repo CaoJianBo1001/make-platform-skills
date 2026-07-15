@@ -24,12 +24,12 @@ Default structure:
 - normalize remote schema variants before the table layer consumes them; handle shapes such as `entity.properties.fields`, `entity.fields`, or the host documented equivalent in a boundary adapter
 - derive `IColumn[]` from normalized runtime schema fields, not from a hand-maintained static column list
 - keep `fieldType`, `fieldSchema`, and `renderKind` or equivalent metadata on each generated column
-- derive `displayGroup`, `renderKind`, default `width`, `align`, multiplicity, and field UI capability hints from the shared registry; do not duplicate field-type string lists inside each table, form, detail, filter, or editor module
+- derive `displayGroup`, `renderKind`, default `width`, `align`, multiplicity, and host-owned display/editor hints from the shared registry; do not duplicate field-type string lists inside table display modules. Advanced-filter capability remains owned by `make-app-filter` and `@qfei-design/make-filter`
 - keep business ordering or primary-link roles as a thin config layer; generic rendering still branches by field type
 - normalize each raw cell value once through a pure field-display adapter before rendering
 - route normalized display groups to focused canvas renderers: `text`, `tag`, `user`, `attachment`, `lookup`, and generic fallback
 - keep option, user, department, file, and lookup candidate loading in hooks/data sources; never fetch from a cell renderer
-- for generated Make App table editing/search selectors, use the host candidate source. The ExpensePoc default UI-Service contract is `GET /api/users?keyword=&page=&size=` -> `{ users, total }` and `GET /api/departments?keyword=&page=&size=` -> `{ departments, total }`; if the host documents a different route, use its equivalent route while preserving the same response semantics. Normalize results before passing options to table editors
+- when Track B is layered onto this Make display base, pass host-provided candidate sources into table editors. Use `makeui` for candidate UI identity/label rules and `make-app-service` for route implementation; never fetch from a cell renderer
 - keep `showSN` sequence numbers and the hover-revealed row detail entry through `bodyRowHeadSuffixOptions`
 - create or update the CanvasTable after schema/columns are ready and the host has real size; do not wait for `records.length`, `rows.length`, or data totals to become positive. Empty rows still render headers and the configured empty state after `setData([])`
 - keep latest rows in the table host/controller and call `setData(latestRows)` after the CanvasTable instance is created, because backend rows can arrive before `ResizeObserver` or schema readiness finishes creating the instance

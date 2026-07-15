@@ -33,10 +33,16 @@ Cover permission matching:
 - deny wins over allow
 - exact permissionKey
 - `data.record.*`
+- `meta.field.*`
 - `*.*.*`
 - three-part wildcard
-- allow without fieldAccess means unrestricted editability
-- explicit `editable` allows editing
+- `data.record.create/update` allows operation entries but does not grant field visibility or editability
+- `meta.field.read` allows field visibility
+- missing `meta.field.read` hides the field
+- `meta.field.update` allows field editability
+- visible field without `meta.field.update` is readonly/disabled
+- field-permission allow without fieldCondition means unrestricted fields for that field permission
+- explicit `editable` allows editing and implies visibility
 - `readonly`, `hidden`, `partialMask`, `fullMask`, and missing fields deny editing
 - field wildcard `*` baseline
 
@@ -55,8 +61,11 @@ Cover object behavior:
 - No create means no create entry and create handler refuses submit.
 - No update means no edit entry and cell edit refuses commit.
 - No delete means no delete entry and delete handler refuses action.
-- Create form uses create editable fields.
-- Edit form and cell edit use update editable fields.
+- Create entry is visible with `data.record.create` even when no field is editable.
+- Edit entry is visible with `data.record.update` or matching wildcard even when no field is editable.
+- Fields without `meta.field.read` do not render.
+- Visible fields without `meta.field.update` render readonly/disabled, skip required validation, and do not submit.
+- Edit form and cell edit use `meta.field.update` editable fields.
 - Submit payload filters unauthorized fields.
 - Permission API failure fails closed.
 

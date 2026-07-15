@@ -31,7 +31,7 @@ Reason:
 
 - Auth establishes identity and `auth.api`.
 - PermissionProvider loads current App permissions.
-- SchemaProvider loads authorized objects and visible fields.
+- SchemaProvider loads authorized objects and structural fields after backend permission trimming.
 - Router and pages consume both permission and schema.
 
 ## UI API adapter
@@ -60,15 +60,18 @@ Normalize IAM response into a small model:
 Required helpers:
 
 - `canUseEntityOperation(access, entityKey, permissionKey)`
-- `canEditEntityField(access, entityKey, fieldKey, permissionKey)`
-- `editableFieldKeysForEntity(access, entityKey, fields, permissionKey)`
+- `canReadEntityField(access, entityKey, fieldKey)`
+- `canUpdateEntityField(access, entityKey, fieldKey)`
+- `visibleFieldsForEntity(access, entityKey, schemaFields)`
+- `editableFieldKeysForEntity(access, entityKey, fields)`
 
 Permission matching must support:
 
 - exact permissionKey
 - `data.record.*`
+- `meta.field.*`
 - `*.*.*`
-- three-part wildcard such as `data.*.*`
+- three-part wildcard such as `data.*.*` or `meta.*.*`
 
 Resource matching should prefer the most specific match:
 
@@ -81,7 +84,15 @@ Resource matching should prefer the most specific match:
 
 The UI may derive `appResource` from response scope `make://<tenantId>/meta/app/<appKey>`, but permission rows may return resources such as `make://<tenantId>/*/app/<appKey>`. Normalize or segment-match that `*` namespace before evaluating operation and field access.
 
-Deny must win over allow when both match. Allow without fieldAccess means no field restriction. When fieldAccess exists, only `editable` permits editing.
+Deny must win over allow when both match.
+
+Keep record operations and field permissions separate:
+
+- `data.record.read/create/update/delete` controls record data loading and operation entries.
+- `meta.field.read` controls field visibility. Fields without read permission are not rendered.
+- `meta.field.update` controls field editability. Visible fields without update permission render readonly/disabled and never submit.
+- If the backend schema endpoint already applies `meta.field.read`, use schema fields as the visible upper bound and never render fields outside schema.
+- If IAM returns `fieldAccess`, consume it only on `meta.field.read/update` permission rows as the field range for that field permission. Ignore `fieldAccess` on `data.record.*` rows for field visibility/editability decisions.
 
 ## Route guard
 
@@ -103,17 +114,20 @@ For each schema-backed object:
 - Compute `canReadRecord` with `data.record.read`.
 - Disable list hook or list loader when `canReadRecord` is false.
 - Block detail open and detail fetch when `canReadRecord` is false.
-- Compute create editable fields with `data.record.create`.
-- Compute update editable fields with `data.record.update`.
-- Show create only when create is allowed and there is at least one editable create field.
-- Show edit only when update is allowed and there is at least one editable update field.
+- Compute `canCreateRecord` with `data.record.create`.
+- Compute `canUpdateRecord` with `data.record.update`.
+- Show create when create is allowed. Do not add an editable-field-count condition.
+- Show edit when update is allowed. Do not add an editable-field-count condition.
 - Show delete only when `data.record.delete` is allowed.
-- Pass update editable fields to table/cell-edit column builders.
-- Pass create/update editable fields to form builders according to mode.
+- Build display fields from schema fields that are visible by `meta.field.read`.
+- Pass `meta.field.update` editable fields to table/cell-edit column builders.
+- Pass visible fields to create/update form builders.
+- Mark visible but non-editable fields readonly/disabled in forms.
+- Skip required validation for readonly/disabled fields.
 - Submit only filtered fields. Do not send unauthorized field values.
 - Recheck permission in action handlers before submit/delete/cell commit.
 
-Use visible schema fields for display. Use permission editable fields for editing.
+Use schema fields as the structural upper bound. Use `meta.field.read` for display and `meta.field.update` for editing.
 
 ## Dictionaries and custom pages
 
@@ -123,7 +137,8 @@ For pages not directly generated from one schema object:
 - Map UI field names to Make `fieldKey`.
 - Gate list/detail with `data.record.read`.
 - Gate create/update/delete and custom actions with the correct operation key.
-- Gate local fields and cell edits with `canEditEntityField`.
+- Gate local field visibility with `meta.field.read`.
+- Gate local field editability and cell edits with `meta.field.update`.
 - Preserve identifiers such as `recordID` or immutable business keys only as identifiers, not as unauthorized update fields.
 - Filter payloads before submit.
 
@@ -156,6 +171,9 @@ Do not report permission work complete if:
 - A direct URL can mount an unauthorized object or fixed business page.
 - Lists/details load without read permission.
 - Buttons are hidden but handlers can still submit/delete/edit.
-- Schema visible fields are treated as editable without `/principal/permission`.
+- `data.record.update` or `data.record.create` is used as field edit permission.
+- Create/edit buttons depend on editable field count instead of only `data.record.create/update`.
+- Fields without `meta.field.read` are rendered.
+- Fields without `meta.field.update` can be edited, validated as required, or submitted.
 - Form payloads include fields the user cannot edit.
 - Refresh reloads data before refreshing permission.

@@ -68,7 +68,12 @@ Permission rules use `Make.IAM.Policy` style statements:
         "key": "Statement1",
         "name": "媒体权限",
         "effect": "allow",
-        "permissionKeys": ["data.record.read", "data.record.update"],
+        "permissionKeys": [
+          "data.record.read",
+          "data.record.update",
+          "meta.field.read",
+          "meta.field.update"
+        ],
         "resources": ["make://<tenantId>/meta/app/<appKey>/entity/<entityKey>"],
         "dataCondition": { "expression": "" },
         "fieldCondition": {
@@ -84,6 +89,8 @@ Permission rules use `Make.IAM.Policy` style statements:
 ```
 
 Unsupported legacy statement shapes should not be treated as allow in new UI.
+
+Record operation keys and field permission keys must both be present when a rule grants both record operations and field visibility/editability. `fieldCondition` constrains `meta.field.read/update`; it must not be interpreted as making `data.record.create/update` grant field permissions.
 
 ## Operations
 
@@ -102,12 +109,27 @@ data.record.*
 Frontend meanings:
 
 - `read`: list/detail/view data.
-- `create`: new record and create-form field editability.
-- `update`: edit, cell edit, update-form field editability.
+- `create`: new record entry and create submit operation.
+- `update`: edit entry, edit route, cell edit commit operation, and update submit operation.
 - `bulkUpdate`: batch edit only when the UI has batch-edit capability.
 - `delete`: delete action.
 - `data.record.*`: all record operations.
 - `*.*.*`: full wildcard permission.
+
+Field permission keys:
+
+```text
+meta.field.read
+meta.field.update
+meta.field.*
+```
+
+Frontend meanings:
+
+- `meta.field.read`: field is visible/readable. Without it, do not render the field.
+- `meta.field.update`: field is editable. Without it, visible fields render readonly/disabled, skip required validation, and are excluded from submit payloads.
+- `editable` field configuration should produce both `meta.field.read` and `meta.field.update`; editable implies visible.
+- Do not use `data.record.create` or `data.record.update` as field visibility or field editability permission.
 
 ## Resources
 
@@ -147,12 +169,14 @@ fullMask
 
 Frontend editability:
 
-- `editable` allows editing.
-- `readonly`, `hidden`, `partialMask`, `fullMask`, missing field, or missing allow denies editing.
-- No fieldCondition on an allow statement means unrestricted fields for that operation.
+- `editable` means visible and editable.
+- `readonly` means visible but not editable.
+- `hidden` means not rendered.
+- `partialMask`, `fullMask`, missing field, or missing allow denies editing; render only if read visibility is allowed and the display layer supports masking.
+- No fieldCondition on a field-permission allow statement means unrestricted fields for that field permission.
 - A `*` field can express a default baseline.
 
-Use fieldCondition for editability. Use schema for visibility. Do not infer editability from visible fields.
+Use `fieldCondition` with `meta.field.read/update` for field visibility and editability. Use schema as the structural field source. Do not infer editability from visible fields or from `data.record.*`.
 
 ## Data condition
 
@@ -160,12 +184,20 @@ Use fieldCondition for editability. Use schema for visibility. Do not infer edit
 
 ## Default/all-form permissions
 
-A default full/read permission may use:
+A default full-access permission may use:
 
 ```text
 resources: ["*"]
 permissionKeys: ["*.*.*"]
-fieldCondition.fields: [{ fieldKey: "*", access: "editable" | "readonly" }]
+fieldCondition.fields: [{ fieldKey: "*", access: "editable" }]
+```
+
+A default read-only permission must not use `*.*.*`. Use explicit read keys:
+
+```text
+resources: ["*"]
+permissionKeys: ["data.record.read", "meta.field.read"]
+fieldCondition.fields: [{ fieldKey: "*", access: "readonly" }]
 ```
 
 Do not treat `*`, `make://<tenantId>/*/app/<appKey>`, or app-level resource as platform permission. In App scope, they are valid single-app permission matches.

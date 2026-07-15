@@ -35,3 +35,10 @@
 - 变更摘要：回退提交 `6e7f6a25` 中 `make-app-filter` 关于 `@qfei-design/make-filter` 包能力门禁和扩展合同的同步内容。
 - 涉及文件：`skills/make-app-filter/SKILL.md` 及 `references/package-integration.md`、`operator-matrix.md`、`service-translation.md`、`header-table-linkage.md`、`testing-and-pitfalls.md`。
 - 关键逻辑：恢复到回退前一版高级筛选说明，撤销 host 不手写 File、DateRange、Lookup 或 DNF 编译逻辑等新增约束。
+
+## 2026-07-10
+
+- 变更摘要：同步 `make-app-filter` 与 `@qfei-design/make-filter@^0.2.5` 公共契约，去除过期 Filter IR、静态操作符矩阵和宿主 DNF 展开规则。
+- 涉及文件：`skills/make-app-filter/SKILL.md`、`references/filter-model.md`、`operator-matrix.md`、`service-translation.md`、`header-table-linkage.md`、`testing-and-pitfalls.md`、根 `README.md` 和筛选契约测试。
+- 关键逻辑：宿主从包入口导入 IR 类型，通过包 API 动态判断字段与操作符能力，并将 `compileListFilter` 结果原样提交给 Service；File、DateRange 和已解析 Lookup 统一走 `0.2.5` 包能力，不再由宿主复制或补偿共享逻辑。
+- 防回归：契约测试禁止旧操作符名称、本地 IR 类型、静态字段操作符表和宿主 DNF 笛卡尔积实现重新进入 Skill。

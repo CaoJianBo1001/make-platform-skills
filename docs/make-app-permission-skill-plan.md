@@ -50,6 +50,10 @@
   - `data.record.delete`
   - `data.record.*`
   - `*.*.*`
+- 字段 permissionKey 包括：
+  - `meta.field.read`
+  - `meta.field.update`
+  - `meta.field.*`
 - 字段权限通过 `fieldCondition.fields` 表达，字段 access 包括 `hidden`、`readonly`、`editable`、`partialMask`、`fullMask`。
 - 行级数据条件通过 `dataCondition.expression` 表达，前台不处理行级判断，后端数据接口负责处理。
 
@@ -105,12 +109,15 @@ Service 访问 IAM 的关键规则：
 
 - `normalizePrincipalPermissionAccess(payload)` 归一化 principal、scope、appResource 和 permissions。
 - `canUseEntityOperation(access, entityKey, permissionKey)` 判断对象级操作权限。
-- `canEditEntityField(access, entityKey, fieldKey, permissionKey)` 判断字段能否编辑。
-- `editableFieldKeysForEntity(access, entityKey, fields, permissionKey)` 计算创建或编辑可编辑字段集合。
-- permissionKey 匹配支持精确匹配、`data.record.*`、`*.*.*` 和三段式通配。
+- `canReadEntityField(access, entityKey, fieldKey)` 判断字段能否展示。
+- `canUpdateEntityField(access, entityKey, fieldKey)` 判断字段能否编辑。
+- `visibleFieldsForEntity(access, entityKey, fields)` 计算可展示字段集合。
+- `editableFieldKeysForEntity(access, entityKey, fields)` 计算可编辑字段集合。
+- permissionKey 匹配支持精确匹配、`data.record.*`、`meta.field.*`、`*.*.*` 和三段式通配。
 - resource 匹配按优先级选择：实体精确资源、实体通配、IAM namespace wildcard app resource、app 级 resource、父级 resource、`*`。
 - 存在 deny 时优先 deny。
-- allow 且没有 fieldAccess 约束时表示字段不受限；有 fieldAccess 时只有 `editable` 才允许编辑。
+- `data.record.*` 只控制操作入口和提交动作；`meta.field.read/update` 控制字段展示和编辑。
+- 字段可见但不可编辑时 disabled/readonly，不参与必填校验，不进入提交 payload。
 
 ## 3. 权限边界定义
 
@@ -193,11 +200,11 @@ flowchart TD
 对象页必须按下面规则消费权限：
 
 - `data.record.read`：没有 read 时，不触发列表 hook、`onDataLoad` 和详情请求，展示无查看权限状态。
-- `data.record.create`：有 create 且至少存在一个可编辑字段时，才展示或启用新增入口。
-- `data.record.update`：有 update 且至少存在一个可编辑字段时，才展示或启用编辑入口。
+- `data.record.create`：有 create 时展示或启用新增入口，不附加可编辑字段数量条件。
+- `data.record.update`：有 update 或匹配 `data.record.*` 时展示或启用编辑入口，不附加可编辑字段数量条件。
 - `data.record.delete`：有 delete 才展示或启用删除入口。
-- 单元格编辑：字段必须在 update 的可编辑字段集合内，否则 `onCellEditCommit` 不可用或提交前返回 forbidden。
-- 表单字段：创建用 create 字段权限，编辑用 update 字段权限；无编辑权限字段不展示或禁用，提交 payload 必须过滤未授权字段。
+- 单元格编辑：字段必须命中 `meta.field.update`，否则不挂编辑器或提交前返回 forbidden。
+- 表单字段：`meta.field.read` 决定是否展示；`meta.field.update` 决定是否可编辑。不可见字段不渲染；可见但不可编辑字段 disabled/readonly，提交 payload 必须过滤。
 - 详情打开：必须有 read。没有 read 时不请求详情接口。
 - 提交和删除前必须二次校验当前权限上下文，不能只依赖按钮是否展示。
 
@@ -252,7 +259,7 @@ frontmatter：
 name: make-app-permission
 description: Use when generating, refactoring, reviewing, or debugging Make App single-app permission management and frontend permission enforcement. Covers /api/make/app/principal/permission Service proxy, Make IAM /api/make/iam/v1/principal/permission calls, app-scope permission payloads, schema-vs-permission separation, route/menu gating, read/create/update/delete button gating, field editability, cell-edit and form payload filtering, refresh-time permission reload, and tests. Does not own platform-admin permissions, auth mechanics, generic Service routes, UI layout, CanvasTable internals, DSL modeling, Make CLI deploy, or runtime packaging.
 metadata:
-  version: 0.1.1
+  version: 0.1.2
 ---
 ```
 
@@ -311,7 +318,7 @@ skills/make-app-permission/
 - `/principal/permission` 的 Service 上游路径必须经过 make-gateway，并且 IAM 使用 `/api/make/iam/v1/principal/permission`。
 - UI 不直接请求 IAM，不手写 Authorization，不绕过 `auth.api` 或宿主统一 API adapter。
 - Service 必须转发已建立的浏览器登录上下文，不能丢 Cookie。
-- schema 只决定菜单和字段可见；字段能否编辑必须看 `/principal/permission`。
+- schema 是菜单、对象和字段结构上限；字段可见由 `meta.field.read` 决定，字段能否编辑由 `meta.field.update` 决定。
 - 前台必须有 App/route guard。隐藏菜单不是权限控制，用户手动修改 URL 也不能进入未授权 App、对象页或固定业务页面。
 - 没有 `data.record.read` 时不得自动请求列表或详情。
 - 新增、编辑、删除、单元格编辑、表单提交都必须做权限判断；提交前还要过滤未授权字段。
@@ -326,7 +333,7 @@ skills/make-app-permission/
 
 - 平台级权限和单个 App 权限的 scope/resource/permissionKey 区别。
 - schema 与 permission 的职责边界。
-- 常见错误案例：用 `make://tenant` scope 拉前台权限、默认 filter 平台权限、把 schema 字段可见当成字段可编辑。
+- 常见错误案例：用 `make://tenant` scope 拉前台权限、默认 filter 平台权限、把 schema 字段可见当成字段可编辑、把 `data.record.update/create` 当成字段权限、用可编辑字段数量控制新增/编辑入口。
 
 `service-principal-permission.md`：
 
@@ -505,10 +512,12 @@ apps/ui/src/features/dictionaries/* 或其他自定义业务页
 - `entity/*` resource allow。
 - deny 优先于 allow。
 - `data.record.*` 匹配 read/create/update/delete。
+- `meta.field.*` 匹配字段 read/update。
 - `*.*.*` 匹配所有操作。
-- 无 fieldAccess 时 allow 表示字段可编辑。
-- fieldAccess 中 `readonly`、`hidden`、缺失字段都不可编辑。
-- `fieldAccess["*"] === "editable"` 时字段可编辑。
+- `data.record.create/update` 不授予字段展示或编辑权限。
+- `meta.field.read` 允许字段展示；缺失 read 时字段不渲染。
+- `meta.field.update` 允许字段编辑；缺失 update 时字段 disabled/readonly，不参与必填校验和提交。
+- field wildcard `*` 可表达全部字段基线。
 
 ### 9.3 页面行为测试
 
@@ -521,7 +530,8 @@ apps/ui/src/features/dictionaries/* 或其他自定义业务页
 - 无 create 时不展示新增入口。
 - 无 update 时不展示编辑入口，cell edit 不可提交。
 - 无 delete 时不展示删除入口。
-- 字段不可编辑时不进入 form fields 或 disabled，并且 submit payload 被过滤。
+- 有 create/update 但无可编辑字段时，新增/编辑入口仍按操作权限展示。
+- 字段不可见时不渲染；字段可见但不可编辑时 disabled/readonly，并且 submit payload 被过滤。
 - 点击刷新先刷新权限，再刷新数据。
 - 刷新后 read/create/update 被撤销时关闭已打开工作区。
 - 权限接口失败时 fail closed。

@@ -78,13 +78,11 @@ Default:
 - unsupported fields still may show sort UI if sorting is in scope
 - unsupported fields must not call `openWithField`
 
-Backend-supported but package-gated fields:
-
-- `Make.Field.File`
-- `Make.Field.DateRange`
-- `Make.Field.Lookup`
-
-Make Data supports these field types in Record list `filter.expression`, but the header menu may show `按该字段筛选` only when the installed filter package exposes matching field/operator support. If the package does not support them yet, hide the action and report the package/backend capability mismatch instead of adding a header-only workaround.
+The `@qfei-design/make-filter@^0.2.5` baseline supports File, DateRange, and
+resolved Lookup fields. Do not special-case these names in the header menu:
+always use the same normalized field object and package support API as the
+advanced-filter panel. An unresolved Lookup, unknown type, invalid key, or field
+with no package operators remains unsupported and must hide `按该字段筛选`.
 
 Always unsupported:
 

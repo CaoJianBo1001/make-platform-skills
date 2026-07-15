@@ -4,7 +4,7 @@ Use this reference when wiring `@qfei-design/make-filter` into a Make App host.
 
 ## Package version baseline
 
-Use `@qfei-design/make-filter@^0.2.2` for new Make advanced-filter integrations. This is the validated baseline for the package `AdvancedFilterPanel` header/body/footer structure used by BizFinancePoc-style fixed panels. If the host has an older package version, upgrade before implementing the advanced filter instead of relying on older package behavior.
+Use `@qfei-design/make-filter@^0.2.5` for new Make advanced-filter integrations. This is the validated baseline for Lookup filtering with source-field CEL expressions and the package `AdvancedFilterPanel` header/body/footer structure used by BizFinancePoc-style fixed panels. If the host has an older package version, upgrade before implementing the advanced filter instead of relying on older package behavior.
 
 ## Public package surface
 
@@ -33,6 +33,7 @@ Never import from `src`, `dist`, or package-internal files.
 ## Host provides
 
 - normalized Make field metadata
+- resolved Lookup relation and target-field metadata from the complete runtime schema
 - applied advanced-filter state
 - toolbar trigger placement
 - Popover, Modal, Drawer, or other mounting container
@@ -53,6 +54,46 @@ In Make record-list pages, any filtering request is one integrated feature:
 - both paths commit through the same advanced-filter draft and Service `filter.expression`
 
 Do not ship only the toolbar package panel or only the table header filter menu.
+
+## Lookup schema handoff
+
+For every `Make.Field.Lookup`, the host must resolve the source field's
+`relationKey`, select the opposite Entity from the Relation `from` / `to` ends,
+and find `targetFieldKey` in that Entity. Pass the source Lookup field key plus
+the resolved target field metadata to the package. If any part cannot be
+resolved, leave the field unsupported instead of guessing from record values.
+
+Pass the same normalized fields to `AdvancedFilterPanel`, `compileListFilter`,
+validation, search, and `parseCelToAdvancedFilter`. Filter IR and CEL expressions
+must use the source Lookup field key. The target field type controls only the
+operator set, value editor, value normalization, and validation.
+
+Normalize a resolved Lookup into the public package shape:
+
+```ts
+import type { AdvancedFilterField } from "@qfei-design/make-filter";
+
+const normalizedLookupField = {
+  key: sourceLookupField.key,
+  name: sourceLookupField.name,
+  type: "Make.Field.Lookup",
+  properties: sourceLookupField.properties,
+  meta: sourceLookupField.meta,
+  lookup: {
+    relationKey: resolvedRelation.key,
+    targetField: {
+      key: resolvedTargetField.key,
+      name: resolvedTargetField.name,
+      type: resolvedTargetField.type,
+      properties: resolvedTargetField.properties,
+      meta: resolvedTargetField.meta,
+    },
+  },
+} satisfies AdvancedFilterField;
+```
+
+Do not replace the top-level `key` with the target field key. Do not pass another
+Lookup as `targetField`; unresolved and nested Lookup fields remain unsupported.
 
 ## Default imports
 

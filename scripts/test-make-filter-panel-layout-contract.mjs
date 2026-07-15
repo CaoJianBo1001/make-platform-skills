@@ -20,6 +20,10 @@ const skill = read('skills/make-app-filter/SKILL.md');
 const uiStyle = read('skills/make-app-filter/references/ui-style.md');
 const testing = read('skills/make-app-filter/references/testing-and-pitfalls.md');
 const packageIntegration = read('skills/make-app-filter/references/package-integration.md');
+const filterModel = read('skills/make-app-filter/references/filter-model.md');
+const operatorMatrix = read('skills/make-app-filter/references/operator-matrix.md');
+const serviceTranslation = read('skills/make-app-filter/references/service-translation.md');
+const headerTableLinkage = read('skills/make-app-filter/references/header-table-linkage.md');
 const makeui = read('skills/makeui/SKILL.md');
 const readme = read('README.md');
 
@@ -85,14 +89,85 @@ for (const [name, content] of [
 ]) {
   assert.match(
     content,
-    /@qfei-design\/make-filter@\^0\.2\.2/,
-    `${name} must require @qfei-design/make-filter@^0.2.2 as the validated fixed-panel baseline`,
+    /@qfei-design\/make-filter@\^0\.2\.5/,
+    `${name} must require @qfei-design/make-filter@^0.2.5 as the Lookup-capable baseline`,
   );
   assert.doesNotMatch(
     content,
-    /@qfei-design\/make-filter@\^0\.1\.4|older than `?0\.1\.4`?|installed `?0\.1\.5\+`?|`0\.1\.4`/i,
-    `${name} must not keep the old package baseline`,
+    /@qfei-design\/make-filter@\^(?:0\.1\.4|0\.2\.[234])|older than `?(?:0\.1\.4|0\.2\.[234])`?|installed `?(?:0\.1\.5|0\.2\.[234])\+`?/i,
+    `${name} must not keep an older package baseline`,
   );
 }
+
+assert.match(
+  skill,
+  /package\.ai\.json\.readOrder[\s\S]*(source of truth|唯一|准则|为准)/i,
+  'make-app-filter must use package.ai.json.readOrder as the package documentation source of truth',
+);
+assert.doesNotMatch(
+  `${skill}\n${readme}`,
+  /node_modules\/@qfei-design\/make-filter\/docs\/|`docs\/(?:agent-usage|api)\.md`/i,
+  'make-app-filter docs must not hardcode unpublished package docs paths',
+);
+assert.match(
+  packageIntegration,
+  /(Lookup)[\s\S]*(complete runtime schema|完整.*schema)[\s\S]*(relation|target)/i,
+  'package integration must assign Lookup relation and target-field resolution to the host runtime schema adapter',
+);
+assert.match(
+  packageIntegration,
+  /key:\s*sourceLookupField\.key[\s\S]*lookup:[\s\S]*relationKey[\s\S]*targetField:[\s\S]*satisfies AdvancedFilterField/,
+  'package integration must show the normalized Lookup field shape with the source field key and resolved target metadata',
+);
+assert.match(
+  testing,
+  /(Lookup)[\s\S]*(source field|源字段)[\s\S]*(CEL|expression|表达式)/i,
+  'testing guidance must verify Lookup expressions use the source field key',
+);
+
+assert.match(
+  filterModel,
+  /import type[\s\S]*AdvancedFilterGroup[\s\S]*from ["']@qfei-design\/make-filter["']/,
+  'filter model must import Filter IR types from the package public entrypoint',
+);
+assert.doesNotMatch(
+  filterModel,
+  /type\s+AdvancedFilter(?:Operator|Value|Condition|Group)\s*=|type\s+DateRangeValue\s*=/,
+  'filter model must not copy package-owned Filter IR type definitions',
+);
+
+const filterReferences = [
+  filterModel,
+  operatorMatrix,
+  serviceTranslation,
+  testing,
+  headerTableLinkage,
+].join('\n');
+
+assert.doesNotMatch(
+  filterReferences,
+  /\b(?:is_any_of|is_none_of|not_contains_date)\b/,
+  'filter references must not retain removed package operator names',
+);
+assert.doesNotMatch(
+  operatorMatrix,
+  /## Current package baseline|\| `Make\.Field\.[^`]+` \|/,
+  'operator guidance must not copy a static package operator matrix',
+);
+assert.match(
+  operatorMatrix,
+  /getOperatorsForField[\s\S]*(source of truth|唯一|为准)/i,
+  'operator guidance must make package APIs the source of truth for the effective operator set',
+);
+assert.doesNotMatch(
+  filterReferences,
+  /(cartesian product|笛卡尔积|host implementation)[\s\S]{0,240}(DNF|distribut)|Do not emit `?\(A \|\| B\) && C`?[\s\S]{0,240}distribut/i,
+  'filter references must not require hosts to implement DNF distribution',
+);
+assert.match(
+  serviceTranslation,
+  /compileListFilter[\s\S]*(unchanged|原样|sole|唯一)[\s\S]*(Service|backend|后端)/i,
+  'service guidance must submit compileListFilter output without host-side boolean rewrites',
+);
 
 console.log('make filter panel layout contract passed');
