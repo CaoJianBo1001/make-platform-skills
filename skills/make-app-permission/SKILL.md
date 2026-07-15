@@ -1,8 +1,8 @@
 ---
 name: make-app-permission
-description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission management and frontend permission enforcement. Triggered by 权限, 单应用权限, app 权限, /principal/permission, /api/make/app/principal/permission, 按钮权限, 菜单权限, 路由权限, 字段可编辑, read/create/update/delete, data.record.*, route guard, refresh permission, or preventing URL permission bypass. Covers the default required permission chain for Make projects: Service proxy to Make IAM, app-scope permission payloads, schema-vs-permission separation, route/menu guards, operation buttons, cell edit, form field filtering, refresh reload, tests, and audit. Does not own platform-admin permissions, auth mechanics, generic Service APIs, UI layout, CanvasTable internals, DSL modeling, Make CLI deploy, or runtime packaging."
+description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission management and frontend permission enforcement. Triggered by 权限, 单应用权限, app 权限, /principal/permission, /api/make/app/principal/permission, 按钮权限, 菜单权限, 路由权限, 字段可见, 字段可编辑, read/create/update/delete, data.record.*, meta.field.*, route guard, refresh permission, or preventing URL permission bypass. Covers the default required permission chain for Make projects: Service proxy to Make IAM, app-scope permission payloads, schema-vs-permission separation, route/menu guards, operation buttons, field visibility/editability, cell edit, form field filtering, refresh reload, tests, and audit. Does not own platform-admin permissions, auth mechanics, generic Service APIs, UI layout, CanvasTable internals, DSL modeling, Make CLI deploy, or runtime packaging."
 metadata:
-  version: 0.1.1
+  version: 0.1.2
 ---
 
 # make-app-permission
@@ -30,11 +30,13 @@ This skill owns the permission contract. Use `make-app-auth` for login/session, 
 - Send app scope by default: `make://<tenantId>/meta/app/<appKey>`. Do not default to tenant root scope and do not add a platform permission filter.
 - Match IAM permission resources in both legacy App scope form `make://<tenantId>/meta/app/<appKey>` and current wildcard namespace form `make://<tenantId>/*/app/<appKey>`, including entity suffixes.
 - Preserve the browser login context from UI to Service to make-gateway. Do not drop Cookie or trusted forwarded host/proto context.
-- Use schema for authorized menus, objects, and visible fields. Use `/principal/permission` for operations and field editability.
+- Use schema for authorized menus, objects, and structural field definitions after backend permission trimming. Field visibility is `meta.field.read`; field editability is `meta.field.update`.
 - Add App/router guards. Hiding menus is not enough: direct URL access must not enter unauthorized Apps, objects, or fixed business routes.
 - Gate list/detail data reads with `data.record.read`.
 - Gate create/update/delete buttons with `data.record.create`, `data.record.update`, and `data.record.delete`.
-- Gate cell edit and form fields with field editability under create/update permission.
+- Do not use editable field count to decide create/edit button visibility. If `data.record.create` or `data.record.update` is allowed, show the matching entry even when every visible field is readonly.
+- Gate field rendering with `meta.field.read`: invisible fields are not rendered in list, detail, filter, create form, edit form, or cell editor candidates.
+- Gate field editing with `meta.field.update`: visible but non-editable fields render readonly/disabled in forms, have no cell editor, skip required validation, and are excluded from submit payloads.
 - Filter form and custom-page payloads before submit so unauthorized fields are not sent.
 - Refresh permissions before refreshing data or retrying page data. Close open workspaces when refreshed permissions revoke access.
 - Fail closed when permission loading fails: no protected data request, no operation buttons, and visible forbidden/error state.

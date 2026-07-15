@@ -23,8 +23,12 @@ try {
       export const DATA_RECORD_CREATE = 'data.record.create';
       export const DATA_RECORD_UPDATE = 'data.record.update';
       export const DATA_RECORD_DELETE = 'data.record.delete';
+      export const META_FIELD_READ = 'meta.field.read';
+      export const META_FIELD_UPDATE = 'meta.field.update';
       export function canUseEntityOperation() { return true; }
-      export function canEditEntityField() { return true; }
+      export function canReadEntityField() { return true; }
+      export function canUpdateEntityField() { return true; }
+      export function visibleFieldsForEntity(access, entityKey, fields) { return fields; }
       export function editableFieldKeysForEntity() { return new Set(['name']); }
     `,
     router: `
@@ -47,7 +51,8 @@ try {
       const canCreateRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_CREATE);
       const canUpdateRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_UPDATE);
       const canDeleteRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_DELETE);
-      const updateEditableFieldKeys = editableFieldKeysForEntity(access, object.entityKey, fields, DATA_RECORD_UPDATE);
+      const visibleFields = visibleFieldsForEntity(access, object.entityKey, fields);
+      const updateEditableFieldKeys = editableFieldKeysForEntity(access, object.entityKey, visibleFields);
       const recordState = useVirtualResourceItems(key, api, { enabled: canReadRecord });
       function filterDraftByEditableFields(draft) { return Object.fromEntries(Object.entries(draft).filter(([key]) => updateEditableFieldKeys.has(key))); }
       async function refreshObjectWorkspace() {
@@ -117,6 +122,26 @@ try {
     service: goodFiles.service,
   });
   assert.match(runAudit(missingRouteGuardRoot, { expectFailure: true }), /route_guard_missing/);
+
+  const fieldTiedToDataRecordRoot = createFixture('field-tied-to-data-record', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace('editableFieldKeysForEntity(access, object.entityKey, visibleFields)', 'editableFieldKeysForEntity(access, object.entityKey, visibleFields, DATA_RECORD_UPDATE)'),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(runAudit(fieldTiedToDataRecordRoot, { expectFailure: true }), /field_permission_tied_to_data_record/);
+
+  const editDependsOnEditableFieldsRoot = createFixture('edit-depends-on-editable-fields', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace('onEdit={canUpdateRecord ? openEdit : undefined}', 'onEdit={canUpdateRecord && updateEditableFieldKeys.size ? openEdit : undefined}'),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(runAudit(editDependsOnEditableFieldsRoot, { expectFailure: true }), /edit_entry_depends_on_editable_fields/);
 
   console.log('audit-make-app-permission tests: PASS');
 } finally {

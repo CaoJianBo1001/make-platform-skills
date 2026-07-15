@@ -76,7 +76,7 @@ Default body:
 }
 ```
 
-Do not add a default `permissionKey in [...]` filter. The App frontend needs all current App permissions, including expanded `data.record.*`, `*.*.*`, operation keys, app-level resources, entity resources, and field access.
+Do not add a default `permissionKey in [...]` filter. The App frontend needs all current App permissions, including expanded `data.record.*`, `meta.field.*`, `*.*.*`, operation keys, field keys, app-level resources, entity resources, and field access.
 
 Only add a filter when the caller explicitly requests a diagnostic or constrained permission-key query:
 
@@ -144,6 +144,19 @@ Return IAM data to the UI in the host Service envelope. The UI model expects the
     {
       "permissionKey": "data.record.update",
       "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
+      "effect": "allow"
+    },
+    {
+      "permissionKey": "meta.field.read",
+      "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
+      "effect": "allow",
+      "fieldAccess": {
+        "*": "readonly"
+      }
+    },
+    {
+      "permissionKey": "meta.field.update",
+      "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
       "effect": "allow",
       "fieldAccess": {
         "name": "editable"
@@ -153,7 +166,7 @@ Return IAM data to the UI in the host Service envelope. The UI model expects the
 }
 ```
 
-Preserve unknown fields if useful, but normalize at the UI boundary before checks.
+Preserve unknown fields if useful, but normalize at the UI boundary before checks. If IAM returns `fieldAccess`, consume it only on `meta.field.read/update` permission rows as the field range for that field permission. Do not derive field visibility or editability from `data.record.*` rows, even if such rows contain `fieldAccess`.
 
 IAM may return permission resources in wildcard namespace form such as `make://<tenantId>/*/app/<appKey>`. Service should preserve the value; UI permission matching must treat it as the same current App resource represented by response scope `make://<tenantId>/meta/app/<appKey>`.
 

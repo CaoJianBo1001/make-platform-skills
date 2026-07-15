@@ -106,12 +106,29 @@ function checkUiContract() {
       failures.push(`operation_key_missing_${key}: UI permission model must include data.record.${key}`);
     }
   }
+  for (const key of ['read', 'update']) {
+    if (!new RegExp(`meta\\.field\\.${key}`).test(uiText)) {
+      failures.push(`field_permission_key_missing_${key}: UI permission model must include meta.field.${key}`);
+    }
+  }
 
   if (!/(canUseEntityOperation|canUse.*Operation|has.*Permission)/.test(uiText)) {
     failures.push('operation_helper_missing: UI must have a helper to evaluate entity operation permission');
   }
-  if (!/(canEditEntityField|editableFieldKeysForEntity|editableFieldNames)/.test(uiText)) {
-    failures.push('field_edit_helper_missing: UI must evaluate field editability from principal permission');
+  if (!/(canReadEntityField|visibleFieldsForEntity|visibleFieldKeys|META_FIELD_READ|meta\.field\.read)/.test(uiText)) {
+    failures.push('field_visibility_helper_missing: UI must evaluate field visibility from meta.field.read');
+  }
+  if (!/(canUpdateEntityField|editableFieldKeysForEntity|editableFieldNames|META_FIELD_UPDATE|meta\.field\.update)/.test(uiText)) {
+    failures.push('field_edit_helper_missing: UI must evaluate field editability from meta.field.update');
+  }
+  if (/(?:canEditEntityField|editableFieldKeysForEntity|editableFieldNames)\s*\([\s\S]{0,180}(?:DATA_RECORD_CREATE|DATA_RECORD_UPDATE|data\.record\.(?:create|update))/.test(uiText)) {
+    failures.push('field_permission_tied_to_data_record: field visibility/editability must use meta.field.*, not data.record.create/update');
+  }
+  if (/(?:canCreate\w*[\s\S]{0,200}\w*editable\w*\.(?:length|size)|\w*editable\w*\.(?:length|size)[\s\S]{0,200}canCreate\w*)/i.test(uiText)) {
+    failures.push('create_entry_depends_on_editable_fields: create entry must depend on data.record.create only');
+  }
+  if (/(?:(?:canUpdate\w*|canEdit\w*)[\s\S]{0,200}\w*editable\w*\.(?:length|size)|\w*editable\w*\.(?:length|size)[\s\S]{0,200}(?:canUpdate\w*|canEdit\w*))/i.test(uiText)) {
+    failures.push('edit_entry_depends_on_editable_fields: edit entry must depend on data.record.update only');
   }
   if (!hasRouteGuardSignal(uiText)) {
     failures.push('route_guard_missing: UI must block direct URL access to schema-missing objects and unauthorized fixed routes');
