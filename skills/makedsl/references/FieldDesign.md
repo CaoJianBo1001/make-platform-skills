@@ -4,6 +4,48 @@
 - 所有 Field 的 `key` 不能以下划线(\_) 开头，下划线开头是预留关键字。
 - 所有 Field 的 `name` 必填，作为用户可见的展示名称，允许中英文数字下划线，长度 2-20。
 
+## 字段属性 properties 速查
+
+`properties` 是字段类型的 schema 配置，由平台元数据下发给表单、表格、筛选、编辑器等消费方。生成 DSL 时必须按字段类型填写，下游元数据消费方不得丢弃这些属性。
+
+| 字段类型 | properties | 语义 |
+| --- | --- | --- |
+| `Make.Field.Number` | `precision: Integer` | 数字精度，用于数字输入、展示和提交前归一化。 |
+| `Make.Field.Date` | `format: String` | 日期展示/输入格式，如 `yyyy-MM-dd`、`yyyy/MM/dd`。 |
+| `Make.Field.DateTime` | `format: String` | 日期时间展示/输入格式，如 `yyyy-MM-dd HH:mm:ss`。 |
+| `Make.Field.DateRange` | `begin: Date`, `end: Date` | 日期范围字段允许选择的边界；记录值仍使用结构化范围值。 |
+| `Make.Field.Percent` | `decimalPlaces: Integer` | 百分比展示和输入的小数位数。 |
+| `Make.Field.Currency` | `symbol: String`, `decimalPlaces: Integer`, `useGrouping: Boolean` | 金额符号、小数位和分组展示规则。 |
+| `Make.Field.File` | `maxCount: Integer` | 最大文件数量，默认值为 `1`。FileField 始终是数组语义。 |
+| `Make.Field.MultiUser` | `maxCount: Integer` | 最大用户数量，默认值为 `1000`。 |
+| `Make.Field.MultiDepartment` | `maxCount: Integer` | 最大部门数量，默认值为 `1000`。 |
+
+# 字段唯一性 | Uniqueness
+
+唯一性统一在 Entity 级用 `properties.uniqueConstraints` 声明，支持联合唯一约束.
+```
+uniqueConstraints:
+  - name: uniq_email          # 单字段唯一 (n=1): 邮箱全 Entity 唯一
+    fields:
+      - email
+  - name: uniq_project_member # 复合唯一 (n≥2): 同一项目下同一成员只能出现一次
+    fields:
+      - project_id
+      - member_id
+```
+
+## 支持唯一性约束的字段类型 | Whitelist
+
+`uniqueConstraints.fields` 只能引用 `capabilities.supportsUniqueConstraint: true` 的字段类型，取值见各字段 DSL 的 `capabilities` 声明；未声明该能力的类型（如 Rollup / Formula / Relation）一律不支持。
+
+# 字段能力 | Capabilities
+
+`capabilities` 声明字段类型的固有能力，由平台按 `type` 统一给出。用户创建/更新字段时不可填写、不可自定义，因此只出现在各字段的 DSL 规范中，不出现在例子里。
+
+- `groupable: Boolean` — 是否支持按该字段的值分组。仅平台当前稳定支持时为 `true`，灰度中或规划中的能力一律为 `false`。
+- `sortable: Boolean` — 是否支持按该字段的值排序。
+- `supportsUniqueConstraint: Boolean` — 是否可被 Entity 级 `properties.uniqueConstraints` 的 `fields` 引用。
+
 # Regular Field | 常规字段
 
 常规字段可以直接对字段进行写入。
@@ -26,6 +68,10 @@ properties:
     suffix: String # 编号后缀, 配置时可以为空
     code: Integer # 编号数字, 自增, 配置时可以为空
     digit: Integer # 编号长度
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: false
 ```
 
 > SemanticVersion 表示语义化, 具体可以查看 https://semver.org/
@@ -64,6 +110,10 @@ type: Make.Field.Text
 meta:
   version: SemanticVersion
 properties: null
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: true # 大小写敏感, Tom 与 tom 视为不同值
 validations:
   isRequired: Boolean
   isAlpha: Boolean
@@ -104,6 +154,10 @@ type: Make.Field.TextArea
 meta:
   version: SemanticVersion
 properties: null
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
   isAlpha: Boolean
@@ -144,6 +198,10 @@ meta:
   version: SemanticVersion
 properties:
   precision: Integer
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: true
 validations:
   isRequired: Boolean
   isInt: Boolean
@@ -184,6 +242,10 @@ properties:
   options:
     - label: String # 显示文本
       value: String # 存储值
+capabilities:
+  groupable: true
+  sortable: true
+  supportsUniqueConstraint: true
 validations:
   isRequired: Boolean
 ```
@@ -224,6 +286,10 @@ properties:
   options:
     - label: String
       value: String
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
 ```
@@ -262,6 +328,10 @@ meta:
   version: SemanticVersion
 properties:
   format: String # yyyy-MM-dd | yyyy/MM/dd | yyyy-MM-dd | yyyy/M/dd | yyyy-M-dd
+capabilities:
+  groupable: true
+  sortable: true
+  supportsUniqueConstraint: true
 validations:
   isRequired: Boolean
 ```
@@ -296,6 +366,10 @@ meta:
   version: SemanticVersion
 properties:
   format: String # yyyy-MM-dd HH:mm:ss | yyyy/MM/dd HH:mm:ss
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: true
 validations:
   isRequired: Boolean
 ```
@@ -331,6 +405,10 @@ meta:
 properties:
   begin: Date
   end: Date
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: true # 底层 begin/end 两列, 元组整体联合唯一
 validations:
   isRequired: Boolean
 ```
@@ -364,6 +442,10 @@ meta:
   version: SemanticVersion
 properties:
   decimalPlaces: Integer
+capabilities:
+  groupable: true
+  sortable: true
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
 ```
@@ -398,6 +480,10 @@ properties:
   symbol: String
   decimalPlaces: Integer
   useGrouping: Boolean # 1000 => 1,000
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
 ```
@@ -431,6 +517,10 @@ type: Make.Field.URL
 meta:
   version: SemanticVersion
 properties: null
+capabilities:
+  groupable: false
+  sortable: false
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
 ```
@@ -463,6 +553,10 @@ meta:
   version: SemanticVersion
 properties:
   maxCount: Integer # 最大文件数量, 默认为 1
+capabilities:
+  groupable: false
+  sortable: false
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
   mustBeImage: Bool
@@ -498,6 +592,10 @@ type: Make.Field.SingleUser
 meta:
   version: SemanticVersion
 properties: null
+capabilities:
+  groupable: true
+  sortable: true
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
 ```
@@ -529,6 +627,10 @@ meta:
   version: SemanticVersion
 properties:
   maxCount: Integer # 最大用户数量, 默认为 1000
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
 ```
@@ -560,6 +662,10 @@ type: Make.Field.SingleDepartment
 meta:
   version: SemanticVersion
 properties: null
+capabilities:
+  groupable: true
+  sortable: true
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
 ```
@@ -591,6 +697,10 @@ meta:
   version: SemanticVersion
 properties:
   maxCount: Integer # 最大部门数量, 默认为 1000
+capabilities:
+  groupable: false
+  sortable: true
+  supportsUniqueConstraint: false
 validations:
   isRequired: Boolean
 ```
@@ -635,8 +745,15 @@ meta:
 properties:
   relationKey: Make.Relation
   targetFieldKey: FieldKey # 对端 Entity 上要查找的字段 key
-  filter: Expression # Filter 条件
+  sortByFieldKey: FieldKey? # 可选, 如果为空的话, 通过 targetFieldKey 排序, 只支持 1:1 关联
+  filter: Expression # 可选，Lookup 对端记录筛选条件，使用统一 Expression 对象承载 CEL 表达式
+capabilities:
+  groupable: true # 运行时仅严格 1:1 + FK 且目标字段 groupable=true 时可分组
+  sortable: true  # 运行时仅严格 1:1 + FK 且目标字段 sortable=true 时可排序
+  supportsUniqueConstraint: false
 ```
+
+Lookup 的 `groupable` / `sortable` 表示字段类型具备相应能力，实际请求还必须同时满足：`fromCardinality=one`、`toCardinality=one`、`storageType=FK`，并由目标字段的 capability 决定是否可用。一对多、多对一、多对多、`JOIN_TABLE` 均不支持；目标字段仍为 Lookup 时不支持递归分组或排序。
 
 ### LookupField 例子
 
@@ -650,6 +767,8 @@ properties:
   relationKey: project_task_relation
   # 拿对面哪个字段？ -> 拿 Task 的 '任务状态'
   targetFieldKey: task_status
+  filter:
+    expression: status == 'doing'
 ```
 
 ### Validation | 数据校验

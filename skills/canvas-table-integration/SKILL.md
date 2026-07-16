@@ -1,8 +1,8 @@
 ---
 name: canvas-table-integration
-description: "Use when integrating `@qfei-design/canvas-table` into an existing app or page. Covers consumer-side local or virtual tables, public props/methods/events, row-head suffix actions, selection, drag, fixed columns, summary rows, empty states, async latest rows synchronization, lightweight canvas interactions, host-side cell-edit architecture, mandatory ExpensePoc-derived cell-edit standards, attachment editors, and Make field-display columns with value normalization and overflow-only tooltips. Only supports `@qfei-design/canvas-table`, never UI-library tables. Read package AI docs first, choose base Track A or C, layer Track B when cell editing is needed, use documented public APIs, and do not modify the table library itself."
+description: "Use when integrating `@qfei-design/canvas-table` into an existing app or page. Covers consumer-side local or virtual tables, public props/methods/events, row-head suffix actions, selection, drag, fixed columns, summary rows, empty states, async latest rows synchronization, lightweight canvas interactions, host-side cell-edit architecture, mandatory ExpensePoc-derived cell-edit standards, attachment editors, and Make field-display columns with schema properties, value normalization, and overflow-only tooltips. Only supports `@qfei-design/canvas-table`, never UI-library tables. Does not design or generate Make DSL YAML (use makedsl). Read package AI docs first, choose base Track A or C, layer Track B when cell editing is needed, use documented public APIs, and do not modify the table library itself."
 metadata:
-  version: 0.1.1
+  version: 0.1.3
 ---
 
 # canvas-table-integration
@@ -24,7 +24,7 @@ Hard Track B rule: every CanvasTable cell edit / 单元格编辑 implementation 
 1. Confirm this is a consumer-side table integration, not table-library maintenance.
 2. Check package installation and read the package AI docs in the required order below.
 3. Choose base Track A or Track C. Add Track B as an editing enhancement when required; for editable Make schema tables use Track C plus Track B.
-4. For Make schema tables, load and normalize schema fields before initializing the table; build `IColumn[]` plus renderers from the normalized field types and the shared field type registry.
+4. For Make schema tables, load and normalize schema fields before initializing the table; build `IColumn[]` plus renderers from the normalized field types, schema `field.properties`, and the shared field type registry.
 5. Read only the base-track references and, when editing is in scope, the Track B references from the topic map.
 6. Start from the package recipe/example when available, then adapt with the smallest project-local diff.
 7. Enable table row defaults unless the user explicitly opts out: `showSN` sequence numbers plus a hover-revealed open-detail action through `bodyRowHeadSuffixOptions`.
@@ -44,6 +44,7 @@ Hard Track B rule: every CanvasTable cell edit / 单元格编辑 implementation 
 - configuring private npm registries
 - treating grouped-table architecture as the default answer
 - forcing a new UI component library into a project that already has an editor/component system
+- designing or generating Make DSL YAML; use `makedsl` for schema modeling
 
 ## Pre-flight check
 
@@ -157,6 +158,7 @@ Treat these as safety rules:
 - when rows can arrive before the CanvasTable instance is ready, store the latest rows and call `setData(latestRows)` immediately after instance creation; do not let early data updates disappear because `tableRef.current` was `null`
 - never render numeric parser failures as `NaN`, `Infinity`, or exception text; normalize them to an empty display value before canvas rendering
 - never accept formatted currency or percent text as the normal backend contract. Values such as strings containing `¥`, `￥`, `%`, or thousands separators are dependency defects; render `-` or surface the data-contract issue instead of silently treating them as API-ready values
+- for Make schema tables, preserve normalized `field.properties` on generated columns/edit configs so renderers and editors can use `Number.precision`, `Date.format`, `DateRange.begin/end`, `Currency.symbol/decimalPlaces/useGrouping`, `Percent.decimalPlaces`, `File.maxCount`, and multi identity `maxCount`
 - do not put `aria-hidden` or `inert` on the visual canvas-table host, or on any ancestor that can contain the package-created focusable canvas
 - if a screen-reader fallback table is needed, keep it as a separate visually-hidden structure and give the visual host its own non-hidden accessible label
 - pagination is opt-in: do not add visible pagination controls, page-size selectors, page state, page query params, total-count handling, paginated fetch logic, `virtualOptions`, or `data:load` wiring unless the user explicitly asks for pagination, virtual loading, or paginated backend integration

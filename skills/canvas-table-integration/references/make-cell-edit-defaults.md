@@ -139,7 +139,7 @@ Concrete component expectations:
 
 - text and URL fields: host Input / native input, full-cell, borderless, select current value on focus
 - textarea fields: host TextArea / textarea, full-cell, borderless, no extra `Form.Item`
-- number, currency, and percent fields: host InputNumber / NumberInput / 数字输入框, full-cell, borderless, right-aligned when the table display is right-aligned, `controls={false}` or hidden steppers by default, finite numeric parser before commit
+- number, currency, and percent fields: host InputNumber / NumberInput / 数字输入框, full-cell, borderless, right-aligned when the table display is right-aligned, `controls={false}` or hidden steppers by default, finite numeric parser before commit. Number editors use `field.properties.precision`; Currency editors use `field.properties.symbol`, `field.properties.decimalPlaces`, and optional `field.properties.useGrouping` for formatter/parser display; Percent editors use `field.properties.decimalPlaces`
 
 ## 5. Attachment editor visual rule
 
@@ -167,15 +167,15 @@ A panel that contains a title, toolbar button, inner bordered list row, and card
 | ID | read-only | none |
 | Text / URL | non-popup inline host Input / 文本输入框, full-cell borderless, select current value on focus | string |
 | TextArea | non-popup inline host TextArea that fills the cell; commit on outside click or explicit key path | string |
-| Number / Currency / Percent | non-popup inline host InputNumber / NumberInput / 数字输入框, borderless, right-aligned display, `controls={false}` or hidden steppers by default; parser failures must not commit or backfill `NaN` | finite number |
-| Date | popup host DatePicker / 日期选择器 opens immediately | `YYYY-MM-DD` or host agreed date string |
-| DateTime | popup host DatePicker / 日期时间选择器 opens immediately; resolve typed input before OK commit | `YYYY-MM-DD HH:mm:ss` or host agreed date-time string |
-| DateRange | popup host RangePicker / 日期区间选择器 opens immediately | `{ begin, end }` or host equivalent |
+| Number / Currency / Percent | non-popup inline host InputNumber / NumberInput / 数字输入框, borderless, right-aligned display, `controls={false}` or hidden steppers by default; parser failures must not commit or backfill `NaN`; apply `Number.precision`, `Currency.symbol/decimalPlaces/useGrouping`, and `Percent.decimalPlaces` from `field.properties` | finite number |
+| Date | popup host DatePicker / 日期选择器 opens immediately; use `field.properties.format` | `YYYY-MM-DD` or host agreed date string |
+| DateTime | popup host DatePicker / 日期时间选择器 opens immediately; use `field.properties.format`; resolve typed input before OK commit | `YYYY-MM-DD HH:mm:ss` or host agreed date-time string |
+| DateRange | popup host RangePicker / 日期区间选择器 opens immediately; use `field.properties.begin` and `field.properties.end` to disable dates outside the allowed range | `{ begin, end }` or host equivalent |
 | SingleSelect | popup host Select / 选择器 opens immediately; single selection may request commit after change; empty value is clear state/placeholder, not a `-` option | option value |
 | MultiSelect | popup host Select / 多选选择器 opens immediately; keep responsive tags and `+N` overflow; empty value is `[]`, not a `-` tag | option value array |
-| SingleUser / MultiUser | searchable user selector opens immediately; include current value and candidates from `/api/users` or host equivalent; do not add a fake `-` candidate | user id or user id array |
-| SingleDepartment / MultiDepartment | searchable department selector opens immediately; include current value and candidates from `/api/departments` or host equivalent; do not add a fake `-` candidate | department id or department id array |
-| File | attachment panel/editor opens as host popup; empty state shows only upload zone; upload/delete goes through host data-source boundary | normalized file payload |
+| SingleUser / MultiUser | searchable user selector opens immediately; include current value and candidates from `/api/users` or host equivalent; `MultiUser` enforces `field.properties.maxCount` by disabling or preventing extra selection while remove/clear still works; do not add a fake `-` candidate | user id or user id array |
+| SingleDepartment / MultiDepartment | searchable department selector opens immediately; include current value and candidates from `/api/departments` or host equivalent; `MultiDepartment` enforces `field.properties.maxCount` by disabling or preventing extra selection while remove/clear still works; do not add a fake `-` candidate | department id or department id array |
+| File | attachment panel/editor opens as host popup; empty state shows only upload zone; upload/delete goes through host data-source boundary; `field.properties.maxCount` limits upload, drag/drop, paste, and append actions | normalized file payload |
 | Lookup | read-only by default; if editable, use a relation/lookup selector popup, not plain text | backend relation payload |
 
 Reuse the host Drawer form's field-type mapping where possible so Drawer forms and table cell editors submit the same value shapes.
@@ -300,6 +300,8 @@ The equality check must understand field types. Examples:
 - select fields compare option values, not labels
 - user and department fields compare stable ids
 - file fields compare stable file metadata, not generated local `uid`
+
+Field-property checks are part of edit readiness: verify `precision`, `decimalPlaces`, `symbol`, `format`, `DateRange.begin/end`, and `maxCount` behavior in the editor path, not only in Drawer forms.
 
 ## 10. Verification checklist
 

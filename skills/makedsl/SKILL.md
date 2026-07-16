@@ -1,8 +1,8 @@
 ---
 name: makedsl
-description: Use when designing or generating Make platform DSL YAML — defining apps, entities, fields, relations, views, or record schemas. Also triggered by requests like "建模", "建表", "加字段", "定义关联", or "生成 DSL". Does not deploy resources (use makecli), build frontend UI (makeui), implement Service/API code (make-app-service), handle auth (make-app-auth), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior.
+description: Use when designing or generating Make platform DSL YAML — defining apps, entities, fields, relations, views, or record schemas. Also triggered by requests like "建模", "建表", "加字段", "定义关联", or "生成 DSL". Does not deploy resources (use makecli), build frontend UI (makeui), implement Service/API code (make-app-service), handle auth (make-app-auth), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior (use canvas-table-integration).
 metadata:
-  version: 0.2.0
+  version: 0.2.2
 ---
 
 # makedsl usage
@@ -10,6 +10,8 @@ Use this skill when you need to  design or generate dsl for make platform or mak
 make platform 从 kubernetes 和 ansible 中借鉴了设计思路, 业务的模型通过 DSL 建模定义, 
 然后通过 DataAPI 来对数据进行 CRUD-LS. 
 生成的 DSL(yaml) 文件应该通过 `makecli` 提交到 make platform (make 开发者平台)
+
+Use `canvas-table-integration` for CanvasTable display, columns, renderers, or cell editing. `makedsl` only owns schema modeling semantics.
 
 ## Runtime Boundary
 

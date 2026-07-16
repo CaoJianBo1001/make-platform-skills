@@ -1,7 +1,7 @@
 # FileField
 我们目前 FileField 在业务上是用于业务可以上传图片/PDF 等各种文件
 
-FileField 的值始终是数组，通过 `maxCount` 控制最多允许上传多少个文件。字段 DSL 说明见 @FieldDesign.md
+FileField 的值始终是数组，通过 `properties.maxCount` 控制最多允许上传多少个文件。字段 DSL 说明见 @FieldDesign.md。元数据消费方必须保留 `maxCount`，供下游按同一数量上限处理文件值。
 
 ## File 字段的流程
 1. 先创建 Entity -> FileField
