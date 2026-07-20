@@ -2,6 +2,8 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+const MINIMUM_SDK_VERSION = [0, 1, 3];
+
 const USAGE = `Usage:
   node skills/make-app-auth/scripts/audit-auth-contract.mjs <project-root> [--mode direct|service-fronted|auto] [--published]
 
@@ -92,8 +94,16 @@ if (hasTokenMode(uiText) || hasServiceTokenModeWithoutLocalPreview(serviceText))
 }
 
 if (published) {
-  for (const declaration of sdkDependencyDeclarations.filter(({ version }) => isVersionBelow(version, [0, 1, 3]))) {
-    failures.push(`sdk_version_too_old: ${relative(declaration.file)} declares @qfeius/make-app-auth ${declaration.version}; published Apps require >= 0.1.3`);
+  if (sdkDependencyDeclarations.length === 0) {
+    failures.push('sdk_version_missing: published Apps must declare @qfeius/make-app-auth >= 0.1.3 in package.json');
+  }
+  for (const declaration of sdkDependencyDeclarations) {
+    const status = classifySdkVersionRange(declaration.version, MINIMUM_SDK_VERSION);
+    if (status === 'too-old') {
+      failures.push(`sdk_version_too_old: ${relative(declaration.file)} declares @qfeius/make-app-auth ${declaration.version}; published Apps require >= 0.1.3`);
+    } else if (status === 'unverifiable') {
+      failures.push(`sdk_version_unverifiable: ${relative(declaration.file)} declares unsupported @qfeius/make-app-auth source ${declaration.version}; published Apps require a verifiable registry range >= 0.1.3`);
+    }
   }
   if (!/apiAuthRedirect\s*:\s*true/.test(projectText)) {
     warnings.push('published_api_auth_redirect_missing: generated unified-login Apps should set apiAuthRedirect:true with SDK >= 0.1.3');
@@ -264,18 +274,74 @@ function findSdkDependencyDeclarations(files) {
   return declarations;
 }
 
-function isVersionBelow(version, minimum) {
-  const match = version.match(/(?:^|[^\d])(\d+)\.(\d+)\.(\d+)/);
-  if (!match) {
-    return false;
+function classifySdkVersionRange(versionRange, minimum) {
+  const clauses = versionRange.split('||').map((clause) => clause.trim());
+  if (clauses.length === 0 || clauses.some((clause) => !clause)) {
+    return 'unverifiable';
   }
-  const current = match.slice(1, 4).map(Number);
-  for (let index = 0; index < minimum.length; index += 1) {
-    if (current[index] !== minimum[index]) {
-      return current[index] < minimum[index];
+
+  for (const clause of clauses) {
+    const lowerBound = resolveRangeLowerBound(clause);
+    if (!lowerBound) {
+      return 'unverifiable';
+    }
+    if (compareVersions(lowerBound, minimum) < 0) {
+      return 'too-old';
     }
   }
-  return false;
+  return 'supported';
+}
+
+function resolveRangeLowerBound(clause) {
+  const hyphenRange = clause.match(/^v?(\d+)\.(\d+)\.(\d+)\s+-\s+v?\d+\.\d+\.\d+$/i);
+  if (hyphenRange) {
+    return hyphenRange.slice(1, 4).map(Number);
+  }
+
+  let lowerBound = [0, 0, 0];
+  for (const token of clause.split(/\s+/)) {
+    if (/^(?:x|\*)$/i.test(token)) {
+      continue;
+    }
+    const match = token.match(/^(>=|>|<=|<|\^|~|=)?v?(\d+)(?:\.(\d+|x|\*))?(?:\.(\d+|x|\*))?$/i);
+    if (!match) {
+      return null;
+    }
+
+    const operator = match[1] || '';
+    const hasWildcard = [match[3], match[4]].some((part) => /^(?:x|\*)$/i.test(part || ''));
+    if (hasWildcard && operator) {
+      return null;
+    }
+    if (operator === '>' && (match[3] === undefined || match[4] === undefined || hasWildcard)) {
+      return null;
+    }
+    if (operator === '<' || operator === '<=') {
+      continue;
+    }
+
+    const candidate = [
+      Number(match[2]),
+      /^\d+$/.test(match[3] || '') ? Number(match[3]) : 0,
+      /^\d+$/.test(match[4] || '') ? Number(match[4]) : 0
+    ];
+    if (operator === '>') {
+      candidate[2] += 1;
+    }
+    if (compareVersions(candidate, lowerBound) > 0) {
+      lowerBound = candidate;
+    }
+  }
+  return lowerBound;
+}
+
+function compareVersions(left, right) {
+  for (let index = 0; index < 3; index += 1) {
+    if (left[index] !== right[index]) {
+      return left[index] - right[index];
+    }
+  }
+  return 0;
 }
 
 function inferMode() {

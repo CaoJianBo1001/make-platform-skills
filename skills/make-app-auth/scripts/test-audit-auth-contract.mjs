@@ -54,13 +54,26 @@ try {
 
   assert.match(runAudit(goodRoot), /status: PASS/);
 
-  write(path.join(goodRoot, 'apps/ui/package.json'), JSON.stringify({
-    dependencies: {
-      '@qfeius/make-app-auth': '^0.1.2'
-    }
-  }));
-  const outdatedSdkOutput = runAudit(goodRoot, { expectFailure: true });
-  assert.match(outdatedSdkOutput, /sdk_version_too_old/);
+  for (const version of ['^0.1.3', '0.1.3', '>0.1.2', '>=0.1.3 <0.2.0', '0.1.3 - 0.2.0', '^1.0.0']) {
+    writeSdkDependency(goodRoot, version);
+    assert.match(runAudit(goodRoot), /status: PASS/, `expected ${version} to pass`);
+  }
+
+  for (const version of ['^0.1.2', '<0.1.3', '>=0.1.3 || 0.1.2']) {
+    writeSdkDependency(goodRoot, version);
+    const output = runAudit(goodRoot, { expectFailure: true });
+    assert.match(output, /sdk_version_too_old/, `expected ${version} to be rejected as too old`);
+  }
+
+  for (const version of ['workspace:*', 'file:../sdk', 'latest']) {
+    writeSdkDependency(goodRoot, version);
+    const output = runAudit(goodRoot, { expectFailure: true });
+    assert.match(output, /sdk_version_unverifiable/, `expected ${version} to be rejected as unverifiable`);
+  }
+
+  fs.rmSync(path.join(goodRoot, 'apps/ui/package.json'));
+  const missingSdkVersionOutput = runAudit(goodRoot, { expectFailure: true });
+  assert.match(missingSdkVersionOutput, /sdk_version_missing/);
 
   const antdThemeTokenRoot = createFixture('antd-theme-token-not-auth-token', {
     ui: `
@@ -933,6 +946,14 @@ function createFixture(name, files) {
 function write(file, content) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, content);
+}
+
+function writeSdkDependency(root, version) {
+  write(path.join(root, 'apps/ui/package.json'), JSON.stringify({
+    dependencies: {
+      '@qfeius/make-app-auth': version
+    }
+  }));
 }
 
 function runAudit(root, options = {}) {
