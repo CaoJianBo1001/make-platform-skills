@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+const SDK_PACKAGE_NAME = '@qfeius/make-app-auth';
 const MINIMUM_SDK_VERSION = [0, 1, 3];
 
 const USAGE = `Usage:
@@ -72,6 +73,7 @@ const uiText = readJoined(uiFiles);
 const serviceText = readJoined(serviceRuntimeFiles);
 const projectText = readJoined(allProjectFiles);
 const sdkDependencyDeclarations = findSdkDependencyDeclarations(allProjectFiles);
+const sdkVersionOverrides = findSdkVersionOverrides(allProjectFiles);
 const inferredMode = mode === 'auto' ? inferMode() : mode;
 
 const failures = [];
@@ -103,6 +105,14 @@ if (published) {
       failures.push(`sdk_version_too_old: ${relative(declaration.file)} declares @qfeius/make-app-auth ${declaration.version}; published Apps require >= 0.1.3`);
     } else if (status === 'unverifiable') {
       failures.push(`sdk_version_unverifiable: ${relative(declaration.file)} declares unsupported @qfeius/make-app-auth source ${declaration.version}; published Apps require a verifiable registry range >= 0.1.3`);
+    }
+  }
+  for (const override of sdkVersionOverrides) {
+    const status = classifySdkVersionRange(override.version, MINIMUM_SDK_VERSION);
+    if (status === 'too-old') {
+      failures.push(`sdk_version_override_too_old: ${relative(override.file)} ${override.source} forces @qfeius/make-app-auth ${override.version}; published Apps require >= 0.1.3`);
+    } else if (status === 'unverifiable') {
+      failures.push(`sdk_version_override_unverifiable: ${relative(override.file)} ${override.source} uses unsupported @qfeius/make-app-auth source ${override.version}; published Apps require a verifiable registry range >= 0.1.3`);
     }
   }
   if (!/apiAuthRedirect\s*:\s*true/.test(projectText)) {
@@ -265,7 +275,7 @@ function findSdkDependencyDeclarations(files) {
       continue;
     }
     for (const section of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
-      const version = manifest?.[section]?.['@qfeius/make-app-auth'];
+      const version = manifest?.[section]?.[SDK_PACKAGE_NAME];
       if (typeof version === 'string' && version.trim()) {
         declarations.push({ file, version: version.trim() });
       }
@@ -274,7 +284,128 @@ function findSdkDependencyDeclarations(files) {
   return declarations;
 }
 
+function findSdkVersionOverrides(files) {
+  const overrides = [];
+  for (const file of files.filter((candidate) => path.basename(candidate) === 'package.json')) {
+    let manifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+      continue;
+    }
+    collectSdkOverrideEntries(manifest?.overrides, file, 'npm overrides', overrides);
+    collectSdkOverrideEntries(manifest?.resolutions, file, 'Yarn resolutions', overrides);
+    collectSdkOverrideEntries(manifest?.pnpm?.overrides, file, 'pnpm overrides', overrides);
+  }
+  for (const file of findPnpmWorkspaceFiles()) {
+    overrides.push(...readPnpmWorkspaceSdkOverrides(file));
+  }
+  return overrides;
+}
+
+function collectSdkOverrideEntries(value, file, source, overrides) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    return;
+  }
+  for (const [selector, selectedValue] of Object.entries(value)) {
+    if (targetsSdkPackage(selector)) {
+      const version = typeof selectedValue === 'string'
+        ? selectedValue.trim()
+        : typeof selectedValue?.['.'] === 'string'
+          ? selectedValue['.'].trim()
+          : '';
+      overrides.push({ file, source, version });
+    }
+    if (selectedValue && typeof selectedValue === 'object') {
+      collectSdkOverrideEntries(selectedValue, file, source, overrides);
+    }
+  }
+}
+
+function findPnpmWorkspaceFiles() {
+  return ['pnpm-workspace.yaml', 'apps/pnpm-workspace.yaml']
+    .map((candidate) => path.join(root, candidate))
+    .filter((candidate) => fs.existsSync(candidate) && fs.statSync(candidate).isFile());
+}
+
+function readPnpmWorkspaceSdkOverrides(file) {
+  const overrides = [];
+  const lines = fs.readFileSync(file, 'utf8').split(/\r?\n/);
+  let overridesIndent = null;
+
+  for (const line of lines) {
+    const section = line.match(/^(\s*)overrides\s*:\s*(.*)$/);
+    if (section && section[1].length === 0) {
+      overridesIndent = section[1].length;
+      for (const version of parseInlineSdkOverrides(section[2])) {
+        overrides.push({ file, source: 'pnpm workspace overrides', version });
+      }
+      continue;
+    }
+    if (overridesIndent === null || !line.trim() || line.trimStart().startsWith('#')) {
+      continue;
+    }
+
+    const indent = line.match(/^\s*/)[0].length;
+    if (indent <= overridesIndent) {
+      overridesIndent = null;
+      continue;
+    }
+
+    const entry = line.match(/^\s*(?:"([^"]+)"|'([^']+)'|([^:#][^:]*?))\s*:\s*(.*?)\s*$/);
+    if (!entry) {
+      continue;
+    }
+    const selector = (entry[1] || entry[2] || entry[3] || '').trim();
+    if (targetsSdkPackage(selector)) {
+      overrides.push({
+        file,
+        source: 'pnpm workspace overrides',
+        version: normalizeYamlScalar(entry[4])
+      });
+    }
+  }
+  return overrides;
+}
+
+function parseInlineSdkOverrides(value) {
+  const overrides = [];
+  const entries = value.matchAll(/(?:^|[{,]\s*)(?:"([^"]+)"|'([^']+)'|([^,:{}\s]+))\s*:\s*(?:"([^"]*)"|'([^']*)'|([^,}\s]+))/g);
+  for (const entry of entries) {
+    const selector = entry[1] || entry[2] || entry[3] || '';
+    if (targetsSdkPackage(selector)) {
+      overrides.push((entry[4] || entry[5] || entry[6] || '').trim());
+    }
+  }
+  return overrides;
+}
+
+function normalizeYamlScalar(value) {
+  const withoutComment = value.replace(/\s+#.*$/, '').trim();
+  if (
+    (withoutComment.startsWith('"') && withoutComment.endsWith('"')) ||
+    (withoutComment.startsWith("'") && withoutComment.endsWith("'"))
+  ) {
+    return withoutComment.slice(1, -1).trim();
+  }
+  return withoutComment;
+}
+
+function targetsSdkPackage(selector) {
+  const index = selector.indexOf(SDK_PACKAGE_NAME);
+  if (index < 0) {
+    return false;
+  }
+  const before = index === 0 || selector[index - 1] === '>' || selector[index - 1] === '/';
+  const afterIndex = index + SDK_PACKAGE_NAME.length;
+  const after = afterIndex === selector.length || selector[afterIndex] === '@';
+  return before && after;
+}
+
 function classifySdkVersionRange(versionRange, minimum) {
+  if (!versionRange) {
+    return 'unverifiable';
+  }
   const clauses = versionRange.split('||').map((clause) => clause.trim());
   if (clauses.length === 0 || clauses.some((clause) => !clause)) {
     return 'unverifiable';
