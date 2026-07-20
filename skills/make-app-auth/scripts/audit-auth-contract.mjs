@@ -69,6 +69,7 @@ const allProjectFiles = collectSourceFiles(root);
 const uiText = readJoined(uiFiles);
 const serviceText = readJoined(serviceRuntimeFiles);
 const projectText = readJoined(allProjectFiles);
+const sdkDependencyDeclarations = findSdkDependencyDeclarations(allProjectFiles);
 const inferredMode = mode === 'auto' ? inferMode() : mode;
 
 const failures = [];
@@ -91,8 +92,11 @@ if (hasTokenMode(uiText) || hasServiceTokenModeWithoutLocalPreview(serviceText))
 }
 
 if (published) {
+  for (const declaration of sdkDependencyDeclarations.filter(({ version }) => isVersionBelow(version, [0, 1, 3]))) {
+    failures.push(`sdk_version_too_old: ${relative(declaration.file)} declares @qfeius/make-app-auth ${declaration.version}; published Apps require >= 0.1.3`);
+  }
   if (!/apiAuthRedirect\s*:\s*true/.test(projectText)) {
-    warnings.push('published_api_auth_redirect_missing: generated unified-login Apps should set apiAuthRedirect:true with SDK >= 0.1.2');
+    warnings.push('published_api_auth_redirect_missing: generated unified-login Apps should set apiAuthRedirect:true with SDK >= 0.1.3');
   }
   if (hasUnsupportedSdkReadyStatus(uiText)) {
     failures.push('unsupported_sdk_ready_status: @qfeius/make-app-auth init returns authenticated/redirecting/unauthenticated/forbidden/failed, not ready');
@@ -239,6 +243,39 @@ function readJoined(files) {
       return '';
     }
   }).join('\n');
+}
+
+function findSdkDependencyDeclarations(files) {
+  const declarations = [];
+  for (const file of files.filter((candidate) => path.basename(candidate) === 'package.json')) {
+    let manifest;
+    try {
+      manifest = JSON.parse(fs.readFileSync(file, 'utf8'));
+    } catch {
+      continue;
+    }
+    for (const section of ['dependencies', 'devDependencies', 'optionalDependencies', 'peerDependencies']) {
+      const version = manifest?.[section]?.['@qfeius/make-app-auth'];
+      if (typeof version === 'string' && version.trim()) {
+        declarations.push({ file, version: version.trim() });
+      }
+    }
+  }
+  return declarations;
+}
+
+function isVersionBelow(version, minimum) {
+  const match = version.match(/(?:^|[^\d])(\d+)\.(\d+)\.(\d+)/);
+  if (!match) {
+    return false;
+  }
+  const current = match.slice(1, 4).map(Number);
+  for (let index = 0; index < minimum.length; index += 1) {
+    if (current[index] !== minimum[index]) {
+      return current[index] < minimum[index];
+    }
+  }
+  return false;
 }
 
 function inferMode() {

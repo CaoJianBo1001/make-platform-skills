@@ -54,6 +54,14 @@ try {
 
   assert.match(runAudit(goodRoot), /status: PASS/);
 
+  write(path.join(goodRoot, 'apps/ui/package.json'), JSON.stringify({
+    dependencies: {
+      '@qfeius/make-app-auth': '^0.1.2'
+    }
+  }));
+  const outdatedSdkOutput = runAudit(goodRoot, { expectFailure: true });
+  assert.match(outdatedSdkOutput, /sdk_version_too_old/);
+
   const antdThemeTokenRoot = createFixture('antd-theme-token-not-auth-token', {
     ui: `
       import { ConfigProvider } from 'antd';
@@ -909,6 +917,11 @@ try {
 
 function createFixture(name, files) {
   const root = path.join(tempRoot, name);
+  write(path.join(root, 'apps/ui/package.json'), JSON.stringify({
+    dependencies: {
+      '@qfeius/make-app-auth': '^0.1.3'
+    }
+  }));
   write(path.join(root, 'apps/ui/src/app.ts'), files.ui);
   write(path.join(root, 'apps/service/src/app.ts'), files.service);
   if (files.serviceTest) {
