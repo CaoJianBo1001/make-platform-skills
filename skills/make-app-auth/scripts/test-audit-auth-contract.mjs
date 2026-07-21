@@ -54,6 +54,75 @@ try {
 
   assert.match(runAudit(goodRoot), /status: PASS/);
 
+  for (const version of ['^0.1.3', '0.1.3', '>0.1.2', '>=0.1.3 <0.2.0', '0.1.3 - 0.2.0', '^1.0.0']) {
+    writeSdkDependency(goodRoot, version);
+    assert.match(runAudit(goodRoot), /status: PASS/, `expected ${version} to pass`);
+  }
+
+  for (const version of ['^0.1.2', '<0.1.3', '>=0.1.3 || 0.1.2']) {
+    writeSdkDependency(goodRoot, version);
+    const output = runAudit(goodRoot, { expectFailure: true });
+    assert.match(output, /sdk_version_too_old/, `expected ${version} to be rejected as too old`);
+  }
+
+  for (const version of ['workspace:*', 'file:../sdk', 'latest']) {
+    writeSdkDependency(goodRoot, version);
+    const output = runAudit(goodRoot, { expectFailure: true });
+    assert.match(output, /sdk_version_unverifiable/, `expected ${version} to be rejected as unverifiable`);
+  }
+
+  writeSdkDependency(goodRoot, '^0.1.3');
+  write(path.join(goodRoot, 'pnpm-workspace.yaml'), `
+packages:
+  - apps/*
+overrides:
+  '@qfeius/make-app-auth': 0.1.2
+  `);
+  const pnpmOverrideOutput = runAudit(goodRoot, { expectFailure: true });
+  assert.match(pnpmOverrideOutput, /sdk_version_override_too_old/);
+  fs.rmSync(path.join(goodRoot, 'pnpm-workspace.yaml'));
+
+  write(
+    path.join(goodRoot, 'pnpm-workspace.yaml'),
+    `overrides: { unrelated-package: 1.0.0, '@qfeius/make-app-auth': 0.1.2 }`
+  );
+  const pnpmInlineOverrideOutput = runAudit(goodRoot, { expectFailure: true });
+  assert.match(pnpmInlineOverrideOutput, /sdk_version_override_too_old/);
+  fs.rmSync(path.join(goodRoot, 'pnpm-workspace.yaml'));
+
+  write(path.join(goodRoot, 'package.json'), JSON.stringify({
+    private: true,
+    overrides: {
+      '@qfeius/make-app-auth': '0.1.2'
+    }
+  }));
+  const npmOverrideOutput = runAudit(goodRoot, { expectFailure: true });
+  assert.match(npmOverrideOutput, /sdk_version_override_too_old/);
+
+  write(path.join(goodRoot, 'package.json'), JSON.stringify({
+    private: true,
+    resolutions: {
+      '@qfeius/make-app-auth': 'file:../make-app-auth'
+    }
+  }));
+  const yarnResolutionOutput = runAudit(goodRoot, { expectFailure: true });
+  assert.match(yarnResolutionOutput, /sdk_version_override_unverifiable/);
+
+  write(path.join(goodRoot, 'package.json'), JSON.stringify({
+    private: true,
+    pnpm: {
+      overrides: {
+        '@qfeius/make-app-auth': '^0.1.3'
+      }
+    }
+  }));
+  assert.match(runAudit(goodRoot), /status: PASS/);
+  fs.rmSync(path.join(goodRoot, 'package.json'));
+
+  fs.rmSync(path.join(goodRoot, 'apps/ui/package.json'));
+  const missingSdkVersionOutput = runAudit(goodRoot, { expectFailure: true });
+  assert.match(missingSdkVersionOutput, /sdk_version_missing/);
+
   const antdThemeTokenRoot = createFixture('antd-theme-token-not-auth-token', {
     ui: `
       import { ConfigProvider } from 'antd';
@@ -909,6 +978,11 @@ try {
 
 function createFixture(name, files) {
   const root = path.join(tempRoot, name);
+  write(path.join(root, 'apps/ui/package.json'), JSON.stringify({
+    dependencies: {
+      '@qfeius/make-app-auth': '^0.1.3'
+    }
+  }));
   write(path.join(root, 'apps/ui/src/app.ts'), files.ui);
   write(path.join(root, 'apps/service/src/app.ts'), files.service);
   if (files.serviceTest) {
@@ -920,6 +994,14 @@ function createFixture(name, files) {
 function write(file, content) {
   fs.mkdirSync(path.dirname(file), { recursive: true });
   fs.writeFileSync(file, content);
+}
+
+function writeSdkDependency(root, version) {
+  write(path.join(root, 'apps/ui/package.json'), JSON.stringify({
+    dependencies: {
+      '@qfeius/make-app-auth': version
+    }
+  }));
 }
 
 function runAudit(root, options = {}) {

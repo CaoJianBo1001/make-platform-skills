@@ -46,7 +46,7 @@ if (boot.status === 'authenticated') {
 - If login callback returns to the App with an expired state/challenge marker, show a simple relogin prompt. Do not immediately redirect again.
 - The relogin button should call `auth.login({ redirect: true })`; the SDK removes the expired-login URL parameters before creating the next challenge.
 - Unified-login Apps must not pass `accessToken`, `token`, or `tokenProvider`; after login, browser requests rely on the App session Cookie written by make-gateway.
-- Set `apiAuthRedirect: true` for generated unified-login Apps with `@qfeius/make-app-auth >= 0.1.2`.
+- Set `apiAuthRedirect: true` for generated unified-login Apps with `@qfeius/make-app-auth >= 0.1.3`.
 - Unified login challenge URLs are returned by make-gateway. Logout returns an App `redirectUri`; App UI code must not configure or hard-code account-center or Org logout URLs.
 - Do not construct Org authorize URLs in App code.
 - Do not handle `code` or `state` in App code unless the SDK contract explicitly requires it.
