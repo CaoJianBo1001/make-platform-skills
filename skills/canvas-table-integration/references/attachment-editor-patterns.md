@@ -135,6 +135,7 @@ The host editor should be responsible for:
 - accepting drag/drop files
 - accepting paste files when the product expects clipboard workflows
 - accepting click-to-upload through a hidden file input or host upload component
+- enforcing `field.properties.maxCount` from the Make File schema before accepting click-to-upload, drag/drop, paste, append, or replacement actions that would exceed the limit
 - replacing files
 - removing files
 - reordering files when the business requires it
@@ -164,6 +165,8 @@ Common behavior:
 - drag files into a drop zone, paste files, or click the drop zone/button to choose local files when the host supports those inputs
 - modify attachment list
 - commit on explicit save/close or on a controlled outside-click flow
+
+When the current attachment count reaches `field.properties.maxCount`, disable add affordances or reject extra files through the host validation/error state while still allowing preview, remove, and replace. Do not silently truncate the submitted attachment array.
 
 Do not default to instant commit unless the host project already uses that model.
 
@@ -218,6 +221,7 @@ For an attachment field integration, verify:
 - rendering handles images, non-images, empty values, and more-than-visible counts
 - clicking a rendered attachment opens/previews the file without triggering row navigation unexpectedly
 - enabled local input modes, such as drag/drop, paste, and click-to-upload, add files in the editor
+- `field.properties.maxCount` blocks or disables any upload, drag/drop, paste, or append action that would exceed the configured file count, without silently truncating the submitted attachment array
 - empty attachment state shows only the upload drop zone, not a fake `-` attachment or empty list row
 - existing attachment cards are compact square thumbnails/icons and the panel is wide enough for normal drag/drop text
 - removal updates the normalized array

@@ -106,7 +106,7 @@ Recommended pattern:
 - host InputNumber / NumberInput / 数字输入框, not a plain text input
 - full-cell, non-popup, borderless inline editor; hide steppers by default with `controls={false}` or the host-library equivalent unless the product explicitly needs stepper controls
 - submit-style editing
-- keep precision and unit behavior in field metadata or field config
+- keep precision and unit behavior in field metadata or field config: `Make.Field.Number` reads `field.properties.precision`, `Make.Field.Currency` reads `field.properties.symbol`, `field.properties.decimalPlaces`, and optional `field.properties.useGrouping`, and `Make.Field.Percent` reads `field.properties.decimalPlaces`
 - keep the row value and submit value as a finite number or pure numeric string, according to the backend contract
 - put currency, percent, thousands separators, and unit display in the editor formatter or table render layer
 - parse formatted input back to a number before commit
@@ -134,7 +134,8 @@ Recommended pattern:
 
 - host DatePicker / 日期选择器 for `Date` and `DateTime`; host RangePicker / 日期区间选择器 for `DateRange`
 - often realtime-style editing
-- keep date format driven by field metadata
+- keep date format driven by field metadata: `Date.properties.format` and `DateTime.properties.format`
+- for `DateRange`, pass `field.properties.begin` and `field.properties.end` into the RangePicker / 日期区间选择器 and disable dates outside that schema range; when only `begin` or only `end` exists, apply the one-sided disabled-date rule
 - open popup immediately when the editor mounts
 - render the picker popup into the editor popup root and include that root in `relatedElements()`
 
@@ -148,6 +149,7 @@ For date-time editors with an explicit OK button, resolve the current input text
 
 Date range fields should be their own editor group when the backend uses a structured value such as `{ begin, end }`. Do not flatten the range into a display string before submit.
 Date range editors must echo current structured values and submit a structured range. A range cell that shows raw JSON or saves `"begin 至 end"` is using the wrong boundary value.
+DateRange begin/end field properties constrain selectable dates; they are not the record value. Keep them in the editor config and compare committed values against the disabled-date rule before submit.
 
 ## 6. Select fields
 
@@ -203,6 +205,8 @@ source. Use `makeui` for the canonical option identity/label/avatar mapping and
 
 For Make identity values, tolerate both record-style values and current identity-service values. Read ids from `recordID`, `userId`, or `id`, and labels from `name`, `userName`, `displayName`, or `label`. For multi-user fields, normalize arrays with the same priority before dirty comparison and submit conversion.
 
+For `Make.Field.MultiUser`, enforce `field.properties.maxCount` in the selector. Once the selected user count reaches `maxCount`, disable additional candidate selection or prevent the next commit while still allowing remove/clear. Do not enforce the limit by truncating the submitted array silently.
+
 People selector options, selected values, and inline echo UI should reuse the same ExpensePoc avatar token as table display: fixed 22px circular image/fallback, 11px radius, 9px centered fallback text, 400 weight, and a separate name label. Do not render user initials with a content-sized pill/tag background, do not enlarge the avatar text, and do not shrink the circular background around the text. Empty user values use placeholder/clear state, not a fake `-` avatar or candidate option.
 
 Current-value echo is mandatory. `SingleUser` may arrive as one object, a one-item array, a scalar id, or an identity API object; `MultiUser` may arrive as an array. Normalize these shapes before rendering the selector. If a selected user has an id and label, merge it into the selector options as an echo option even when `/api/users` is still loading or the current page of candidates does not contain that user. If the selected user has only a label and no stable id, keep that label visible as a temporary echo and require a real candidate selection before committing a changed value; do not render the editor empty. Candidate responses must merge with selected echo options rather than replacing them.
@@ -231,6 +235,8 @@ equivalent wins.
 
 For Make department values, tolerate both record-style values and current department-service values. Read ids from `recordID`, `departmentId`, or `id`, and labels from `name`, `departmentName`, `displayName`, or `label`. For multi-department fields, normalize arrays with the same priority before dirty comparison and submit conversion.
 
+For `Make.Field.MultiDepartment`, enforce `field.properties.maxCount` in the selector. Once the selected department count reaches `maxCount`, disable additional candidate selection or prevent the next commit while still allowing remove/clear. Do not enforce the limit by truncating the submitted array silently.
+
 Do not use field schema `options`, table row samples, hardcoded fixtures, or mock departments as candidate lists in production. Do not replace an empty real department API result with local fallback data unless the product explicitly asks for demo/mock mode. Submitting a fake department id usually creates backend validation failures.
 The department editor must echo the current record value even while remote candidates are loading. Normalize ids from `recordID`, `departmentId`, or `id`; normalize labels from `name`, `departmentName`, `displayName`, or `label`.
 
@@ -245,6 +251,7 @@ Recommended pattern:
 - otherwise provide a host DOM editor with drag/drop and click-to-upload file selection
 - usually submit-style editing
 - require a saved backend record identity when the backend upload API needs one
+- enforce `field.properties.maxCount` across click-to-upload, drag/drop, paste, and append actions; after the file count reaches `maxCount`, disable or reject additional files through the host validation/error state instead of silently dropping them
 
 Typical concerns:
 

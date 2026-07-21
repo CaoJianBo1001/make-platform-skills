@@ -5,6 +5,7 @@
 - [Selection strategy](#selection-strategy)
 - [Default candidate mapping](#default-candidate-mapping)
 - [Make field-metadata-driven components](#make-field-metadata-driven-components)
+- [Make field properties contract](#make-field-properties-contract)
 - [Host form controlled field contract](#host-form-controlled-field-contract)
 - [Detail value display](#detail-value-display)
 - [Table component rule](#table-component-rule)
@@ -80,7 +81,7 @@ Form and field components should consume normalized UI field metadata, not raw b
 
 If no field metadata exists, stop and call out the missing UI dependency instead of inventing static form controls.
 
-For new Make POC projects, create or reuse a shared field type registry at `apps/ui/src/lib/make-field-types.ts` before implementing field-driven UI. The registry is the shared source for host-owned form controls, detail display, CanvasTable table display, and table cell editors; these consumers should resolve common `Make.Field.*` presentation behavior from the registry instead of carrying separate local mappings. Advanced-filter controls resolve support and editor behavior through `make-app-filter` package APIs, not this registry.
+For new Make POC projects, create or reuse a shared field type registry at `apps/ui/src/lib/make-field-types.ts` before implementing field-driven UI. The registry is the shared source for host-owned form controls, detail display, CanvasTable table display, and table cell editors; these consumers should resolve common `Make.Field.*` presentation behavior from the registry instead of carrying separate local mappings. The registry must preserve normalized `field.properties` and expose the properties needed by generated UI, including `format`, `precision`, `decimalPlaces`, `maxCount`, `begin`, `end`, `symbol`, and `useGrouping`. Advanced-filter controls resolve support and editor behavior through `make-app-filter` package APIs, not this registry.
 
 Use type-appropriate controls:
 
@@ -101,6 +102,26 @@ Do not silently degrade date, user, department, select, file, or lookup fields t
 If a field type is unknown, prefer a read-only display or an explicit unsupported-field fallback. Do not pretend it is a plain text field unless the user confirms that downgrade.
 
 File fields are mode-sensitive. If upload requires a persisted record identity, create forms must omit `Make.Field.File` controls. Render attachment upload/edit only after a record exists and the stable id is available. Detail views may display existing attachments.
+
+## Make field properties contract
+
+Generated Make UI must treat schema `field.properties` as behavior input, not passive documentation. Normalize the raw schema once at the metadata boundary and pass these properties through the shared field registry, form adapters, detail display adapter, CanvasTable handoff, and cell-editor handoff.
+
+| Field type | Property | Required UI behavior |
+| --- | --- | --- |
+| `Make.Field.Date` | `format` | Use the schema format for DatePicker display, typed input parsing, detail text, and table handoff. If absent, use the host date default consistently instead of mixing formats per surface. |
+| `Make.Field.DateTime` | `format` | Use the schema format for date-time picker display, parsing, detail text, and table handoff. Keep submit values in the backend-agreed date-time shape. |
+| `Make.Field.DateRange` | `begin`, `end` | Treat `begin` and `end` as the selectable range. Date range controls must disable dates before `begin` or after `end`; with only one boundary present, apply a one-sided disabled-date rule. Submit a structured range such as `{ begin, end }`, not display text. |
+| `Make.Field.Number` | `precision` | Configure numeric controls and display formatting from `precision`; validate or normalize decimal places before submit according to the host backend rule. Do not submit formatted display strings. |
+| `Make.Field.Currency` | `symbol`, `decimalPlaces`, `useGrouping` | Use `symbol` and `decimalPlaces` in input formatter, detail display, and table display; `useGrouping` controls thousands separators when the host formatter supports it. Store and submit only finite numbers or pure numeric strings. |
+| `Make.Field.Percent` | `decimalPlaces` | Use `decimalPlaces` for percent input/display precision and add `%` only in formatter/renderers. Do not multiply or divide values by 100 unless the host metadata or backend contract explicitly says so. |
+| `Make.Field.File` | `maxCount` | Use `maxCount` as the attachment selection/upload limit. Disable or block extra choose, drag/drop, paste, and add actions after the limit; show the host validation/error state instead of silently dropping files. Default to the DSL default of `1` when the property is absent. |
+| `Make.Field.MultiUser` | `maxCount` | Use `maxCount` as the maximum selected user count. Once reached, disable further candidate selection or prevent the next commit while preserving clear/remove actions. Default to the DSL default when absent. |
+| `Make.Field.MultiDepartment` | `maxCount` | Use `maxCount` as the maximum selected department count. Once reached, disable further candidate selection or prevent the next commit while preserving clear/remove actions. Default to the DSL default when absent. |
+
+For Ant Design, this usually maps to `DatePicker` / `RangePicker` `format` and `disabledDate`, `InputNumber` `precision` / formatter / parser, `Upload` or project attachment controls with `maxCount`, and multiple `Select` controls that block extra selections after `maxCount`. Other component libraries should implement equivalent controlled behavior.
+
+Do not hide these rules inside business field-name checks. A field named `amount` is not enough to infer currency behavior; use `type: Make.Field.Currency` plus `field.properties.symbol` and `field.properties.decimalPlaces`.
 
 ## Host form controlled field contract
 
@@ -241,6 +262,7 @@ Value extraction should be tolerant but deterministic:
 
 - Number, Currency, and Percent backend/API values stay numeric: accept finite numbers or pure numeric strings only. Do not submit or persist display strings containing `￥`, `¥`, `%`, thousands separators, or unit text.
 - Currency and Percent symbols are presentation. Add them only in detail/table renderers or input formatters after finite-number validation, never in the form store value or API payload.
+- Use field properties when formatting detail values: `Number.precision`, `Currency.symbol`, `Currency.decimalPlaces`, `Currency.useGrouping`, `Percent.decimalPlaces`, `Date.format`, and `DateTime.format`. DateRange detail values display the record value's range while the field schema `begin` / `end` remains the selectable-boundary rule for edit controls.
 
 - empty values display a muted `-`
 - generic object label priority is `label`, `name`, `title`, `displayName`, then `value`

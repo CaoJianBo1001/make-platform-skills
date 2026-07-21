@@ -24,7 +24,7 @@ Default structure:
 - normalize remote schema variants before the table layer consumes them; handle shapes such as `entity.properties.fields`, `entity.fields`, or the host documented equivalent in a boundary adapter
 - derive `IColumn[]` from normalized runtime schema fields, not from a hand-maintained static column list
 - keep `fieldType`, `fieldSchema`, and `renderKind` or equivalent metadata on each generated column
-- derive `displayGroup`, `renderKind`, default `width`, `align`, multiplicity, and host-owned display/editor hints from the shared registry; do not duplicate field-type string lists inside table display modules. Advanced-filter capability remains owned by `make-app-filter` and `@qfei-design/make-filter`
+- derive `displayGroup`, `renderKind`, default `width`, `align`, multiplicity, host-owned display/editor hints, and normalized `field.properties` from the shared registry; do not duplicate field-type string lists inside table display modules. Advanced-filter capability remains owned by `make-app-filter` and `@qfei-design/make-filter`
 - keep business ordering or primary-link roles as a thin config layer; generic rendering still branches by field type
 - normalize each raw cell value once through a pure field-display adapter before rendering
 - route normalized display groups to focused canvas renderers: `text`, `tag`, `user`, `attachment`, `lookup`, and generic fallback
@@ -42,9 +42,9 @@ Default visual rules:
 - text/link cells use 14px sans-serif text, 8px horizontal padding, `#1f2937`, ellipsis, and overflow-only tooltip
 - empty values render muted `-` with `#9ca3af`
 - clickable text, safe URLs, and openable lookup references use `#1677ff`
-- number, currency, and percent cells accept only finite numbers or pure numeric strings from backend/API data. Parse through a finite-number guard before display formatting. Invalid, blank, formatted, `NaN`, `Infinity`, or unparseable values render muted `-`, never `NaN`, `Infinity`, or parser error text.
-- currency and percent display formatting is frontend-owned and driven by field type. `Make.Field.Currency` renderers add the field/schema currency symbol, defaulting to `￥` when absent; `Make.Field.Percent` renderers add `%` after finite validation. API payloads, row data used for editing, and submit values stay numeric or pure numeric strings.
-- date and date-range cells render formatted text, ellipsize when clipped, and use the same overflow-only tooltip
+- number, currency, and percent cells accept only finite numbers or pure numeric strings from backend/API data. Parse through a finite-number guard before display formatting. Invalid, blank, formatted, `NaN`, `Infinity`, or unparseable values render muted `-`, never `NaN`, `Infinity`, or parser error text. `Make.Field.Number` display uses `field.properties.precision` when present.
+- currency and percent display formatting is frontend-owned and driven by field type. `Make.Field.Currency` renderers add `field.properties.symbol`, defaulting to `￥` when absent, use `field.properties.decimalPlaces`, and honor `field.properties.useGrouping` when the host formatter supports grouping. `Make.Field.Percent` renderers add `%` after finite validation and use `field.properties.decimalPlaces`. API payloads, row data used for editing, and submit values stay numeric or pure numeric strings.
+- date and date-range cells render formatted text, ellipsize when clipped, and use the same overflow-only tooltip. `Make.Field.Date` and `Make.Field.DateTime` use `field.properties.format` when present; `Make.Field.DateRange` displays the record value range, while schema `begin` / `end` remains the editor selectable-boundary contract.
 - tags are 22px tall, 4px radius, 12px text, 8px horizontal text padding, and use `+N` overflow when space runs out. A visible tag's tooltip appears only when that tag label is ellipsized; a `+N` tag's tooltip contains the full label list joined with `、`
 - select tags use `#eef4ff` background and `#1677ff` text, with option labels resolved from field properties before falling back to raw values
 - department tags use `#f2f4f7` background and `#344054` text, with the same tag overflow and tooltip behavior as select fields
@@ -113,12 +113,12 @@ In new Make POC code, this table should be represented in the shared registry in
 | `Make.Field.Text` | text | string/number/boolean/object | text with ellipsis + overflow-only tooltip |
 | `Make.Field.TextArea` | text | string/object | wider text column, ellipsis + overflow-only tooltip |
 | `Make.Field.URL` | url | string or `{ href/url/value, label/name }` | clickable text only for safe hrefs |
-| `Make.Field.Number` | number | finite number or finite numeric string; invalid/non-finite is empty | right-aligned ellipsized number text, overflow-only tooltip, never `NaN` |
-| `Make.Field.Currency` | number | finite number or pure numeric string; formatted strings are invalid | ellipsized currency text with field/schema symbol, default `￥`, right-aligned, overflow-only tooltip, never `NaN` |
-| `Make.Field.Percent` | number | finite number or pure numeric string; formatted strings are invalid | ellipsized percent text with `%`, right-aligned, overflow-only tooltip, never `NaN` |
-| `Make.Field.Date` | date | parseable date string/value | ellipsized `YYYY-MM-DD` or host date format, overflow-only tooltip |
-| `Make.Field.DateTime` | date | parseable date-time string/value | ellipsized `YYYY-MM-DD HH:mm` or host date-time format, overflow-only tooltip |
-| `Make.Field.DateRange` | date | `[begin,end]` or `{ begin/end/start/from/to }` | format as `YYYY-MM-DD 至 YYYY-MM-DD` or host date-range text; apply ellipsis only when the column clips the rendered text, with overflow-only tooltip |
+| `Make.Field.Number` | number | finite number or finite numeric string; invalid/non-finite is empty | right-aligned ellipsized number text using `field.properties.precision` when present, overflow-only tooltip, never `NaN` |
+| `Make.Field.Currency` | number | finite number or pure numeric string; formatted strings are invalid | ellipsized currency text with `field.properties.symbol`, `field.properties.decimalPlaces`, and optional `useGrouping`, default symbol `￥`, right-aligned, overflow-only tooltip, never `NaN` |
+| `Make.Field.Percent` | number | finite number or pure numeric string; formatted strings are invalid | ellipsized percent text with `%` and `field.properties.decimalPlaces`, right-aligned, overflow-only tooltip, never `NaN` |
+| `Make.Field.Date` | date | parseable date string/value | ellipsized text using `field.properties.format` or host date format, overflow-only tooltip |
+| `Make.Field.DateTime` | date | parseable date-time string/value | ellipsized text using `field.properties.format` or host date-time format, overflow-only tooltip |
+| `Make.Field.DateRange` | date | `[begin,end]` or `{ begin/end/start/from/to }` | format as `YYYY-MM-DD 至 YYYY-MM-DD` or host date-range text; schema `field.properties.begin` / `end` is not displayed as the value but must be passed to editors; apply ellipsis only when the column clips the rendered text, with overflow-only tooltip |
 | `Make.Field.SingleSelect` | select | raw value, option object, one-item array | one select tag; ellipsized tag tooltip only |
 | `Make.Field.MultiSelect` | select | array of raw values/option objects | select tag list with `+N`; `+N` tooltip contains full label list |
 | `Make.Field.SingleUser` | user | object or backend one-item array | avatar/name renderer; name tooltip only when ellipsized |
@@ -133,8 +133,8 @@ In new Make POC code, this table should be represented in the shared registry in
 Use tolerant extraction. Do not fail the cell because one key is absent.
 
 - generic object label priority: `label`, `name`, `title`, `displayName`, `value`
-- numeric values: accept finite numbers directly; for trimmed pure numeric strings, parse to a number first and accept only when `Number.isFinite(parsed)` is true. Treat `null`, `undefined`, blank strings, `NaN`, `Infinity`, formatted strings, and unparseable strings as empty. Do not render `Number(value)` directly.
-- currency and percent display may apply symbols, separators, precision, or `%` only after finite validation. Backend/API values for `Make.Field.Currency` and `Make.Field.Percent` must be finite numbers or pure numeric strings; strings already containing currency symbols, percent signs, thousands separators, or display units are data-contract defects and should not be silently normalized as the standard path.
+- numeric values: accept finite numbers directly; for trimmed pure numeric strings, parse to a number first and accept only when `Number.isFinite(parsed)` is true. Treat `null`, `undefined`, blank strings, `NaN`, `Infinity`, formatted strings, and unparseable strings as empty. Do not render `Number(value)` directly. Use `Number.precision` for display precision when the schema provides it.
+- currency and percent display may apply symbols, separators, precision, or `%` only after finite validation. Backend/API values for `Make.Field.Currency` and `Make.Field.Percent` must be finite numbers or pure numeric strings; strings already containing currency symbols, percent signs, thousands separators, or display units are data-contract defects and should not be silently normalized as the standard path. Currency formatting uses `symbol`, `decimalPlaces`, and `useGrouping`; percent formatting uses `decimalPlaces`.
 - keep percent scale consistent with host metadata or documented backend semantics. Do not multiply or divide percent values by 100 unless the field metadata or project contract explicitly says backend stores fractions.
 - select labels: `field.properties.options[]` with `{ value, label }`, fallback to raw value
 - user candidate API results: value/id is `userId`, label is `userName`, optional avatar is `avatar`
@@ -193,7 +193,8 @@ Add focused tests before or with implementation:
 - object switch resets horizontal and vertical scroll instead of reusing the previous object's scrollLeft/scrollTop
 - overflow tooltips are default behavior, but only appear when text/tag/user/attachment/lookup content is ellipsized, clipped, or hidden behind `+N`; text-bearing overflow must visibly show ellipsis before tooltip
 - number/currency/percent values cover `0`, negative, decimal, pure numeric string, `null`, empty string, non-numeric string, formatted strings, `NaN`, and `Infinity`, and never render `NaN`
-- currency and percent display tests verify that backend values such as `"1000.00"` and `"85.00"` remain pure numeric input values while the frontend renderer adds the currency symbol or `%` according to field type
+- number display tests cover `field.properties.precision`; currency and percent display tests verify that backend values such as `"1000.00"` and `"85.00"` remain pure numeric input values while the frontend renderer adds `Currency.symbol`, `Currency.decimalPlaces`, optional grouping, or `%` plus `Percent.decimalPlaces` according to field type
+- date display tests cover `field.properties.format`; date-range editor handoff tests preserve `field.properties.begin` and `field.properties.end`
 - backend variants: primitive, object, array, JSON string, empty value
 - select option label fallback
 - user backend shapes with `name`, `userName`, `recordID`, `userId`, and avatar keys
@@ -219,6 +220,7 @@ Mock canvas-table shapes in unit tests when the host test environment cannot dra
 - Do not call user or department candidate APIs inside canvas renderers. Load candidates at the page/table-controller layer and pass normalized options into editors or display adapters.
 - Do not call `Number(value).toLocaleString()` or similar formatting without first checking `Number.isFinite`.
 - Do not treat formatted strings containing currency symbols, percent signs, thousands separators, or display units as valid backend values. The normal API contract for `Currency` and `Percent` is finite number or pure numeric string; display formatting is added only by frontend renderers.
+- Do not drop `field.properties` when building CanvasTable columns. Losing `precision`, `format`, `decimalPlaces`, `symbol`, `begin`, `end`, or `maxCount` makes table display and cell editors diverge from Drawer forms.
 - Do not flatten select, user, department, file, or lookup values into plain text when the schema type supports richer default rendering.
 - Do not show tooltip for every cell unconditionally. Tooltip is for visible ellipsis, unavoidable non-text clipping, or `+N` hidden values.
 - Do not render raw JSON wrapper text when a label can be extracted.

@@ -209,7 +209,7 @@ Response Body
 
 - SingleDepartmentField 非必填时可以写入 `null` 或不提交该字段；必填时不能为 `null`。
 - MultiDepartmentField 非必填时可以写入 `[]` 或不提交该字段；必填时数组不能为空。
-- MultiDepartmentField 通过 `maxCount` 控制最多可选择的部门数量，默认值以 @FieldDesign.md 为准。
+- MultiDepartmentField 通过 `properties.maxCount` 控制最多可写入的部门数量，默认值以 @FieldDesign.md 为准；元数据消费方必须保留 `maxCount`，供下游按同一数量上限处理多部门值。
 - MultiDepartmentField 中同一个部门 ID 不允许重复出现。
 - DataAPIDesign.md 中的接口写入的部门 ID 必须是字符串类型，并且必须来自 Department 分页查询接口返回的当前组织可见部门；候选查询响应 JSON 中的 `departmentId` 已是字符串。
 - 禁止通过前端实现 Department 数据过滤功能，必须使用后端接口`filter`参数实现。
