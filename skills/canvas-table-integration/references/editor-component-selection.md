@@ -31,7 +31,7 @@ For Make schema-driven cell editing, this priority must produce concrete editor 
 | File | existing upload / attachment manager |
 | ID / Lookup | read-only by default unless the backend explicitly supports editing |
 
-If the host project uses Ant Design, the ExpensePoc baseline is Input for text, InputNumber with `variant="borderless"` and `controls={false}` for numbers, DatePicker or RangePicker with controlled `open`, and Select with controlled `open` and `getPopupContainer` pointing at the editor popup root. Other component libraries should use equivalent controls and behavior.
+If the host project uses Ant Design, the platform baseline is Input for text, InputNumber with `variant="borderless"` and `controls={false}` for numbers, DatePicker or RangePicker with controlled `open`, and Select with controlled `open` and `getPopupContainer` pointing at the editor popup root. Other component libraries should use equivalent controls and behavior.
 
 ## 3. What to inspect first
 

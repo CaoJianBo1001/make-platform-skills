@@ -52,6 +52,8 @@ Rules:
 
 - Normalize schema variants at the Service/API boundary before UI sees them.
 - Keep entity key, entity display name, field key, field name, field type, options, relation metadata, required/read-only flags, and lookup target metadata when available.
+- Preserve normalized field `capabilities`, including `sortable` and `groupable`,
+  so UI candidates and Service validation use the same runtime Schema contract.
 - Do not require local DSL/YAML files to serve schema in published runtime.
 - If remote schema is unavailable, return a visible error status; do not silently serve stale generated fields unless the project explicitly has an offline-dev fallback.
 
@@ -86,6 +88,61 @@ Rules:
 - Do not generate new Service contracts that send `filter: []`, `filter: {}`, blank raw strings, or old object-array DSL to Make Data. Raw non-blank CEL strings are legacy compatibility only when the host API already documents them.
 - Do not infer returned fields from arbitrary UI row keys. The UI should request fields by schema keys when it needs a smaller payload.
 - Create/update payloads carry raw submit values, not formatted display labels.
+
+Use `make-app-sort` for the canonical five-level ordered sort model, sortable-field
+capability, save-before-apply behavior, and CanvasTable header linkage. Service
+owns parsing and authoritative validation.
+
+## Entity Preset routes
+
+Generate these routes when advanced filtering or record sorting is enabled:
+
+- `GET /api/entities/:entityKey/preset`
+  - response: `{ filter: { expression } | null, sort: { fieldKey, order }[] }`
+- `PATCH /api/entities/:entityKey/preset`
+  - sparse body containing at least one supported dimension
+  - filter clear: `{ filter: null }`
+  - sort clear: `{ sort: [] }`
+  - response: `{ ok: true }` or the host's documented update result
+
+For `gatewayBaseUrl: "/api/make"` hosts, also document and test the actual
+published mapping under `/api/make/app/**`. Do not leave prefix-free compatibility
+routes as the only path.
+
+Rules:
+
+- Call Make Preset `/preset/v1/entity` with
+  `X-Make-Target: MakeService.GetResource` or
+  `X-Make-Target: MakeService.UpdateResource`.
+- Inject `appKey` from normalized deployment config and `entityKey` from the
+  validated route. Never accept `appKey` from UI input.
+- Forward the current login/session context because Preset is scoped to the
+  current user, App, and Entity.
+- Normalize missing filter to `null` and missing sort to `[]`; do not leak the raw
+  Make response envelope.
+- PATCH is sparse. Send only dimensions present in the request and preserve
+  sibling dimensions plus the future `group`. Do not implement client-side
+  read-modify-write of the whole Preset.
+- Verify upstream sparse merge semantics with an integration test that updates one
+  dimension and proves existing sibling dimensions remain unchanged. If the
+  upstream contract is not atomic, report the blocker instead of adding a racy
+  read-modify-write fallback.
+- Validate filter through `make-app-filter` semantics.
+- Validate Preset sort and records sort with the same pure shape parser: at most
+  five unique `{ fieldKey, order }` entries and only `asc | desc`.
+- Before Make calls, resolve current runtime fields and require
+  `field.capabilities?.sortable === true` for every sort field. Do not use a
+  field-type allowlist.
+- Treat Preset GET as a tolerant upstream boundary: sanitize invalid/stale stored
+  sort entries to a safe response and log discard counts. Keep PATCH and records
+  strict with 400 responses for invalid client input.
+- Do not accept `group` until the later grouping contract is implemented; sparse
+  updates preserve an existing upstream group without exposing it.
+- Add route and adapter logs at entry, success, failure, and clear branches with
+  safe entity/dimension/count context. Redact credentials and filter values.
+
+Use `make-app-sort` for sort UI/model/records timing and `make-app-filter` for
+advanced-filter package/hydration/save behavior.
 
 ## Candidate routes
 

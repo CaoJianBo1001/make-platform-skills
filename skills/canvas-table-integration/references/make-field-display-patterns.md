@@ -14,7 +14,7 @@ Keep the adapter pure. Keep I/O such as option, department, or user candidate lo
 
 ## Default Make Schema Table Baseline
 
-For new Make App projects, any Make schema-driven business table should follow this ExpensePoc-derived display baseline unless the user explicitly asks for a different table style.
+For new Make App projects, any Make schema-driven business table should follow this platform display baseline unless the user explicitly asks for a different table style.
 
 Default structure:
 
@@ -24,7 +24,7 @@ Default structure:
 - normalize remote schema variants before the table layer consumes them; handle shapes such as `entity.properties.fields`, `entity.fields`, or the host documented equivalent in a boundary adapter
 - derive `IColumn[]` from normalized runtime schema fields, not from a hand-maintained static column list
 - keep `fieldType`, `fieldSchema`, and `renderKind` or equivalent metadata on each generated column
-- derive `displayGroup`, `renderKind`, default `width`, `align`, multiplicity, host-owned display/editor hints, and normalized `field.properties` from the shared registry; do not duplicate field-type string lists inside table display modules. Advanced-filter capability remains owned by `make-app-filter` and `@qfei-design/make-filter`
+- derive `displayGroup`, `renderKind`, default `width`, `align`, multiplicity, host-owned display/editor hints, and normalized `field.properties` from the shared registry; do not duplicate field-type string lists inside table display modules. Advanced-filter capability remains owned by `make-app-filter` and `@qfei-design/make-app-filter`
 - keep business ordering or primary-link roles as a thin config layer; generic rendering still branches by field type
 - normalize each raw cell value once through a pure field-display adapter before rendering
 - route normalized display groups to focused canvas renderers: `text`, `tag`, `user`, `attachment`, `lookup`, and generic fallback
@@ -48,7 +48,7 @@ Default visual rules:
 - tags are 22px tall, 4px radius, 12px text, 8px horizontal text padding, and use `+N` overflow when space runs out. A visible tag's tooltip appears only when that tag label is ellipsized; a `+N` tag's tooltip contains the full label list joined with `、`
 - select tags use `#eef4ff` background and `#1677ff` text, with option labels resolved from field properties before falling back to raw values
 - department tags use `#f2f4f7` background and `#344054` text, with the same tag overflow and tooltip behavior as select fields
-- user values render a fixed compact avatar plus name text and `+N` overflow. Avatar image and fallback color circle both use the ExpensePoc avatar token: fixed 22px diameter, 11px radius, no layout-driven resizing, and no content-sized background. Fallback avatar background follows the project primary/avatar token, defaulting to a restrained blue when no token exists; only use a hash color palette when the host already has that convention and the colors are muted. Fallback avatar text uses 9px white centered text, 400 weight, and at most two display characters. The renderer may use the last two Chinese characters like ExpensePoc, but it must never shrink the circle, enlarge the font, or draw a small pill/tag background around the text. Visible user names get tooltip only when ellipsized; `+N` gets a tooltip with all names
+- user values render a fixed compact avatar plus name text and `+N` overflow. Avatar image and fallback color circle both use the shared compact avatar token: fixed 22px diameter, 11px radius, no layout-driven resizing, and no content-sized background. Fallback avatar background follows the project primary/avatar token, defaulting to a restrained blue when no token exists; only use a hash color palette when the host already has that convention and the colors are muted. Fallback avatar text uses 9px white centered text, 400 weight, and at most two display characters. The renderer may use the last two Chinese characters for compact CJK display, but it must never shrink the circle, enlarge the font, or draw a small pill/tag background around the text. Visible user names get tooltip only when ellipsized; `+N` gets a tooltip with all names
 - file values render 22px image thumbnails for images, otherwise a 22px file-extension block, and `+N` overflow when width cannot fit all attachments. Do not flatten attachments into plain filenames; `+N` tooltip should expose the full attachment name list when names are available
 - lookup references render blue clickable text only when entity + `recordID` exist and the reference is not deleted; deleted references render muted with strikethrough. Multiple lookup references render inline with gaps, collapse to `+N` when width runs out, and use overflow-only tooltip for ellipsized labels or collapsed lists
 
@@ -141,7 +141,7 @@ Use tolerant extraction. Do not fail the cell because one key is absent.
 - user label priority: `name`, `userName`, `displayName`, `label`, `userId`, `id`, `recordID`
 - user identity priority: `recordID`, `userId`, `id`; fallback to name for display-only avatar color
 - user avatar priority: `avatar`, `avatarM`, `avatarL`, `avatarS`, `avatarOrigin`, `userAvatar`
-- user fallback avatar text: derive from the normalized display name, using one or two short display characters. Chinese names may use the last two characters, matching ExpensePoc; non-CJK names use up to two uppercase initials. The full name remains outside the avatar as ellipsized text.
+- user fallback avatar text: derive from the normalized display name, using one or two short display characters. Chinese names may use the last two characters; non-CJK names use up to two uppercase initials. The full name remains outside the avatar as ellipsized text.
 - department candidate API results: value/id is `departmentId`, label is `departmentName`; flatten trees before option display
 - department label priority: `name`, `departmentName`, `displayName`, `label`, `departmentId`, `id`, `recordID`
 - URL href priority: `href`, `url`, `value`; text priority: `label`, `name`, href

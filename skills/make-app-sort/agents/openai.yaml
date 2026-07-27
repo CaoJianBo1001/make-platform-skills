@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make App Sort"
+  short_description: "Standardize Make record sorting and presets"
+  default_prompt: "Use $make-app-sort to implement Make record-list sorting with drag-and-drop priority, Entity Preset persistence, and CanvasTable header linkage."

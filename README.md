@@ -26,7 +26,8 @@ Codex 判断优先级：
 | Make POC、PoC 前置环境、更新 Make POC 环境、makecli 登录校验、Node/pnpm/git/makecli 版本检查 | `setup-make-poc` | 只负责 PoC 前置环境准备、工具链更新、Make skills 更新、环境选择和登录校验；不负责 PRD、DSL、Service、UI、apply、deploy 或 git 提交 |
 | 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、表单布局、响应式、UI 状态 | `makeui` | 只负责 UI 怎么展示，不负责认证、打包、Service、业务 API 设计和发布 |
 | CanvasTable、表格渲染、字段类型展示、表格编辑、序号列、行头详情图标、`showSN`、`bodyRowHeadSuffixOptions` | `canvas-table-integration` | 只负责 `@qfei-design/canvas-table` 消费侧接入，不负责页面 Shell 和业务 API |
-| 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-filter` | `make-app-filter` | 负责完整筛选能力：`@qfei-design/make-filter` 消费侧接入、高级筛选控件行为、CanvasTable 表头筛选联动和 `filter.expression` 合同；不负责页面 Shell、表格渲染 API 细节、Service 实现、认证或发布 |
+| 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | 负责完整筛选能力：`@qfei-design/make-app-filter` 消费侧接入、高级筛选控件行为、CanvasTable 表头筛选联动和 `filter.expression` 合同；不负责页面 Shell、表格渲染 API 细节、Service 实现、认证或发布 |
+| 排序、高级排序、多字段排序、排序优先级、升序/降序、拖拽排序条件、表头排序、`openWithField`、`capabilities.sortable`、Entity Preset sort、records sort、dnd-kit | `make-app-sort` | 负责完整排序能力：五级排序纯模型、拖拽草稿、CanvasTable 表头联动、Preset 保存/读取/回显和 records sort 合同；不负责页面 Shell、CanvasTable API 细节、Service 实现或后续分组 |
 | Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema/records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排和 Make adapter 配置语义，不负责 UI、认证、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
 | 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、路由权限、按钮权限、字段可编辑、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、schema/permission 分工、路由和按钮/字段权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
 | 登录、认证、Token、统一登录、OAuth、Cookie、Session、logout、401/403、`/api/make/**` 鉴权请求 | `make-app-auth` | 只负责认证和鉴权请求，不负责 UI 布局和打包发布 |
@@ -38,8 +39,10 @@ Codex 判断优先级：
 常见组合：
 
 - 做一个对象列表页：`makeui` + `canvas-table-integration`
-- 做筛选、高级筛选、表格筛选或表头按字段筛选：`make-app-filter` + `makeui` + `canvas-table-integration`，必须同时完成 package 高级筛选和 CanvasTable 表头筛选联动
+- 做筛选、高级筛选、表格筛选或表头按字段筛选：`make-app-filter` + `make-app-permission` + `makeui` + `canvas-table-integration`，必须同时完成 package 高级筛选、权限感知 Preset 生命周期和 CanvasTable 表头筛选联动
 - 做筛选 Service 合同或 filter.expression 透传：`make-app-filter` + `make-app-service`
+- 做多字段排序、拖拽排序或表头升降序：`make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，必须同时完成权限感知的 Preset 保存/回显和 records sort
+- 同时做筛选和排序：`make-app-filter` + `make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，共享一次权限感知的 Entity Preset 加载与并发请求协调器，但按维度独立保存
 - 做 UI 需要的 Service 接口：`make-app-service` + `makeui`
 - 做 Make 项目默认权限体系：`make-app-permission` + `make-app-service` + `make-app-auth` + `makeui`，涉及表格编辑时加 `canvas-table-integration`
 - 做一个登录后的页面：`makeui` + `make-app-auth`
@@ -99,7 +102,7 @@ npx skills update canvas-table-integration
 - 从 `package.ai.json.readOrder` 动态读取当前 CanvasTable 包文档，不硬编码包内 `docs/`、`examples/` 或 monorepo 路径
 - 非 Make 表格使用 Track A 基础；Make schema 表格使用 Track C 展示基础；需要单元格编辑时在对应基础上叠加 Track B
 - 把 JSON meta 转成 `IColumn[]`
-- Make schema 表格默认按字段类型使用 ExpensePoc 风格渲染，包含附件、lookup、下拉标签、人员、部门，以及内容溢出时显示省略号并展示 tooltip
+- Make schema 表格默认按平台字段展示规范渲染附件、lookup、下拉标签、人员和部门，并仅在内容溢出时显示省略号和 tooltip
 - 切换左侧对象或动态路由时，canvas-table 默认重置滚动位置和对象级临时状态
 
 ### makeui
@@ -121,7 +124,7 @@ npx skills update makeui
 - 不负责打包发布、Service runtime、镜像入口和构建产物；这些交给 `make-app-runtime`
 
 ### make-app-filter
-指导生成、重构或审查 Make App 完整筛选能力。只要用户提出“筛选 / 高级筛选 / 表格筛选 / 表头筛选 / 按字段筛选”，就必须同时完成 `@qfei-design/make-filter` 高级筛选接入和宿主 CanvasTable 表头筛选联动，覆盖包安装与文档读取、筛选条件模型、字段类型操作符、筛选值归一化、CEL/DNF 表达式、系统变量、DateRange/File/Lookup 字段支持、Package `AdvancedFilterPanel`、CanvasTable 表头“按该字段筛选”联动和 `filter.expression` 合同。
+指导生成、重构或审查 Make App 完整筛选能力。只要用户提出“筛选 / 高级筛选 / 表格筛选 / 表头筛选 / 按字段筛选”，就必须同时完成 `@qfei-design/make-app-filter` 高级筛选接入和宿主 CanvasTable 表头筛选联动，覆盖包安装与文档读取、筛选条件模型、字段类型操作符、筛选值归一化、CEL/DNF 表达式、系统变量、DateRange/File/Lookup 字段支持、Package `AdvancedFilterPanel`、CanvasTable 表头“按该字段筛选”联动和 `filter.expression` 合同。
 
 #### 升级 skill
 ```bash
@@ -130,18 +133,43 @@ npx skills update make-app-filter
 
 **使用场景**
 - 设计或修改完整筛选能力：高级筛选弹窗、筛选条件组、`且 / 或` 关系、确认提交交互和 CanvasTable 表头“按该字段筛选”入口
-- 接入或升级 `@qfei-design/make-filter@^0.2.5`，先读取 `package.ai.json`，再动态按 `package.ai.json.readOrder` 读取实际发布的包文档，不硬编码 `docs/` 或 `examples/` 内部路径
+- 接入或升级 `@qfei-design/make-app-filter@^1.0.0`，先读取 `package.ai.json`，再动态按 `package.ai.json.readOrder` 读取实际发布的包文档，不硬编码 `docs/` 或 `examples/` 内部路径
 - 使用包内 core、React panel、controller、AntD adapter 和 `styles.css`；禁止复制或手写本地筛选模型、操作符矩阵、校验器、CEL compiler/parser 或高级筛选面板
 - 根据 Make 字段类型使用包内筛选操作符和值编辑器
 - 通过包内 `compileListFilter` 把搜索和高级筛选合并为 Service 可消费的 `filter.expression`
 - 对齐后端 Record 列表筛选：新请求使用 `filter: { expression }`，无有效表达式时省略 `filter`，不生成 `[]`、`{}`、空表达式或旧对象 DSL
-- `0.2.5` 基线支持 DateRange、File 和已解析 Lookup；字段展示、操作符、CEL 与布尔分组全部以 `@qfei-design/make-filter` 公开能力为准，宿主不得手写或重排表达式
+- `1.0.0` 基线支持 DateRange、File 和已解析 Lookup；字段展示、操作符、CEL 与布尔分组全部以 `@qfei-design/make-app-filter` 公开能力为准，宿主不得手写或重排表达式
 - 做 CanvasTable 表头更多菜单与高级筛选的联动：点击“按该字段筛选”调用同一个 package controller 追加草稿条件并打开高级筛选
+- 使用 `make-app-permission` 提供 `{ enabled, entityKey, generation }` 访问上下文；权限关闭时阻止新的 Schema/Preset/records 请求并让旧结果失效
+- 筛选和排序共享父级 Entity Preset 协调器，以请求 ID 管理并发保存；筛选面板本地提交锁不能替代共享 pending 状态
 - 不允许只做高级筛选或只做表头筛选；Make 记录列表里的筛选能力要么完整交付，要么不交付
 - 约束空筛选、未完成条件、unsupported 字段、人员/部门筛选值和测试
 - 不负责页面 Shell 和工具栏整体布局；这些交给 `makeui`
 - 不负责 CanvasTable 渲染和 suffixRender API 细节；这些交给 `canvas-table-integration`
 - 不负责 Service route 实现；这些交给 `make-app-service`
+
+### make-app-sort
+指导生成、重构或审查 Make App 完整排序能力，覆盖最多五级的有序
+`{ fieldKey, order }[]`、`capabilities.sortable === true` 字段判断、dnd-kit
+拖拽优先级、工具栏与 CanvasTable 表头共用排序面板、Entity Preset 保存/读取/回显，
+以及 records sort 的 UI-Service 合同。
+
+#### 升级 skill
+```bash
+npx skills update make-app-sort
+```
+
+**使用场景**
+- 设计或修改多字段排序、升序/降序、排序优先级、清空排序
+- 接入 `@qfei-design/make-app-sort@^0.1.0` 的 React controller、面板、适配器和样式；dnd-kit 由包内部维护，宿主不直接安装或编排
+- 按运行时 Schema `capabilities.sortable === true` 选择字段，不维护字段类型白名单
+- 排序最多五级，字段唯一，数组顺序就是优先级
+- 通过 `openWithField(fieldKey, order?)` 将 CanvasTable 表头升降序接入同一个排序面板，确认前不刷新 records
+- 先读取 Entity Preset 再查询 records；确认时先保存 Preset，成功后才应用和刷新，失败保留旧应用态与当前草稿
+- Preset 按维度局部更新：排序只写 `{ sort }`，不覆盖 filter 和未来 group
+- 使用 `onConfirm` 持久化、同步 `onApplied` 更新应用态、`onApplyError` 上报应用失败，并把权限感知、单调变化且引用稳定的访问上下文 generation token 作为 `resetKey`
+- 分组作为排序后的第二阶段，未来使用独立 `make-app-group` 和 `capabilities.groupable`
+- 页面位置交给 `makeui`，CanvasTable 表头菜单机制交给 `canvas-table-integration`，Service 路由和 Make adapter 交给 `make-app-service`
 
 ### make-app-service
 指导生成、重构或审查 Make App 的 `apps/service` API，覆盖 UI-Service 合同、Service 路由、Make Meta/Data API adapter、`MAKE_APP_KEY` / Make adapter 环境变量/config 语义、schema/records/users/departments/lookup/file 代理接口和 Service API 测试。

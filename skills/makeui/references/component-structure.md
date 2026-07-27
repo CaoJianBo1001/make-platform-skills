@@ -2,7 +2,7 @@
 
 ## Contents
 
-- [ExpensePoc default UI tree](#expensepoc-default-ui-tree)
+- [Platform default UI tree](#platform-default-ui-tree)
 - [Default module boundaries](#default-module-boundaries)
 - [Componentization readiness checklist](#componentization-readiness-checklist)
 - [Route and page files](#route-and-page-files)
@@ -10,9 +10,9 @@
 - [Object list and table pages](#object-list-and-table-pages)
 - [Small-change exception](#small-change-exception)
 
-## ExpensePoc default UI tree
+## Platform default UI tree
 
-For new Make POC projects, use the ExpensePoc-style `apps/ui/src` layout as the default unless the host project already has an equivalent componentized tree:
+For new Make POC projects, use the platform `apps/ui/src` layout as the default unless the host project already has an equivalent componentized tree:
 
 ```text
 apps/ui/src/
@@ -52,11 +52,11 @@ For new Make POC projects, create a shared field type registry at `apps/ui/src/l
 
 The registry should cover all current Make field types and expose small metadata that downstream modules can reuse, such as `fieldType`, `displayGroup`, `renderKind`, `multiple`, default `width`, `align`, form/detail layout hints, and host editor hints. Keep business role overrides, such as making a primary code clickable, in thin feature config layered on top of the registry.
 
-Advanced filtering is the explicit exception: pass normalized runtime fields to `make-app-filter`, and let `@qfei-design/make-filter` choose filter support, operators, defaults, validation, and value editors. Do not mirror those package contracts in the host registry.
+Advanced filtering is the explicit exception: pass normalized runtime fields to `make-app-filter`, and let `@qfei-design/make-app-filter` choose filter support, operators, defaults, validation, and value editors. Do not mirror those package contracts in the host registry.
 
 ## Default module boundaries
 
-New generated Make POC UI and non-trivial generated/refactored `apps/ui` code must be componentized by responsibility. Prefer the host project's existing directory style first when it already separates concerns. If the project has no clear convention, use the ExpensePoc default tree and these boundaries:
+New generated Make POC UI and non-trivial generated/refactored `apps/ui` code must be componentized by responsibility. Prefer the host project's existing directory style first when it already separates concerns. If the project has no clear convention, use the platform default tree and these boundaries:
 
 - `pages` or `routes`: route-level page entrypoints
 - `features/<domain>`: object or workflow-specific UI modules

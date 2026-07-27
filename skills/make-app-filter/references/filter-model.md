@@ -12,7 +12,7 @@ import type {
   AdvancedFilterCondition,
   AdvancedFilterGroup,
   AdvancedFilterNode,
-} from "@qfei-design/make-filter";
+} from "@qfei-design/make-app-filter";
 ```
 
 Use package-generated stable ids for React keys and package helpers for immutable
@@ -68,7 +68,7 @@ Default labels:
 - no active conditions: `筛选`
 - active conditions: `已筛选 N 个条件`
 
-Default active trigger style is green-tinted, matching ExpensePoc:
+Default active trigger style uses a restrained green-tinted state:
 
 - border: `#8fd19e`
 - background: `#eaf7ed`

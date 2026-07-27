@@ -30,7 +30,7 @@ Default Make App shell:
 - content region below the header
 - no body-level or whole-page scroll
 
-When no project-specific shell already exists, use the ExpensePoc-style dense object-management shell as the default:
+When no project-specific shell already exists, use the platform dense object-management shell as the default:
 
 - sidebar width around 220px
 - compact brand block at the top

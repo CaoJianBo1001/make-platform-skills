@@ -117,7 +117,7 @@ Use these defaults for first-pass editable-list work. Adapt them to the host pro
 ## Track C workflow
 
 1. Check whether the package is installed and read the package docs in the required order.
-2. For new Make App projects, apply the ExpensePoc-derived table display baseline unless the user explicitly asks for another visual style.
+2. For new Make App projects, apply the platform table-display baseline unless the user explicitly asks for another visual style.
 3. Identify the Make field schema shape and the actual backend value formats.
 4. Normalize backend schema variants, such as `entity.properties.fields` or `entity.fields`, before the table layer consumes them.
 5. Create or reuse the shared Make field type registry at `apps/ui/src/lib/make-field-types.ts`; it should expose `displayGroup`, `renderKind`, default `width`, `align`, multiplicity, and UI capability hints for all current Make field types.
@@ -271,7 +271,7 @@ For Track B, report:
 For Track C, report:
 
 - which Make field types were covered
-- whether the ExpensePoc-derived default table display baseline was applied or intentionally overridden
+- whether the platform default table-display baseline was applied or intentionally overridden
 - how table initialization is gated on schema availability
 - where schema-to-column config lives
 - where value normalization lives

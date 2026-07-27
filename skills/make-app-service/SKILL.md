@@ -1,8 +1,8 @@
 ---
 name: make-app-service
-description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service API code and UI-Service contracts. Covers Service route design, apps/docs/api.md, layered source structure, make-client adapters, schema normalization APIs, record CRUD through Make gateway /make/data/v1/record, record list filter parsing and { expression } pass-through, user/department/lookup/file proxy APIs, Make adapter config, request login-context forwarding, validation, logging, and Service API tests. For generated Make Apps, coordinate the required /api/make/app/principal/permission Service proxy through make-app-permission. Does not cover UI layout, auth implementation, permission logic, build output, runtime, DSL modeling, Make CLI deployment, or canvas-table internals."
+description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service API code and UI-Service contracts. Covers Service route design, apps/docs/api.md, layered source structure, make-client adapters, schema normalization APIs, record CRUD through Make gateway /make/data/v1/record, record-list filter/sort parsing, Entity Preset filter/sort routes and adapters, user/department/lookup/file proxy APIs, Make adapter config, request login-context forwarding, validation, logging, and Service API tests. For generated Make Apps, coordinate the required /api/make/app/principal/permission Service proxy through make-app-permission. Use make-app-sort for sorting behavior and make-app-filter for filtering behavior. Does not cover UI layout, auth implementation, permission logic, build output, runtime, DSL modeling, Make CLI deployment, or canvas-table internals."
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # make-app-service
@@ -11,7 +11,7 @@ Use this skill for Make App Service API work in `apps/service`.
 
 `make-app-service` owns the Service API contract between `apps/ui` and `apps/service`, thin Make Data API orchestration, Service route shape, Make adapter runtime config semantics, request/response normalization, Service-side validation, error mapping, boundary logging, and Service API tests.
 
-It does not own UI layout (`makeui`), authentication implementation (`make-app-auth`), single-app permission logic (`make-app-permission`), runtime build/start contracts (`make-app-runtime`), DSL modeling (`makedsl`), Make CLI execution (`makecli`), or CanvasTable rendering/editing (`canvas-table-integration`).
+It does not own sorting behavior (`make-app-sort`), filtering behavior (`make-app-filter`), UI layout (`makeui`), authentication implementation (`make-app-auth`), single-app permission logic (`make-app-permission`), runtime build/start contracts (`make-app-runtime`), DSL modeling (`makedsl`), Make CLI execution (`makecli`), or CanvasTable rendering/editing (`canvas-table-integration`).
 
 ## Quick start
 
@@ -19,9 +19,9 @@ It does not own UI layout (`makeui`), authentication implementation (`make-app-a
 2. Preserve the host API contract. Update `apps/docs/api.md` before or with any Service route or response-shape change.
 3. For Make Deploy's default route split, treat published browser-facing Service routes as `/api/**`. Prefix-free `/app/**`, `/auth/**`, or `/health` routes may be local compatibility only; do not document them as the published UI contract unless the deploy route actually exposes them.
 4. Keep Service thin: validate UI input, normalize request/response shapes, call Make adapters, and return stable UI-facing contracts.
-5. For a new Make POC Service, use the ExpensePoc-style layered source tree by default: `app.ts`, `server.ts`, `config.ts`, `logger.ts`, `make-client/`, `services/`, `utils/`, with tests beside the route/adapter/helper they cover.
+5. For a new Make POC Service, use the platform layered source tree by default: `app.ts`, `server.ts`, `config.ts`, `logger.ts`, `make-client/`, `services/`, `utils/`, with tests beside the route/adapter/helper they cover.
 6. Do not read local DSL/YAML as a published runtime data source. Runtime schema and data come from Make/backend APIs or the host Service adapter.
-7. Use shared adapters for Make Meta/Data calls, candidate APIs, lookup, files, and schema normalization. Build Make adapter URLs and `appKey` from normalized runtime config, not from route-local domains or UI input.
+7. Use shared adapters for Make Meta/Data/Preset calls, candidate APIs, lookup, files, and schema normalization. Build Make adapter URLs and `appKey` from normalized runtime config, not from route-local domains or UI input.
 8. For generated Make Apps, include the required single-app permission Service proxy by using `make-app-permission`; do not leave `/api/make/app/principal/permission` as a later task unless the user explicitly opts out of permissions.
 9. Add or update Service tests for every changed route, adapter, validation path, and error path.
 10. Read only the needed reference files from the map below.
@@ -39,6 +39,8 @@ It does not own UI layout (`makeui`), authentication implementation (`make-app-a
 | Service build output, port `3000`, `dist/server.js`, package scripts, publish readiness | Use `make-app-runtime` |
 | UI layout, forms, detail display, visual states | Use `makeui` |
 | Make field/table rendering in CanvasTable | Use `canvas-table-integration` |
+| Record sorting, sortable capabilities, Preset sort, records sort | Use `make-app-sort` |
+| Advanced filter package behavior and Preset filter | Use `make-app-filter` |
 
 ## Scope boundary
 
@@ -60,6 +62,7 @@ Generated or refactored Make App Service code should provide these capabilities 
 - runtime schema: `/api/schema`, `/api/entities/:entityKey/fields`
 - single-app permissions: `/api/make/app/principal/permission` through `make-app-permission` for generated Make Apps
 - records: list, get, create, update, delete, cell update
+- current-user Entity Preset: get and sparse filter/sort update when filtering or sorting is enabled
 - lookup options and safe lookup relation updates
 - user candidates and department candidates
 - file upload/delete/download proxy
@@ -71,7 +74,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 
 - `apps/docs/api.md` is the UI-Service contract source. Do not change Service route behavior without updating it.
 - For Make Deploy Service-fronted Apps that use `gatewayBaseUrl: "/api/make"`, `apps/docs/api.md` must document published browser paths under `/api/make/**`, for example `/api/make/auth/**`, `/api/make/oauth/**`, and `/api/make/app/**`. Do not document prefix-free `/app/**` as the published path unless the deploy HTTPRoute exposes it. Older `/api` projects may keep `/api/auth/**` and `/api/app/**` only as an explicit legacy contract.
-- New generated Make POC Services and non-trivial generated/refactored `apps/service` code must use a layered, componentized source structure instead of flat route/adapter/helper files. For new Make POC Services, default to the ExpensePoc-style tree: `app.ts`, `server.ts`, `config.ts`, `logger.ts`, `make-client/` for Make/backend adapters, `services/` for multi-step orchestration, `utils/` for pure helpers, and colocated tests.
+- New generated Make POC Services and non-trivial generated/refactored `apps/service` code must use a layered, componentized source structure instead of flat route/adapter/helper files. For new Make POC Services, default to the platform tree: `app.ts`, `server.ts`, `config.ts`, `logger.ts`, `make-client/` for Make/backend adapters, `services/` for multi-step orchestration, `utils/` for pure helpers, and colocated tests.
 - A flat `apps/service/src` tree is a readiness defect for generated POC work when it mixes route registration, Make request construction, schema normalization, lookup/file orchestration, config parsing, logging, and helpers side by side. Split it before reporting the Service as complete.
 - Route handlers in `app.ts` or `routes/` only validate input, call a service/adapter, map errors, log safe boundary context, and send the documented response. Do not put raw Make payload construction, schema variant parsing, record lookup orchestration, file proxy mapping, or custom workflow steps directly into route handlers.
 - UI-facing APIs return stable, normalized shapes. Do not leak raw Make response envelopes unless the route contract explicitly says so.
@@ -90,8 +93,11 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - Service-to-gateway calls inside the cluster must not use the browser-facing `/api/make` prefix. `/api/make/**` belongs to same-origin browser access, Service ingress, and local-preview public gateway calls; published Service internal upstream URLs use gateway-origin plus `/make`.
 - Service source must not hard-code concrete Make dev/test/prod domains, infer namespace-local gateway addresses, or map deployment environments to domains.
 - Runtime Service code must not require `apps/dsl/**`, `/dsl/**`, or copied `*.yaml` files to start or serve schema/data in published Apps.
-- Schema APIs normalize backend schema variants before UI sees them. Handle known variants such as `entity.properties.fields`, `entity.fields`, or the host-documented equivalent at the Service/API boundary.
+- Schema APIs normalize backend schema variants before UI sees them. Handle known variants such as `entity.properties.fields`, `entity.fields`, or the host-documented equivalent at the Service/API boundary, and preserve field `capabilities.sortable` / `capabilities.groupable` for sorting and future grouping.
 - Record list and detail are separate contracts. Do not implement detail by calling list and guessing the first row when a single-record Make call exists.
+- Entity Preset GET/PATCH routes must use the Make Preset `/preset/v1/entity` adapter with `MakeService.GetResource` / `MakeService.UpdateResource`, preserve the established login context, and update only submitted dimensions. Use `make-app-sort` and `make-app-filter` for dimension semantics.
+- Preset sort and records sort must share shape validation and authoritatively validate fields against current runtime schema `capabilities.sortable === true`. Reject invalid, duplicate, non-sortable, or more-than-five rules before Make calls.
+- Sparse Preset updates must preserve sibling dimensions and the future `group`; saving sort must not send filter/group, and saving filter must not send sort/group.
 - User and department candidates come from Service routes such as `GET /api/users` and `GET /api/departments` or the host equivalent; do not use local demo arrays in generated Service.
 - Lookup option APIs must resolve target object/field from schema metadata and return `{ options, total }`. Do not expose full target records to selector UIs by default.
 - File routes proxy upload/delete/download through Service. UI should not expose raw backend file URLs when a Service download proxy is available.
@@ -111,6 +117,8 @@ GET    /api/config
 GET    /api/make/app/principal/permission
 GET    /api/schema
 GET    /api/entities/:entityKey/fields
+GET    /api/entities/:entityKey/preset
+PATCH  /api/entities/:entityKey/preset
 GET    /api/entities/:entityKey/records
 GET    /api/entities/:entityKey/records/:recordID
 POST   /api/entities/:entityKey/records
@@ -132,5 +140,7 @@ Lookup relation update routes are optional and should be generated only when the
 - With `makeui`: this skill provides Service contracts and normalized API shapes; `makeui` decides how UI renders them.
 - With `make-app-permission`: this skill provides Service layering and tests; `make-app-permission` owns the principal permission route, IAM upstream path, App scope payload, and frontend permission contract.
 - With `canvas-table-integration`: this skill provides schema/records/candidate APIs; table rendering and editing UI stay in the canvas skill.
+- With `make-app-sort`: this skill implements and tests Preset/records routes and Make adapters; `make-app-sort` owns sortable rules, draft/save timing, and header linkage.
+- With `make-app-filter`: this skill implements and tests Preset/records routes and Make adapters; `make-app-filter` owns package filter behavior, hydration, and save timing.
 - With `make-app-auth`: this skill may preserve Service-fronted app route shape, but auth proxy and session behavior stay in auth.
 - With `make-app-runtime`: this skill writes Service source and tests; runtime build/start/port checks stay in runtime.
