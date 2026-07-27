@@ -193,7 +193,7 @@ Recommended placement behavior:
 
 Default visual baseline for Make schema table editing:
 
-- use an ExpensePoc-style attachment panel connected to the edited cell
+- use the platform-standard attachment panel connected to the edited cell
 - default panel width is about `450px`, with a viewport max such as `calc(100vw - 32px)`; do not make the panel as narrow as a single cell
 - use one flat blue panel border connected to the active cell, with `border-radius: 0`, no card chrome, and no nested border that competes with the canvas active-cell outline
 - render existing image/file thumbnails or cards at the top of the panel

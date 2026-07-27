@@ -4,7 +4,7 @@ Use this reference when structuring `apps/service/src` code.
 
 ## Default folder responsibilities
 
-Preserve existing project structure when it already separates these concerns. For new Make POC projects, use the ExpensePoc-style layered tree by default:
+Preserve existing project structure when it already separates these concerns. For new Make POC projects, use the platform layered tree by default:
 
 ```text
 apps/service/src/

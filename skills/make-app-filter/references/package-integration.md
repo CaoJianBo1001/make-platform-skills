@@ -1,19 +1,19 @@
 # Package Integration
 
-Use this reference when wiring `@qfei-design/make-filter` into a Make App host.
+Use this reference when wiring `@qfei-design/make-app-filter` into a Make App host.
 
 ## Package version baseline
 
-Use `@qfei-design/make-filter@^0.2.5` for new Make advanced-filter integrations. This is the validated baseline for Lookup filtering with source-field CEL expressions and the package `AdvancedFilterPanel` header/body/footer structure used by BizFinancePoc-style fixed panels. If the host has an older package version, upgrade before implementing the advanced filter instead of relying on older package behavior.
+Use `@qfei-design/make-app-filter@^1.0.0` for new Make advanced-filter integrations. This is the validated baseline for Lookup filtering with source-field CEL expressions and the package `AdvancedFilterPanel` fixed header/body/footer structure. If the host has an older package version, upgrade before implementing the advanced filter instead of relying on older package behavior.
 
 ## Public package surface
 
 Use only public package entrypoints:
 
-- `@qfei-design/make-filter`
-- `@qfei-design/make-filter/react`
-- `@qfei-design/make-filter/adapters/antd`
-- `@qfei-design/make-filter/styles.css`
+- `@qfei-design/make-app-filter`
+- `@qfei-design/make-app-filter/react`
+- `@qfei-design/make-app-filter/adapters/antd`
+- `@qfei-design/make-app-filter/styles.css`
 
 Never import from `src`, `dist`, or package-internal files.
 
@@ -41,6 +41,8 @@ Never import from `src`, `dist`, or package-internal files.
 - host CSS for the fixed panel container and `.advanced-filter__body { overflow-y: auto; }`
 - candidate APIs for users and departments
 - Service request adapter and record reload timing
+- permission-aware `{ enabled, entityKey, generation }` Preset context
+- shared request-ID-based pending state for concurrent filter/sort saves
 - CanvasTable header filter UI/menu and `openWithField` linkage
 - optional URL/deep-link encoding and parsing policy
 
@@ -71,7 +73,7 @@ operator set, value editor, value normalization, and validation.
 Normalize a resolved Lookup into the public package shape:
 
 ```ts
-import type { AdvancedFilterField } from "@qfei-design/make-filter";
+import type { AdvancedFilterField } from "@qfei-design/make-app-filter";
 
 const normalizedLookupField = {
   key: sourceLookupField.key,
@@ -98,13 +100,16 @@ Lookup as `targetField`; unresolved and nested Lookup fields remain unsupported.
 ## Default imports
 
 ```tsx
-import { compileListFilter } from "@qfei-design/make-filter";
+import {
+  cloneFilterGroup,
+  compileListFilter,
+} from "@qfei-design/make-app-filter";
 import {
   AdvancedFilterPanel,
   useAdvancedFilterController,
-} from "@qfei-design/make-filter/react";
-import { createAntdFilterComponents } from "@qfei-design/make-filter/adapters/antd";
-import "@qfei-design/make-filter/styles.css";
+} from "@qfei-design/make-app-filter/react";
+import { createAntdFilterComponents } from "@qfei-design/make-app-filter/adapters/antd";
+import "@qfei-design/make-app-filter/styles.css";
 ```
 
 Use `createAntdFilterComponents` only when the host uses Ant Design. For other component libraries, implement `AdvancedFilterComponents` with host controls instead of adding Ant Design.
@@ -114,54 +119,148 @@ Use `createAntdFilterComponents` only when the host uses Ant Design. For other c
 The package does not render the trigger or overlay:
 
 ```tsx
+import { useLayoutEffect, useRef, useState } from "react";
+
 const components = createAntdFilterComponents();
-const [open, setOpen] = useState(false);
-const controller = useAdvancedFilterController({
-  fields: filterableFields,
-  value: appliedGroup,
-  onChange: onApplyGroup,
-});
 
-function handleOpenChange(nextOpen) {
-  if (nextOpen) {
-    controller.beginDraft();
-    setOpen(true);
-    return;
-  }
-  controller.resetDraft();
-  setOpen(false);
+function PermissionAwareFilterHost({ presetContext, ...props }) {
+  if (!presetContext.enabled) return null;
+
+  const resetKey = presetContext.generation;
+  return <AdvancedFilterPopover key={resetKey} {...props} />;
 }
 
-function handleConfirm() {
-  const validation = controller.confirm();
-  if (validation.valid) setOpen(false);
-}
+function AdvancedFilterPopover({
+  appliedGroup,
+  candidateSources,
+  filterableFields,
+  onApplyError,
+  onApplyGroup,
+  onPersistError,
+  persistFilter,
+  renderTrigger,
+}) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const activeRef = useRef(true);
+  const saveRequestRef = useRef<symbol | null>(null);
 
-<Popover
-  open={open}
-  trigger="click"
-  placement="bottomLeft"
-  content={
-    <div className="advanced-filter-popover">
-      <AdvancedFilterPanel
-        candidateSources={candidateSources}
-        components={components}
-        fields={filterableFields}
-        value={controller.draftValue}
-        validationErrors={controller.validationErrors}
-        onChange={controller.setDraftValue}
-        onClear={controller.clearDraft}
-        onConfirm={handleConfirm}
-      />
-    </div>
+  useLayoutEffect(
+    () => () => {
+      activeRef.current = false;
+      saveRequestRef.current = null;
+    },
+    [],
+  );
+
+  const controller = useAdvancedFilterController({
+    fields: filterableFields,
+    value: appliedGroup,
+  });
+
+  function handleOpenChange(nextOpen) {
+    if (saveRequestRef.current) return;
+    if (nextOpen) {
+      controller.beginDraft();
+      setOpen(true);
+      return;
+    }
+    controller.resetDraft();
+    setOpen(false);
   }
-  onOpenChange={handleOpenChange}
-/>
+
+  function finishSaveRequest(requestId) {
+    if (!activeRef.current || saveRequestRef.current !== requestId) return;
+    saveRequestRef.current = null;
+    setSaving(false);
+  }
+
+  async function handleConfirm() {
+    if (saveRequestRef.current) return;
+    const validation = controller.validate();
+    if (!validation.valid) return;
+
+    const nextValue = cloneFilterGroup(controller.draftValue);
+    const requestId = Symbol("filter-preset-save");
+    saveRequestRef.current = requestId;
+    setSaving(true);
+
+    try {
+      await persistFilter(nextValue, requestId);
+    } catch (error) {
+      if (activeRef.current && saveRequestRef.current === requestId) {
+        try {
+          onPersistError(error);
+        } finally {
+          finishSaveRequest(requestId);
+        }
+      }
+      return;
+    }
+
+    if (!activeRef.current || saveRequestRef.current !== requestId) return;
+    try {
+      onApplyGroup(nextValue);
+      setOpen(false);
+    } catch (error) {
+      onApplyError(error);
+    } finally {
+      finishSaveRequest(requestId);
+    }
+  }
+
+  return (
+    <Popover
+      open={open}
+      trigger="click"
+      placement="bottomLeft"
+      content={
+        <div className="advanced-filter-popover">
+          <AdvancedFilterPanel
+            candidateSources={candidateSources}
+            components={components}
+            fields={filterableFields}
+            value={controller.draftValue}
+            validationErrors={controller.validationErrors}
+            onChange={controller.setDraftValue}
+            onClear={controller.clearDraft}
+            onConfirm={() => void handleConfirm()}
+          />
+        </div>
+      }
+      onOpenChange={handleOpenChange}
+    >
+      {renderTrigger({ disabled: saving })}
+    </Popover>
+  );
+}
 ```
 
 Host CSS should size only the outer container, for example width, max-height, and overflow. Do not duplicate package panel internals in host CSS.
 
-For BizFinancePoc-style fixed panels, host CSS must clip the outer wrapper and make the package body the only scroll region:
+`persistFilter(nextValue, requestId)` only PATCHes the Preset through the shared
+host Preset coordinator. That coordinator registers every filter/sort request ID,
+removes only the request that settled, and owns shared pending/error state. The
+panel-local `saveRequestRef` only prevents duplicate filter confirmation.
+
+`onApplyGroup` synchronously replaces applied state after success; records reload
+from an effect/query key derived from permission-aware object context plus
+`appliedGroup`. Do not request records inside `persistFilter`.
+`onPersistError` handles only PATCH failures; `onApplyError` separately owns
+synchronous applied-state callback failures after persistence has succeeded.
+
+The parent increments `presetContext.generation` whenever entity or
+permission-enabled state changes and uses that stable primitive as `resetKey`.
+The keyed remount resets package draft state after the context transition has
+committed. The layout-effect cleanup marks old async handlers inactive; no
+request-generation ref is mutated during render. Old success and failure results
+must not mutate the new context.
+
+If `parseCelToAdvancedFilter` returns `unsupported`, keep the raw CEL expression
+in backend requests, render the trigger as active, and show a visible compatibility
+warning. Replace or clear it only after explicit confirmation saves successfully.
+
+For fixed three-region panels, host CSS must clip the outer wrapper and make the package body the only scroll region:
 
 ```css
 .advanced-filter-popover {
@@ -176,7 +275,7 @@ For BizFinancePoc-style fixed panels, host CSS must clip the outer wrapper and m
 
 ## Compatibility shims
 
-When migrating an older project, a small local shim may preserve old function names while delegating to package exports. The shim must not contain copied operator, validation, compiler, parser, or panel logic. Add a test or source check that imports from `@qfei-design/make-filter`.
+When migrating an older project, a small local shim may preserve old function names while delegating to package exports. The shim must not contain copied operator, validation, compiler, parser, or panel logic. Add a test or source check that imports from `@qfei-design/make-app-filter`.
 
 ## Out of scope for the package
 

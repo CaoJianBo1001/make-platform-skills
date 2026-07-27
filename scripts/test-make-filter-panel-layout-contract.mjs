@@ -24,13 +24,14 @@ const filterModel = read('skills/make-app-filter/references/filter-model.md');
 const operatorMatrix = read('skills/make-app-filter/references/operator-matrix.md');
 const serviceTranslation = read('skills/make-app-filter/references/service-translation.md');
 const headerTableLinkage = read('skills/make-app-filter/references/header-table-linkage.md');
+const filterPreset = read('skills/make-app-filter/references/preset-integration.md');
 const makeui = read('skills/makeui/SKILL.md');
 const readme = read('README.md');
 
-assert.match(
+assert.doesNotMatch(
   skill,
-  /BizFinancePoc[\s\S]*(fixed|固定|三段|header|footer|body)/i,
-  'make-app-filter must name BizFinancePoc as the fixed advanced-filter panel layout baseline',
+  /BizFinancePoc|ExpensePoc|uju[-_]?mdm/i,
+  'make-app-filter must describe the fixed advanced-filter layout without project names',
 );
 assert.match(
   skill,
@@ -89,13 +90,13 @@ for (const [name, content] of [
 ]) {
   assert.match(
     content,
-    /@qfei-design\/make-filter@\^0\.2\.5/,
-    `${name} must require @qfei-design/make-filter@^0.2.5 as the Lookup-capable baseline`,
+    /@qfei-design\/make-app-filter@\^1\.0\.0/,
+    `${name} must require @qfei-design/make-app-filter@^1.0.0 as the supported baseline`,
   );
   assert.doesNotMatch(
     content,
-    /@qfei-design\/make-filter@\^(?:0\.1\.4|0\.2\.[234])|older than `?(?:0\.1\.4|0\.2\.[234])`?|installed `?(?:0\.1\.5|0\.2\.[234])\+`?/i,
-    `${name} must not keep an older package baseline`,
+    /@qfei-design\/make-filter|@qfei-design\/make-app-filter@\^0\./i,
+    `${name} must not keep the retired package name or pre-1.0 baseline`,
   );
 }
 
@@ -106,7 +107,7 @@ assert.match(
 );
 assert.doesNotMatch(
   `${skill}\n${readme}`,
-  /node_modules\/@qfei-design\/make-filter\/docs\/|`docs\/(?:agent-usage|api)\.md`/i,
+  /node_modules\/@qfei-design\/make-app-filter\/docs\/|`docs\/(?:agent-usage|api)\.md`/i,
   'make-app-filter docs must not hardcode unpublished package docs paths',
 );
 assert.match(
@@ -127,7 +128,7 @@ assert.match(
 
 assert.match(
   filterModel,
-  /import type[\s\S]*AdvancedFilterGroup[\s\S]*from ["']@qfei-design\/make-filter["']/,
+  /import type[\s\S]*AdvancedFilterGroup[\s\S]*from ["']@qfei-design\/make-app-filter["']/,
   'filter model must import Filter IR types from the package public entrypoint',
 );
 assert.doesNotMatch(
@@ -168,6 +169,51 @@ assert.match(
   serviceTranslation,
   /compileListFilter[\s\S]*(unchanged|原样|sole|唯一)[\s\S]*(Service|backend|后端)/i,
   'service guidance must submit compileListFilter output without host-side boolean rewrites',
+);
+assert.match(
+  filterPreset,
+  /(A\s*->\s*B\s*->\s*A|A\s*→\s*B\s*→\s*A)[\s\S]*(generation|代次|epoch)[\s\S]*(忽略|ignore|丢弃)/i,
+  'filter preset guidance must reject ABA stale saves with a monotonic generation',
+);
+assert.match(
+  skill,
+  /make-app-permission/,
+  'make-app-filter must hand list-access policy to make-app-permission',
+);
+assert.match(
+  filterPreset,
+  /(enabled|permission|权限)[\s\S]*(entityKey)[\s\S]*(generation|代次|epoch)/i,
+  'filter preset context must include permission-enabled state, entityKey, and generation',
+);
+assert.match(
+  filterPreset,
+  /(permission|权限)[\s\S]*(disabled|关闭|撤销|denied)[\s\S]*(GET|PATCH|records|请求)[\s\S]*(block|阻止|不得|不能)/i,
+  'permission loss must block new filter preset and records requests',
+);
+assert.match(
+  packageIntegration,
+  /key=\{resetKey\}[\s\S]*(useLayoutEffect|layout effect)[\s\S]*(requestId|request id|请求 ID)/i,
+  'filter host example must reset by committed context and identify each local save request',
+);
+assert.doesNotMatch(
+  packageIntegration,
+  /if\s*\(\s*!Object\.is\(observedResetKeyRef\.current,\s*resetKey\)\s*\)/,
+  'filter host example must not mutate request lifecycle refs during render',
+);
+assert.match(
+  packageIntegration,
+  /onPersistError[\s\S]*onApplyError[\s\S]*(separate|区分|only|仅)/i,
+  'filter host example must keep persistence and applied-state callback errors separate',
+);
+assert.match(
+  filterPreset,
+  /(filter|筛选)[\s\S]*(sort|排序)[\s\S]*(shared|共享|共同)[\s\S]*(request ID|请求 ID|pending-request|pending request)/i,
+  'filter and sort must share request-identity-based preset pending state',
+);
+assert.match(
+  filterPreset,
+  /(unsupported|不支持|无法.*编辑)[\s\S]*(backend|后端)[\s\S]*(active|生效)[\s\S]*(warning|提示|可见)/i,
+  'unsupported saved CEL must stay visibly active while backend filtering remains active',
 );
 
 console.log('make filter panel layout contract passed');

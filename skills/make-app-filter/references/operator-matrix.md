@@ -38,7 +38,7 @@ For each normalized runtime field:
    select and initialize the value editor.
 4. Use package operator labels unchanged. Do not rename conditions in the host.
 
-The `@qfei-design/make-filter@^0.2.5` baseline includes File, DateRange, and
+The `@qfei-design/make-app-filter@^1.0.0` baseline includes File, DateRange, and
 Lookup filtering. Lookup remains supported only when the host passes a valid
 source Lookup key together with resolved `relationKey` and non-Lookup target
 field metadata. The package derives Lookup operators and value behavior from

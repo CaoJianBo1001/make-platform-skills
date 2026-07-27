@@ -347,7 +347,7 @@ Symptom:
 
 Fix:
 
-- use an ExpensePoc-style attachment panel connected to the edited cell
+- use the platform-standard attachment panel connected to the edited cell
 - render thumbnails/file cards and one drag/drop/click upload zone inside the same panel
 - keep only one active/panel border and avoid nested form-card chrome
 - keep upload/delete persistence in the host data-source adapter; the cell editor owns only selection, preview, remove, and normalized value extraction

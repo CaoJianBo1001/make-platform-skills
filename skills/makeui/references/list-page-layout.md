@@ -22,7 +22,7 @@ Default object-list scaffold:
 4. Local page toolbar
 5. CanvasTable container
 
-The default layout should match the ExpensePoc-style dense list screen:
+The default layout should match the platform dense list-screen baseline:
 
 - left app sidebar; background color follows the project theme
 - flat workspace header with title only
@@ -71,6 +71,7 @@ Toolbar placement:
 
 - search input on the left
 - optional filter next to search only when requested or already established by the project
+- optional sort after filter and before refresh when requested; route behavior to `make-app-sort`
 - refresh near the search input or in the secondary action group
 - create/new as the rightmost primary action
 - refresh must sit in this local toolbar above the table; do not place it in the global header, object title header, table header row, canvas-table header area, or column header area
@@ -94,8 +95,9 @@ Only add these when the user explicitly asks:
 Recommended placement:
 
 - filter: near search, usually immediately after search or refresh
-- group and sort: after filter, as data-organization controls
-- column settings: near the table's right side or after group/sort
+- sort: after filter and before refresh; use `make-app-sort` for the component, Preset, records, drag, and header linkage
+- group: add after sort only in the later grouping phase; route it to the future grouping Skill instead of implementing it in `makeui`
+- column settings: near the table's right side or after sort/group
 - import/export: right action group, usually left of create/new or inside a more-actions menu
 - batch actions: appear only after rows are selected, in a selection-state toolbar above the table
 - pagination: bottom-right or bottom-center inside the list/table container; do not reserve pagination space when pagination is not requested

@@ -78,7 +78,7 @@ Default:
 - unsupported fields still may show sort UI if sorting is in scope
 - unsupported fields must not call `openWithField`
 
-The `@qfei-design/make-filter@^0.2.5` baseline supports File, DateRange, and
+The `@qfei-design/make-app-filter@^1.0.0` baseline supports File, DateRange, and
 resolved Lookup fields. Do not special-case these names in the header menu:
 always use the same normalized field object and package support API as the
 advanced-filter panel. An unresolved Lookup, unknown type, invalid key, or field

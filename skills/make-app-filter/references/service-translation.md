@@ -9,7 +9,7 @@ New Make App code sends record filters as:
 ```json
 {
   "filter": {
-    "expression": "title.contains(\"客户\")"
+    "expression": "<filterExpression>"
   }
 }
 ```
@@ -53,7 +53,7 @@ syntax belongs to package tests and published package documentation.
 
 System variables remain right-hand values such as `_currentUser`,
 `_currentUserDepartment`, `_today`, or `_now`; do not use them as field keys.
-DateRange, File, and resolved Lookup fields are supported by the `0.2.5` package
+DateRange, File, and resolved Lookup fields are supported by the `1.0.0` package
 baseline through the same compiler path.
 
 Use `parseCelToAdvancedFilter` only for supported expression echo or deep-link compatibility. Unsupported CEL should remain backend-only fallback, not fake UI conditions.

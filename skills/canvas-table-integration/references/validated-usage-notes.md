@@ -7,7 +7,7 @@ Use it to track which capabilities have been validated in real consumer projects
 Current validation basis:
 
 - a downstream React host integration with local tables, editable columns, attachment metadata, and host-side save flow
-- an ExpensePoc-style React Make App integration with Service-backed schema, remote records, editable cells, and real attachment proxy APIs
+- a production-style React Make App integration with Service-backed schema, remote records, editable cells, and real attachment proxy APIs
 
 ## 1. Validated by real project usage
 

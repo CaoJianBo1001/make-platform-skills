@@ -37,9 +37,9 @@ Default host Popover behavior:
 
 Do not hard-code a fixed initial height when content is shorter than the max height.
 
-## BizFinancePoc fixed panel layout baseline
+## Fixed three-region panel layout baseline
 
-Every Make advanced filter popover/panel must preserve the BizFinancePoc three-region layout. Pixel values may follow the host theme, but the structure, button placement, and scroll ownership are mandatory:
+Every Make advanced filter popover/panel must preserve the fixed three-region layout. Pixel values may follow the host theme, but the structure, button placement, and scroll ownership are mandatory:
 
 - top fixed header: left title `筛选`, right action `清空所有`; the header is outside the scrollable condition area and uses a bottom divider
 - middle body / condition area: contains condition rows and nested condition groups only; it is the only vertical scroll region, and host CSS must set `.advanced-filter__body { overflow-y: auto; }`
@@ -66,7 +66,7 @@ Minimum host CSS:
 
 The user must be able to clear, add conditions/groups, and confirm without scrolling to the top or bottom of the condition list. Header and footer controls must remain visible while the condition body scrolls.
 
-Readiness blocker: do not deliver a single-scroll / full-panel scroll implementation where `筛选`, `清空所有`, `+ 添加条件`, `+ 添加条件组`, or `确认` scroll away with condition rows. 单一滚动或全弹层滚动导致按钮滚走时就是交付阻断. This is the uju_mdm-style defect shown in review and must be fixed before reporting the advanced filter as ready.
+Readiness blocker: do not deliver a single-scroll / full-panel scroll implementation where `筛选`, `清空所有`, `+ 添加条件`, `+ 添加条件组`, or `确认` scroll away with condition rows. 单一滚动或全弹层滚动导致按钮滚走时就是交付阻断，必须在报告高级筛选可交付前修复。
 
 ## Package panel
 
@@ -95,7 +95,7 @@ Package `styles.css` owns:
 - single white panel surface
 - fixed header/footer inside the panel
 - header/body/footer flex structure inside the host container
-- BizFinancePoc header/body/footer button placement
+- required header/body/footer button placement
 - condition rows
 - nested group surface
 - attached value editor and delete button

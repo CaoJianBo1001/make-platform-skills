@@ -6,9 +6,9 @@ Use this reference before finishing package-backed advanced filter work.
 
 Package source:
 
-- `apps/ui/package.json` depends on `@qfei-design/make-filter@^0.2.5` or newer
-- UI entry imports `@qfei-design/make-filter/styles.css`
-- local advanced-filter shim, if any, imports from `@qfei-design/make-filter`
+- `apps/ui/package.json` depends on `@qfei-design/make-app-filter@^1.0.0` or newer
+- UI entry imports `@qfei-design/make-app-filter/styles.css`
+- local advanced-filter shim, if any, imports from `@qfei-design/make-app-filter`
 - host code does not contain copied Filter IR types, operator matrix, CEL compiler/parser, validator, or `AdvancedFilterPanel` clone
 
 Filter model and operators:
@@ -40,7 +40,7 @@ UI behavior:
 - opening with no conditions inserts one default draft condition through `beginDraft`
 - package panel renders inside a host-owned container
 - host Popover uses max height rather than fixed initial height
-- panel follows the BizFinancePoc fixed layout: header top, scrollable condition body middle, footer bottom
+- panel follows the fixed three-region layout: header top, scrollable condition body middle, footer bottom
 - header and footer remain visible while conditions scroll; they must not scroll with the condition body
 - header remains visible while the body scrolls, with `筛选` on the left and `清空所有` on the right
 - footer remains visible while the body scrolls, with `+ 添加条件` and `+ 添加条件组` on the left and `确认` on the right
@@ -53,6 +53,15 @@ UI behavior:
 - outside click discards unconfirmed draft changes
 - `清空所有` clears applied filters only after confirmation
 - active trigger shows `已筛选 N 个条件`
+- unsupported saved CEL keeps a visibly active trigger and warning while the raw expression remains active on the backend
+
+Preset lifecycle:
+
+- the first records request waits for runtime fields and Preset hydration
+- save success updates applied state before the records query reacts
+- save failure preserves the previous applied value and current draft
+- concurrent sparse filter and sort saves keep their shared saving state until all requests settle
+- an old `A -> B -> A` load/save result is ignored by a monotonic request generation even though the final entity key matches
 
 Header linkage:
 
@@ -75,7 +84,7 @@ Service and integration:
 
 ## Common regressions
 
-- copying the old local advanced-filter implementation instead of using `@qfei-design/make-filter`
+- copying the old local advanced-filter implementation instead of using `@qfei-design/make-app-filter`
 - forgetting package `styles.css`
 - submitting on every keystroke instead of waiting for `确认`
 - closing the popover but keeping unconfirmed draft changes

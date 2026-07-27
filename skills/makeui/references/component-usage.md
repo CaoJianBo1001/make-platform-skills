@@ -180,7 +180,7 @@ function RemoteUserSelect({
 }
 ```
 
-User and department selectors require a real host-provided candidate source. For generated Make App projects, use the ExpensePoc-proven default UI-Service candidate contract unless the host project already documents equivalent endpoints or Service/API routes:
+User and department selectors require a real host-provided candidate source. For generated Make App projects, use the platform default UI-Service candidate contract unless the host project already documents equivalent endpoints or Service/API routes:
 
 - users: `GET /api/users?keyword=&page=&size=` -> `{ users, total }`
 - departments: `GET /api/departments?keyword=&page=&size=` -> `{ departments, total }`
@@ -215,7 +215,7 @@ For Ant Design, the default form-control mapping is:
 - select/user/department/lookup candidates: `Select` with `showSearch` and `mode="multiple"` for multi-value fields
 - file: no create upload when a saved record identity is required; edit/detail attachment UI after persistence
 
-ExpensePoc-style selector behavior:
+Platform selector behavior:
 
 - `SingleUser` / `SingleDepartment`: single `Select`; `MultiUser` / `MultiDepartment`: `Select` with `mode="multiple"`
 - set `showSearch`, `allowClear`, and `optionFilterProp="label"`

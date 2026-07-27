@@ -2,7 +2,7 @@
 
 Use this reference for Make schema-driven editable cells in `@qfei-design/canvas-table`.
 
-These defaults are derived from the current ExpensePoc table-editing implementation. They are the mandatory baseline / 强制准入规范 for every CanvasTable cell-edit implementation. Host component names may vary, but the lifecycle, value contract, no-double-border visual rule, popup behavior, and save/rollback behavior must not be weakened.
+These defaults define the validated platform behavior for Make table editing. They are the mandatory baseline / 强制准入规范 for every CanvasTable cell-edit implementation. Host component names may vary, but the lifecycle, value contract, no-double-border visual rule, popup behavior, and save/rollback behavior must not be weakened.
 
 If an implementation misses this baseline, treat it as a readiness blocker / 交付阻断. Do not report the editable table as done, complete, ready, or delivered until the standard is satisfied.
 
@@ -10,7 +10,7 @@ If an implementation misses this baseline, treat it as a readiness blocker / 交
 
 Use `editType: "custom"` plus a host `customEdit(options)` bridge for business fields.
 
-For generated Make App editable tables, the ExpensePoc-style cell editor is the required baseline. Do not invent a second cell-edit style for new POC projects.
+For generated Make App editable tables, the platform-standard cell editor is the required baseline. Do not invent a second cell-edit style for new POC projects.
 
 For Make App editable tables, use the applicable required defaults:
 
@@ -87,7 +87,7 @@ Placement baseline:
 - select, user, department, date, date range, and lookup popups prefer left/top-start alignment from the edited cell when there is enough viewport space
 - if the popup would overflow right, align its right edge with the edited cell or shift it left within the viewport
 - if the popup would overflow bottom, flip above the cell or shift upward within the viewport while keeping the anchor visually clear
-- attachment panels follow the ExpensePoc rule: default left alignment from the edited cell; switch to right alignment only when the available right-side viewport space is smaller than the panel width
+- attachment panels follow the viewport-aware placement rule: default left alignment from the edited cell; switch to right alignment only when the available right-side viewport space is smaller than the panel width
 - all placement decisions use the post-scroll cell geometry, not stale coordinates from before `scrollTo(...)`. A dropdown that chooses right alignment before scroll and then switches left after scroll is a bug; the popup should not be shown or placed until after the scroll has settled
 
 ## 3. No double-border rule
@@ -109,7 +109,7 @@ Default visual requirements:
 
 If a screenshot shows a blue cell outline plus another blue rectangle around the Select/Input/Pick trigger, the editor is wrong.
 
-Default ExpensePoc sizing:
+Default editor sizing:
 
 - editor root, popup editor wrapper, select trigger, date picker, and number input are `width: 100%` and `height: 100%`
 - the input/trigger can keep small horizontal text padding, but must not introduce an inset bordered rectangle
@@ -143,7 +143,7 @@ Concrete component expectations:
 
 ## 5. Attachment editor visual rule
 
-Attachment editing must preserve the ExpensePoc-style table editor behavior. A host attachment component may be reused only when it satisfies the same connected-panel, no nested form-card chrome, value, and data-source-boundary rules.
+Attachment editing must preserve the required platform table-editor behavior. A host attachment component may be reused only when it satisfies the same connected-panel, no nested form-card chrome, value, and data-source-boundary rules.
 
 Default attachment editor shape:
 

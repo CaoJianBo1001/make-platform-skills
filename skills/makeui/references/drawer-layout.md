@@ -71,7 +71,7 @@ Form layout:
 - show form-level save errors as a compact `Alert` above the first form panel
 - keep control height and radius consistent, for example 36px controls with 6px radius when using Ant Design
 
-Unless the user or existing project asks otherwise, use the ExpensePoc create/edit Drawer as the default visual baseline:
+Unless the user or existing project asks otherwise, use the platform create/edit Drawer as the default visual baseline:
 
 - `Drawer` on the right, width `60%`, fullscreen toggle can expand to `100%`
 - `layout="vertical"` form, `colon={false}`
