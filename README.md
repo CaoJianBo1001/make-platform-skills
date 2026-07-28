@@ -23,7 +23,7 @@ Codex 判断优先级：
 
 | 用户问题 / 关键词 | 使用 skill | 边界 |
 | --- | --- | --- |
-| Make 环境安装、Make POC、PoC 前置环境、更新 Make 环境、makecli 登录校验、Node/pnpm/git/makecli 版本检查 | `make-env-setup` | 只负责本地开发环境准备、工具链更新、Make skills 更新、环境选择和登录校验；不负责 PRD、DSL、Service、UI、apply、deploy 或 git 提交 |
+| Make 环境安装、更新 Make 环境、makecli 登录校验、Node/pnpm/git/makecli 版本检查 | `make-env-setup` | 只负责本地开发环境准备、工具链更新、Make skills 更新、环境选择和登录校验；不负责 PRD、DSL、Service、UI、apply、deploy 或 git 提交 |
 | 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、表单布局、响应式、UI 状态 | `makeui` | 只负责 UI 怎么展示，不负责认证、打包、Service、业务 API 设计和发布 |
 | CanvasTable、表格渲染、字段类型展示、表格编辑、序号列、行头详情图标、`showSN`、`bodyRowHeadSuffixOptions` | `canvas-table-integration` | 只负责 `@qfei-design/canvas-table` 消费侧接入，不负责页面 Shell 和业务 API |
 | 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | 负责完整筛选能力：`@qfei-design/make-app-filter` 消费侧接入、高级筛选控件行为、CanvasTable 表头筛选联动和 `filter.expression` 合同；不负责页面 Shell、表格渲染 API 细节、Service 实现、认证或发布 |
@@ -62,8 +62,9 @@ npx skills update make-env-setup
 ```
 
 **使用场景**
-- 开始 Make 开发（含 POC）前检查和更新本地工具链
-- 校验 makecli 版本、环境选择和登录状态
+- 配置 Make 开发环境
+- 开始 Make 开发前检查和更新本地工具链
+- 校验 makecli 版本和登录状态
 - 处理前置环境、makecli 登录校验或 Make skills 更新
 
 ### makecli
