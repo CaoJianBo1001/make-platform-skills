@@ -1,12 +1,12 @@
 ---
-name: setup-make-poc
-description: Use when preparing or updating a Make POC environment before development, including checking latest versions of Node, pnpm, git, makecli, Make platform skills, makecli login/verify, and Make environment selection. Triggered by Make POC, POC 环境安装, 更新 Make POC 环境, makecli 登录校验, or PoC 前置环境. Trigger matching is case-insensitive.
+name: make-env-setup
+description: Use when preparing or updating the local Make development environment before development, including checking latest versions of Node, pnpm, git, makecli, Make platform skills, makecli login/verify, and Make environment selection. Triggered by Make POC, Make 环境安装, POC 环境安装, 更新 Make 环境, makecli 登录校验, or PoC 前置环境. Trigger matching is case-insensitive.
 metadata:
-   version: 0.1.1
+   version: 0.2.0
    homepage: https://github.com/qfeius/make-platform-skills
 ---
 
-# setup-make-poc
+# make-env-setup
 
 Prepare the local environment and initialize the project folder for a Make POC before any PRD, DSL, Service, UI, apply, deploy, or git work.
 
