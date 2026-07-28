@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make Env Setup"
+  short_description: "Prepare the local Make development environment"
+  default_prompt: "Use $make-env-setup to check and update Node, pnpm, git, makecli, Make platform skills, verify makecli login, select the Make environment, and initialize the project folder."
