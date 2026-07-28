@@ -75,6 +75,7 @@ Use the stable package channel. On macOS use Homebrew. On WSL use Linuxbrew if a
 
    ```bash
    brew tap qfeius/makecli
+   brew trust qfeius/makecli
    if ! command -v makecli >/dev/null 2>&1; then
      brew install makecli
    elif brew list makecli >/dev/null 2>&1 || brew list qfeius/makecli/makecli >/dev/null 2>&1; then
@@ -104,12 +105,6 @@ pnpm --version
 git --version
 makecli version
 ```
-
-If `makecli version` is below `0.4.5`, stop and report that the CLI is too old after update. Do not continue to the final interactive Make gate.
-
-## Final Interactive Make Gate
-
-Run the Make environment selection, token verification, and project folder initialization at the end, after the system gate, toolchain update, version verification, and skills update are complete.
 
 ### Verify Token With Guided Login
 
