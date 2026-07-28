@@ -57,29 +57,28 @@ Use the stable package channel. On macOS use Homebrew. On WSL use Linuxbrew if a
    brew update
    ```
 
-3. Install missing tools and upgrade outdated tools.
+3. Install missing tools and upgrade brew-managed tools. `brew upgrade` is a no-op when the package is already current. A tool that exists but is not brew-managed (for example node via nvm, pnpm via corepack) must be left untouched; note it in the summary.
 
    ```bash
    for pkg in node pnpm git; do
-     if ! brew list "$pkg" >/dev/null 2>&1; then
+     if ! command -v "$pkg" >/dev/null 2>&1; then
        brew install "$pkg"
-     elif [ -n "$(brew outdated --quiet "$pkg")" ]; then
+     elif brew list "$pkg" >/dev/null 2>&1; then
        brew upgrade "$pkg"
      fi
    done
    ```
 
-4. Install or update `makecli`.
+4. Install or update `makecli`. The two env vars keep this step scoped to makecli only: no implicit metadata refresh (step 2 already ran `brew update`) and no cascading upgrade of other installed packages.
 
    ```bash
    brew tap qfeius/makecli
    brew trust qfeius/makecli
+   export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
    if ! command -v makecli >/dev/null 2>&1; then
-     brew install makecli
-   elif brew list makecli >/dev/null 2>&1 || brew list qfeius/makecli/makecli >/dev/null 2>&1; then
-     if [ -n "$(brew outdated --quiet makecli 2>/dev/null || brew outdated --quiet qfeius/makecli/makecli 2>/dev/null)" ]; then
-       brew upgrade makecli || brew upgrade qfeius/makecli/makecli
-     fi
+     brew install qfeius/makecli/makecli
+   elif brew list makecli >/dev/null 2>&1; then
+     brew upgrade makecli
    else
      makecli update
    fi
