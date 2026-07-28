@@ -3,7 +3,7 @@ make 平台的 skill
 
 # 安装
 ```
-  npx skills add qfeius/make-platform-skills
+  npx skills add qfeius/make-platform-skills --all -g
 ```
 # 升级
 ```
