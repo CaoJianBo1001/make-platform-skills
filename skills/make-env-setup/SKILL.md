@@ -1,36 +1,21 @@
 ---
 name: make-env-setup
-description: Use when preparing or updating the local Make development environment before development, including checking latest versions of Node, pnpm, git, makecli, Make platform skills, makecli login/verify, and Make environment selection. Triggered by Make POC, Make 环境安装, POC 环境安装, 更新 Make 环境, makecli 登录校验, or PoC 前置环境. Trigger matching is case-insensitive.
+description: Use when preparing or updating the local Make development environment before development. Triggered by Make 环境安装, Make 环境初始化, 更新 Make 环境.
 metadata:
-   version: 0.2.0
+   version: 0.2.1
    homepage: https://github.com/qfeius/make-platform-skills
 ---
 
 # make-env-setup
 
-Prepare the local environment and initialize the project folder for a Make POC before any PRD, DSL, Service, UI, apply, deploy, or git work.
+Prepare the local environment and initialize the project folder for a Make App before any PRD, DSL, Service, UI, apply, deploy, or git work.
 
-Core rule: installed is not ready. Always check whether each required tool is current through its stable install channel. If it is outdated, update it first, then verify versions and login state again.
-
-## Trigger Handling
-
-Treat trigger phrases as case-insensitive. Normalize the user's request to lowercase before matching English keywords.
-
-Trigger examples include:
-
-- `Make POC`, `make poc`, `MAKE POC`
-- `PoC 前置环境`, `poc 前置环境`
-- `makecli 登录校验`, `MAKECLI 登录校验`
-- `更新 Make POC 环境`, `更新 make poc 环境`
-
-Use this skill only for environment readiness and `makecli app init` project initialization. For PRD, DSL, Service, UI, table integration, apply, deploy, or feature coding, stop after project initialization and switch to the appropriate Make skill.
 
 ## Safety Rules
 
 - Do not print or store tokens, cookies, Authorization headers, passwords, or secrets.
-- Do not manually create PRD, DSL, Service, or UI files; only run `makecli app init` in the selected PoC directory.
+- Do not manually create PRD, DSL, Service, or UI files; only run `makecli app init` in the selected directory.
 - Interactive secret entry must be completed by the user. Do not ask the user to paste secrets into chat.
-- "Latest" means the latest stable version available from the current install channel, not nightly, beta, or a hard-coded version.
 
 ## System Gate
 
@@ -126,39 +111,6 @@ If `makecli version` is below `0.4.5`, stop and report that the CLI is too old a
 
 Run the Make environment selection, token verification, and project folder initialization at the end, after the system gate, toolchain update, version verification, and skills update are complete.
 
-### Select Make Environment
-
-Ask the user exactly:
-
-```text
-请选择使用PoC的环境：开发、测试
-```
-
-Wait for the user's answer. Do not infer from project names, current config, or previous conversations.
-
-Map the answer as:
-
-| User answer | makecli environment |
-|-------------|---------------------|
-| 开发 | `dev` |
-| 测试 | `test` |
-
-Use this command after selection:
-
-```bash
-makecli configure set environment <selected-env>
-```
-
-For example, if the user answers `开发`, run:
-
-```bash
-makecli configure set environment dev
-```
-
-If the user answers anything other than `开发` or `测试`, ask again with the exact prompt above. If the command fails, report the error and ask the user whether to retry or choose another environment. Continue only after the environment command succeeds.
-
-Do not configure old `server-url` values. If a previous config contains old server-url settings, do not reuse them; prefer the current `--env`, `--meta-server-url`, and `--repo-server-url` model when a later Make workflow needs explicit endpoints.
-
 ### Verify Token With Guided Login
 
 After the environment is configured successfully, check the current token:
@@ -193,14 +145,14 @@ makecli configure token
 
 The user must complete interactive secret entry in their own terminal. After the user finishes, return to the guided `makecli login` flow above instead of running token verification after their reply.
 
-### Initialize PoC Project Folder
+### Initialize App Project Folder
 
 Run this step only after environment selection succeeds and either the initial token verification passed or a `makecli login` command completed successfully.
 
 Ask the user exactly:
 
 ```text
-是否使用当前目录作为 PoC 目录？请回复“是”或“否”。
+是否使用当前目录作为 App 目录？请回复“是”或“否”。
 ```
 
 If the user replies `是`, run:
@@ -214,7 +166,7 @@ Use that absolute current directory as `<project-folder>`.
 If the user replies `否`, ask exactly:
 
 ```text
-请输入 PoC 目录地址：
+请输入 App 目录地址：
 ```
 
 Wait for the user to provide the directory address. Do not infer a directory from previous messages. Accept either an absolute path or a relative path as provided by the user.
@@ -240,7 +192,7 @@ End only after environment selection succeeds, either the initial token verifica
 - Make skills result.
 - Make environment: selected value, `dev` or `test`.
 - Login status: already valid or refreshed with `makecli login`.
-- PoC project folder: selected `<project-folder>`.
+- App project folder: selected `<project-folder>`.
 - Project initialization: `makecli app init` completed.
 
 Keep the completion output concise and next-step focused. Omit negative summaries about actions not performed.
@@ -250,14 +202,14 @@ Do not show internal status names in user-facing output.
 If everything passes, say:
 
 ```text
-环境已经准备好了，可以进行下一步 PoC 了。
+环境已经准备好了，可以进行下一步 App 了。
 ```
 
 Then provide this small example:
 
 ```text
-PoC示例：
-我要做一个 Make PoC，用来演示合同台账管理。
+App 示例：
+我要做一个 Make App，用来演示合同台账管理。
 角色包括管理员和业务人员。
 核心流程是新建合同、维护付款计划、查看合同列表和详情。
 请先和我确认需求细节，生成 apps/docs/PRD.md，再进行 DSL 建模；DSL 必须先 diff，等我确认后才 apply。
