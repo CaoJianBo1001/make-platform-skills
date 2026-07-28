@@ -47,7 +47,7 @@ try {
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -161,7 +161,7 @@ overrides:
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -253,7 +253,7 @@ overrides:
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
         localPreviewHeaders(headers);
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -300,7 +300,7 @@ overrides:
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -347,7 +347,7 @@ overrides:
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -398,7 +398,7 @@ overrides:
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -436,7 +436,7 @@ overrides:
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -476,7 +476,7 @@ overrides:
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -516,7 +516,7 @@ overrides:
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `,
     serviceTest: `
@@ -561,7 +561,7 @@ overrides:
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch('http://make-gateway/make' + url.pathname.replace('/api', ''), { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -690,7 +690,7 @@ overrides:
         if (req.url.includes('/api/make/auth/session/complete')) {
           return fetch('http://make-gateway/make/auth/session/complete', { headers, redirect: 'manual' });
         }
-        return fetch(MAKE_API_BASE_URL + '/data/v1/record', { headers });
+        return fetch(MAKE_API_BASE_URL + '/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -742,7 +742,7 @@ overrides:
         if (url.pathname.startsWith('/api/make/oauth/')) {
           return fetch(buildNamespaceUrl(url.pathname, '/api/make/oauth', OAUTH_GATEWAY_SCOPE), { headers, redirect: 'manual' });
         }
-        return fetch(buildMakeUrl('/data/v1/record'), { headers });
+        return fetch(buildMakeUrl('/data/v1/record'), { method: 'POST', headers });
       }
     `
   });
@@ -813,7 +813,7 @@ overrides:
         if (req.url.includes('/api/make/auth/session/complete')) {
           return fetch('http://make-gateway/make/auth/session/complete', { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -851,7 +851,7 @@ overrides:
         if (req.url.includes('/api/make/oauth/challenge')) {
           return fetch('http://make-gateway/make/oauth/challenge', { headers });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });
@@ -961,7 +961,7 @@ overrides:
         if (req.url.includes('/api/auth/session/complete')) {
           return fetch('http://make-gateway/make/auth/session/complete', { headers, redirect: 'manual' });
         }
-        return fetch('http://make-gateway/make/data/v1/record', { headers });
+        return fetch('http://make-gateway/make/data/v1/record', { method: 'POST', headers });
       }
     `
   });

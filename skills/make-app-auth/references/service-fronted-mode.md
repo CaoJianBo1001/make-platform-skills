@@ -196,9 +196,16 @@ Internal make-gateway URLs must not use the external `/api` prefix:
 ```ts
 const makeAuthBaseUrl = 'http://make-gateway/make';
 const makeBusinessBaseUrl = 'http://make-gateway/make';
+businessHeaders.set('Content-Type', 'application/json');
+businessHeaders.set('X-Make-Target', 'MakeService.ListResources');
+const recordPayload = { appKey: config.appKey, entityKey, fields, pagination };
 
 await fetch(`${makeAuthBaseUrl}/auth/current-context`, { headers: authHeaders });
-await fetch(`${makeBusinessBaseUrl}/data/v1/record`, { headers: businessHeaders });
+await fetch(`${makeBusinessBaseUrl}/data/v1/record`, {
+  method: 'POST',
+  headers: businessHeaders,
+  body: JSON.stringify(recordPayload)
+});
 ```
 
 Local-preview URLs are different because they leave the user's machine through the public gateway resolved by makecli:
@@ -206,9 +213,23 @@ Local-preview URLs are different because they leave the user's machine through t
 ```ts
 const publicGatewayOrigin = readMakecliResolveJson().make_api_origin;
 const localPreviewBaseUrl = `${publicGatewayOrigin}/api/make`;
+const schemaHeaders = new Headers(makecliTokenHeaders);
+schemaHeaders.set('Content-Type', 'application/json');
+schemaHeaders.set('X-Make-Target', 'MakeService.GetResource');
+const dataHeaders = new Headers(makecliTokenHeaders);
+dataHeaders.set('Content-Type', 'application/json');
+dataHeaders.set('X-Make-Target', 'MakeService.ListResources');
 
-await fetch(`${localPreviewBaseUrl}/meta/v1/schema`, { headers: makecliTokenHeaders });
-await fetch(`${localPreviewBaseUrl}/data/v1/record`, { headers: makecliTokenHeaders });
+await fetch(`${localPreviewBaseUrl}/meta/v1/schema`, {
+  method: 'POST',
+  headers: schemaHeaders,
+  body: JSON.stringify({ appKey: config.appKey })
+});
+await fetch(`${localPreviewBaseUrl}/data/v1/record`, {
+  method: 'POST',
+  headers: dataHeaders,
+  body: JSON.stringify(recordPayload)
+});
 ```
 
 ## Session Complete
