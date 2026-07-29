@@ -57,7 +57,7 @@ Default base selection:
 
 - Published runtime: `MAKE_API_BASE_URL` / `MAKE_SERVER_URL` configure the k8s gateway origin only, for example `http://make-gateway.make-dev`.
 - Local preview runtime: when `MAKE_APP_LOCAL_PREVIEW=true`, derive the gateway origin from `makecli configure resolve --target local-preview --output=json` field `make_api_origin`. Public gateway calls pass through nginx and use the `/api/make` scope.
-- schema/meta calls follow Meta API design and use runtime-mode scope plus `makeSchemaPath`: local preview `${publicGatewayOrigin}/api/make/meta/**`, published `${internalGatewayOrigin}/make/meta/**`.
+- schema/meta calls follow Meta API design and use runtime-mode scope plus `makeSchemaPath`: local preview `${publicGatewayOrigin}/api/make/meta/**`, published `${internalGatewayOrigin}/make/meta/**`. Schema reads are upstream `POST` calls with `X-Make-Target: MakeService.GetResource` and body `{ appKey: config.appKey }`.
 - business/data calls follow Data API design and use runtime-mode scope plus Data API paths: local preview `${publicGatewayOrigin}/api/make/data/**`, published `${internalGatewayOrigin}/make/data/**`.
 - `/make` and `/api/make` are adapter path scopes selected by runtime mode, not generic env var values.
 - auth forwarding belongs to `make-app-auth`; when Service-fronted auth proxy code needs the gateway, it should also join the gateway origin with its documented service scope instead of changing `MAKE_API_BASE_URL`.
@@ -69,7 +69,7 @@ For published Service-to-internal-make-gateway calls, the normalized base URL is
 
 ```text
 MAKE_API_BASE_URL=http://make-gateway.make-dev
-GET ${gatewayOrigin}/make/meta/v1/schema
+POST ${gatewayOrigin}/make/meta/v1/schema
 POST ${gatewayOrigin}/make/data/v1/record
 ```
 
@@ -78,7 +78,7 @@ For local-preview Service-to-public-gateway calls, the public gateway origin fol
 ```text
 MAKE_APP_LOCAL_PREVIEW=true
 makecli configure resolve --target local-preview --output=json
-GET ${publicGatewayOrigin}/api/make/meta/v1/schema
+POST ${publicGatewayOrigin}/api/make/meta/v1/schema
 POST ${publicGatewayOrigin}/api/make/data/v1/record
 ```
 
@@ -91,6 +91,7 @@ Do not hard-code concrete Make dev/test/prod domains, namespace-local gateway ho
 Schema adapter should:
 
 - fetch remote runtime schema from Make/backend API
+- call the runtime-mode schema path with `POST`, `X-Make-Target: MakeService.GetResource`, JSON `Content-Type`, and body `{ appKey: config.appKey }`
 - normalize app display name, entities, fields, relations, options, and lookup metadata
 - support known backend variants such as `entity.properties.fields` and `entity.fields`
 - expose `getAppSchema()` and `getEntityFields(entityKey)` or host-equivalent methods

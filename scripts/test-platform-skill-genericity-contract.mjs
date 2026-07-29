@@ -16,6 +16,8 @@ const platformSkillDirectories = [
 const platformEntryFiles = ['README.md'];
 const forbiddenProjectNames =
   /(BizFinancePoc|ExpensePoc|uju[-_]?mdm|ClaimTable|DemoWorkbench)/i;
+const forbiddenPersonalContext =
+  /(\/Users\/[^\s`)]+|\/home\/[^\s`)]+|\/var\/folders\/[^\s`)]+|\/(?:private\/)?tmp\/[^\s`)]+)/;
 
 const collectSkillDocuments = (relativeDirectory) => {
   const absoluteDirectory = path.join(repoRoot, relativeDirectory);
@@ -31,9 +33,28 @@ const collectSkillDocuments = (relativeDirectory) => {
   });
 };
 
+const collectFiles = (relativeDirectory, filePattern) => {
+  const absoluteDirectory = path.join(repoRoot, relativeDirectory);
+  assert.ok(
+    fs.existsSync(absoluteDirectory),
+    `Expected ${relativeDirectory} under repo root ${repoRoot}`,
+  );
+
+  return fs.readdirSync(absoluteDirectory, { withFileTypes: true }).flatMap((entry) => {
+    const relativePath = path.join(relativeDirectory, entry.name);
+    if (entry.isDirectory()) return collectFiles(relativePath, filePattern);
+    return filePattern.test(entry.name) ? [relativePath] : [];
+  });
+};
+
 const checkedFiles = [
   ...platformSkillDirectories.flatMap(collectSkillDocuments),
   ...platformEntryFiles,
+];
+const privacyCheckedFiles = [
+  ...checkedFiles,
+  ...collectSkillDocuments('docs'),
+  ...collectFiles('scripts', /\.(?:mjs|js|ts|md|ya?ml)$/i),
 ];
 
 for (const relativePath of checkedFiles) {
@@ -42,6 +63,15 @@ for (const relativePath of checkedFiles) {
     content,
     forbiddenProjectNames,
     `${relativePath} must describe platform behavior without project-specific names`,
+  );
+}
+
+for (const relativePath of privacyCheckedFiles) {
+  const content = fs.readFileSync(path.join(repoRoot, relativePath), 'utf8');
+  assert.doesNotMatch(
+    content,
+    forbiddenPersonalContext,
+    `${relativePath} must not expose personal usernames or local machine paths`,
   );
 }
 

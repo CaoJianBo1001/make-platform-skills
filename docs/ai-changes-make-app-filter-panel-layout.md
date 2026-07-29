@@ -18,7 +18,7 @@ uju_mdm 项目中的高级筛选弹层把条件组、顶部标题、清空入口
 
 - 2026-06-24 17:46 CST：先运行新增契约测试，确认旧文档因缺少 BizFinancePoc 固定布局基线而失败。
 - 修改后已运行新增高级筛选面板布局契约测试、现有字段类型/单元格编辑契约测试和 `git diff --check`，均通过。
-- `quick_validate.py` 需要 `PyYAML`；本机和 bundled Python 默认缺少该依赖，已临时安装到 `/tmp/codex-pyyaml` 后校验 `skills/make-app-filter` 和 `skills/makeui`，均通过。
+- `quick_validate.py` 需要 `PyYAML`；本机和 bundled Python 默认缺少该依赖，已临时安装到临时依赖目录后校验 `skills/make-app-filter` 和 `skills/makeui`，均通过。
 - 2026-06-25 CST：review 后扩展契约测试，新增宿主 CSS 滚动责任和 `@qfei-design/make-filter@^0.2.2` 版本基线检查，修复后相关测试通过。
 
 ## 边界

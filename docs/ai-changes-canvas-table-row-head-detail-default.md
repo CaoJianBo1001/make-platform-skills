@@ -13,4 +13,4 @@
 
 - 已执行：`quick_validate.py skills/canvas-table-integration` 通过。
 - 已执行：`git diff --check` 通过。
-- 已执行：同步到 `/Users/caojianbo/.codex/skills/canvas-table-integration` 后，对 `SKILL.md`、`references/row-head-action-patterns.md`、`references/core-props-methods-events.md` 执行 `cmp`，结果一致。
+- 已执行：同步到用户级 `canvas-table-integration` skill 目录后，对 `SKILL.md`、`references/row-head-action-patterns.md`、`references/core-props-methods-events.md` 执行 `cmp`，结果一致。
