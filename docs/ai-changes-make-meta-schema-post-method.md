@@ -2,7 +2,7 @@
 
 ## 背景
 
-对照本地后端资料 `/Users/caojianbo/ZSQF/make-group/backend/AgenticDSL/Design/MetaAPIDesign.md` 和 makecli 实现，`/meta/v1/schema` 属于 Make Meta API 上游调用，必须使用 `POST`，并通过 `X-Make-Target: MakeService.GetResource` 表达动作，body 中注入 `appKey`。
+对照本地后端资料 `AgenticDSL/Design/MetaAPIDesign.md` 和 makecli 实现，`/meta/v1/schema` 属于 Make Meta API 上游调用，必须使用 `POST`，并通过 `X-Make-Target: MakeService.GetResource` 表达动作，body 中注入 `appKey`。
 
 同时对照本地 Data API 设计，`/data/v1/record` 这类 Make Data API 上游调用也统一使用 `POST`，动作由 `X-Make-Target` 指定，不能依赖 fetch 默认 GET。
 

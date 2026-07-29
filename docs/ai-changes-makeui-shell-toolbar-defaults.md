@@ -16,4 +16,4 @@
 
 - 已执行：`quick_validate.py skills/makeui` 通过。
 - 已执行：`git diff --check` 通过。
-- 已执行：同步 `/Users/caojianbo/.agents/skills/skills-makeui`，并对 `SKILL.md`、`app-shell-layout.md`、`list-page-layout.md` 做 `cmp` 校验通过。
+- 已执行：同步用户级 `skills-makeui` skill 目录，并对 `SKILL.md`、`app-shell-layout.md`、`list-page-layout.md` 做 `cmp` 校验通过。

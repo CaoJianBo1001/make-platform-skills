@@ -14,4 +14,4 @@
 - 已执行：`quick_validate.py skills/makeui` 通过。
 - 已执行：`git diff --check` 通过。
 - 已执行：reference 断链检查通过，超过 100 行的 reference 均有 Contents。
-- 已执行：同步到 `/Users/caojianbo/.agents/skills/skills-makeui` 后，对 `SKILL.md` 和本次改动的 reference 文件执行 `cmp`，结果一致。
+- 已执行：同步到用户级 `skills-makeui` skill 目录后，对 `SKILL.md` 和本次改动的 reference 文件执行 `cmp`，结果一致。
