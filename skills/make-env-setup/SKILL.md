@@ -2,17 +2,15 @@
 name: make-env-setup
 description: Use when preparing or updating the local Make development environment before development. Triggered by Make 环境安装, Make 环境初始化, 更新 Make 环境.
 metadata:
-   version: 0.2.1
-   homepage: https://github.com/qfeius/make-platform-skills
+  version: 0.3.0
+  homepage: https://github.com/qfeius/make-platform-skills
 ---
 
 # make-env-setup
-
 Prepare the local environment and initialize the project folder for a Make App before any PRD, DSL, Service, UI, apply, deploy, or git work.
 
 
 ## Safety Rules
-
 - Do not print or store tokens, cookies, Authorization headers, passwords, or secrets.
 - Do not manually create PRD, DSL, Service, or UI files; only run `makecli app init` in the selected directory.
 - Interactive secret entry must be completed by the user. Do not ask the user to paste secrets into chat.
@@ -59,29 +57,28 @@ Use the stable package channel. On macOS use Homebrew. On WSL use Linuxbrew if a
    brew update
    ```
 
-3. Install missing tools and upgrade outdated tools.
+3. Install missing tools and upgrade brew-managed tools. `brew upgrade` is a no-op when the package is already current. A tool that exists but is not brew-managed (for example node via nvm, pnpm via corepack) must be left untouched; note it in the summary.
 
    ```bash
    for pkg in node pnpm git; do
-     if ! brew list "$pkg" >/dev/null 2>&1; then
+     if ! command -v "$pkg" >/dev/null 2>&1; then
        brew install "$pkg"
-     elif [ -n "$(brew outdated --quiet "$pkg")" ]; then
+     elif brew list "$pkg" >/dev/null 2>&1; then
        brew upgrade "$pkg"
      fi
    done
    ```
 
-4. Install or update `makecli`.
+4. Install or update `makecli`. The two env vars keep this step scoped to makecli only: no implicit metadata refresh (step 2 already ran `brew update`) and no cascading upgrade of other installed packages.
 
    ```bash
    brew tap qfeius/makecli
    brew trust qfeius/makecli
+   export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
    if ! command -v makecli >/dev/null 2>&1; then
-     brew install makecli
-   elif brew list makecli >/dev/null 2>&1 || brew list qfeius/makecli/makecli >/dev/null 2>&1; then
-     if [ -n "$(brew outdated --quiet makecli 2>/dev/null || brew outdated --quiet qfeius/makecli/makecli 2>/dev/null)" ]; then
-       brew upgrade makecli || brew upgrade qfeius/makecli/makecli
-     fi
+     brew install qfeius/makecli/makecli
+   elif brew list makecli >/dev/null 2>&1; then
+     brew upgrade makecli
    else
      makecli update
    fi
@@ -106,7 +103,7 @@ git --version
 makecli version
 ```
 
-### Verify Token With Guided Login
+## Verify Token With Guided Login
 
 After the environment is configured successfully, check the current token:
 
@@ -120,17 +117,16 @@ If verification fails because the token is missing, expired, invalid, or belongs
 
 1. Run:
    ```bash
-   makecli login
+   makecli login --timeout=60s
    ```
-2. Wait up to 20 seconds for the command to receive the login callback and exit successfully.
-3. If `makecli login` exits successfully within 20 seconds, continue to project folder initialization.
-4. If 20 seconds pass without a callback and `makecli login` is still waiting, terminate the running `makecli login` process with Ctrl-C or SIGINT to close the callback listener, then tell the user:
+   The command opens the browser, waits up to 60 seconds for the login callback, then exits on its own. If it prints an authorization URL instead of opening a browser, relay that URL to the user.
+2. If the command exits successfully, login is done; continue to project folder initialization.
+3. If the command exits with a timeout or callback error, tell the user:
    ```text
-   请在浏览器或终端中完成 makecli 登录。完成后回复“已经完成登录”。
+   请在浏览器中完成 makecli 登录。完成后回复“已经完成登录”。
    ```
-5. Stop and wait for the user to reply `已经完成登录`（等用户回复“已经完成登录”）.
-6. After the user replies `已经完成登录`, do not run `makecli configure verify --output=json` and do not wait for the previous callback. Immediately run `makecli login` again to start a fresh authorization.
-7. Apply the same 20-second callback rule to each fresh `makecli login`: if it exits successfully, continue; if it is still waiting after 20 seconds, terminate it to close the callback listener, tell the user the same message, wait for `已经完成登录`, and repeat step 6.
+   Then stop and wait for the user to reply `已经完成登录`.
+4. After the user replies, run `makecli configure verify --output=json`. If `valid` is `true`, login succeeded; continue. If `valid` is `false`, go back to step 1.
 
 If browser login is not convenient, offer the token fallback:
 
@@ -138,72 +134,52 @@ If browser login is not convenient, offer the token fallback:
 makecli configure token
 ```
 
-The user must complete interactive secret entry in their own terminal. After the user finishes, return to the guided `makecli login` flow above instead of running token verification after their reply.
+The user must complete interactive secret entry in their own terminal. After the user finishes, run `makecli configure verify --output=json` to confirm the token. If `valid` is `false`, ask the user to re-enter the token, or fall back to the guided `makecli login` flow above.
 
-### Initialize App Project Folder
+## Initialize App Project Folder
 
-Run this step only after environment selection succeeds and either the initial token verification passed or a `makecli login` command completed successfully.
+`makecli app init` derives the app key from the target directory's basename and validates the name itself; do not pre-validate names in this skill.
 
-Ask the user exactly:
+1. Pick a candidate:
+   - If the user has already described the app they want to build, recommend a folder name derived from that description.
+   - Otherwise, if the current directory is not an existing project, recommend initializing in place.
+   - Otherwise recommend a generic name such as `make_app`.
+2. Confirm with the user:
+   ```text
+   是否使用 <app-folder> 作为 App 目录？请回复 “是” 或 “否”。
+   ```
+   If the user replies anything other than `是` or `否`, ask again with the same prompt.
+3. If the user replies `否`, ask:
+   ```text
+   请输入 App 目录地址：
+   ```
+   Accept an absolute or relative path as provided.
+4. Run `makecli app init <app-folder>`, or `makecli app init` with no argument when initializing the current directory. The command creates the directory if needed and is idempotent.
+5. If init fails with an invalid key error, the error message states the naming rule: derive a compliant folder name from the chosen one (for example `contract-ledger` → `contract_ledger`), tell the user the adjusted name, and retry. For other errors, report the error and ask the user whether to retry or choose another directory. Continue only after init succeeds.
 
-```text
-是否使用当前目录作为 App 目录？请回复“是”或“否”。
-```
+## Setup Completion Output
 
-If the user replies `是`, run:
-
-```bash
-pwd
-```
-
-Use that absolute current directory as `<project-folder>`.
-
-If the user replies `否`, ask exactly:
-
-```text
-请输入 App 目录地址：
-```
-
-Wait for the user to provide the directory address. Do not infer a directory from previous messages. Accept either an absolute path or a relative path as provided by the user.
-
-If the user replies anything other than `是` or `否` to the first prompt, ask again with the exact prompt above.
-
-After `<project-folder>` is selected, run:
-
-```bash
-makecli app init <project-folder>
-```
-
-Quote or escape `<project-folder>` safely when executing the command, especially if the path contains spaces or shell metacharacters.
-
-If `makecli app init <project-folder>` fails, report the error and ask the user whether to retry the same directory or enter another directory. Continue only after `makecli app init <project-folder>` succeeds.
-
-## Completion Output
-
-End only after environment selection succeeds, either the initial token verification passed or a `makecli login` command completed successfully, and `makecli app init <project-folder>` succeeds. Use a concise readiness report:
+End only after the toolchain is installed and verified, the token is valid (initial verification passed or the login flow succeeded), and `makecli app init` succeeded. Use a concise readiness report:
 
 - OS path used: macOS or WSL.
 - Tool versions: Node, pnpm, git, makecli.
 - Make skills result.
-- Make environment: selected value, `dev` or `test`.
 - Login status: already valid or refreshed with `makecli login`.
-- App project folder: selected `<project-folder>`.
-- Project initialization: `makecli app init` completed.
+- App folder: the initialized directory.
 
 Keep the completion output concise and next-step focused. Omit negative summaries about actions not performed.
-
-Do not show internal status names in user-facing output.
 
 If everything passes, say:
 
 ```text
-环境已经准备好了，可以进行下一步 App 了。
+Make 开发环境已经准备好，可以进行下一步开发 App。
 ```
 
 Then provide this small example:
 
 ```text
-App 示例：
+App 参考示例：
+
 我要做一个 Make App，用来演示合同台账管理。
 角色包括管理员和业务人员。
 核心流程是新建合同、维护付款计划、查看合同列表和详情。
