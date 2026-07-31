@@ -20,9 +20,10 @@ Route tests should cover:
 - `/api/health`, local/probe `/health` when present, and `/api/config` do not expose secrets
 - Service-fronted published routes for `gatewayBaseUrl: "/api/make"` projects use `/api/make/**`: at minimum test `/api/make/auth/**`, `/api/make/oauth/**`, and `/api/make/app/**` or the documented business paths; prefix-free compatibility routes alone are not enough. Older `/api` projects may keep `/api/auth/**` and `/api/app/**` only as an explicit legacy contract
 - schema routes return normalized schema and fields
-- record list parses `fields`, `filter`, `sort`, `pagination`
+- record list parses `fields`, `filter`, `groupFilter`, `sort`, `pagination`
 - record list sends Make filters as `{ expression }`, omits empty filters, and rejects malformed filter query/body values before calling the adapter
-- Entity Preset GET/PATCH routes normalize filter/sort, update dimensions sparsely, preserve future group state, and forward current login/session context
+- record-groups parses `filter`, `groupFilter`, `group`, `pagination`, requires non-empty group, and validates `capabilities.groupable === true`
+- Entity Preset GET/PATCH routes normalize filter/sort/group, update dimensions sparsely, and forward current login/session context
 - Preset and records sort accept at most five unique `{ fieldKey, order }` entries, reject `{ field, order }`, and validate runtime `capabilities.sortable === true` before Make calls; use `make-app-sort` for the behavioral contract
 - record list/detail call the Make adapter path selected by runtime mode and forward the required login/session context: local preview public gateway `/api/make/data/v1/record` with server-side makecli auth, published k8s gateway `/make/data/v1/record` with browser session context
 - invalid query/body returns 400 and does not call Make adapter
@@ -65,6 +66,7 @@ Adapter tests should cover:
 - headers and target names
 - pagination defaults
 - filter/sort translation, including `{ expression }` pass-through and empty-filter omission
+- group translation, including record-groups `MakeService.ListResources`, records `groupFilter`, Data API `group: []` rejection, and grouped leaf records with omitted group
 - Entity Preset `/preset/v1/entity` adapter targets `MakeService.GetResource` / `MakeService.UpdateResource`, injects deployment `appKey`, and sends only submitted dimensions
 - file multipart body field names
 - download path stripping and query redaction
@@ -85,7 +87,7 @@ Before reporting Service work as ready:
 - Make-backed record reads go through the runtime-mode gateway scope and preserve the established login/session context: makecli token only in local preview, browser Cookie only in published runtime
 - no route leaks raw Make response envelopes unless documented
 - invalid client input is rejected before Make calls
-- Entity Preset updates cannot overwrite sibling filter/sort or the future group dimension
+- Entity Preset updates cannot overwrite sibling filter/sort/group dimensions
 - no tokens, cookies, service keys, or signed URLs appear in logs or public config
 - no Make Data raw download URL is used directly as an image/PDF preview URL in UI; previews point to the Service download proxy
 - Make adapter gateway origins come from normalized Service config or `makecli configure resolve --target local-preview --output=json` in local preview, and the gateway scope is an explicit runtime-mode decision rather than a route-local string hack or env override
@@ -116,7 +118,7 @@ When route docs changed, also run any UI/service integration tests that consume 
 - Service started reading `apps/dsl/**` at runtime because schema API was missing
 - UI candidate dropdowns were backed by local demo arrays
 - record detail route called list and returned the first row
-- Preset PATCH replaced the full object and erased a sibling sort/filter or future group dimension
+- Preset PATCH replaced the full object and erased a sibling sort/filter/group dimension
 - records accepted a syntactically valid field that runtime schema did not mark `capabilities.sortable === true`
 - Make adapter errors were swallowed and returned `{ ok: true }`
 - `qfei_relation` partial update cleared unrelated lookup relations

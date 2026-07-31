@@ -50,8 +50,8 @@ dimension:
 ```
 
 `filter: null` clears advanced filter and `sort: []` clears user sorting. Saving
-one dimension must not send, read-modify-write, or overwrite the other dimension
-or the future `group`.
+one dimension must not send, read-modify-write, or overwrite the other dimensions,
+including `group`.
 
 ## Make Entity Preset adapter
 
@@ -188,5 +188,6 @@ signed URLs, or record bodies.
 
 ## Group compatibility
 
-Do not accept `group` until the later grouping contract exists. Preserve any
-upstream group value by sending sparse sort/filter updates.
+Do not implement grouping inside this Skill. Preserve any upstream group value by
+sending sparse sort/filter updates, and route grouping behavior to
+`make-app-group`.

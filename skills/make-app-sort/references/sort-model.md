@@ -34,7 +34,7 @@ Do not infer sortable support from:
 - form `disabled` or read-only state
 - row values or sample data
 - local DSL/YAML
-- the future `capabilities.groupable` flag
+- the separate `capabilities.groupable` flag
 
 The UI and Service must use the same normalized runtime schema capability. The
 Service remains authoritative when a client sends stale or handcrafted rules.

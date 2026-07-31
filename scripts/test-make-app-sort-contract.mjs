@@ -77,8 +77,13 @@ assert.doesNotMatch(
 );
 assert.match(
   skill,
-  /(分组|group)[\s\S]*(后续|later|phase 2|第二阶段)[\s\S]*(make-app-group|groupable)/i,
-  'make-app-sort must reserve the explicit second-stage grouping boundary',
+  /Grouping is owned by `make-app-group`[\s\S]*capabilities\.groupable/i,
+  'make-app-sort must hand grouping to the current make-app-group boundary',
+);
+assert.doesNotMatch(
+  sortSkillBundle,
+  /(future\s+`?group`?|future\s+capabilities\.groupable|future compatibility|no\s+`group`\s+UI\/request exists yet|后续分组|未来分组|分组.*第二阶段|later grouping contract)/i,
+  'make-app-sort active references must not describe grouping as future or unimplemented',
 );
 
 assert.match(
@@ -186,7 +191,7 @@ assert.match(
 assert.match(
   presetFlow,
   /(局部|partial|sparse)[\s\S]*(sort)[\s\S]*(filter|group)[\s\S]*(覆盖|overwrite|preserve|保留)/i,
-  'sort persistence must be sparse and preserve sibling and future group dimensions',
+  'sort persistence must be sparse and preserve sibling filter/group dimensions',
 );
 assert.match(
   presetFlow,
@@ -350,7 +355,7 @@ assert.doesNotMatch(
 assert.match(
   readme,
   /同时做筛选和排序[^\n]*make-app-filter[^\n]*make-app-sort[^\n]*make-app-permission/i,
-  'README filter/sort composition must include make-app-permission',
+  'README filter/sort composition must include make-app-permission without forcing grouping',
 );
 
 console.log('make app sort contract passed');

@@ -1,6 +1,6 @@
 ---
 name: make-app-sort
-description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list sorting with @qfei-design/make-app-sort. Triggered by 排序, 高级排序, 多字段排序, 排序优先级, 升序/降序, 排序条件拖拽, 表格/表头/列头排序, openWithField, sortable/groupable capabilities, Entity Preset sort save/load/echo, records sort payloads, or sorting tests. Covers one integrated toolbar, CanvasTable header, Entity Preset, and Service sorting flow. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, npm package internals, or the later grouping feature."
+description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list sorting with @qfei-design/make-app-sort. Triggered by 排序, 高级排序, 多字段排序, 排序优先级, 升序/降序, 排序条件拖拽, 表格/表头/列头排序, openWithField, sortable capabilities, Entity Preset sort save/load/echo, records sort payloads, or sorting tests. Covers one integrated toolbar, CanvasTable header, Entity Preset, and Service sorting flow. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, npm package internals, or grouping."
 metadata:
   version: 0.1.3
 ---
@@ -51,6 +51,7 @@ surfaces.
 | Service route/adapter code and boundary logs | Use `make-app-service` |
 | Object/list access policy and permission gates | Use `make-app-permission` |
 | Advanced-filter state and Preset filter persistence | Use `make-app-filter` |
+| Grouping state, Preset group, record-groups, groupFilter | Use `make-app-group` |
 
 ## Non-negotiable invariants
 
@@ -69,7 +70,7 @@ surfaces.
   `onApplied`, and required `onApplyError`. Do not put records requests in
   `onConfirm` or `onApplied`.
 - Save before apply. Preset writes are sparse, clear uses `sort: []`, and filter,
-  sort, and future group dimensions never overwrite one another. Shared saving and
+  sort, and group dimensions never overwrite one another. Shared saving and
   error state must remain correct when filter and sort saves overlap.
 - Schema/Preset hydration and access checks gate the first records request. Object
   or permission changes invalidate the old generation, panel, header menu, applied
@@ -85,9 +86,9 @@ surfaces.
 
 ## Grouping boundary
 
-Grouping is a later second-stage feature owned by `make-app-group` and
-`capabilities.groupable`; this Skill must not add group UI, records payloads, or
-Preset writes. Sparse sort updates preserve a future group dimension.
+Grouping is owned by `make-app-group` and `capabilities.groupable`; this Skill must
+not add group UI, record-groups payloads, `groupFilter` expression composition, or
+Preset `group` writes. Sparse sort updates preserve the existing group dimension.
 
 ## Handoffs
 
@@ -101,3 +102,6 @@ Preset writes. Sparse sort updates preserve a future group dimension.
   enable/disable as an object-context transition that invalidates sort requests.
 - With `make-app-filter`: filter and sort share one Entity Preset lifecycle but
   update dimensions independently and may save concurrently.
+- With `make-app-group`: group and sort share one Entity Preset lifecycle but
+  update dimensions independently. Sort applies to ordinary records and grouped
+  leaf records, while grouping-mode record-groups requests ignore ordinary sort.

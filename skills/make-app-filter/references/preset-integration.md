@@ -21,8 +21,8 @@ Keyword search stays separate and is not persisted. Search may participate in th
 current records query through `compileListFilter`, but it must never appear in an
 Entity Preset PATCH.
 
-Saving filter is a sparse update. Do not send a possibly stale `sort` or future
-`group` dimension.
+Saving filter is a sparse update. Do not send a possibly stale `sort` or `group`
+dimension.
 
 ## Permission-aware context
 
@@ -136,4 +136,4 @@ Cover:
 - first-load failure settles to the documented fallback; same-context reload failure preserves last-known-good state
 - concurrent sparse filter/sort saves keep saving active until all requests settle
 - each concurrent save removes only its own request ID and preserves sibling errors
-- sort and future group dimensions are not overwritten
+- sort and group dimensions are not overwritten

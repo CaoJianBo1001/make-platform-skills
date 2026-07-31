@@ -9,6 +9,7 @@ const repoRoot = path.resolve(process.argv[2] ?? path.join(scriptDir, '..'));
 const platformSkillDirectories = [
   'skills/canvas-table-integration',
   'skills/make-app-filter',
+  'skills/make-app-group',
   'skills/make-app-service',
   'skills/make-app-sort',
   'skills/makeui',

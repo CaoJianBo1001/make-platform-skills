@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make App Group"
+  short_description: "Make record grouping with presets and CanvasTable"
+  default_prompt: "Use $make-app-group to add Make record-list grouping with the package panel, Entity Preset persistence, Service record-groups/groupFilter contracts, and CanvasTable grouped leaf pagination."
