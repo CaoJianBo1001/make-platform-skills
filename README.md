@@ -25,9 +25,10 @@ Codex 判断优先级：
 | --- | --- | --- |
 | Make 环境安装、更新 Make 环境、makecli 登录校验、Node/pnpm/git/makecli 版本检查 | `make-env-setup` | 只负责本地开发环境准备、工具链更新、Make skills 更新、环境选择和登录校验；不负责 PRD、DSL、Service、UI、apply、deploy 或 git 提交 |
 | 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、表单布局、响应式、UI 状态 | `makeui` | 只负责 UI 怎么展示，不负责认证、打包、Service、业务 API 设计和发布 |
-| CanvasTable、表格渲染、字段类型展示、表格编辑、序号列、行头详情图标、`showSN`、`bodyRowHeadSuffixOptions` | `canvas-table-integration` | 只负责 `@qfei-design/canvas-table` 消费侧接入，不负责页面 Shell 和业务 API |
+| CanvasTable、表格渲染、字段类型展示、表格编辑、序号列、行头详情图标、`showSN`、`bodyRowHeadSuffixOptions`、`GroupTableComponent` 底层接入 | `canvas-table-integration` | 只负责 `@qfei-design/canvas-table` 消费侧接入，不负责页面 Shell 和业务 API；Make 记录分组完整能力交给 `make-app-group` |
 | 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | 负责完整筛选能力：`@qfei-design/make-app-filter` 消费侧接入、高级筛选控件行为、CanvasTable 表头筛选联动和 `filter.expression` 合同；不负责页面 Shell、表格渲染 API 细节、Service 实现、认证或发布 |
-| 排序、高级排序、多字段排序、排序优先级、升序/降序、拖拽排序条件、表头排序、`openWithField`、`capabilities.sortable`、Entity Preset sort、records sort、dnd-kit | `make-app-sort` | 负责完整排序能力：五级排序纯模型、拖拽草稿、CanvasTable 表头联动、Preset 保存/读取/回显和 records sort 合同；不负责页面 Shell、CanvasTable API 细节、Service 实现或后续分组 |
+| 排序、高级排序、多字段排序、排序优先级、升序/降序、拖拽排序条件、表头排序、`openWithField`、`capabilities.sortable`、Entity Preset sort、records sort、dnd-kit | `make-app-sort` | 负责完整排序能力：五级排序纯模型、拖拽草稿、CanvasTable 表头联动、Preset 保存/读取/回显和 records sort 合同；不负责页面 Shell、CanvasTable API 细节、Service 实现或分组 |
+| 分组、高级分组、多级分组、分组条件、拖拽分组、表头分组、`capabilities.groupable`、Entity Preset group、record-groups、groupFilter、分组叶子明细分页、`@qfei-design/make-app-group` | `make-app-group` | 负责完整分组能力：三级分组模型、拖拽草稿、Preset 保存/回显、Service record-groups/groupFilter、CanvasTable 分组渲染和叶子分页；不负责页面 Shell、CanvasTable 内部或筛选/排序模型 |
 | Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema/records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排和 Make adapter 配置语义，不负责 UI、认证、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
 | 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、路由权限、按钮权限、字段可编辑、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、schema/permission 分工、路由和按钮/字段权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
 | 登录、认证、Token、统一登录、OAuth、Cookie、Session、logout、401/403、`/api/make/**` 鉴权请求 | `make-app-auth` | 只负责认证和鉴权请求，不负责 UI 布局和打包发布 |
@@ -43,6 +44,8 @@ Codex 判断优先级：
 - 做筛选 Service 合同或 filter.expression 透传：`make-app-filter` + `make-app-service`
 - 做多字段排序、拖拽排序或表头升降序：`make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，必须同时完成权限感知的 Preset 保存/回显和 records sort
 - 同时做筛选和排序：`make-app-filter` + `make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，共享一次权限感知的 Entity Preset 加载与并发请求协调器，但按维度独立保存
+- 做多级分组、拖拽分组或分组表格：`make-app-group` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，必须同时完成权限感知的 Preset 保存/回显、record-groups、groupFilter、CanvasTable 分组和叶子明细分页
+- 同时做筛选、分组和排序：`make-app-filter` + `make-app-group` + `make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，共享一次权限感知的 Entity Preset 加载与并发请求协调器，但按维度独立保存
 - 做 UI 需要的 Service 接口：`make-app-service` + `makeui`
 - 做 Make 项目默认权限体系：`make-app-permission` + `make-app-service` + `make-app-auth` + `makeui`，涉及表格编辑时加 `canvas-table-integration`
 - 做一个登录后的页面：`makeui` + `make-app-auth`
@@ -100,6 +103,7 @@ npx skills update canvas-table-integration
 **使用场景**
 - 在页面里接入 `@qfei-design/canvas-table`
 - 接普通表格；分页表格、虚拟加载、分组表格仅在用户明确要求时添加
+- Make 记录列表分组的完整行为、Preset、Service、groupFilter 和叶子分页由 `make-app-group` 主责；此 skill 只提供 `GroupTableComponent` 底层公开 API 接入
 - 从 `package.ai.json.readOrder` 动态读取当前 CanvasTable 包文档，不硬编码包内 `docs/`、`examples/` 或 monorepo 路径
 - 非 Make 表格使用 Track A 基础；Make schema 表格使用 Track C 展示基础；需要单元格编辑时在对应基础上叠加 Track B
 - 把 JSON meta 转成 `IColumn[]`
@@ -121,6 +125,7 @@ npx skills update makeui
 - 详情页/详情抽屉按字段类型和返回结构展示值，日期范围、下拉、人员、部门、附件、lookup 等不能直接展示原始 JSON
 - 表单/详情中的人员、部门字段默认使用候选接口源；Make App 默认 UI-Service 候选接口为 `/api/users` 和 `/api/departments`，如宿主已有等价路由则遵循宿主合同
 - 需要在 UI 中接入 Make 记录表格时，配合 `canvas-table-integration`
+- 分组按钮位置由 `makeui` 决定，但完整分组行为交给 `make-app-group`
 - 不负责认证细节；认证、统一登录、logout 和 `/api/make/**` 请求规则交给 `make-app-auth`
 - 不负责打包发布、Service runtime、镜像入口和构建产物；这些交给 `make-app-runtime`
 
@@ -149,6 +154,30 @@ npx skills update make-app-filter
 - 不负责 CanvasTable 渲染和 suffixRender API 细节；这些交给 `canvas-table-integration`
 - 不负责 Service route 实现；这些交给 `make-app-service`
 
+### make-app-group
+指导生成、重构或审查 Make App 完整分组能力，覆盖最多三级的有序
+`{ fieldKey, order }[]`、`capabilities.groupable === true` 字段判断、
+`@qfei-design/make-app-group` 拖拽草稿、工具栏与可选表头分组入口、Entity Preset
+保存/读取/回显、Service record-groups/groupFilter 合同、Make Data 分组模式、DNF
+表达式追加和 CanvasTable 分组叶子明细分页。
+
+#### 升级 skill
+```bash
+npx skills update make-app-group
+```
+
+**使用场景**
+- 设计或修改多级分组、分组条件、分组优先级、清空分组
+- 接入 `@qfei-design/make-app-group@^0.1.0` 的 React controller、面板、适配器和样式；dnd-kit 由包内部维护，宿主不直接安装或编排
+- 按运行时 Schema `capabilities.groupable === true` 选择字段，不维护字段类型白名单；Lookup 是否可分组以运行时能力为准，不做平台级一律排除
+- 分组最多三级，字段唯一，数组顺序就是层级
+- 通过 `openWithField(fieldKey, order?)` 将可选 CanvasTable 表头分组入口接入同一个分组面板，确认前不刷新 records 或 record-groups
+- 先读取 Entity Preset 再查询 records 或 root record-groups；确认时先保存 Preset，成功后才应用和刷新，失败保留旧应用态与当前草稿
+- Preset 按维度局部更新：分组只写 `{ group }`，不覆盖 filter 和 sort；Preset 清空使用 `{ group: [] }`
+- Data API 叶子明细回到普通 records 模式时必须省略 `group` 或传 `null`，不得传 `group: []`
+- `groupFilter` 由宿主按 DNF 表达式规则追加组路径条件，不能把复杂 OR 表达式直接拼成嵌套条件
+- 页面位置交给 `makeui`，CanvasTable 分组渲染机制交给 `canvas-table-integration`，Service 路由和 Make adapter 交给 `make-app-service`
+
 ### make-app-sort
 指导生成、重构或审查 Make App 完整排序能力，覆盖最多五级的有序
 `{ fieldKey, order }[]`、`capabilities.sortable === true` 字段判断、dnd-kit
@@ -167,9 +196,9 @@ npx skills update make-app-sort
 - 排序最多五级，字段唯一，数组顺序就是优先级
 - 通过 `openWithField(fieldKey, order?)` 将 CanvasTable 表头升降序接入同一个排序面板，确认前不刷新 records
 - 先读取 Entity Preset 再查询 records；确认时先保存 Preset，成功后才应用和刷新，失败保留旧应用态与当前草稿
-- Preset 按维度局部更新：排序只写 `{ sort }`，不覆盖 filter 和未来 group
+- Preset 按维度局部更新：排序只写 `{ sort }`，不覆盖 filter 和 group
 - 使用 `onConfirm` 持久化、同步 `onApplied` 更新应用态、`onApplyError` 上报应用失败，并把权限感知、单调变化且引用稳定的访问上下文 generation token 作为 `resetKey`
-- 分组作为排序后的第二阶段，未来使用独立 `make-app-group` 和 `capabilities.groupable`
+- 分组使用独立 `make-app-group` 和 `capabilities.groupable`
 - 页面位置交给 `makeui`，CanvasTable 表头菜单机制交给 `canvas-table-integration`，Service 路由和 Make adapter 交给 `make-app-service`
 
 ### make-app-service
@@ -184,6 +213,7 @@ npx skills update make-app-service
 - 设计或修改 `apps/service` 接口
 - 更新 `apps/docs/api.md` 中的 UI-Service 合同
 - 生成 schema、fields、records、record detail、create、update、delete、cell update 等通用对象接口
+- 当分组启用时生成 record-groups、records `groupFilter` 和 Entity Preset `group` 合同；分组语义由 `make-app-group` 主责
 - 生成人员、部门、lookup options、文件上传/删除/下载代理接口
 - 设计 Make Meta/Data API adapter、错误返回、请求参数校验、日志脱敏和接口测试
 - 线上 Service 读取记录必须通过 Make gateway 的 `/make/data/v1/record`，并把请求登录态转发给 gateway；不得通过 `makecli` 获取运行时数据

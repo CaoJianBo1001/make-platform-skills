@@ -88,7 +88,7 @@ Route and adapter tests cover:
 - deployment `appKey` and `entityKey` payloads
 - current login/session context forwarding
 - normalized `{ filter, sort }` response
-- partial update payload and sibling/future group preservation
+- partial update payload and sibling filter/group preservation
 - `filter: null` and `sort: []`
 - malformed JSON, non-array sort, more than five, duplicate, invalid direction,
   unknown property, unknown field, and non-sortable field return 400
@@ -121,4 +121,5 @@ Before reporting complete:
 - Service docs and UI adapter agree on route and payload shape
 - `@qfei-design/make-app-sort@^0.1.0` is consumed through public exports and its
   `package.ai.json.readOrder`; no host fallback exists
-- no `group` UI/request exists yet, but sparse updates preserve future compatibility
+- grouping UI, Preset `group`, record-groups, and groupFilter are owned by
+  `make-app-group`; sparse sort updates preserve the current group dimension

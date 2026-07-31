@@ -78,8 +78,8 @@ Writes are sparse:
 { "sort": [{ "fieldKey": "<sortableFieldKey>", "order": "desc" }] }
 ```
 
-Saving sort must not send a stale `filter` or future `group`; saving filter must not
-send sort. Service and upstream update semantics preserve sibling dimensions
+Saving sort must not send a stale `filter` or `group`; saving filter or group must
+not send sort. Service and upstream update semantics preserve sibling dimensions
 without a client read-modify-write. Clearing uses `{ "sort": [] }`. Session search
 is never persisted.
 

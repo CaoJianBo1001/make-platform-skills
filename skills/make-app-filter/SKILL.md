@@ -1,6 +1,6 @@
 ---
 name: make-app-filter
-description: "Use when integrating, generating, refactoring, or reviewing Make App record-list filtering with @qfei-design/make-app-filter, CanvasTable header linkage, permission-aware Entity Preset save/load/echo, and Service filter.expression payloads. Triggered by 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, 筛选保存/回显, CEL/DNF expressions, system variables, empty filters, field-type operators, DateRange/File/Lookup support, candidate values, URL echo, and tests. Uses make-app-permission for list-access policy. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, sorting, auth, runtime packaging, DSL modeling, Make CLI execution, or table cell editing."
+description: "Use when integrating, generating, refactoring, or reviewing Make App record-list filtering with @qfei-design/make-app-filter, CanvasTable header linkage, permission-aware Entity Preset save/load/echo, and Service filter.expression payloads. Triggered by 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, 筛选保存/回显, CEL/DNF expressions, system variables, empty filters, field-type operators, DateRange/File/Lookup support, candidate values, URL echo, and tests. Uses make-app-permission for list-access policy. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, sorting, grouping, auth, runtime packaging, DSL modeling, Make CLI execution, or table cell editing."
 metadata:
   version: 0.1.5
 ---
@@ -17,7 +17,7 @@ Use this skill for Make App filtering. Any Make project that uses filtering, adv
 
 Do not implement only advanced filter or only header filter in Make record-list pages. They must be done together or not done.
 
-This skill owns the consumer-side package integration contract, advanced-filter behavior, field support, Entity Preset filter persistence, Service filter payload shape, host-owned header-linkage semantics, URL/deep-link filter echo, and filter-specific tests. It consumes list-access state from `make-app-permission`; it does not define permission policy. It does not own sorting (`make-app-sort`), page shell/layout (`makeui`), CanvasTable rendering internals or header menu API details (`canvas-table-integration`), Service route implementation (`make-app-service`), auth (`make-app-auth`), runtime packaging (`make-app-runtime`), DSL modeling (`makedsl`), or Make CLI execution (`makecli`).
+This skill owns the consumer-side package integration contract, advanced-filter behavior, field support, Entity Preset filter persistence, Service filter payload shape, host-owned header-linkage semantics, URL/deep-link filter echo, and filter-specific tests. It consumes list-access state from `make-app-permission`; it does not define permission policy. It does not own sorting (`make-app-sort`), grouping (`make-app-group`), page shell/layout (`makeui`), CanvasTable rendering internals or header menu API details (`canvas-table-integration`), Service route implementation (`make-app-service`), auth (`make-app-auth`), runtime packaging (`make-app-runtime`), DSL modeling (`makedsl`), or Make CLI execution (`makecli`).
 
 ## Quick start
 
@@ -71,6 +71,7 @@ Required read procedure for installed `1.0.0+` packages:
 | Entity Preset filter load, hydration, save barrier, clear, stale requests | `references/preset-integration.md` |
 | Tests, smoke checks, common regressions | `references/testing-and-pitfalls.md` |
 | Backend Record filter contract, CEL subset, DateRange/File/Lookup/system variables | Use `makedsl`; read its EntityDataFilterUsage reference |
+| Group path expression composition and record-groups `groupFilter` | Use `make-app-group`; reuse this Skill's DNF expression rules |
 | Toolbar placement and surrounding page layout | Use `makeui` |
 | CanvasTable `suffixRender` mechanics | Use `canvas-table-integration` |
 | Service route implementation and adapter tests | Use `make-app-service` |
@@ -100,7 +101,7 @@ Required read procedure for installed `1.0.0+` packages:
 - Table scrolling, object switching, outside click, or unmount must close any header menu and restore the header suffix icon to hover-only state.
 - Advanced filter panel layout is mandatory: every Make advanced filter must use the fixed three-region baseline with a fixed header, scrollable body, and fixed footer. A panel where add/confirm/clear actions scroll away with conditions is a readiness blocker and must not be reported as ready, complete, or delivered.
 - Entity object-list filtering persists only the advanced-filter expression in the current user's Entity Preset. Load and hydrate Preset filter before the first records query.
-- Preset writes are sparse. Saving filter sends only `{ filter }`, never a possibly stale `sort` or future `group`.
+- Preset writes are sparse. Saving filter sends only `{ filter }`, never a possibly stale `sort` or `group`.
 - Save before apply. Preset save failure keeps the previous applied filter, open panel, and current draft; it must not reload records.
 - Clear advanced filter with `filter: null`. Toolbar keyword search remains session-only and must not be persisted.
 - When list access is disabled, block new schema/Preset GET, Preset PATCH, and records requests; invalidate in-flight results and close filter surfaces. Ignore stale Preset load/save responses after either `entityKey` or permission-enabled state changes.
@@ -121,5 +122,6 @@ Required read procedure for installed `1.0.0+` packages:
 - With `canvas-table-integration`: use that skill for CanvasTable `suffixRender` and header menu mechanics; this skill owns how the host "按该字段筛选" action talks to the package-backed advanced-filter controller.
 - With `make-app-service`: this skill defines filter query and Preset filter semantics; Service route validation, adapter logging, and Make request details stay in service.
 - With `make-app-sort`: filter and sort share one parent-owned Entity Preset coordinator and load lifecycle but update their dimensions independently. This skill does not define sorting UI or sort validation.
+- With `make-app-group`: filter and group share expression syntax and Preset lifecycle but update dimensions independently. This skill owns global `filter.expression`; `make-app-group` owns transient path `groupFilter` composition and record-groups timing.
 - With `make-app-permission`: consume the resolved list-access gate and include its enabled state in the Preset request generation. This skill does not define permission policy or permission endpoints.
 - With `makedsl`: read `EntityDataFilterUsage.md` to confirm backend filter semantics such as DNF, system variables, DateRange/File/Lookup, empty filter handling, and error cases. Do not generate DSL from this skill.

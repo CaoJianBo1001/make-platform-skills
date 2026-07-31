@@ -106,6 +106,7 @@ Record adapter should expose stable operations:
 ```ts
 type MakeRecordAdapter = {
   listRecords(entityKey, params): Promise<{ records: unknown[]; total: number }>;
+  listRecordGroups(entityKey, params): Promise<{ groups: unknown[]; total: number }>;
   getRecord(entityKey, recordID): Promise<unknown>;
   createRecord(entityKey, data): Promise<string>;
   updateRecord(entityKey, recordID, data): Promise<void>;
@@ -123,7 +124,10 @@ Rules:
 - create returns `recordID` only when that is the UI contract; otherwise document the exact response shape
 - update/delete return stable success shape to routes
 - record list filters should be passed to Make as an `Expression` object, usually `{ expression }`; omit empty filters before calling Make unless the host explicitly documents a different compatibility contract
+- record list `groupFilter` should be passed to Make as a separate `Expression` object for grouped leaf rows; do not merge it into `filter`
 - do not translate new UI filters to arrays, `{}`, blank raw strings, or old object DSL; raw non-blank CEL strings are only a legacy normalization path when the host already needs it
+- record-groups should call `MakeService.ListResources` with non-empty `group`, one-based `pagination`, and no `fields` or ordinary `sort`
+- ordinary grouped leaf records should call records mode with `group` omitted or `null`; never send `group: []`
 - do not mutate formatted UI display labels into submit payloads
 
 ## User and department adapters

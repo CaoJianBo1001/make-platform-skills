@@ -71,7 +71,8 @@ Toolbar placement:
 
 - search input on the left
 - optional filter next to search only when requested or already established by the project
-- optional sort after filter and before refresh when requested; route behavior to `make-app-sort`
+- optional group after filter and before sort when requested; route behavior to `make-app-group`
+- optional sort after group and before refresh when requested; route behavior to `make-app-sort`
 - refresh near the search input or in the secondary action group
 - create/new as the rightmost primary action
 - refresh must sit in this local toolbar above the table; do not place it in the global header, object title header, table header row, canvas-table header area, or column header area
@@ -95,8 +96,8 @@ Only add these when the user explicitly asks:
 Recommended placement:
 
 - filter: near search, usually immediately after search or refresh
-- sort: after filter and before refresh; use `make-app-sort` for the component, Preset, records, drag, and header linkage
-- group: add after sort only in the later grouping phase; route it to the future grouping Skill instead of implementing it in `makeui`
+- group: after filter and before sort; use `make-app-group` for the component, Preset, record-groups, groupFilter, drag, and grouped table flow
+- sort: after group and before refresh; use `make-app-sort` for the component, Preset, records, drag, and header linkage
 - column settings: near the table's right side or after sort/group
 - import/export: right action group, usually left of create/new or inside a more-actions menu
 - batch actions: appear only after rows are selected, in a selection-state toolbar above the table

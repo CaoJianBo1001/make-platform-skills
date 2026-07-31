@@ -1,6 +1,6 @@
 ---
 name: canvas-table-integration
-description: "Use when integrating `@qfei-design/canvas-table` into an existing app or page. Covers consumer-side local or virtual tables, public props/methods/events, row-head and header-menu mechanics, selection, drag, fixed columns, summary rows, empty states, async latest rows synchronization, lightweight canvas interactions, host-side cell-edit architecture, mandatory platform cell-edit standards, attachment editors, and Make field-display columns with schema properties, value normalization, and overflow-only tooltips. Route record sorting behavior, Preset state, and header asc/desc controller linkage to make-app-sort. Only supports `@qfei-design/canvas-table`, never UI-library tables. Does not design or generate Make DSL YAML (use makedsl). Read package AI docs first, choose base Track A or C, layer Track B when cell editing is needed, use documented public APIs, and do not modify the table library itself."
+description: "Use when integrating `@qfei-design/canvas-table` into an existing app or page. Covers consumer-side local, virtual, and grouped table runtime APIs, public props/methods/events, row-head and header-menu mechanics, selection, drag, fixed columns, summary rows, empty states, async latest rows synchronization, lightweight canvas interactions, host-side cell-edit architecture, mandatory platform cell-edit standards, attachment editors, and Make field-display columns with schema properties, value normalization, and overflow-only tooltips. Route record sorting behavior, Preset state, and header asc/desc controller linkage to make-app-sort. Route Make record-list grouping behavior, Preset group, record-groups, groupFilter, and grouped leaf pagination to make-app-group. Only supports `@qfei-design/canvas-table`, never UI-library tables. Does not design or generate Make DSL YAML (use makedsl). Read package AI docs first, choose base Track A or C, layer Track B when cell editing is needed, use documented public APIs, and do not modify the table library itself."
 metadata:
   version: 0.1.4
 ---
@@ -34,7 +34,8 @@ Hard Track B rule: every CanvasTable cell edit / 单元格编辑 implementation 
 11. If Track B is in scope, verify the mandatory cell-edit standard before finishing; a non-standard cell editor is not a shippable partial result.
 12. Add only the capabilities the user explicitly needs now; pagination, selection, sorting, grouping, and editing are not defaults.
 13. When table-header sorting is requested, use this Skill only for the documented header menu/suffix mechanics and route sorting behavior, `openWithField`, Preset, and records timing to `make-app-sort`.
-14. Before finishing, read the relevant pitfalls reference and verify one concrete table path.
+14. When Make record-list grouping is requested, use this Skill only for `GroupTableComponent` public API mechanics and route grouping behavior, Preset, `record-groups`, `groupFilter`, and leaf-page timing to `make-app-group`.
+15. Before finishing, read the relevant pitfalls reference and verify one concrete table path.
 
 ## Do not use this skill for
 
@@ -95,6 +96,7 @@ If an existing Make record list uses another table component, the expected integ
 | Proven downstream usage and unvalidated areas | `references/validated-usage-notes.md` |
 | Track workflows, capability checklists, output templates | `references/track-workflows.md` |
 | Table-header asc/desc behavior, shared sort panel, Preset and records sort | Use `make-app-sort` |
+| Make record grouping, Preset group, record-groups, groupFilter, grouped leaf pagination | Use `make-app-group` |
 
 ### For base Track A
 
@@ -165,6 +167,7 @@ Treat these as safety rules:
 - if a screen-reader fallback table is needed, keep it as a separate visually-hidden structure and give the visual host its own non-hidden accessible label
 - pagination is opt-in: do not add visible pagination controls, page-size selectors, page state, page query params, total-count handling, paginated fetch logic, `virtualOptions`, or `data:load` wiring unless the user explicitly asks for pagination, virtual loading, or paginated backend integration
 - sorting is opt-in: when requested, expose header asc/desc only through the host's documented CanvasTable header menu/suffix API, then call the shared `make-app-sort` controller. Do not sort records locally, keep separate header sort state, or call records directly from a header action
+- grouping is opt-in: for Make record lists, use `make-app-group` for the package panel, Preset, Service, `groupFilter`, and records timing. This Skill may instantiate `GroupTableComponent` and wire `group:load` / `group:data:load`, but must not define grouping semantics itself
 
 ## Detailed workflows and maintenance references
 

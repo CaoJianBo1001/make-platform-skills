@@ -62,9 +62,13 @@ Rules:
 Default:
 
 - `GET /api/entities/:entityKey/records`
-  - query: `fields`, `filter`, `sort`, `pagination`
+  - query: `fields`, `filter`, `groupFilter`, `sort`, `pagination`
   - complex values should be JSON strings unless the host contract says otherwise
   - response: `{ records, total }`
+- `GET /api/entities/:entityKey/record-groups`
+  - query: `filter`, `groupFilter`, `group`, `pagination`
+  - complex values should be JSON strings unless the host contract says otherwise
+  - response: `{ groups, pagination: { page, size, total } }`
 - `GET /api/entities/:entityKey/records/:recordID` -> record
 - `POST /api/entities/:entityKey/records`
   - body: `{ data }`
@@ -85,7 +89,15 @@ Rules:
 - List and detail are separate contracts. Use Make single-record reads for detail when available.
 - Validate `sort` shape. Prefer `{ fieldKey, order }`; reject ambiguous legacy `{ field, order }` in new contracts.
 - Validate `filter` shape before passing to Make. New Record list contracts should use `{ expression }` for CEL-style filters and omit `filter` when no expression exists.
+- Validate `groupFilter` shape before passing to Make. It is separate from `filter`; do not merge the two expressions in Service.
 - Do not generate new Service contracts that send `filter: []`, `filter: {}`, blank raw strings, or old object-array DSL to Make Data. Raw non-blank CEL strings are legacy compatibility only when the host API already documents them.
+- For grouped leaf records, ordinary records mode must omit `group` or pass `group: null`; never send `group: []` to Make Data.
+- Record-groups uses Make Data grouping mode: `group` is required and non-empty, each item is `{ fieldKey, order }`, and `properties` is invalid.
+- Record-groups should not forward `fields` or ordinary `sort`; grouping mode ignores them.
+- Make Data upstream returns `{ data, pagination: { page, size, total } }`; Service
+  maps `data` to `groups` and preserves `pagination.total` as the current-layer
+  group total. If an existing host exposes a flat `total` alias, document it as a
+  Service alias derived from `pagination.total`, not as the upstream response shape.
 - Do not infer returned fields from arbitrary UI row keys. The UI should request fields by schema keys when it needs a smaller payload.
 - Create/update payloads carry raw submit values, not formatted display labels.
 
@@ -93,16 +105,23 @@ Use `make-app-sort` for the canonical five-level ordered sort model, sortable-fi
 capability, save-before-apply behavior, and CanvasTable header linkage. Service
 owns parsing and authoritative validation.
 
+Use `make-app-group` for the canonical three-level ordered group model,
+groupable-field capability, `groupFilter` path semantics, record-groups timing, and
+CanvasTable grouped leaf pagination. Service owns parsing and authoritative
+validation.
+
 ## Entity Preset routes
 
-Generate these routes when advanced filtering or record sorting is enabled:
+Generate these routes when advanced filtering, record sorting, or record grouping
+is enabled:
 
 - `GET /api/entities/:entityKey/preset`
-  - response: `{ filter: { expression } | null, sort: { fieldKey, order }[] }`
+  - response: `{ filter: { expression } | null, sort: { fieldKey, order }[], group: { fieldKey, order }[] }`
 - `PATCH /api/entities/:entityKey/preset`
   - sparse body containing at least one supported dimension
   - filter clear: `{ filter: null }`
   - sort clear: `{ sort: [] }`
+  - group clear: `{ group: [] }`
   - response: `{ ok: true }` or the host's documented update result
 
 For `gatewayBaseUrl: "/api/make"` hosts, also document and test the actual
@@ -118,11 +137,11 @@ Rules:
   validated route. Never accept `appKey` from UI input.
 - Forward the current login/session context because Preset is scoped to the
   current user, App, and Entity.
-- Normalize missing filter to `null` and missing sort to `[]`; do not leak the raw
-  Make response envelope.
+- Normalize missing filter to `null`, missing sort to `[]`, and missing group to
+  `[]`; do not leak the raw Make response envelope.
 - PATCH is sparse. Send only dimensions present in the request and preserve
-  sibling dimensions plus the future `group`. Do not implement client-side
-  read-modify-write of the whole Preset.
+  sibling dimensions, including `group`. Do not implement client-side read-modify-write
+  of the whole Preset.
 - Verify upstream sparse merge semantics with an integration test that updates one
   dimension and proves existing sibling dimensions remain unchanged. If the
   upstream contract is not atomic, report the blocker instead of adding a racy
@@ -133,16 +152,23 @@ Rules:
 - Before Make calls, resolve current runtime fields and require
   `field.capabilities?.sortable === true` for every sort field. Do not use a
   field-type allowlist.
+- Validate Preset group and record-groups with the same strict shape parser: at
+  most three unique `{ fieldKey, order }` entries and only `asc | desc`.
+- Before Make calls, resolve current runtime fields and require
+  `field.capabilities?.groupable === true` for every group field. Do not use a
+  field-type allowlist and do not blanket-disable Lookup grouping in platform
+  Service guidance.
 - Treat Preset GET as a tolerant upstream boundary: sanitize invalid/stale stored
-  sort entries to a safe response and log discard counts. Keep PATCH and records
-  strict with 400 responses for invalid client input.
-- Do not accept `group` until the later grouping contract is implemented; sparse
-  updates preserve an existing upstream group without exposing it.
+  sort/group entries to a safe response and log discard counts. Keep PATCH,
+  records, and record-groups strict with 400 responses for invalid client input.
+- Preset `group: []` means clear saved grouping. Data API `group: []` is invalid
+  and must not be generated for ordinary records or grouped leaf records.
 - Add route and adapter logs at entry, success, failure, and clear branches with
   safe entity/dimension/count context. Redact credentials and filter values.
 
 Use `make-app-sort` for sort UI/model/records timing and `make-app-filter` for
-advanced-filter package/hydration/save behavior.
+advanced-filter package/hydration/save behavior. Use `make-app-group` for group
+UI/model/group-data timing.
 
 ## Candidate routes
 
