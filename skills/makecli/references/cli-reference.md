@@ -303,6 +303,29 @@ Recognize bills from a PDF/OFD/PNG/JPG file. See `--help` for crop/coordinate fl
 
 ---
 
+## whoami
+
+```
+makecli whoami [--output table|json]
+```
+
+Shows the current token's identity (user/tenant + profile/environment). Triggers browser login automatically when the token is missing or expired — at most one login per call.
+
+---
+
+## skills
+
+```
+makecli skills list [--all] [--output table|json]
+makecli skills install <name>... | --all [--yes|-y]
+makecli skills update
+makecli skills uninstall <name>... | --all [--yes|-y]
+```
+
+Manages Make platform skills (installed via npx under the hood). `list` shows installed skills by default (`--all` includes the remote catalog); `install`/`uninstall` prompt for confirmation (`--yes` skips; non-interactive shells refused without it).
+
+---
+
 ## update / version
 
 ```
