@@ -21,7 +21,7 @@ Default trigger:
 
 ## Host overlay
 
-The package does not render shadcn `Popover`, `Sheet`, `Dialog`, or scroll containers. The host chooses the mounting surface. Default Make object lists use a bottom-left `Popover`.
+The package does not render Popover, Modal, Drawer, or scroll containers. The host chooses the mounting surface. Default Make object lists use a bottom-left Popover.
 
 Default host Popover behavior:
 
@@ -44,7 +44,7 @@ Every Make advanced filter popover/panel must preserve the fixed three-region la
 - top fixed header: left title `筛选`, right action `清空所有`; the header is outside the scrollable condition area and uses a bottom divider
 - middle body / condition area: contains condition rows and nested condition groups only; it is the only vertical scroll region, and host CSS must set `.advanced-filter__body { overflow-y: auto; }`
 - bottom fixed footer: left actions `+ 添加条件` and `+ 添加条件组`, right primary action `确认`; the footer is outside the scrollable condition area and uses a top divider
-- container: the host `PopoverContent` / `SheetContent` / `DialogContent` wrapper clips overflow with `overflow: hidden`, then lets `.advanced-filter__body` scroll inside the max-height panel
+- container: the host Popover/Drawer/Modal content wrapper clips overflow with `overflow: hidden`, then lets `.advanced-filter__body` scroll inside the max-height panel
 
 Minimum host CSS:
 
@@ -118,7 +118,7 @@ Keep the package defaults:
 ## Defaults to avoid
 
 - Do not build a custom advanced-filter panel when `AdvancedFilterPanel` satisfies the requirement.
-- Do not use a full-screen `Sheet` for the default advanced filter.
+- Do not use a full-screen Drawer for the default advanced filter.
 - Do not style host overlay internals by copying package CSS into the app.
 - Do not make the whole Popover content a single `overflow: auto` region; only the condition body scrolls.
 - Do not place `清空所有`, `+ 添加条件`, `+ 添加条件组`, or `确认` inside the condition body.

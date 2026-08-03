@@ -11,17 +11,15 @@
 
 ## Default mode
 
-Create, edit, and detail UIs use a right-side panel surface by default. For generated Make App object create/edit/detail, this is a hard layout rule unless the user explicitly requests a different surface.
+Create, edit, and detail UIs use a right-side Drawer by default. For generated Make App object create/edit/detail, this is a hard layout rule unless the user explicitly requests a different surface.
 
-- surface: right-side panel; do not require a concrete component named `Drawer`
-- implementation mapping: shadcn/ui uses `Sheet` with `side="right"` by default
-- if stacked panels, fullscreen mode, or custom mask behavior exceed the stock `Sheet` API, build a project-local `SidePanel` wrapper from shadcn/Radix primitives while preserving the same right-side behavior and shadcn visual tokens
+- placement: right; use `placement="right"` for Drawer components and `side="right"` for shadcn/ui Sheet
 - default width: `60%`
 - small screens: may use `100%`, but the surface still enters from the right
-- mask closable: enabled by default; clicking the mask or blank area closes the current surface
+- mask closable: enabled by default; clicking the mask or blank area closes the current Drawer
 - header action area contains close and primary/secondary actions
 - no fixed footer by default
-- body scrolls inside the side-panel shell
+- body scrolls inside the Drawer shell
 
 Do not use bottom Drawer/Sheet, mobile bottom sheet, centered Modal/Dialog, or page-level replacement for object create/edit/detail unless the user explicitly requests that different presentation.
 
@@ -31,7 +29,7 @@ Treat these as Make UI defaults. For Make object create/edit/detail, right-side 
 
 Use route pages only when the user explicitly asks for an independent page, route, navigation, page jump, or standalone screen.
 
-Right-side panel presentation can still be driven by dynamic child routes when URL-addressable create/edit/detail state is required. In that case, keep the side-panel UI and use route params for object and record identity.
+Drawer presentation can still be driven by dynamic child routes when URL-addressable create/edit/detail state is required. In that case, keep the Drawer UI and use route params for object and record identity.
 
 ## Header actions
 
@@ -48,7 +46,7 @@ Use a compact header layout:
 - close should be icon-only by default, with accessible name/title `关闭`; avoid visible `关闭` text unless an existing project pattern explicitly requires text buttons
 - title text must be readable within the available header space. Give the title container `min-width: 0` plus a flexible width, and only apply ellipsis after real overflow; keep the full title available through `title`/tooltip. Do not shrink the title slot so otherwise displayable titles are truncated.
 
-Use `lucide-react` for fullscreen controls and the project-standard close control for closing.
+When Ant Design is used, prefer `FullscreenOutlined` and `FullscreenExitOutlined` for fullscreen controls, and the project-standard close control for closing.
 
 If fullscreen is not implemented or not useful for a simple Drawer, keep a normal close control in the header.
 
@@ -56,8 +54,8 @@ If fullscreen is not implemented or not useful for a simple Drawer, keep a norma
 
 Recommended structure:
 
-1. Side-panel header: left fullscreen toggle plus mode/title; right save/submit and final icon-only close
-2. Side-panel body: form content
+1. Drawer header: left fullscreen toggle plus mode/title; right save/submit and final icon-only close
+2. Drawer body: form content
 
 Form layout:
 
@@ -65,18 +63,18 @@ Form layout:
 - create/edit forms use a dedicated modifier class or style scope when their visual treatment differs from detail Drawers
 - default to vertical labels in a two-column grid for metadata-driven forms, because field labels may be long or unpredictable
 - horizontal label/value alignment remains acceptable when labels are short, stable, or already established by the project
-- use a subtle neutral side-panel body with one lightweight white form panel or section panels; avoid visually heavy cards and nested cards
+- use a subtle neutral Drawer body with one lightweight white form panel or section panels; avoid visually heavy cards and nested cards
 - keep form panels compact: moderate padding, 6-8px radius, thin neutral border, and low shadow at most
 - common fields use a two-column grid on desktop; do not render every field as full-width one-column rows unless the user explicitly asks
 - long text, descriptions, URL/link fields, attachments, lookup/relation controls, and rich content span full width
 - collapse to one column on small screens
-- show form-level save errors as a compact status/alert surface above the first form panel
-- keep control height and radius consistent, for example 36px controls with 6-8px radius unless the selected library's density tokens require another value
+- show form-level save errors as a compact `Alert` above the first form panel
+- keep control height and radius consistent, for example 36px controls with 6px radius when using Ant Design
 
-Unless the user or existing project asks otherwise, use the platform create/edit side-panel as the default visual baseline:
+Unless the user or existing project asks otherwise, use the platform create/edit Drawer as the default visual baseline:
 
-- right-side surface, width `60%`, fullscreen toggle can expand to `100%`
-- vertical labels in the form layout; do not prescribe library-specific form props such as `layout` or `colon` unless the selected library and host project already use them
+- `Drawer` on the right, width `60%`, fullscreen toggle can expand to `100%`
+- `layout="vertical"` form, `colon={false}`
 - header badge shows mode such as `新建` or `编辑`; right side contains primary save and final close
 - one white form panel for normal writable fields, and a second section panel for relation/association fields when needed
 - panel padding around `16px`, thin neutral border, 8px radius, low shadow at most
@@ -84,7 +82,7 @@ Unless the user or existing project asks otherwise, use the platform create/edit
 - field item margin around `10px`, label padding around `6px`, 36px controls, and textarea min-height around `96px`
 - normal metadata-driven fields occupy one grid column by default
 - full-span rows only for wide controls: `Make.Field.TextArea`, URL/link fields, `Make.Field.File`, `Make.Field.Lookup`, relation/association selectors, long text, attachment-heavy values, or otherwise wide controls
-- body scrolls inside the side-panel; the page behind it does not scroll
+- body scrolls inside the Drawer; the page behind it does not scroll
 
 Default create/edit field span mapping:
 
@@ -96,7 +94,7 @@ Default create/edit field span mapping:
 
 Field-metadata-driven Make forms:
 
-- consume host-provided field metadata before rendering create/edit side-panel fields
+- consume host-provided field metadata before rendering create/edit Drawer fields
 - derive field labels, readonly/editable presentation, and control choice from field metadata when available
 - use the field component mapping in `component-usage.md`
 - use the host-form controlled field contract in `component-usage.md` for every custom form field control; user, department, lookup, select, date, file, and relation selectors must forward `value/onChange/onBlur/id/disabled` so the displayed value and form store stay synchronized
@@ -122,7 +120,7 @@ Do not define business validation rules here. Only provide visual error, loading
 
 Recommended structure:
 
-1. Side-panel header: left fullscreen toggle plus record title or generic detail title; right contextual actions and final icon-only close
+1. Drawer header: left fullscreen toggle plus record title or generic detail title; right contextual actions and final icon-only close
 2. detail body: compact read-only information grid
 3. related sections: related data and attachments when supported
 
@@ -152,9 +150,9 @@ Default detail field span mapping:
 | `ID`, `Text`, `Number`, `Currency`, `Percent`, `Date`, `DateTime`, `DateRange`, `SingleSelect`, `MultiSelect`, `SingleUser`, `MultiUser`, `SingleDepartment`, `MultiDepartment` | one column; two fields per row |
 | `TextArea`, long text, URL/link-rich values, `File`, `Lookup`, relation/association values, attachment-heavy values, rich custom values | full row |
 
-Detail side panels should not have a footer unless the user explicitly asks for persistent bottom actions.
+Detail Drawers should not have a footer unless the user explicitly asks for persistent bottom actions.
 
-Edit and detail side panels should look related but not identical: edit uses vertical form labels in panel sections, while detail uses compact label/value rows. Do not render detail fields as a loose unstyled list.
+Edit and detail Drawers should look related but not identical: edit uses vertical form labels in panel sections, while detail uses compact label/value rows. Do not render detail fields as a loose unstyled list.
 
 If a related-data section is tabular, route the table implementation to `@qfei-design/canvas-table` through `canvas-table-integration`.
 
@@ -188,6 +186,6 @@ When a user opens a related record from a Lookup value, use the same Drawer stac
 
 ## Drawer scrolling
 
-The side-panel shell remains fixed. The body scrolls.
+The Drawer shell remains fixed. The body scrolls.
 
-Do not let the underlying page scroll when the side panel is open.
+Do not let the underlying page scroll when the Drawer is open.

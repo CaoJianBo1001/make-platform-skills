@@ -21,10 +21,8 @@ configure, or directly import dnd-kit and must not implement drag behavior again
 If a required drag behavior is missing, fix and release the shared package rather
 than adding a host fallback.
 
-Use shadcn/ui or project-local shadcn-compatible controls to build the sorting
-panel component adapter, and pass it through the package `components` prop. Use
-those adapters for `Popover`, `Select`, `Button`, `Tooltip`, icons, and messages.
-Do not introduce another UI library only for sorting.
+Use the host project's component library for Popover, Select, Button, Tooltip,
+icons, and messages. Do not introduce another UI library only for sorting.
 
 Before implementing table-header actions, read the installed CanvasTable
 `package.ai.json` and every `readOrder` entry through
@@ -121,7 +119,7 @@ Make host or this consumer Skill.
 ## Layout and styles
 
 Import package `styles.css` once. The package owns panel layout and internal styles;
-the host owns outer shadcn `Popover` placement, padding, arrow, portal, z-index, and active
+the host owns outer Popover placement, padding, arrow, portal, z-index, and active
 trigger styling. Scope any necessary outer override to this overlay only.
 
 ## CanvasTable header linkage

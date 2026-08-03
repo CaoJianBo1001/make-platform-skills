@@ -12,6 +12,7 @@ Use only public package entrypoints:
 
 - `@qfei-design/make-app-filter`
 - `@qfei-design/make-app-filter/react`
+- `@qfei-design/make-app-filter/adapters/antd`
 - `@qfei-design/make-app-filter/styles.css`
 
 Never import from `src`, `dist`, or package-internal files.
@@ -26,7 +27,7 @@ Never import from `src`, `dist`, or package-internal files.
 - `AdvancedFilterPanel`
 - `useAdvancedFilterController`
 - candidate source props
-- `AdvancedFilterComponents` component contract for host controls
+- optional Ant Design adapter
 - internal panel stylesheet
 
 ## Host provides
@@ -35,10 +36,9 @@ Never import from `src`, `dist`, or package-internal files.
 - resolved Lookup relation and target-field metadata from the complete runtime schema
 - applied advanced-filter state
 - toolbar trigger placement
-- shadcn `Popover`, `Sheet`, `Dialog`, or other mounting container
+- Popover, Modal, Drawer, or other mounting container
 - container width, max height, and scrolling
 - host CSS for the fixed panel container and `.advanced-filter__body { overflow-y: auto; }`
-- shadcn/ui `AdvancedFilterComponents` adapter using host-controlled controls
 - candidate APIs for users and departments
 - Service request adapter and record reload timing
 - permission-aware `{ enabled, entityKey, generation }` Preset context
@@ -106,13 +106,13 @@ import {
 } from "@qfei-design/make-app-filter";
 import {
   AdvancedFilterPanel,
-  type AdvancedFilterComponents,
   useAdvancedFilterController,
 } from "@qfei-design/make-app-filter/react";
+import { createAntdFilterComponents } from "@qfei-design/make-app-filter/adapters/antd";
 import "@qfei-design/make-app-filter/styles.css";
 ```
 
-Build the `AdvancedFilterComponents` value from shadcn/ui controls or project-local shadcn-compatible adapters. If the installed package exposes only a legacy visual adapter and no neutral component adapter, treat the integration as blocked until the shared package is upgraded or fixed; do not add the legacy UI library just to render this panel.
+Use `createAntdFilterComponents` only when the host uses Ant Design. For other component libraries, implement `AdvancedFilterComponents` with host controls instead of adding Ant Design.
 
 ## Minimal host wrapper
 
@@ -120,11 +120,8 @@ The package does not render the trigger or overlay:
 
 ```tsx
 import { useLayoutEffect, useRef, useState } from "react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
+
+const components = createAntdFilterComponents();
 
 function PermissionAwareFilterHost({ presetContext, ...props }) {
   if (!presetContext.enabled) return null;
@@ -136,7 +133,6 @@ function PermissionAwareFilterHost({ presetContext, ...props }) {
 function AdvancedFilterPopover({
   appliedGroup,
   candidateSources,
-  components,
   filterableFields,
   onApplyError,
   onApplyGroup,
@@ -144,7 +140,6 @@ function AdvancedFilterPopover({
   persistFilter,
   renderTrigger,
 }) {
-  const filterComponents = components satisfies AdvancedFilterComponents;
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const activeRef = useRef(true);
@@ -215,25 +210,27 @@ function AdvancedFilterPopover({
   }
 
   return (
-    <Popover open={open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger asChild>{renderTrigger({ disabled: saving })}</PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="advanced-filter-popover p-0"
-        sideOffset={6}
-        onOpenAutoFocus={(event) => event.preventDefault()}
-      >
-        <AdvancedFilterPanel
-          candidateSources={candidateSources}
-          components={filterComponents}
-          fields={filterableFields}
-          value={controller.draftValue}
-          validationErrors={controller.validationErrors}
-          onChange={controller.setDraftValue}
-          onClear={controller.clearDraft}
-          onConfirm={() => void handleConfirm()}
-        />
-      </PopoverContent>
+    <Popover
+      open={open}
+      trigger="click"
+      placement="bottomLeft"
+      content={
+        <div className="advanced-filter-popover">
+          <AdvancedFilterPanel
+            candidateSources={candidateSources}
+            components={components}
+            fields={filterableFields}
+            value={controller.draftValue}
+            validationErrors={controller.validationErrors}
+            onChange={controller.setDraftValue}
+            onClear={controller.clearDraft}
+            onConfirm={() => void handleConfirm()}
+          />
+        </div>
+      }
+      onOpenChange={handleOpenChange}
+    >
+      {renderTrigger({ disabled: saving })}
     </Popover>
   );
 }
@@ -282,7 +279,7 @@ When migrating an older project, a small local shim may preserve old function na
 
 ## Out of scope for the package
 
-- shadcn `Popover`, `Sheet`, `Dialog`, or scroll container rendering
+- Popover, Modal, Drawer, or scroll container rendering
 - toolbar layout
 - Service route implementation
 - CanvasTable header filter UI or menu behavior

@@ -7,7 +7,7 @@ metadata:
 
 # canvas-table-integration
 
-Use this skill only for **consumer-side integration** of `@qfei-design/canvas-table`. It never supports UI-library tables, native HTML tables, or any other table implementation as the Make product table.
+Use this skill only for **consumer-side integration** of `@qfei-design/canvas-table`. It does not support Ant Design Table, Arco Table, TDesign Table, native HTML tables, or any other table implementation as the product table.
 
 This skill uses two base tracks and one optional enhancement:
 
@@ -45,7 +45,7 @@ Hard Track B rule: every CanvasTable cell edit / 单元格编辑 implementation 
 - maintaining `package.ai.json`, `recipes.json`, examples, or docs inside the table library repo
 - configuring private npm registries
 - treating grouped-table architecture as the default answer
-- adding another UI library for cell editors instead of using shadcn primitives, project-local adapters, or qualified business controls that satisfy the CanvasTable editor contract
+- forcing a new UI component library into a project that already has an editor/component system
 - designing or generating Make DSL YAML; use `makedsl` for schema modeling
 
 ## Pre-flight check

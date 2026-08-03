@@ -1,11 +1,8 @@
 # field editor patterns
 
-Use this file to map business field types to shadcn-compatible editor patterns.
+Use this file to map business field types to host editor patterns.
 
-Generated Make UI uses shadcn/ui as the default component system. This file is
-about host-side editor integration through shadcn primitives, project-local
-controlled adapters, and existing business field controls that already satisfy
-the same value, popup, focus, and visual contracts.
+This file is about host-side editor integration, not about forcing one UI library.
 
 When the host backend exposes Make-style field schemas, handle the currently supported 18 field types explicitly enough to avoid ambiguous value shapes:
 
@@ -84,7 +81,7 @@ Examples:
 
 Recommended pattern:
 
-- shadcn/ui `Input` / 文本输入框 for single-line text and URL fields; shadcn/ui `Textarea` or textarea for multi-line text
+- host Input / 文本输入框 for single-line text and URL fields; host TextArea / textarea for multi-line text
 - full-cell, non-popup, borderless inline editor; the CanvasTable active edit border is the only editing border
 - submit-style editing
 - `updateVal()` returns the edited string for both display and submit in simple cases
@@ -93,7 +90,7 @@ Recommended pattern:
 Good fit for:
 
 - `contenteditable`
-- shadcn-compatible input component
+- host input component
 - textarea-like component when needed
 
 ## 4. Number-like fields
@@ -106,8 +103,8 @@ Examples:
 
 Recommended pattern:
 
-- shadcn/ui `Input` or local `NumberInput` / 数字输入框 with a finite parser, not a plain text downgrade
-- full-cell, non-popup, borderless inline editor; hide native steppers by default in the local adapter unless the product explicitly needs stepper controls
+- host InputNumber / NumberInput / 数字输入框, not a plain text input
+- full-cell, non-popup, borderless inline editor; hide steppers by default with `controls={false}` or the host-library equivalent unless the product explicitly needs stepper controls
 - submit-style editing
 - keep precision and unit behavior in field metadata or field config: `Make.Field.Number` reads `field.properties.precision`, `Make.Field.Currency` reads `field.properties.symbol`, `field.properties.decimalPlaces`, and optional `field.properties.useGrouping`, and `Make.Field.Percent` reads `field.properties.decimalPlaces`
 - keep the row value and submit value as a finite number or pure numeric string, according to the backend contract
@@ -135,10 +132,10 @@ Good defaults:
 
 Recommended pattern:
 
-- shadcn Date Picker composition (`Popover` + `Calendar`) / 日期选择器 for `Date`; use a local time-aware shadcn-compatible adapter for `DateTime`; use a local date-range adapter with `Popover` + `Calendar` range mode for `DateRange`
+- host DatePicker / 日期选择器 for `Date` and `DateTime`; host RangePicker / 日期区间选择器 for `DateRange`
 - often realtime-style editing
 - keep date format driven by field metadata: `Date.properties.format` and `DateTime.properties.format`
-- for `DateRange`, pass `field.properties.begin` and `field.properties.end` into the local date-range adapter and disable dates outside that schema range; when only `begin` or only `end` exists, apply the one-sided disabled-date rule
+- for `DateRange`, pass `field.properties.begin` and `field.properties.end` into the RangePicker / 日期区间选择器 and disable dates outside that schema range; when only `begin` or only `end` exists, apply the one-sided disabled-date rule
 - open popup immediately when the editor mounts
 - render the picker popup into the editor popup root and include that root in `relatedElements()`
 
@@ -148,7 +145,7 @@ Typical concerns:
 - whether selecting a value should close immediately or not
 - whether direct typed input has been parsed before OK / commit
 
-For date-time editors with an explicit OK button, resolve the current input text into the selected value before calling the table commit path. Date-time adapters should not assume typed text has already updated the selected value just because it is complete.
+For date-time editors with an explicit OK button, resolve the current input text into the selected value before calling the table commit path. Some UI libraries do not emit `onChange` just because the user typed a complete date-time string.
 
 Date range fields should be their own editor group when the backend uses a structured value such as `{ begin, end }`. Do not flatten the range into a display string before submit.
 Date range editors must echo current structured values and submit a structured range. A range cell that shows raw JSON or saves `"begin 至 end"` is using the wrong boundary value.
@@ -165,13 +162,13 @@ Recommended pattern:
 
 ### Single-select
 
-- shadcn/ui `Select` / 选择器 using schema `{ label, value }` options
+- host Select / 选择器 using schema `{ label, value }` options
 - often realtime-style
 - selecting a new value may commit immediately
 
 ### Multi-select
 
-- shadcn-compatible Combobox (`Popover` + `Command`) / 多选选择器 with responsive tags and value arrays
+- host Select / 多选选择器 with responsive tags and value arrays
 - often submit-style
 - editing may remain open while the user manages multiple selections
 
@@ -192,7 +189,7 @@ Do not synthesize a `-` option for empty values. Empty display uses the table re
 
 Recommended pattern:
 
-- reuse a project-owned people selector backed by the host user candidate API when it satisfies the CanvasTable editor contract
+- reuse the host project's existing people selector backed by the host user candidate API
 - treat `focus()` as "open the selector" rather than only text focus
 - usually submit-style editing
 
@@ -214,14 +211,14 @@ People selector options, selected values, and inline echo UI should reuse the sh
 
 Current-value echo is mandatory. `SingleUser` may arrive as one object, a one-item array, a scalar id, or an identity API object; `MultiUser` may arrive as an array. Normalize these shapes before rendering the selector. If a selected user has an id and label, merge it into the selector options as an echo option even when `/api/users` is still loading or the current page of candidates does not contain that user. If the selected user has only a label and no stable id, keep that label visible as a temporary echo and require a real candidate selection before committing a changed value; do not render the editor empty. Candidate responses must merge with selected echo options rather than replacing them.
 
-Do not use field schema `options`, table row samples, hardcoded fixtures, or mock users as candidate lists in production. If no user API exists, preserve the current cell value for display and allow editing only to the extent the project-owned candidate source supports it.
+Do not use field schema `options`, table row samples, hardcoded fixtures, or mock users as candidate lists in production. If no user API exists, preserve the current cell value for display and allow editing only to the extent the host selector/data source supports it.
 The people editor must echo the current record value even while remote candidates are loading. Normalize ids from `recordID`, `userId`, or `id`; normalize labels from `name`, `userName`, `displayName`, or `label`.
 
 ## 8. Department fields
 
 Recommended pattern:
 
-- reuse a project-owned department selector backed by the host department candidate API when it satisfies the CanvasTable editor contract
+- reuse the host project's department selector backed by the host department candidate API
 - treat `focus()` as opening the selector
 - usually submit-style editing
 
@@ -250,8 +247,8 @@ Attachment fields are special and should usually be treated as their own categor
 Recommended pattern:
 
 - render in-table previews/icons through canvas-table rendering
-- reuse a project-owned upload/file control for editing when it satisfies the CanvasTable attachment editor contract
-- otherwise provide a shadcn-compatible local `Attachment` editor with drag/drop and click-to-upload file selection
+- reuse the host project's upload/file components for editing when available
+- otherwise provide a host DOM editor with drag/drop and click-to-upload file selection
 - usually submit-style editing
 - require a saved backend record identity when the backend upload API needs one
 - enforce `field.properties.maxCount` across click-to-upload, drag/drop, paste, and append actions; after the file count reaches `maxCount`, disable or reject additional files through the host validation/error state instead of silently dropping them

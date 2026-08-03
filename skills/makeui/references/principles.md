@@ -24,8 +24,8 @@
 - Do not infer that a requested table needs pagination, cell editing, virtual loading, or custom renderers; table implementation belongs to `canvas-table-integration`.
 - Make record tables and list tables must use `@qfei-design/canvas-table` through `canvas-table-integration`. If cell editing is needed, use `canvas-table-integration` for the editing design too.
 - Do not add product capabilities that were not requested, especially pagination, views, advanced filters, grouping, sorting, column settings, import, or export.
-- Use shadcn/ui as the default Make App component system for new generated UI.
-- Do not silently mix shadcn/ui with an existing non-shadcn component system. If the user asks for replacement, migrate the touched UI surface to shadcn/ui; otherwise state the mismatch before component-library-specific edits.
+- Do not force Ant Design or Less when the user or project already has another UI/styling system.
+- Do not silently choose Ant Design, Arco Design, or shadcn/ui for a new project. Component-library selection is blocking until the user explicitly names one of those three libraries or delegates to the default/recommended option, which means Ant Design.
 - Do not skip the Make App shell for generated object-list UI. Start from the shell unless the project already has one.
 - Do not silently downgrade `Date`, `User`, `Department`, `Select`, `File`, or `Lookup` Make fields to plain text inputs. Use type-appropriate UI controls or show an explicit unsupported-field UI fallback.
 - Do not show attachment upload controls in create flows when upload requires a saved record identity. New records do not have a persisted id; omit file upload until edit/detail after persistence.
@@ -37,7 +37,7 @@ Use a focused object-management layout:
 - global shell with top header and left navigation for generated Make App object-list UI
 - list page as the main entry
 - object navigation through dynamic React Router params
-- create/edit/detail as right-side Drawer-style surfaces by default; use shadcn/ui `Sheet side="right"` and do not use bottom sheets unless explicitly requested
+- create/edit/detail as right-side Drawer by default; use `placement="right"` / `side="right"` and do not use bottom sheets unless explicitly requested
 - create/edit/detail use the platform desktop two-column field grid by default; only wide fields such as `TextArea`, URL/link, file, lookup/relation, long text, attachments, or rich controls span the full row
 - route pages only on explicit user request
 - table area fills remaining content height
@@ -93,7 +93,7 @@ Keep the app shell visible when possible. A failed object view should render an 
 
 If a detail is not requested and not present in the project, choose the simplest useful UI.
 
-For a new project with no established component library, use shadcn/ui. Follow the shadcn/ui setup path in `component-usage.md`, add only the components needed by the generated screens, and handle missing high-level widgets through shadcn composition or project-local controlled adapters. Do not add another component suite as a shortcut for date ranges, uploads, remote selectors, transfer-style pickers, or tables.
+For a new project with no established component library, ask the user to choose from this ordered list: Ant Design (recommended/default), Arco Design, or shadcn/ui. Do not offer TDesign as a new-project candidate. Do not choose automatically before the user responds. If the user explicitly names one of the three libraries, use that library. If the user answers with a generic delegation such as "default", "recommended", "you decide", "anything is fine", or "whatever", treat it as choosing Ant Design. If the user has not made either an explicit or delegated choice, pause component-library-specific implementation and only provide a neutral plan or ask the selection question. If the user chooses shadcn/ui, follow the host project's chosen setup path and add only the UI components needed by the generated screens.
 
 ## Dynamic object routes
 

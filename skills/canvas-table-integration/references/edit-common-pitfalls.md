@@ -12,15 +12,15 @@ Fix:
 
 - split responsibilities into edit controller, editor container, field editors, and save layer
 
-## 2. Adding another UI library into the editor path
+## 2. Forcing a new UI library into the project
 
 Symptom:
 
-- the editor path ignores shadcn/ui, project-local adapters, or existing business controls and adds another UI library for a missing widget
+- the editor path ignores the project's existing components and adds a new library without need
 
 Fix:
 
-- first inspect the current project and use shadcn/ui primitives, project-local adapters, or existing business controls that satisfy the editor contract
+- first inspect the current project and reuse existing business/UI components
 
 ## 3. Mixing display value and submit value
 
@@ -311,7 +311,7 @@ Symptom:
 
 Fix:
 
-- make popup editors open on mount through the editor adapter's controlled `open` or equivalent prop
+- make popup editors open on mount through the host component's controlled `open` or equivalent prop
 - render the popup into a dedicated popup root and return that root from `relatedElements()`
 - focus the editor after the framework root has rendered
 - keep `autoClose.enter: "ignore"` for popup editors whose internal keyboard interaction owns Enter
@@ -324,7 +324,7 @@ Symptom:
 - edited text, textarea, or number cells show an extra input border, radius, margin, or blank inset
 - select, user, department, date, or date-range triggers show a second blue border inside the canvas-table active-cell outline
 - the component does not fill the active cell height or width
-- the active cell contains visible helper/hint/help text, range tips such as `0-5`, or form validation copy below or beside the editor
+- the active cell contains visible helper/hint/help text, range tips such as `0-5`, or `Form.Item` validation copy below or beside the editor
 
 Fix:
 
@@ -332,7 +332,7 @@ Fix:
 - set the editor container and actual editor component to `width: 100%` and `height: 100%`
 - use borderless or visually merged editor variants
 - remove component-level focus border and focus `box-shadow` from the in-cell trigger; keep the popup/dropdown panel styling separate
-- do not wrap cell editors in form-item wrappers, cards, or bordered panels
+- do not wrap cell editors in `Form.Item`, cards, or bordered panels
 - keep only small inner text padding when needed; do not create an extra outer box
 - do not render helper/hint/help text inside the active cell editor; use `aria-label`, `title`, placeholder text, tooltip, or an external validation surface instead
 - do not clamp the editor root to a fixed narrow width; it must fill the active cell rather than sizing itself to a smaller input box

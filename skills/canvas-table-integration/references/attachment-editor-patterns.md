@@ -206,16 +206,11 @@ Default visual baseline for Make schema table editing:
 
 Do not change the canvas-table package just to solve a host popup placement problem until host-side positioning has been tried.
 
-## 10. shadcn-compatible attachment rule
+## 10. Component-library rule
 
-For generated Make UI attachment editors, use a project-local shadcn-compatible
-`Attachment` adapter by default. A business upload/file control may be reused
-only when it satisfies the CanvasTable editor contract for value extraction,
-popup ownership, focus behavior, visual chrome, max-count enforcement, and
-data-source upload boundaries.
+For attachment editors, prefer the current project's existing upload/file component system when it exists.
 
-Do not add another UI library or require a specific upload package just to fill
-the attachment-editor gap.
+Do not force the skill to require a specific upload library.
 
 ## 11. Verification checklist
 

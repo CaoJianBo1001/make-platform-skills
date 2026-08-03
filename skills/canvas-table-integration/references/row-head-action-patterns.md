@@ -27,7 +27,7 @@ Default visual behavior:
 
 ## 2. Basic open-detail icon
 
-Canvas cannot render a React icon component directly. Use an image source such as a small SVG data URL, a local icon asset, or an `HTMLImageElement`. For shadcn/lucide projects, convert a small lucide-style SVG or static asset to an image source before passing it to the canvas layer.
+Canvas cannot render a React icon component directly. Use an image source such as a small SVG data URL, a local icon asset, or an `HTMLImageElement`. If the host project uses Ant Design, it can still use the Ant Design visual asset, but pass the canvas layer an image source.
 
 ```ts
 import { ImgShape, RectShape, type IBodyRowHeadSuffixOptions } from '@qfei-design/canvas-table'

@@ -27,7 +27,7 @@ This skill owns the consumer-side package integration contract, advanced-filter 
 4. Read package docs before designing code. Prefer installed package docs; if the host is working in the package repo, read source docs.
 5. Import `@qfei-design/make-app-filter/styles.css` once in the host UI entry.
 6. Use package APIs for filter core, panel, controller, adapter, validation, and CEL compile/parse. Do not copy or hand-write these capabilities in the host.
-7. Keep host responsibilities outside the package: toolbar trigger, shadcn `Popover` / `Sheet` / `Dialog` container, scroll sizing, applied state, candidate APIs, Service request adapter, and CanvasTable header filter UI/menu.
+7. Keep host responsibilities outside the package: toolbar trigger, Popover/Drawer/Modal container, scroll sizing, applied state, candidate APIs, Service request adapter, and CanvasTable header filter UI/menu.
 8. Wire header "按该字段筛选" to the same package controller/panel; do not create separate header-only state or a local filter implementation.
 9. Align with the backend Record list filter contract: Service sends `filter: { expression }`, blank expressions mean no filter, and field support must match runtime metadata plus package public APIs. Submit `compileListFilter` output unchanged; never rewrite CEL/DNF in the host.
 10. For entity object lists, establish the permission-aware `{ enabled, entityKey, generation }` context from `make-app-permission`. Only while enabled, load the current Entity Preset before the first records query, hydrate the saved filter through package public APIs, and keep toolbar search session-only.
@@ -80,7 +80,7 @@ Required read procedure for installed `1.0.0+` packages:
 
 - Do not create new Make advanced-filter implementations in host apps. No hand-written Filter IR helpers, operator matrix, validator, CEL compiler/parser, or advanced filter panel when the package provides it.
 - Do not deliver filtering partially in Make record-list pages. If filtering is in scope, implement package-backed toolbar advanced filter, CanvasTable header filter UI, header-to-panel linkage, and Service expression payload together.
-- New integrations must import package APIs from `@qfei-design/make-app-filter` and `@qfei-design/make-app-filter/react`, pass shadcn/ui controls through the package `AdvancedFilterComponents` contract, and avoid legacy visual adapters.
+- New integrations must import package APIs from `@qfei-design/make-app-filter`, `@qfei-design/make-app-filter/react`, and optional `@qfei-design/make-app-filter/adapters/antd`.
 - New integrations must import `@qfei-design/make-app-filter/styles.css` once. Host CSS may style the outer overlay/container, but must not fork package internals unless fixing a host-specific containment issue.
 - New filter output uses `filter: { expression: string }`. If `compileListFilter` returns `undefined`, omit `filter`.
 - `compileListFilter` is the only host-facing search/advanced-filter compiler. Send its result unchanged; do not parse, redistribute, or rewrite CEL/DNF in host code.

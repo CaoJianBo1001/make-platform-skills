@@ -51,7 +51,7 @@ metadata intact.
 Before changing code, identify:
 
 - framework: React or Vue
-- shadcn/ui setup and generated `src/components/ui` availability
+- existing component library
 - existing business field editors
 - existing upload / date / select / people / department widgets
 - field metadata shape: editability, required, field type, precision, format, multi/single mode, attachment value structure
@@ -62,7 +62,7 @@ Do not invent a new editor system if the project already has one.
 
 ## Track B pragmatic host-edit guidance
 
-Use these defaults for first-pass editable-list work. Adapt them to the host project's shadcn/ui setup, project-owned business controls, save model, and backend contract.
+Use these defaults for first-pass editable-list work. Adapt them to the host project's real component system, save model, and backend contract.
 
 1. Declare `editType: "custom"` on target editable columns; do not assume `customEdit` alone is enough.
 2. Start with the smallest working editor bridge before abstracting the editor container.
@@ -101,7 +101,7 @@ Use these defaults for first-pass editable-list work. Adapt them to the host pro
 
 1. Check whether the package is installed and read package editing docs through `package.ai.json.readOrder`.
 2. Select and preserve the display base. For Make schema fields, complete Track C before adding Track B.
-3. Identify the host framework, shadcn/ui setup, and existing field-editor components.
+3. Identify the host framework, component library, and existing field-editor components.
 4. Identify the field metadata that drives editability and field type.
 5. Identify the stable row identity used by backend reads, saves, dirty state, and detail routes.
 6. Read the host Make schema and Drawer form field mapping before coding editors.
@@ -202,7 +202,7 @@ Before finishing Track A or C, read `references/common-pitfalls.md`.
 
 Track B:
 
-- adding another UI library instead of using shadcn primitives or project-local adapters
+- forcing a brand-new component library into the project
 - putting all editor logic directly into `customEdit`
 - failing to separate display value and submit value
 - treating all field types as the same commit model
@@ -255,7 +255,7 @@ For Track A, report:
 For Track B, report:
 
 - which editable field path was selected
-- which shadcn/ui primitives, project-local adapters, and business editor components were reused
+- which project component library and business editor components were reused
 - where the edit controller logic lives
 - whether a shared editor-container abstraction was used
 - which field types were implemented or documented

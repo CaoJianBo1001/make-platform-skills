@@ -5,10 +5,10 @@
 Use this priority:
 
 1. User-specified styling system.
-2. Existing project Tailwind/shadcn styling setup.
-3. Tailwind CSS as the default styling system required by shadcn/ui.
+2. Existing project styling system.
+3. Less as a default candidate when no styling system exists.
 
-Do not add Less as a new default for generated Make App UI. If an existing project still uses Less, migrate touched shadcn/ui surfaces through Tailwind-compatible styles instead of mixing new Less component styling into shadcn primitives.
+Do not force Less if the project already uses CSS Modules, Tailwind, styled-components, or another convention.
 
 ## Layout stability
 
@@ -58,7 +58,7 @@ Avoid:
 - in percentage-based Drawers, prefer stable two-column grids such as `repeat(2, minmax(0, 1fr))` with `min-width: 0` children
 - keep common fields in two columns on desktop; avoid one full-width row per field unless the user explicitly asks
 - treat fixed minimum column widths as an overflow risk; use them only after checking the target Drawer width and breakpoint behavior
-- align label typography, control height, border radius, and focus ring with existing project tokens or shadcn/ui defaults before adding custom values
+- align label typography, control height, border radius, and focus ring with existing project tokens or Ant Design defaults before adding custom values
 - let `TextArea`, long text, URL/link, file, lookup/relation, description, attachment-heavy, and rich controls span full width when it improves readability
 - omit file upload fields in create mode when upload needs a saved record identity; show attachment controls only after a persisted record exists
 - header button density can be slightly more relaxed when a form needs it, but changes should stay scoped away from list and detail action styling

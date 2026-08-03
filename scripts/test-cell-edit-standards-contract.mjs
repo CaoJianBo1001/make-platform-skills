@@ -26,42 +26,10 @@ const editorPatterns = read(
 const componentSelection = read(
   'skills/canvas-table-integration/references/editor-component-selection.md',
 );
-const trackWorkflows = read(
-  'skills/canvas-table-integration/references/track-workflows.md',
-);
 const pitfalls = read(
   'skills/canvas-table-integration/references/edit-common-pitfalls.md',
 );
 const makeui = read('skills/makeui/SKILL.md');
-const activeCellEditDocs = [
-  defaults,
-  editorPatterns,
-  componentSelection,
-  trackWorkflows,
-  pitfalls,
-  makeui,
-].join('\n');
-const legacyCellEditorPattern = new RegExp(
-  [
-    'host Input',
-    'host TextArea',
-    'host InputNumber',
-    'host DatePicker',
-    'host RangePicker',
-    'host Select',
-    'host component library',
-    'project component library',
-    'existing component library',
-    'selected project component library',
-    'Form.Item',
-    'InputNumber',
-    'DatePicker',
-    'RangePicker',
-  ]
-    .map((text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
-    .join('|'),
-  'i',
-);
 
 assert.match(
   skill,
@@ -106,18 +74,18 @@ assert.match(
 );
 assert.match(
   defaults,
-  /shadcn[\s\S]*(Input|NumberInput|数字输入框)[\s\S]*(hide.*stepper|hidden steppers|隐藏.*(stepper|步进)|finite parser)/i,
-  'Number editors must use shadcn-compatible numeric controls and hide nested steppers by default',
+  /(InputNumber|NumberInput|数字输入框)[\s\S]*(controls=\{false\}|controls=false|隐藏.*(stepper|步进)|hide.*stepper)/i,
+  'Number editors must use host numeric controls and hide nested steppers by default',
 );
 assert.match(
   defaults,
-  /shadcn[\s\S]*(Date Picker|日期选择器)[\s\S]*Popover[\s\S]*Calendar[\s\S]*(open|立即打开)/i,
-  'Date editors must use shadcn date-picker composition and open immediately',
+  /(DatePicker|日期选择器)[\s\S]*(open|立即打开)/i,
+  'Date editors must use host date picker controls and open immediately',
 );
 assert.match(
   defaults,
-  /(shadcn[\s\S]*Select|Combobox[\s\S]*Popover[\s\S]*Command|Popover[\s\S]*Command[\s\S]*Combobox)[\s\S]*(open|立即打开)/i,
-  'Select-like popup editors must use shadcn Select or Combobox controls and open immediately',
+  /(Select|选择器|下拉)[\s\S]*(open|立即打开)/i,
+  'Select-like popup editors must use host selector controls and open immediately',
 );
 assert.match(
   defaults,
@@ -137,30 +105,24 @@ assert.match(
 
 assert.match(
   editorPatterns,
-  /Text[\s\S]*shadcn[\s\S]*(Input|Textarea|输入框)|shadcn[\s\S]*(Input|Textarea)[\s\S]*Text/i,
-  'Field editor mapping must route text fields to shadcn text controls',
+  /Text[\s\S]*(Input|输入框)|Input[\s\S]*Text|文本[\s\S]*输入框/i,
+  'Field editor mapping must route text fields to a text input control',
 );
 assert.match(
   editorPatterns,
-  /Number[\s\S]*shadcn[\s\S]*(Input|NumberInput|数字输入框)|shadcn[\s\S]*(Input|NumberInput)[\s\S]*Number/i,
-  'Field editor mapping must route numeric fields to shadcn-compatible number controls',
+  /Number[\s\S]*(InputNumber|NumberInput|数字输入框)|数字[\s\S]*数字输入框/i,
+  'Field editor mapping must route numeric fields to a number input control',
 );
 assert.match(
   editorPatterns,
-  /Date[\s\S]*shadcn[\s\S]*(Date Picker|日期选择器)[\s\S]*Popover[\s\S]*Calendar/i,
-  'Field editor mapping must route date fields to shadcn date-picker composition',
+  /Date[\s\S]*(DatePicker|日期选择器)|日期[\s\S]*日期选择器/i,
+  'Field editor mapping must route date fields to a date picker control',
 );
 
 assert.match(
   componentSelection,
-  /shadcn\/ui[\s\S]*(Input|Textarea|Select|Popover|Calendar|Command|Attachment)/i,
-  'Component selection must prefer shadcn/ui primitives and local controlled adapters for concrete editor controls',
-);
-
-assert.doesNotMatch(
-  activeCellEditDocs,
-  legacyCellEditorPattern,
-  'CanvasTable cell-edit guidance must not preserve legacy host component-library control names or wrappers',
+  /(项目|host)[\s\S]*(组件库|component library)[\s\S]*(InputNumber|NumberInput|DatePicker|Select|数字输入框|日期选择器|选择器)/i,
+  'Component selection must prefer the project component library for concrete editor controls',
 );
 
 assert.match(

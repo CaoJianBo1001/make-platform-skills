@@ -17,6 +17,7 @@ Use only public entries:
 
 - `@qfei-design/make-app-group`
 - `@qfei-design/make-app-group/react`
+- `@qfei-design/make-app-group/adapters/antd`
 - `@qfei-design/make-app-group/styles.css`
 
 Import `@qfei-design/make-app-group/styles.css` once from the host UI entry. Do
@@ -24,11 +25,10 @@ not import from `src`, `dist`, or generated chunk files.
 
 ## Host-owned container
 
-The package does not render the toolbar trigger or the outer shadcn `Popover`,
-`Sheet`, or `Dialog`. The host owns:
+The package does not render the toolbar trigger or the outer Popover, Modal, or
+Drawer. The host owns:
 
 - toolbar placement and trigger label
-- shadcn/ui component adapter passed through the package `components` prop
 - overlay placement, z-index, portal, and viewport sizing
 - disabled state from access and page loading context
 - entity-keyed applied group state
@@ -36,11 +36,8 @@ The package does not render the toolbar trigger or the outer shadcn `Popover`,
 - data request lifecycle after applied group changes
 - safe error formatting
 
-Build the panel component adapter from shadcn/ui controls or project-local
-shadcn-compatible wrappers and pass it to `RecordGroupPanel`. If the installed
-package exposes only a legacy visual adapter and no neutral `components` prop,
-stop and upgrade or fix the package; do not add another UI library just for the
-grouping panel.
+For Ant Design hosts, use `createAntdRecordGroupComponents()` and pass the result
+to `RecordGroupPanel`.
 
 Hide the trigger when there are no groupable fields. Do not show a disabled button
 as the only feedback for an entity that cannot be grouped.
