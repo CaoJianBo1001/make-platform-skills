@@ -30,6 +30,7 @@ const serviceSkill = read('skills/make-app-service/SKILL.md');
 const serviceApi = read('skills/make-app-service/references/service-api-contracts.md');
 const makeui = read('skills/makeui/SKILL.md');
 const listLayout = read('skills/makeui/references/list-page-layout.md');
+const drawerLayout = read('skills/makeui/references/drawer-layout.md');
 const sortSkill = read('skills/make-app-sort/SKILL.md');
 const sortModel = read('skills/make-app-sort/references/sort-model.md');
 const sortPresetFlow = read('skills/make-app-sort/references/preset-and-data-flow.md');
@@ -349,6 +350,21 @@ assert.match(
 );
 assert.match(
   canvasFlow,
+  /(unrelated UI state|无关 UI 状态)[\s\S]*(Detail Drawer|详情抽屉|Drawer)[\s\S]*(must\s+not|不得|不应)[\s\S]*(record-groups|leaf records|group:data:load|setGroup|GroupTableComponent)/i,
+  'grouped table lifecycle must not reload or resync for unrelated detail UI state',
+);
+assert.match(
+  canvasFlow,
+  /(grouping|group config|分组配置)[\s\S]*(stable|memoize|稳定|useMemo)[\s\S]*(must\s+not|不得|不应)[\s\S]*(depend|dependency|依赖)[\s\S]*(entire|whole|整个)[\s\S]*(object|对象)/i,
+  'grouped table config must be stable and effects must not depend on the whole grouping object',
+);
+assert.match(
+  canvasFlow,
+  /setGroup\(rootGroups,\s*undefined,\s*0\)[\s\S]*(only|仅|guard|保护|防护)[\s\S]*(dataVersion|rootGroups)/i,
+  'root group synchronization must be guarded by dataVersion/rootGroups',
+);
+assert.match(
+  canvasFlow,
   /page \+ 1[\s\S]*(Service|Data API|one-based)/,
   'Canvas zero-based pages must translate to one-based Service/Data pages',
 );
@@ -388,6 +404,11 @@ assert.match(
   /grouped mode adds `fixed: "left"` only when no left-fixed data column exists[\s\S]*existing left-fixed data column is not duplicated[\s\S]*ordinary non-grouped `CanvasTableComponent` mode does not get/,
   'testing guidance must cover grouped-only conditional fixed-left behavior',
 );
+assert.match(
+  testing,
+  /(Detail Drawer|详情抽屉|Drawer)[\s\S]*(does not|do not|不|不得)[\s\S]*(recreate|重建)[\s\S]*GroupTableComponent[\s\S]*(repeat|重复)[\s\S]*setGroup[\s\S]*(fetchLeafPage|leaf|叶子|group:data:load)/i,
+  'testing guidance must cover unrelated detail UI state not refreshing grouped tables',
+);
 
 assert.match(
   readme,
@@ -403,6 +424,11 @@ assert.match(
   listLayout,
   /group: after filter and before sort[\s\S]*make-app-group/,
   'list-page layout must place group after filter and before sort',
+);
+assert.match(
+  drawerLayout,
+  /(non-mutating|非数据变更|无数据变更)[\s\S]*(Detail Drawer|详情抽屉|Drawer)[\s\S]*(must\s+not|不得|不应)[\s\S]*(refresh|reload|刷新|重新拉取)[\s\S]*(record-groups|records|table|表格)/i,
+  'makeui drawer guidance must forbid non-mutating detail UI actions from refreshing grouped tables',
 );
 assert.match(
   canvasSkill,

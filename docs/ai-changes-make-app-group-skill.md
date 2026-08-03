@@ -92,3 +92,21 @@ AI 可以按统一规范完成完整分组功能，而不是只接一个弹窗�
 - 明确该规则不作用于普通非分组 `CanvasTableComponent` 模式，非分组表格不新增首列
   左固定默认要求。
 - 补充分组测试契约，防止后续移除分组左固定保障、重复添加固定列或误应用到非分组表格。
+
+## 2026-08-03 分组详情抽屉刷新回归规则
+
+- 补充分组 CanvasTable 生命周期规则：根分组 `setGroup(rootGroups, undefined, 0)`
+  只允许在初始化或 `rootGroups` / `dataVersion` 等语义数据变化时执行，不允许由
+  父组件普通渲染或对象引用变化重复触发。
+- 明确宿主传入的 `grouping` / 分组配置需要保持稳定；数据同步 effect 不应依赖每次
+  render 都重新创建的完整分组对象，而应依赖分组字段、根分组数据、总数、分页尺寸和
+  数据版本等真实输入。
+- 同步 CanvasTable 通用集成陷阱：详情抽屉、全屏、表头按钮、行操作弹层等无关 UI 状态
+  不得重建表格实例、重复 `setData` / `setGroup` 或重新请求列表、`record-groups`、
+  叶子明细页。
+- 同步 MakeUI 详情抽屉规则：非数据变更的详情交互只更新 UI 状态；只有保存、删除、
+  关系更新或显式刷新命令才能刷新列表、分组或表格数据。
+- 补充 `test-make-app-group-contract.mjs` 和 `test-canvas-table-data-sync-contract.mjs`
+  防回归断言，覆盖等价新引用分组配置、详情抽屉交互和父组件状态抖动。
+- 压缩 `canvas-table-integration` 的 frontmatter description，保留分组/排序/Track A/B/C
+  触发语义，同时满足 `quick_validate.py` 的 1024 字符限制。

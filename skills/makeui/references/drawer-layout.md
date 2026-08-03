@@ -156,6 +156,13 @@ Edit and detail Drawers should look related but not identical: edit uses vertica
 
 If a related-data section is tabular, route the table implementation to `@qfei-design/canvas-table` through `canvas-table-integration`.
 
+Non-mutating Detail Drawer interactions are UI state only. Opening/closing detail,
+fullscreen toggles, tab switches, header buttons, copy/link actions, and other
+read-only controls must not refresh or reload the object list, grouped
+`record-groups`, records, or table data. Trigger list/group/table refresh only
+after a successful data mutation such as save, delete, relation update, or an
+explicit user refresh command.
+
 Do not add activity, dynamic records, timeline, comments, or operation logs by default. Add them only when the user explicitly asks.
 
 ## Stacked Drawers

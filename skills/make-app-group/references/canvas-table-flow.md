@@ -70,6 +70,24 @@ After construction, call:
 table.setGroup(rootGroups, undefined, 0);
 ```
 
+Only call `setGroup(rootGroups, undefined, 0)` during initial construction or
+when `rootGroups` or an explicit `dataVersion` has actually changed. Guard the
+sync with the last applied `rootGroups`/`dataVersion` pair or an equivalent
+semantic token so the same grouped data does not re-enter CanvasTable.
+
+Keep the host `grouping` or group config stable with `useMemo` or the host
+framework equivalent. Data-sync effects must not depend on the entire grouping
+object when that object is recreated by parent renders. Depend on semantic
+inputs instead, such as applied group keys, root group rows, root total, page
+sizes, table dimensions, and `dataVersion`.
+
+Unrelated UI state, including opening/closing a Detail Drawer, Drawer fullscreen,
+header buttons, row action popovers, or other non-mutating detail controls, must
+not request `record-groups`, reload leaf records, trigger `group:data:load`,
+repeat `setGroup(rootGroups, undefined, 0)`, or recreate
+`GroupTableComponent`. Keep row-detail callbacks and loaders in refs when the
+latest function body is needed but the table instance should remain stable.
+
 CanvasTable page indexes are zero-based. Service/Data API page indexes are
 one-based. Translate inside the loader callback only.
 
