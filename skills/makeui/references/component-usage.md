@@ -3,6 +3,7 @@
 ## Contents
 
 - [Selection strategy](#selection-strategy)
+- [shadcn/ui gap policy](#shadcnui-gap-policy)
 - [Default candidate mapping](#default-candidate-mapping)
 - [Make field-metadata-driven components](#make-field-metadata-driven-components)
 - [Make field properties contract](#make-field-properties-contract)
@@ -16,62 +17,65 @@
 
 Use this priority:
 
-1. User-specified component library.
-2. Existing project component library.
-3. New-project selection among Ant Design, Arco Design, and shadcn/ui when no library exists.
+1. User-specified shadcn/ui migration request.
+2. Existing project-owned business controls that already satisfy the Make value, accessibility, and layout contracts.
+3. shadcn/ui as the platform default component system for generated Make App UI.
 
-Do not add a new component library to an existing project unless the user asks.
+Do not add another React component library to fill shadcn/ui gaps. If a host project still uses a previous all-in-one component suite, migrate the touched UI surface to shadcn/ui when the user asks for component-library replacement. If the user has not asked for migration, state the mismatch before doing component-library-specific edits.
 
-Use this same rule for icons and styling tools.
+Use this same rule for icons and styling tools: shadcn/ui pairs with Tailwind CSS and `lucide-react` by default.
 
-For new projects, component-library selection is a blocking decision. Actively ask the user to choose one of these ordered options:
+For new projects, shadcn/ui is the default component system. Do not ask the user to choose from alternative component libraries unless the user explicitly requests a different library comparison. Scaffold component-library-specific UI code, imports, theme setup, icons, and package dependencies for shadcn/ui.
 
-1. Ant Design (recommended/default)
-2. Arco Design
-3. shadcn/ui
+Treat shadcn/ui as a source-code component system, not a traditional prebuilt UI package. Follow the official Vite path for new or existing Vite projects:
 
-Recommend Ant Design as the default option, but do not select it before the user has responded to the component-library choice. The user may either explicitly name Ant Design, Arco Design, or shadcn/ui, or delegate to the default/recommended option. Generic answers such as "default", "recommended", "you decide", "anything is fine", or "whatever" count as choosing Ant Design. Until the user gives one of those explicit or delegated choices, do not scaffold or edit component-library-specific UI code, imports, theme setup, icons, or package dependencies. If progress is still useful before the answer, produce only a component-library-neutral plan, file map, or pseudocode.
-
-Do not mix Ant Design, Arco Design, and shadcn/ui in the same app unless the existing project already does so and the user asks to keep it.
-
-When shadcn/ui is selected, treat it as a source-code component system, not a traditional prebuilt UI package. Follow the official Vite path for new or existing Vite projects:
-
-- ensure Tailwind CSS is configured before generating shadcn/ui components
+- install/configure Tailwind CSS and `@tailwindcss/vite` before generating shadcn/ui components
 - ensure the `@/*` alias is configured in TypeScript and Vite
-- run the shadcn CLI from `apps/ui` or pass the correct config path for the workspace
-- add only the components actually needed by the generated UI
+- run the shadcn CLI through the host package manager, for example `pnpm dlx shadcn@latest init` or `npx shadcn@latest init`, from `apps/ui` or pass the correct config path for the workspace so `components.json` lands in the UI package
+- use the same package-runner form to add only the components actually needed by the generated UI, for example `pnpm dlx shadcn@latest add button input sheet popover command calendar` or the host package-manager equivalent
 - keep generated shadcn/ui components under the host project's established component path, usually `src/components/ui`
+- keep shared shadcn helpers such as `cn` under the host project's established utility path, usually `src/lib/utils`
 - use `lucide-react` icons unless the project has another established icon system
+
+## shadcn/ui gap policy
+
+shadcn/ui is intentionally a set of copyable primitives and recipes. It does not provide every high-level widget that previous all-in-one suites provided. Missing widgets must be handled by composition or project-local controlled adapters, not by reintroducing another UI library.
+
+Use this approach:
+
+- Start from official shadcn/ui components and recipes when they exist.
+- Build project-local components under `src/components` for Make-specific behavior such as remote candidate selectors, attachment upload, and right-side panel stacking.
+- Keep reusable low-level primitives under `src/components/ui` only when they are shadcn/ui components or very small shadcn-compatible wrappers.
+- Keep every Make-specific field control host-form controlled: forward `value/onChange/onBlur/id/disabled`, keep visual state and form state synchronized, and submit normalized values.
+- If a package-owned panel only exposes a legacy visual adapter and no neutral component adapter, treat that as an integration blocker. Upgrade or fix the shared package so shadcn/ui controls can be passed through its public component contract; do not install the previous UI library just for that panel.
 
 ## Default candidate mapping
 
-When Ant Design is the selected component library:
-
-- shell: `Layout`
-- sidebar navigation: `Menu`
-- global and page actions: `Button`
-- search: `Input` with a search icon or search affordance
-- optional filters: `Drawer`, `Popover`, or compact form controls
-- create/edit/detail: `Drawer`
-- route forms: `Form`
-- read-only details: `Descriptions`, simple grids, or cards/panels
-- feedback: `message`, `Alert`, `Result`, `Spin`, `Empty`
-- avatar and user menu: `Avatar`, `Dropdown`
-
-Use project-standard icons first. If using Ant Design, prefer `@ant-design/icons`.
-
-When shadcn/ui is the selected component system:
+Use this shadcn/ui mapping for generated Make App UI:
 
 - shell: CSS/Tailwind layout with project-local shell components
-- sidebar navigation: project-local sidebar/menu components, or shadcn/ui navigation primitives when already added
+- sidebar navigation: project-local sidebar/menu components styled with Tailwind and shadcn tokens; use shadcn sidebar/navigation primitives only when they have been added
 - global and page actions: `Button`
 - search: `Input` with a lucide search icon
-- optional filters: `Popover`, `Sheet`, or compact form controls
+- optional filters: `Popover`, `Sheet`, `Command`, or compact form controls
 - create/edit/detail: right-side `Sheet` with `side="right"` by default; do not use bottom Sheet for Make object CRUD unless explicitly requested
-- route forms: `Form` with type-appropriate field controls
+- route forms: `Form` / `Field` conventions with type-appropriate controlled field controls
 - read-only details: simple grids or project-local panels; avoid inventing nested card layouts
-- feedback: `Alert`, `Skeleton`, toast/sonner, and explicit empty states when those components are installed
+- feedback: `Alert`, `Skeleton`, `sonner`/toast, `Spinner` when installed, and explicit empty states
 - avatar and user menu: `Avatar` and `DropdownMenu`
+- Make record table: `@qfei-design/canvas-table`; shadcn/ui `Table` and Data Table recipes are not a replacement for Make record lists
+- simple non-Make static table: shadcn/ui `Table`; use a TanStack-based Data Table recipe only when sorting/filtering/pagination is explicitly requested outside Make record-list requirements
+- date field: shadcn/ui Date Picker composition with `Popover` + `Calendar`; wrap it in a controlled `DateField` adapter for Make `format`, disabled-date, focus, and submit-value behavior
+- date-time field: project-local `DateTimeField` built from shadcn-compatible input, calendar, and time controls; do not downgrade to plain text
+- date range field: project-local `DateRangeField` built from `Popover` + `Calendar` range selection; apply `field.properties.begin/end`
+- simple select: shadcn/ui `Select`
+- searchable or remote single selector: shadcn/ui Combobox recipe using `Popover` + `Command`
+- multi-select, user, department, and lookup selectors: project-local controlled adapters using `Popover` + `Command`, chips/badges, remote search, and current-value echo
+- number/currency/percent: shadcn/ui `Input` with `type="number"` only when it satisfies parser and formatting rules; otherwise create a local `NumberInput` adapter with finite parser, hidden steppers when needed, and display formatter separated from submit values
+- file/attachment: project-local `Attachment` display plus native input/dropzone upload behavior through the host data-source boundary; shadcn/ui does not provide a complete upload manager
+- tree, cascader, transfer, mention, timeline, rate, and other specialized widgets: build a Make-specific controlled adapter only when requested; otherwise render a supported fallback state instead of adding another UI suite
+
+Use `lucide-react` for icons by default. If Canvas rendering needs an icon image, convert a small lucide/static SVG to an image source rather than trying to render a React icon inside canvas.
 
 ## Make field-metadata-driven components
 
@@ -109,7 +113,7 @@ Generated Make UI must treat schema `field.properties` as behavior input, not pa
 
 | Field type | Property | Required UI behavior |
 | --- | --- | --- |
-| `Make.Field.Date` | `format` | Use the schema format for DatePicker display, typed input parsing, detail text, and table handoff. If absent, use the host date default consistently instead of mixing formats per surface. |
+| `Make.Field.Date` | `format` | Use the schema format for date-picker display, typed input parsing, detail text, and table handoff. If absent, use the host date default consistently instead of mixing formats per surface. |
 | `Make.Field.DateTime` | `format` | Use the schema format for date-time picker display, parsing, detail text, and table handoff. Keep submit values in the backend-agreed date-time shape. |
 | `Make.Field.DateRange` | `begin`, `end` | Treat `begin` and `end` as the selectable range. Date range controls must disable dates before `begin` or after `end`; with only one boundary present, apply a one-sided disabled-date rule. Submit a structured range such as `{ begin, end }`, not display text. |
 | `Make.Field.Number` | `precision` | Configure numeric controls and display formatting from `precision`; validate or normalize decimal places before submit according to the host backend rule. Do not submit formatted display strings. |
@@ -119,7 +123,7 @@ Generated Make UI must treat schema `field.properties` as behavior input, not pa
 | `Make.Field.MultiUser` | `maxCount` | Use `maxCount` as the maximum selected user count. Once reached, disable further candidate selection or prevent the next commit while preserving clear/remove actions. Default to the DSL default when absent. |
 | `Make.Field.MultiDepartment` | `maxCount` | Use `maxCount` as the maximum selected department count. Once reached, disable further candidate selection or prevent the next commit while preserving clear/remove actions. Default to the DSL default when absent. |
 
-For Ant Design, this usually maps to `DatePicker` / `RangePicker` `format` and `disabledDate`, `InputNumber` `precision` / formatter / parser, `Upload` or project attachment controls with `maxCount`, and multiple `Select` controls that block extra selections after `maxCount`. Other component libraries should implement equivalent controlled behavior.
+For shadcn/ui and project-local adapters, map these rules to equivalent controlled controls: date/range picker `format` and disabled-date behavior, numeric input precision/formatter/parser, attachment controls with `maxCount`, and multiple-value selectors that block extra selections after `maxCount`.
 
 Do not hide these rules inside business field-name checks. A field named `amount` is not enough to infer currency behavior; use `type: Make.Field.Currency` plus `field.properties.symbol` and `field.properties.decimalPlaces`.
 
@@ -138,7 +142,7 @@ This contract applies to all type-specific field controls, especially `SingleUse
 
 Component library choice does not require a different contract.
 
-Ant Design, Arco, shadcn, or any existing project component library can be used for the visible control. Do not solve controlled-field bugs by forcing a project to use a specific form item or select component. The required behavior is the library-neutral adapter boundary between the host form layer and the field control.
+shadcn/ui or an existing project-owned business control can be used for the visible control. Do not solve controlled-field bugs by forcing a specific form item or select component. The required behavior is the adapter boundary between the host form layer and the field control.
 
 Common failure pattern to reject:
 
@@ -207,19 +211,19 @@ When the candidate source is missing and the user confirms a placeholder, use a 
 - avoids fake global demo candidates
 - shows loading, empty, error, and retry states
 
-For Ant Design, the default form-control mapping is:
+Use this library-neutral form-control mapping:
 
-- text: `Input`, long text: `Input.TextArea`
-- number/currency/percent: `InputNumber`
-- date/date-time/date-range: `DatePicker` / `DatePicker.RangePicker`
-- select/user/department/lookup candidates: `Select` with `showSearch` and `mode="multiple"` for multi-value fields
+- text: single-line text control; long text: textarea
+- number/currency/percent: numeric input with formatter/parser separated from submitted values
+- date/date-time/date-range: date, date-time, or range picker
+- select/user/department/lookup candidates: searchable single-value or multi-value selector/combobox
 - file: no create upload when a saved record identity is required; edit/detail attachment UI after persistence
 
 Platform selector behavior:
 
-- `SingleUser` / `SingleDepartment`: single `Select`; `MultiUser` / `MultiDepartment`: `Select` with `mode="multiple"`
-- set `showSearch`, `allowClear`, and `optionFilterProp="label"`
-- for user/department fields, use remote search: `filterOption={false}` and call the candidate search function from `onSearch`
+- `SingleUser` / `SingleDepartment`: single-value selector; `MultiUser` / `MultiDepartment`: multi-value selector
+- allow search, clearing, keyboard focus, and label-based display
+- for user/department fields, use remote search instead of filtering stale local options
 - show loading while candidates load; show an error/disabled state such as `人员候选加载失败` or `部门候选加载失败` when the candidate API fails
 - merge current record values into options before candidate results so existing selections still display readable labels while async options are empty
 - submit user values as `userId`; submit department values as `departmentId`; keep labels only for display

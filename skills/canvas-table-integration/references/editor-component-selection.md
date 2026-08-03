@@ -2,36 +2,40 @@
 
 Use this file when deciding which editor components to use in a host project.
 
-## 1. Do not force one UI library
+## 1. Use shadcn/ui for generated Make UI
 
-This skill does not require a specific UI library.
+Generated Make UI uses shadcn/ui as the default component system. Existing
+business field components may still be reused when they already satisfy the value,
+popup, focus, and visual contracts below.
 
-Do not introduce a new component library when the host project already has a stable editor/component system.
+Do not introduce another component library to replace a missing shadcn/ui widget.
+Compose shadcn/ui primitives or create a project-local controlled adapter.
 
 ## 2. Selection priority
 
 Choose editor components in this order:
 
 1. existing business field components in the host project
-2. existing UI component library already installed in the host project
-3. native controls as a fallback
+2. shadcn/ui primitives and official recipes
+3. native controls wrapped in shadcn-compatible project-local adapters
 
-For Make schema-driven cell editing, this priority must produce concrete editor controls from the project / host component library, not a generic text-input fallback for every field:
+For Make schema-driven cell editing, this priority must produce concrete editor controls, not a generic text-input fallback for every field:
 
 | Field group | Preferred host component |
 | --- | --- |
-| Text / URL | Input / 文本输入框 |
-| TextArea | TextArea / 多行输入框 |
-| Number / Currency / Percent | InputNumber / NumberInput / 数字输入框 |
-| Date / DateTime | DatePicker / 日期选择器 |
-| DateRange | RangePicker / 日期区间选择器 |
-| SingleSelect / MultiSelect | Select / 选择器, using schema options |
-| SingleUser / MultiUser | existing user picker / people selector backed by host candidate APIs |
-| SingleDepartment / MultiDepartment | existing department picker backed by host candidate APIs |
-| File | existing upload / attachment manager |
+| Text / URL | shadcn/ui `Input` / 文本输入框 |
+| TextArea | shadcn/ui `Textarea` / 多行输入框 |
+| Number / Currency / Percent | shadcn/ui `Input` or local `NumberInput` / 数字输入框 with finite parser and hidden steppers when needed |
+| Date / DateTime | shadcn/ui Date Picker composition using `Popover` + `Calendar`; DateTime uses a local time-aware adapter |
+| DateRange | local date-range picker using `Popover` + `Calendar` range mode and `field.properties.begin/end` |
+| SingleSelect | shadcn/ui `Select`, using schema options |
+| MultiSelect | local controlled multi-select using `Popover` + `Command` and chips/badges |
+| SingleUser / MultiUser | local people selector using `Popover` + `Command`, remote host candidate APIs, and current-value echo |
+| SingleDepartment / MultiDepartment | local department selector using `Popover` + `Command`, remote host candidate APIs, and current-value echo |
+| File | local `Attachment` display plus native input/dropzone upload manager through host data-source APIs |
 | ID / Lookup | read-only by default unless the backend explicitly supports editing |
 
-If the host project uses Ant Design, the platform baseline is Input for text, InputNumber with `variant="borderless"` and `controls={false}` for numbers, DatePicker or RangePicker with controlled `open`, and Select with controlled `open` and `getPopupContainer` pointing at the editor popup root. Other component libraries should use equivalent controls and behavior.
+For shadcn/ui controls, preserve the CanvasTable cell-edit baseline: inline inputs are full-cell and borderless; popup controls use controlled open state; popup content portals to the editor popup root; and date, selector, identity, and attachment panels open immediately after edit activation.
 
 ## 3. What to inspect first
 

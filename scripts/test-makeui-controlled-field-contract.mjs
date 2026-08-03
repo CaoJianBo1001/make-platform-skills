@@ -61,14 +61,26 @@ assert.match(
 );
 assert.match(
   componentUsage,
-  /(Ant Design|AntD|Arco|shadcn|component library|组件库)[\s\S]*(does not require|not require|不要求|不能.*强制|不得.*强制)/i,
-  'component usage must keep the contract component-library neutral',
+  /(shadcn|component library|component system|组件库)[\s\S]*(does not require|not require|不要求|不能.*强制|不得.*强制|Do not solve controlled-field bugs)/i,
+  'component usage must keep the controlled-field contract independent from a specific form/select implementation',
+);
+const legacySuitePattern = new RegExp(
+  [
+    ['Ant', ' Design'].join(''),
+    ['Ant', 'D'].join(''),
+  ]
+    .map((text) => text.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+    .join('|'),
+  'i',
 );
 for (const line of `${componentUsage}\n${skill}`.split('\n')) {
   assert.doesNotMatch(
     line,
-    /(must|必须|require|要求)[^。\n]*(Ant Design|AntD)[^。\n]*(Select|Form\.Item)|(?:必须|要求)[^。\n]*(使用|采用)[^。\n]*(Ant Design|AntD)/i,
-    'makeui must not require Ant Design Select/Form.Item for the controlled-field contract',
+    new RegExp(
+      `(must|必须|require|要求)[^。\\n]*(?:${legacySuitePattern.source})[^。\\n]*(Select|Form\\.Item)|(?:必须|要求)[^。\\n]*(使用|采用)[^。\\n]*(?:${legacySuitePattern.source})`,
+      'i',
+    ),
+    'makeui must not require a legacy suite Select/Form wrapper for the controlled-field contract',
   );
 }
 

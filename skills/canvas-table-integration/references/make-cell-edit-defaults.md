@@ -71,7 +71,7 @@ Default popup-style fields:
 - `Make.Field.File`
 - editable relation/lookup selectors when the host backend explicitly supports them
 
-For React and Ant Design style components, this usually means controlled `open` or equivalent on mount, `getPopupContainer={() => popupRoot}`, and `focus()` in the editor handle after the editor root has rendered.
+For React and shadcn/Radix-style components, this usually means controlled `open` state on mount, rendering `PopoverContent` / dropdown content into the editor popup root, and `focus()` in the editor handle after the editor root has rendered.
 
 Popup visibility requirements:
 
@@ -98,13 +98,13 @@ Default visual requirements:
 
 - Non-popup / 非弹窗 inline editors for text, textarea, URL, number, currency, and percent fields keep only the CanvasTable-owned edit border. The inner input is a full-cell editing surface, not a nested form control box.
 - Select, user, department, date, and date-range triggers inside the cell are borderless, shadowless, full width, and full height.
-- Ant Design style components should use borderless variants and remove selector/picker focus `box-shadow`; the dropdown/picker panel may keep its normal popup shadow.
-- Ant Design style `InputNumber` should use `variant="borderless"` and `controls={false}` by default. Other UI libraries should use their equivalent NumberInput / 数字输入框 with hidden steppers for the standard Make cell editor.
-- Text and textarea editors should use the host Input / TextArea / 文本输入框 equivalents with `border: none`, no focus ring, no outer margin, and no wrapper border inside the cell.
-- Date and date-time editors should use the host `DatePicker` / 日期选择器, and select/user/department editors should use the host `Select` / 选择器 or business selector. Popup-style controls must mount with `open` / controlled-open behavior so the panel is visible immediately after edit activation.
+- shadcn/ui trigger components should remove inner borders, focus rings, and shadows while inside the active cell; the dropdown/picker panel may keep its normal popup shadow.
+- shadcn/ui does not provide a complete number input. Use shadcn `Input` or a local `NumberInput` adapter that hides steppers by default, applies finite parsing, and keeps formatting separated from submitted values.
+- Text and textarea editors should use shadcn `Input` / `Textarea` or native equivalents with `border: none`, no focus ring, no outer margin, and no wrapper border inside the cell.
+- Date and date-time editors should use a shadcn Date Picker composition (`Popover` + `Calendar`) or a local time-aware adapter, and select/user/department editors should use shadcn `Select`, Combobox (`Popover` + `Command`), or business selector adapters. Popup-style controls must mount with `open` / controlled-open behavior so the panel is visible immediately after edit activation.
 - Single-select and identity tags can render as compact pills inside the cell, but the trigger container itself must not draw another blue rectangle.
 - Clear, search, and suffix icons stay inside the same borderless trigger area and must not create a nested input box.
-- Visible helper/hint/help text, range tips such as `0-5`, `Form.Item` help, or inline validation instructions must not render inside the active cell editor. Put constraints in `aria-label`, `title`, placeholder text, tooltip, or an external validation/error surface that does not occupy the edited cell.
+- Visible helper/hint/help text, range tips such as `0-5`, field help, or inline validation instructions must not render inside the active cell editor. Put constraints in `aria-label`, `title`, placeholder text, tooltip, or an external validation/error surface that does not occupy the edited cell.
 - The only visible blue border during normal editing is the canvas-table active cell outline. Attachment panels may draw one panel border that covers or replaces the active-cell outline.
 
 If a screenshot shows a blue cell outline plus another blue rectangle around the Select/Input/Pick trigger, the editor is wrong.
@@ -129,7 +129,7 @@ Default inline fields:
 - `Make.Field.Currency`
 - `Make.Field.Percent`
 
-The editor root and the actual input/textarea/number component should use `width: 100%` and `height: 100%`. Do not wrap the editor in `Form.Item`, cards, bordered panels, or components that add an extra visible border, radius, margin, or outer padding inside the active cell. The active-cell outline belongs to canvas-table; the input itself should be borderless or visually merged with the edited cell.
+The editor root and the actual input/textarea/number component should use `width: 100%` and `height: 100%`. Do not wrap the editor in form-item wrappers, cards, bordered panels, or components that add an extra visible border, radius, margin, or outer padding inside the active cell. The active-cell outline belongs to canvas-table; the input itself should be borderless or visually merged with the edited cell.
 
 Small horizontal content padding is acceptable inside the input text area, but it must not create an extra inset box. Textarea editors must also fill the cell instead of rendering as a smaller bordered textarea floating inside the cell.
 
@@ -137,9 +137,9 @@ Do not add visible helper, hint, range, or validation copy below or beside inlin
 
 Concrete component expectations:
 
-- text and URL fields: host Input / native input, full-cell, borderless, select current value on focus
-- textarea fields: host TextArea / textarea, full-cell, borderless, no extra `Form.Item`
-- number, currency, and percent fields: host InputNumber / NumberInput / 数字输入框, full-cell, borderless, right-aligned when the table display is right-aligned, `controls={false}` or hidden steppers by default, finite numeric parser before commit. Number editors use `field.properties.precision`; Currency editors use `field.properties.symbol`, `field.properties.decimalPlaces`, and optional `field.properties.useGrouping` for formatter/parser display; Percent editors use `field.properties.decimalPlaces`
+- text and URL fields: shadcn `Input` / native input, full-cell, borderless, select current value on focus
+- textarea fields: shadcn `Textarea` / textarea, full-cell, borderless, no extra form wrapper
+- number, currency, and percent fields: shadcn `Input` or local NumberInput / 数字输入框, full-cell, borderless, right-aligned when the table display is right-aligned, hide steppers by default, finite numeric parser before commit. Number editors use `field.properties.precision`; Currency editors use `field.properties.symbol`, `field.properties.decimalPlaces`, and optional `field.properties.useGrouping` for formatter/parser display; Percent editors use `field.properties.decimalPlaces`
 
 ## 5. Attachment editor visual rule
 
@@ -165,14 +165,14 @@ A panel that contains a title, toolbar button, inner bordered list row, and card
 | Field group | Default editor behavior | Submit value |
 | --- | --- | --- |
 | ID | read-only | none |
-| Text / URL | non-popup inline host Input / 文本输入框, full-cell borderless, select current value on focus | string |
-| TextArea | non-popup inline host TextArea that fills the cell; commit on outside click or explicit key path | string |
-| Number / Currency / Percent | non-popup inline host InputNumber / NumberInput / 数字输入框, borderless, right-aligned display, `controls={false}` or hidden steppers by default; parser failures must not commit or backfill `NaN`; apply `Number.precision`, `Currency.symbol/decimalPlaces/useGrouping`, and `Percent.decimalPlaces` from `field.properties` | finite number |
-| Date | popup host DatePicker / 日期选择器 opens immediately; use `field.properties.format` | `YYYY-MM-DD` or host agreed date string |
-| DateTime | popup host DatePicker / 日期时间选择器 opens immediately; use `field.properties.format`; resolve typed input before OK commit | `YYYY-MM-DD HH:mm:ss` or host agreed date-time string |
-| DateRange | popup host RangePicker / 日期区间选择器 opens immediately; use `field.properties.begin` and `field.properties.end` to disable dates outside the allowed range | `{ begin, end }` or host equivalent |
-| SingleSelect | popup host Select / 选择器 opens immediately; single selection may request commit after change; empty value is clear state/placeholder, not a `-` option | option value |
-| MultiSelect | popup host Select / 多选选择器 opens immediately; keep responsive tags and `+N` overflow; empty value is `[]`, not a `-` tag | option value array |
+| Text / URL | non-popup inline shadcn `Input` / 文本输入框, full-cell borderless, select current value on focus | string |
+| TextArea | non-popup inline shadcn `Textarea` that fills the cell; commit on outside click or explicit key path | string |
+| Number / Currency / Percent | non-popup inline shadcn `Input` or local NumberInput / 数字输入框, borderless, right-aligned display, hide steppers by default; parser failures must not commit or backfill `NaN`; apply `Number.precision`, `Currency.symbol/decimalPlaces/useGrouping`, and `Percent.decimalPlaces` from `field.properties` | finite number |
+| Date | popup shadcn Date Picker (`Popover` + `Calendar`) / 日期选择器 opens immediately; use `field.properties.format` | `YYYY-MM-DD` or host agreed date string |
+| DateTime | popup shadcn-compatible date-time adapter opens immediately; use `field.properties.format`; resolve typed input before OK commit | `YYYY-MM-DD HH:mm:ss` or host agreed date-time string |
+| DateRange | popup shadcn-compatible DateRange adapter using `Popover` + `Calendar` opens immediately; use `field.properties.begin` and `field.properties.end` to disable dates outside the allowed range | `{ begin, end }` or host equivalent |
+| SingleSelect | popup shadcn `Select` / 选择器 opens immediately; single selection may request commit after change; empty value is clear state/placeholder, not a `-` option | option value |
+| MultiSelect | popup shadcn-compatible Combobox (`Popover` + `Command`) / 多选选择器 opens immediately; keep responsive tags and `+N` overflow; empty value is `[]`, not a `-` tag | option value array |
 | SingleUser / MultiUser | searchable user selector opens immediately; include current value and candidates from `/api/users` or host equivalent; `MultiUser` enforces `field.properties.maxCount` by disabling or preventing extra selection while remove/clear still works; do not add a fake `-` candidate | user id or user id array |
 | SingleDepartment / MultiDepartment | searchable department selector opens immediately; include current value and candidates from `/api/departments` or host equivalent; `MultiDepartment` enforces `field.properties.maxCount` by disabling or preventing extra selection while remove/clear still works; do not add a fake `-` candidate | department id or department id array |
 | File | attachment panel/editor opens as host popup; empty state shows only upload zone; upload/delete goes through host data-source boundary; `field.properties.maxCount` limits upload, drag/drop, paste, and append actions | normalized file payload |
@@ -315,7 +315,7 @@ Before reporting an editable Make table as done, verify at least:
 - popup placement is decided from post-scroll geometry; popups default left/top-start when they fit, flip or shift near right/bottom viewport edges, and attachment panels default left and switch right only when right-side space is insufficient
 - select, date, user, and department triggers do not draw a second blue border inside the active cell
 - inline editors fill the active cell and have no extra nested border or outer margin
-- inline editors do not render visible helper/hint/help text, range tips such as `0-5`, or `Form.Item` validation copy inside the active cell
+- inline editors do not render visible helper/hint/help text, range tips such as `0-5`, or field validation copy inside the active cell
 - editor roots and actual controls are full-cell sized; there is no width clamp, fixed narrow width, or min/max-width workaround that makes the editor smaller than the edited cell
 - select/user/department empty states do not create a fake `-` option
 - attachment fields use one connected popup/panel with compact thumbnails and one upload zone, not a nested form card

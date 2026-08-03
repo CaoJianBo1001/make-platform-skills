@@ -123,17 +123,17 @@ overrides:
   const missingSdkVersionOutput = runAudit(goodRoot, { expectFailure: true });
   assert.match(missingSdkVersionOutput, /sdk_version_missing/);
 
-  const antdThemeTokenRoot = createFixture('antd-theme-token-not-auth-token', {
+  const shadcnThemeTokenRoot = createFixture('shadcn-theme-token-not-auth-token', {
     ui: `
-      import { ConfigProvider } from 'antd';
       import { createMakeAppAuth } from '@qfeius/make-app-auth';
       const auth = createMakeAppAuth({ gatewayBaseUrl: '/api/make', unifiedLogin: true, apiAuthRedirect: true });
+      const themeTokens = { colorPrimary: '#2563eb' };
       const init = await auth.init({ redirect: true });
       if (init.reason === 'state_expired' || init.reason === 'challenge_expired') {
         await auth.login({ redirect: true });
       }
       export function App() {
-        return <ConfigProvider theme={{ token: { colorPrimary: '#2563eb' } }} />;
+        return <main className="min-h-screen bg-background text-foreground" style={{ color: themeTokens.colorPrimary }} />;
       }
       export async function loadSchema() {
         return auth.api.get('/app/schema', { credentials: 'include' });
@@ -166,7 +166,7 @@ overrides:
     `
   });
 
-  assert.match(runAudit(antdThemeTokenRoot), /status: PASS/);
+  assert.match(runAudit(shadcnThemeTokenRoot), /status: PASS/);
 
   const constantNamespaceProxyRoot = createFixture('constant-namespace-proxy', {
     ui: `

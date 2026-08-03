@@ -138,7 +138,7 @@ If any of these happen, the host design is probably getting unhealthy:
 - attachment upload calls live inside canvas-table, a generic table wrapper, or canvas render code
 - every field type has its own outside-click policy
 - display values and submit values are mixed together everywhere
-- the host introduces a whole new component library instead of reusing the current one
+- the host adds another UI library instead of using shadcn primitives, project-local adapters, or qualified business controls
 - the canvas-table instance is recreated on every draft or callback change
 - dirty row colors disappear after resize or table recreation
 - Tab commit saves but keyboard focus remains on `body`
