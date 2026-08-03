@@ -132,6 +132,13 @@ Verify:
 - leaf `group:data:load` sends full path groupFilter and calls
   `setData(rows, groupValue, page, { totalRowCount })`
 - failed or cancelled leaf load calls `markGroupPageLoadFailed`
+- Detail Drawer open/close/fullscreen/header actions do not recreate
+  `GroupTableComponent`, do not repeat `setGroup(rootGroups, undefined, 0)`,
+  and do not trigger `fetchLeafPage`, `group:data:load`, or other leaf reloads
+- rerendering with an equivalent but newly allocated grouping config object does
+  not resync root groups or reload grouped leaf pages
+- root group sync is guarded by `rootGroups`/`dataVersion` or an equivalent
+  semantic token, not by parent object identity
 - group/context changes clear loading-page dedupe sets and destroy old instances
 - grouped V1 disables or omits cell editing unless separately specified
 

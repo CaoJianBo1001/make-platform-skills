@@ -204,3 +204,25 @@ Fix:
 - clear transient state that belongs to the old object: selection, active edit, hover row, header menu, open column menu, pending row patches, and object-scoped event handlers
 - keep data refreshes within the same object separate from object switches; normal refresh may preserve scroll, object switch should not
 - add a smoke check: scroll object A horizontally, switch to object B, verify the table starts at the left edge
+
+## 15. Recreating the table from parent state churn
+
+Symptom:
+
+- opening a Detail Drawer visibly refreshes the table behind it
+- clicking Drawer header buttons, row action popovers, or other non-mutating UI controls calls table list APIs again
+- grouped tables repeat `setGroup(rootGroups, undefined, 0)` or trigger `group:data:load` without a real group/data change
+
+Cause:
+
+- parent state such as Detail Drawer stack, fullscreen, popover, or header menu state creates new table config objects on every render
+- a React/Vue effect depends on the whole config object or callback identity instead of semantic table inputs
+- row-detail or loader callbacks are placed in the table creation dependency list even though the table instance should not change
+
+Fix:
+
+- keep table identity tied to entity/schema/group/page size/container size and real data generation, not unrelated UI state
+- parent state or unrelated UI state such as Detail Drawer, popover, and header menu changes must not recreate, destroy, call `setData`, call `setGroup`, reload, or refresh the CanvasTable instance
+- keep callback refs for latest row actions, detail open handlers, and data loaders; callback identity changes must not recreate the table instance or `GroupTableComponent`
+- for grouped tables, guard root group synchronization with `rootGroups` plus `dataVersion` or another semantic token before calling `setGroup(rootGroups, undefined, 0)`
+- add a regression test that opens/closes detail UI and clicks non-mutating Drawer actions, then verifies no list, `record-groups`, or leaf-page request was issued

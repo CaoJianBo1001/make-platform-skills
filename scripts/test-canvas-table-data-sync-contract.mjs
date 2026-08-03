@@ -48,6 +48,16 @@ assert.match(
   'pitfalls must describe rows arriving before the CanvasTable instance race',
 );
 assert.match(
+  pitfalls,
+  /(parent state|父组件状态|unrelated UI state|无关 UI 状态)[\s\S]*(Detail Drawer|详情抽屉|Drawer|popover|弹层|header menu|表头菜单)[\s\S]*(must not|不得|不应)[\s\S]*(recreate|重建|destroy|销毁|setData|setGroup|reload|刷新)/i,
+  'pitfalls must forbid unrelated parent UI state from recreating or refreshing the canvas table',
+);
+assert.match(
+  pitfalls,
+  /(callback|回调)[\s\S]*(ref|引用)[\s\S]*(must not|不得|不应)[\s\S]*(table instance|CanvasTable instance|表格实例|GroupTableComponent)/i,
+  'pitfalls must require callback ref patterns when callbacks should not recreate the table instance',
+);
+assert.match(
   makeDisplay,
   /(schema|columns|字段|列)[\s\S]*(ready|准备好|available)[\s\S]*(not|不要|不能|不得)[\s\S]*(records\.length|rows\.length|数据条数)/i,
   'Make display initialization must gate on schema/columns readiness, not row count',
