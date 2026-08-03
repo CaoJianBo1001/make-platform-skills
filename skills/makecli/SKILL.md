@@ -1,8 +1,8 @@
 ---
 name: makecli
-description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, entities, relations, records, inspect resources, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
+description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, check build/deploy progress or app URLs, entities, relations, records, inspect resources, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"部署进度\", \"构建状态\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.5.5
+  version: 0.5.6
 ---
 
 # makecli — Make Platform CLI
@@ -44,6 +44,10 @@ User request arrives
     |
     +- Publish code? --> Deploy Workflow
     |
+    +- Build/deploy progress? --> app deploy --status / --wait
+    |
+    +- App overview + environment URLs? --> app info <appKey>
+    |
     +- Data CRUD? --> record commands
     |
     +- Delete resource / one-off operation? --> Imperative Workflow
@@ -72,11 +76,22 @@ Key rules:
 ```bash
 makecli preflight                      # validate layout (--app-type fullstack|service|ui)
 git add -A && git commit -m "..."      # deploy pushes committed HEAD; dirty worktree is refused
-makecli app deploy                     # --env defaults to preview
+makecli app deploy --wait              # push + block until build reaches terminal state
 makecli app deploy --env production    # prompts confirmation — needs user consent (--yes to skip)
 ```
 
 Deploy reads the app key from `apps/dsl/app.yaml` and refuses apps never registered via `app create`.
+
+**`--wait` is the agent-friendly path** — one call, one verdict:
+- Exit code **0** = build SUCCESS (environment URL printed as `URL:` row) / **2** = build FAILED or CANCELED (error detail printed) / **124** = timeout (`--timeout`, default 5m; build may still be running)
+- Re-running after a timeout re-attaches to the same build (keyed by HEAD commit sha) — it's idempotent
+
+**Check progress without pushing:**
+```bash
+makecli app deploy --status                # one-shot snapshot of the current HEAD's deploy status
+makecli app deploy --status --output json  # machine-readable (BuildTask fields + url on success)
+makecli app deploy --status --wait         # block until terminal state, no push
+```
 
 ## Workflow: Imperative Operations
 
@@ -144,12 +159,13 @@ makecli app create shop --name "我的商城"          # 2. Scaffold + register 
 cd shop                                           # 3. Write DSL (makedsl skill) under apps/dsl/
 makecli diff -f apps/dsl && makecli apply -f apps/dsl
 git add -A && git commit -m "feat: initial app"   # 4. Develop, then commit
-makecli app deploy                                # 5. Deploy to preview
+makecli app deploy --wait                         # 5. Deploy to preview, wait for build, get URL
 ```
 
 **Inspect remote state:**
 ```bash
 makecli app list --filter "key=shop"
+makecli app info <appKey>                 # app meta + preview/production deploy status & URLs
 makecli entity list --app <app>
 makecli entity list <key> --app <app>     # detail view: fields + unique constraints
 makecli schema --app <app>                # aggregated app + entities + relations
@@ -163,4 +179,5 @@ makecli schema --app <app>                # aggregated app + entities + relation
 - **Don't run interactive commands via Bash tool.** `login`, `configure token`, `configure config` block on user input — tell user to run via `!`.
 - **Don't pass `--yes` to `app delete` or `app deploy --env production` without explicit user consent.** These flags skip safety confirmations.
 - **Don't deploy with a dirty worktree.** `app deploy` pushes committed HEAD only — commit first, it never auto-commits.
+- **Don't hand-roll polling loops over `--status`.** Use `deploy --status --wait`.
 - **Don't write DSL YAML from memory.** Invoke the `makedsl` skill for schema reference.
