@@ -117,12 +117,34 @@ Confirms by typing the app key (gh-style). Non-interactive shells are refused un
 
 ```
 makecli app deploy [--env preview|production] [--force] [--yes|-y]
+                   [--wait] [--timeout 5m] [--status] [--output table|json]
 ```
 
 - Runs from the project directory; app key comes from `apps/dsl/app.yaml` (no `--app` flag)
 - Pushes the **committed HEAD as-is** — errors if worktree dirty, no commits, or no git repo (commit first)
 - Refuses apps never registered via `app create` (guides to `makecli app create -f apps/dsl/app.yaml`)
 - `--env` defaults to `preview`; `production` prompts continue/abort confirmation (`--yes` skips; non-interactive shells refused without it)
+
+**Progress & waiting** (build task located by local HEAD commit sha — no task ID needed, re-runs re-attach idempotently):
+
+| Invocation | Behavior |
+|------------|----------|
+| `deploy --wait` | Push, then block until build terminal state (SUCCESS/FAILED/CANCELED) |
+| `deploy --status` | One-shot progress snapshot (no push) |
+| `deploy --status --wait` | Block until terminal state, no push |
+
+- **Exit codes: 0 = SUCCESS / 2 = FAILED or CANCELED / 124 = timeout** — script/agent-friendly, no text parsing
+- `--timeout` (default `5m`, requires `--wait`) bounds the wait; right after push the task may briefly not exist yet ("task not created yet") — the wait tolerates this window
+- On SUCCESS the environment URL is shown (`URL:` row; same source as `app info`)
+- `--output json` (requires `--status`): stdout is a single BuildTask object (`status`, `phase`, `errorCode`, `errorMessage`, `url` on success, …); with `--wait`, progress goes to stderr so stdout stays parseable
+
+### app info
+
+```
+makecli app info <appKey> [--output table|json]
+```
+
+App metadata (key/name/description/version) + per-environment deployment table: ENVIRONMENT / STATUS (`Ready`, `Pending`, `Failed`, `Not deployed`) / COMMIT / URL for `preview` and `production`. JSON output: `{app, deployment}` (deployment `null` if never deployed).
 
 ---
 
@@ -278,6 +300,29 @@ makecli integration ocr -f <file> [--pages "1,3" | "2-4"] [--merge-elec] [--veri
 ```
 
 Recognize bills from a PDF/OFD/PNG/JPG file. See `--help` for crop/coordinate flags.
+
+---
+
+## whoami
+
+```
+makecli whoami [--output table|json]
+```
+
+Shows the current token's identity (user/tenant + profile/environment). Triggers browser login automatically when the token is missing or expired — at most one login per call.
+
+---
+
+## skills
+
+```
+makecli skills list [--all] [--output table|json]
+makecli skills install <name>... | --all [--yes|-y]
+makecli skills update
+makecli skills uninstall <name>... | --all [--yes|-y]
+```
+
+Manages Make platform skills (installed via npx under the hood). `list` shows installed skills by default (`--all` includes the remote catalog); `install`/`uninstall` prompt for confirmation (`--yes` skips; non-interactive shells refused without it).
 
 ---
 
