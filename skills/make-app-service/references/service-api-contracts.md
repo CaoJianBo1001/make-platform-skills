@@ -110,6 +110,24 @@ groupable-field capability, `groupFilter` path semantics, record-groups timing, 
 CanvasTable grouped leaf pagination. Service owns parsing and authoritative
 validation.
 
+## Request cancellation
+
+Use request cancellation for long-running, paginated, or supersedable Service calls when the UI may abandon an earlier request, including large-data virtual scrolling. Cancellation is an execution concern and must not become a query parameter, request body field, or response-shape change in `apps/docs/api.md`.
+
+At the Service boundary:
+
+1. Reuse the framework's request signal when it provides one; otherwise create one request-scoped `AbortController`.
+2. Detect only a premature client disconnect or closed response through the host framework's documented lifecycle hook and abort the controller. Normal completion must not abort the downstream request signal: in Node/Express-style handlers, guard `close` with `if (!res.writableEnded) controller.abort()`; in other frameworks, use the equivalent completed flag, response finished state, or request-aborted signal. Cleanup should be idempotent because finish, close, and error hooks may arrive in different orders.
+3. Pass the same `AbortSignal` through the service layer and every downstream Make adapter or `fetch` call for that work.
+4. Treat `AbortError` as expected control flow. Do not map it to a user-visible 5xx, retry it automatically, or write a response after the connection has closed.
+5. In `finally`, remove disconnect listeners and release request-local resources so completed requests do not retain handlers. Listener cleanup must not itself abort a normally completed response.
+
+Keep cancellation scoped to the request that created it. Do not reuse an `AbortController` across users, routes, query contexts, or independent page requests. If one request starts several downstream calls, either pass the same signal to all calls or derive child controllers that are all aborted when the request ends.
+
+The adapter must pass `signal` to the actual network client. Merely ignoring a late response protects state but does not save Service or Make gateway work. If an intermediate library cannot propagate `AbortSignal`, document that boundary as a performance limitation and retain stale-response guards; do not claim end-to-end cancellation.
+
+Log safe route, entity, page, and cancellation reason at the route/adapter boundary. Do not log row payloads, filter contents, credentials, cookies, or tokens. Expected cancellation may use debug/info logging; non-abort failures retain the normal error contract.
+
 ## Entity Preset routes
 
 Generate these routes when advanced filtering, record sorting, or record grouping

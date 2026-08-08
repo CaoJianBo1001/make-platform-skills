@@ -26,6 +26,8 @@ Route tests should cover:
 - Entity Preset GET/PATCH routes normalize filter/sort/group, update dimensions sparsely, and forward current login/session context
 - Preset and records sort accept at most five unique `{ fieldKey, order }` entries, reject `{ field, order }`, and validate runtime `capabilities.sortable === true` before Make calls; use `make-app-sort` for the behavioral contract
 - record list/detail call the Make adapter path selected by runtime mode and forward the required login/session context: local preview public gateway `/api/make/data/v1/record` with server-side makecli auth, published k8s gateway `/make/data/v1/record` with browser session context
+- cancellable list/page routes abort their request-scoped signal when the client disconnects, propagate that signal to the downstream adapter, avoid writing a response or reporting a user-visible 5xx for `AbortError`, and remove lifecycle listeners after success, failure, or cancellation
+- normal completion does not abort downstream work; test the framework's completion guard such as `res.writableEnded`, a completed flag, or response finished state separately from premature close
 - invalid query/body returns 400 and does not call Make adapter
 - create/update/delete/cell-update call the adapter with the documented payload
 - detail uses the single-record adapter

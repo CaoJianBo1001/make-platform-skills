@@ -116,13 +116,16 @@ Use for lightweight row highlighting based on business state.
 
 Use these methods first:
 
-- `setData(data, page?)`
+- `setData(data, page?, request?)`
+- `setVirtualPageData(data, page, totalRowCount, request?)`
+- `markPageLoadFailed(page, request?)`
 - `updateProps(newProps)`
 - `updateCanvasSize(width, height, refresh?)`
 - `refreshCanvas()`
 - `scrollTo(x, y)`
 - `scrollToRow(rowIndex)`
 - `getScrollState()`
+- `getPagesInView()`
 - `getTableData()`
 - `setRowData(rowKey, data)`
 - `setCellData(rowKey, columnKey, data)`
@@ -139,10 +142,11 @@ Use these methods first:
 #### `setData`
 
 - local mode: `setData(rows)`
-- virtual mode: `setData(rows, page)`
+- virtual mode, identity-aware installed contract: `setData(rows, page, request)` after claiming the request synchronously and with the same request that came from `data:load(page, request)`
+- virtual mode, legacy page-only installed contract: `setData(rows, page)` only when the installed public docs do not expose a request context
 - `setData([])` is valid. Empty rows still keep the table header visible and show the configured `emptyStateOptions` / 暂无数据 empty state; do not hide or skip the CanvasTable host just because rows are empty.
 
-Do not omit `page` in virtual mode.
+Do not omit `page` in virtual mode. When the response also carries a latest authoritative total and the installed package documents `setVirtualPageData`, commit total and rows atomically with `setVirtualPageData(rows, page, totalRowCount, request)`. On failure or cancellation, release the pending page with `markPageLoadFailed(page, request)` on the identity-aware path or the documented legacy form.
 
 Keep row synchronization independent from instance creation timing. In React/Vue wrappers, API rows may arrive before `ResizeObserver` has produced a real size and before `CanvasTableComponent` exists. Store the latest rows in a ref or equivalent stable holder, update that holder whenever rows change, call `table.setData(latestRows)` whenever the instance already exists, and call `table.setData(latestRows)` again immediately after creating the instance. Do not drop a data update simply because `tableRef.current` was `null` during the first rows effect.
 

@@ -1,4 +1,4 @@
 interface:
   display_name: "Canvas Table Integration"
-  short_description: "Integrate @qfei-design/canvas-table in Make apps"
-  default_prompt: "Use $canvas-table-integration to build a Make App record table with schema-driven field display."
+  short_description: "Integrate CanvasTable editing and virtual loading"
+  default_prompt: "Use $canvas-table-integration to build a large-data CanvasTable with virtual scrolling and bounded page loading."

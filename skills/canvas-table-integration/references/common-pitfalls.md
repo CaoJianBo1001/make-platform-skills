@@ -61,7 +61,7 @@ Symptom:
 
 Fix:
 
-- in virtual mode, always call `setData(rows, page)`
+- in virtual mode, always include the page argument. On the identity-aware installed contract, claim the request synchronously and call `setData(rows, page, request)` with the same request; on a legacy page-only installed contract, use `setData(rows, page)` and document that request identity is unavailable.
 
 ## 6. Switching to advanced features too early
 

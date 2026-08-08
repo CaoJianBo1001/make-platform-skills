@@ -93,6 +93,19 @@ Validated patterns:
 
 This validates the remote paginated list path for Make record pages.
 
+High-volume virtual loading is also validated by a downstream record-list integration:
+
+- fast-scroll and scrollbar-drag targets are coalesced before network dispatch
+- host concurrency is bounded and pages nearest the current viewport are prioritized
+- stale queued requests are cancelled, while stale in-flight requests are aborted when `AbortController` is available
+- host and CanvasTable caches use aligned bounds, and evicted pages reload during reverse scrolling
+- page cancellation propagates through the Service boundary to downstream fetch where the request stack supports `AbortSignal`
+- in that legacy downstream path, background pages wrote directly with `setData(rows, page)` while first-page state continued to own totals and page-level status
+
+This validates the large-data scheduler and cancellation rules in `virtual-table-patterns.md`; the documented tuning values remain adjustable for other hosts.
+
+The downstream integration used the legacy page-only CanvasTable contract. It validates viewport coalescing, bounded concurrency, host cancellation, Service propagation, and cache behavior, but the identity-aware request contract has not yet been validated by a downstream host. Identity-aware `request` claiming and round-trip behavior is currently validated by the package's public docs, examples, and package tests; keep that distinction visible until a real downstream integration adopts it.
+
 ### Schema-driven Make columns
 
 Validated patterns:
