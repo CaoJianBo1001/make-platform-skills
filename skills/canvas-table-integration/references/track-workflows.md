@@ -139,7 +139,7 @@ Track A common capabilities:
 - local data updates via `setData(rows)`
 - local empty rows via `setData([])`: table header stays visible and `emptyStateOptions` / 暂无数据 renders
 - rows arrive before the table instance is ready: after ready, apply latest rows with `setData(latestRows)`
-- virtual paged updates via `setData(rows, page)`
+- virtual paged updates: identity-aware contracts use `setData(rows, page, request)` with the claimed request; legacy page-only contracts use `setData(rows, page)` only when the installed docs expose no request context
 - `updateProps(...)` for column / size / config updates
 - default sequence numbers via `showSN`
 - default detail entry via `bodyRowHeadSuffixOptions`

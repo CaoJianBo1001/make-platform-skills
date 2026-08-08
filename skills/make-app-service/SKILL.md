@@ -1,8 +1,8 @@
 ---
 name: make-app-service
-description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service API code and UI-Service contracts. Covers Service route design, apps/docs/api.md, layered source structure, make-client adapters, schema normalization APIs, record CRUD through Make gateway /make/data/v1/record, record-list filter/sort/groupFilter parsing, record-groups routes, Entity Preset filter/sort/group routes and adapters, user/department/lookup/file proxy APIs, Make adapter config, request login-context forwarding, validation, logging, and Service API tests. For generated Make Apps, coordinate the required /api/make/app/principal/permission Service proxy through make-app-permission. Use make-app-sort for sorting behavior, make-app-filter for filtering behavior, and make-app-group for grouping behavior. Does not cover UI layout, auth implementation, permission logic, build output, runtime, DSL modeling, Make CLI deployment, or canvas-table internals."
+description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service API code and UI-Service contracts. Covers Service route design, apps/docs/api.md, layered source structure, make-client adapters, schema normalization APIs, record CRUD through Make gateway /make/data/v1/record, record-list filter/sort/groupFilter parsing, record-groups routes, Entity Preset filter/sort/group routes and adapters, user/department/lookup/file proxy APIs, Make adapter config, request login-context forwarding, request cancellation and AbortSignal propagation, validation, logging, and Service API tests. For generated Make Apps, coordinate the required /api/make/app/principal/permission Service proxy through make-app-permission. Use make-app-sort for sorting behavior, make-app-filter for filtering behavior, and make-app-group for grouping behavior. Does not cover UI layout, auth implementation, permission logic, build output, runtime, DSL modeling, Make CLI deployment, or canvas-table internals."
 metadata:
-  version: 0.1.1
+  version: 0.1.3
 ---
 
 # make-app-service
@@ -23,14 +23,16 @@ It does not own sorting behavior (`make-app-sort`), filtering behavior (`make-ap
 6. Do not read local DSL/YAML as a published runtime data source. Runtime schema and data come from Make/backend APIs or the host Service adapter.
 7. Use shared adapters for Make Meta/Data/Preset calls, candidate APIs, lookup, files, and schema normalization. Build Make adapter URLs and `appKey` from normalized runtime config, not from route-local domains or UI input.
 8. For generated Make Apps, include the required single-app permission Service proxy by using `make-app-permission`; do not leave `/api/make/app/principal/permission` as a later task unless the user explicitly opts out of permissions.
-9. Add or update Service tests for every changed route, adapter, validation path, and error path.
-10. Read only the needed reference files from the map below.
+9. For cancellable or supersedable requests, propagate a request-scoped `AbortSignal` from the Service boundary into every downstream adapter; read `references/service-api-contracts.md` before implementation.
+10. Add or update Service tests for every changed route, adapter, validation path, and error path.
+11. Read only the needed reference files from the map below.
 
 ## Topic reference map
 
 | Task / topic | Read |
 | --- | --- |
 | Service route shapes and UI-Service response contracts | `references/service-api-contracts.md` |
+| Request cancellation, client disconnect handling, downstream `AbortSignal` propagation | `references/service-api-contracts.md` |
 | Service folder structure, layering, logging, errors | `references/service-layering.md` |
 | Make Data API adapter rules, schema, records, files, lookup, candidates | `references/make-data-adapter.md` |
 | Test requirements, contract checks, safety review | `references/testing-and-safety.md` |
@@ -104,6 +106,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - File routes proxy upload/delete/download through Service. UI should not expose raw backend file URLs when a Service download proxy is available.
 - Browser resource tags such as `<img src>` cannot attach `Authorization`. When Make file downloads require a bearer token, keep the URL browser-facing through a Service download proxy, verify the current App session first, and let only the Service adapter attach the deployment-injected token. Do not put Make tokens or raw `/data/v1/download/**` URLs in UI state, public config, JSX, or logs.
 - Add boundary logs at route/adapter entry, success, and failure. Redact tokens, cookies, Authorization, API keys, signed download query strings, and unnecessary personal data.
+- For cancellable or supersedable work, a client disconnect must abort downstream work through a request-scoped `AbortSignal`. Do not stop at ignoring a stale response, and do not treat an expected `AbortError` as a user-visible 5xx failure.
 - Tests are required for route contracts, invalid input, adapter payloads, Make error mapping, and any schema/value normalization added by this skill.
 - Generated Make App Services must not be reported complete without the required principal permission proxy from `make-app-permission`, unless the user explicitly opts out of permissions.
 
@@ -140,7 +143,7 @@ Lookup relation update routes are optional and should be generated only when the
 
 - With `makeui`: this skill provides Service contracts and normalized API shapes; `makeui` decides how UI renders them.
 - With `make-app-permission`: this skill provides Service layering and tests; `make-app-permission` owns the principal permission route, IAM upstream path, App scope payload, and frontend permission contract.
-- With `canvas-table-integration`: this skill provides schema/records/candidate APIs; table rendering and editing UI stay in the canvas skill.
+- With `canvas-table-integration`: this skill provides schema/records/candidate APIs and owns Service-side disconnect-to-downstream cancellation; table rendering, editing UI, and browser-side virtual-page scheduling stay in the canvas skill.
 - With `make-app-sort`: this skill implements and tests Preset/records routes and Make adapters; `make-app-sort` owns sortable rules, draft/save timing, and header linkage.
 - With `make-app-filter`: this skill implements and tests Preset/records routes and Make adapters; `make-app-filter` owns package filter behavior, hydration, and save timing.
 - With `make-app-group`: this skill implements and tests Preset group, record-groups, records groupFilter, and Make adapters; `make-app-group` owns groupable rules, groupFilter composition, grouped data timing, and CanvasTable grouped-flow coordination.

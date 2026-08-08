@@ -1,8 +1,8 @@
 ---
 name: canvas-table-integration
-description: "Use when integrating `@qfei-design/canvas-table` into an existing app or page. Covers consumer-side local, virtual, and grouped runtime APIs, public props/methods/events, row-head and header-menu mechanics, selection, drag, fixed columns, summary rows, empty states, latest rows synchronization, canvas interactions, host-side cell-edit architecture, platform cell-edit standards, attachment editors, and Make field-display columns with schema properties, value normalization, and overflow-only tooltips. Route record sorting, Preset state, and header asc/desc controller linkage to make-app-sort. Route Make record-list grouping behavior, Preset group, record-groups, groupFilter, and grouped leaf pagination to make-app-group. Only supports `@qfei-design/canvas-table`, never UI-library tables. Does not design or generate Make DSL YAML (use makedsl). Read package AI docs first, choose base Track A or C, layer Track B when editing is needed, use public APIs, and do not modify the table library."
+description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
 metadata:
-  version: 0.1.4
+  version: 0.1.7
 ---
 
 # canvas-table-integration
@@ -30,12 +30,13 @@ Hard Track B rule: every CanvasTable cell edit / 单元格编辑 implementation 
 7. Enable table row defaults unless the user explicitly opts out: `showSN` sequence numbers plus a hover-revealed open-detail action through `bodyRowHeadSuffixOptions`.
 8. For Make schema tables, apply the platform field-renderer defaults. Text-bearing overflow must show ellipsis, and tooltip is enabled by default only for ellipsized overflow or hidden `+N` content; do not require the user to ask for it.
 9. When the object/entity/schema key changes, reset table interaction state and scroll position. Do not carry the previous object's horizontal or vertical scroll into the next object.
-10. Keep table initialization independent of row count: create the table after container size plus schema/columns are ready, call `setData(latestRows)` after the instance is ready, and call `setData([])` for empty rows so headers and empty state still render.
-11. If Track B is in scope, verify the mandatory cell-edit standard before finishing; a non-standard cell editor is not a shippable partial result.
-12. Add only the capabilities the user explicitly needs now; pagination, selection, sorting, grouping, and editing are not defaults.
-13. When table-header sorting is requested, use this Skill only for the documented header menu/suffix mechanics and route sorting behavior, `openWithField`, Preset, and records timing to `make-app-sort`.
-14. When Make record-list grouping is requested, use this Skill only for `GroupTableComponent` public API mechanics and route grouping behavior, Preset, `record-groups`, `groupFilter`, and leaf-page timing to `make-app-group`.
-15. Before finishing, read the relevant pitfalls reference and verify one concrete table path.
+10. Keep table initialization independent of row count: create the table after container size plus schema/columns are ready, then apply the latest rows with `setData(latestRows)` in local mode. In virtual mode, select the page-only or identity-aware callback from the installed public docs and preserve its page/request contract. Empty rows remain valid and must still render headers and the empty state.
+11. For large-data, fast-scroll, or scrollbar-drag virtual loading, follow `references/virtual-table-patterns.md`; installed-contract selection, request identity, bounded scheduling, stale-request cancellation, pending-page release, atomic total/page writes, and cache limits are delivery requirements for that path.
+12. If Track B is in scope, verify the mandatory cell-edit standard before finishing; a non-standard cell editor is not a shippable partial result.
+13. Add only the capabilities the user explicitly needs now; pagination, selection, sorting, grouping, and editing are not defaults.
+14. When table-header sorting is requested, use this Skill only for the documented header menu/suffix mechanics and route sorting behavior, `openWithField`, Preset, and records timing to `make-app-sort`.
+15. When Make record-list grouping is requested, use this Skill only for `GroupTableComponent` public API mechanics and route grouping behavior, Preset, `record-groups`, `groupFilter`, and leaf-page timing to `make-app-group`.
+16. Before finishing, read the relevant pitfalls reference and verify one concrete table path.
 
 ## Do not use this skill for
 
@@ -47,6 +48,7 @@ Hard Track B rule: every CanvasTable cell edit / 单元格编辑 implementation 
 - treating grouped-table architecture as the default answer
 - forcing a new UI component library into a project that already has an editor/component system
 - designing or generating Make DSL YAML; use `makedsl` for schema modeling
+- designing Service routes, server disconnect handling, or downstream cancellation adapters; use `make-app-service`
 
 ## Pre-flight check
 
@@ -80,7 +82,7 @@ If an existing Make record list uses another table component, the expected integ
 | --- | --- |
 | Public props, methods, events, setup, cleanup | `references/core-props-methods-events.md` |
 | Row-head sequence number or open-detail action | `references/row-head-action-patterns.md` |
-| Virtual loading / paginated backend integration | `references/virtual-table-patterns.md` |
+| Virtual loading, paginated backend integration, large-data fast scrolling, or scrollbar dragging | `references/virtual-table-patterns.md` |
 | Schema/meta to `IColumn[]` | `references/column-patterns.md` |
 | Custom clickable cell shapes | `references/shape-render-patterns.md` |
 | Track A pitfalls | `references/common-pitfalls.md` |
@@ -97,6 +99,7 @@ If an existing Make record list uses another table component, the expected integ
 | Track workflows, capability checklists, output templates | `references/track-workflows.md` |
 | Table-header asc/desc behavior, shared sort panel, Preset and records sort | Use `make-app-sort` |
 | Make record grouping, Preset group, record-groups, groupFilter, grouped leaf pagination | Use `make-app-group` |
+| Service route cancellation, server disconnect handling, downstream `AbortSignal` propagation | Use `make-app-service` |
 
 ### For base Track A
 
@@ -104,7 +107,7 @@ Read as needed:
 
 - `references/core-props-methods-events.md`
 - `references/row-head-action-patterns.md` when adding an icon or action to the body row head / sequence-number area
-- `references/virtual-table-patterns.md` when using paginated virtual loading
+- `references/virtual-table-patterns.md` when using paginated virtual loading, especially for large data, fast scrolling, or scrollbar dragging
 - `references/column-patterns.md` when shaping columns
 - `references/shape-render-patterns.md` when adding custom clickable cell content
 - `references/common-pitfalls.md` before finalizing changes
@@ -166,6 +169,8 @@ Treat these as safety rules:
 - do not put `aria-hidden` or `inert` on the visual canvas-table host, or on any ancestor that can contain the package-created focusable canvas
 - if a screen-reader fallback table is needed, keep it as a separate visually-hidden structure and give the visual host its own non-hidden accessible label
 - pagination is opt-in: do not add visible pagination controls, page-size selectors, page state, page query params, total-count handling, paginated fetch logic, `virtualOptions`, or `data:load` wiring unless the user explicitly asks for pagination, virtual loading, or paginated backend integration
+- when installed docs expose a virtual-page request context, claim it synchronously and pass the same request to the network signal plus `setData` / `setVirtualPageData` or `markPageLoadFailed`; use the legacy page-only path only when that is the installed public contract
+- virtual loading failures and cancellations must release the package pending-page marker through the installed package's documented public API; large-data or fast-scroll paths must also use a bounded host scheduler instead of firing every transient viewport page immediately
 - sorting is opt-in: when requested, expose header asc/desc only through the host's documented CanvasTable header menu/suffix API, then call the shared `make-app-sort` controller. Do not sort records locally, keep separate header sort state, or call records directly from a header action
 - grouping is opt-in: for Make record lists, use `make-app-group` for the package panel, Preset, Service, `groupFilter`, and records timing. This Skill may instantiate `GroupTableComponent` and wire `group:load` / `group:data:load`, but must not define grouping semantics itself
 
