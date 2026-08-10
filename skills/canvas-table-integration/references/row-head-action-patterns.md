@@ -2,7 +2,7 @@
 
 Use this file when a table needs a compact row-level action in the body row head, such as an open-detail icon beside the sequence number.
 
-For every consumer-side CanvasTable integration, this is the default row detail entry pattern unless the user explicitly says the table does not need a detail entry: show sequence numbers in the row head, reveal an open-detail icon from the row-head suffix on row hover or keyboard focus, and open the row detail Drawer or the host project's established detail surface when the icon is clicked. Row selection is not enabled by default.
+For every consumer-side CanvasTable integration, this is the default row detail entry pattern unless the user explicitly says the table does not need a detail entry: show sequence numbers in the row head, reveal an open-detail icon from the row-head suffix on row hover or keyboard focus, and open the row detail Drawer or the host project's established detail surface when the icon is clicked. Writable Make record lists also enable multiple selection by default through `make-app-actions`; non-Make and strictly read-only tables keep selection opt-in.
 
 ## 1. Use `bodyRowHeadSuffixOptions`
 

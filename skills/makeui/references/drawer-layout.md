@@ -37,7 +37,11 @@ Use a compact header layout:
 
 - left title area: fullscreen toggle when supported, then mode tag or record status, then title
 - right action area: contextual actions first, then one close control as the final far-right item
-- detail actions usually include edit/delete or other requested record actions before the close control
+- when `make-app-actions` owns record editing/deletion, the detail Drawer does not
+  include edit/delete; those commands remain exclusively in the selection bar
+- detail actions may include other requested contextual commands before close;
+  edit/delete return only when the user explicitly opts out of selection-bar
+  ownership and defines another workflow
 - create/edit actions usually include save/submit and the final close control; do not add a separate cancel button when it only duplicates close
 - keep button spacing compact
 - avoid decorative icons on text actions; reserve icons for compact controls such as fullscreen, exit fullscreen, and close
@@ -167,7 +171,9 @@ Do not add activity, dynamic records, timeline, comments, or operation logs by d
 
 ## Stacked Drawers
 
-When a user opens edit from detail, keep the detail Drawer mounted underneath and open the edit Drawer above it.
+When an explicitly configured workflow opens edit from detail, keep the detail
+Drawer mounted underneath and open the edit Drawer above it. The default
+`make-app-actions` workflow does not expose edit from detail.
 
 - closing the edit Drawer returns to the detail Drawer
 - closing the detail Drawer returns to the list page
@@ -181,7 +187,8 @@ When a user opens a related record from a Lookup value, use the same Drawer stac
 - only make Lookup values clickable when the display item has a target object key and saved record identity, and is not marked deleted
 - append the related detail Drawer above the source detail Drawer
 - close only the topmost Drawer
-- bind edit/delete/detail actions to the Drawer instance's own entity and record id, not to a shared "current detail" singleton
+- when an explicitly configured Drawer action exists, bind it to that Drawer
+  instance's own entity and record id, not to a shared "current detail" singleton
 - guard async loads with the source Drawer identity so a stale response cannot reopen a closed Drawer
 
 ## Drawer scrolling

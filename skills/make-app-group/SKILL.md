@@ -2,7 +2,7 @@
 name: make-app-group
 description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # make-app-group
@@ -71,6 +71,7 @@ their implementation surfaces.
 | CanvasTable construction and header menu mechanics | Use `canvas-table-integration` |
 | Service route/adapter code and boundary logs | Use `make-app-service` |
 | Object/list access policy and permission gates | Use `make-app-permission` |
+| Grouped record selection actions and batch editing | Use `make-app-actions` |
 | Advanced-filter expression semantics | Use `make-app-filter`; read `makedsl` filter references when generating CEL |
 | Record sorting and table-header asc/desc behavior | Use `make-app-sort` |
 
@@ -118,6 +119,9 @@ their implementation surfaces.
   `markGroupPageLoadFailed(groupValue, page)` so CanvasTable can retry that page.
 - Grouped V1 should treat cell editing as disabled unless the product explicitly
   defines and tests a grouped edit lifecycle.
+- Writable grouped record lists may use the default `make-app-actions` selection
+  workflow. Under CanvasTable 1.3.0, `GroupTableComponent` does not support Shift
+  range selection; do not emulate it in the host.
 - Add safe boundary logs at UI-Service adapters and Service route/adapters for
   entry, success, failure, and stale-result branches. Never log cookies, tokens,
   secrets, Authorization, full expressions, or record payloads.

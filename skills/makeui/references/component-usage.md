@@ -294,7 +294,9 @@ This applies to:
 - table display
 - row sequence numbers and row-head detail entry by default for every table unless the user explicitly opts out
 - pagination or virtual loading layout around the table, only when explicitly requested
-- row selection, only when requested
+- row selection: default for writable Make record lists through
+  `make-app-actions`; only when requested for non-Make or strictly read-only
+  tables
 - cell editing, when requested
 
 The selected UI library can still provide surrounding controls such as buttons, inputs, drawers, popovers, forms, and feedback components.

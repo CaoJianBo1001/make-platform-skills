@@ -1,8 +1,8 @@
 ---
 name: make-app-service
-description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service API code and UI-Service contracts. Covers Service route design, apps/docs/api.md, layered source structure, make-client adapters, schema normalization APIs, record CRUD through Make gateway /make/data/v1/record, record-list filter/sort/groupFilter parsing, record-groups routes, Entity Preset filter/sort/group routes and adapters, user/department/lookup/file proxy APIs, Make adapter config, request login-context forwarding, request cancellation and AbortSignal propagation, validation, logging, and Service API tests. For generated Make Apps, coordinate the required /api/make/app/principal/permission Service proxy through make-app-permission. Use make-app-sort for sorting behavior, make-app-filter for filtering behavior, and make-app-group for grouping behavior. Does not cover UI layout, auth implementation, permission logic, build output, runtime, DSL modeling, Make CLI deployment, or canvas-table internals."
+description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, schema normalization, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Generated Apps coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.1.3
+  version: 0.1.4
 ---
 
 # make-app-service
@@ -11,7 +11,7 @@ Use this skill for Make App Service API work in `apps/service`.
 
 `make-app-service` owns the Service API contract between `apps/ui` and `apps/service`, thin Make Data API orchestration, Service route shape, Make adapter runtime config semantics, request/response normalization, Service-side validation, error mapping, boundary logging, and Service API tests.
 
-It does not own sorting behavior (`make-app-sort`), filtering behavior (`make-app-filter`), grouping behavior (`make-app-group`), UI layout (`makeui`), authentication implementation (`make-app-auth`), single-app permission logic (`make-app-permission`), runtime build/start contracts (`make-app-runtime`), DSL modeling (`makedsl`), Make CLI execution (`makecli`), or CanvasTable rendering/editing (`canvas-table-integration`).
+It does not own record-action behavior (`make-app-actions`), sorting behavior (`make-app-sort`), filtering behavior (`make-app-filter`), grouping behavior (`make-app-group`), UI layout (`makeui`), authentication implementation (`make-app-auth`), single-app permission logic (`make-app-permission`), runtime build/start contracts (`make-app-runtime`), DSL modeling (`makedsl`), Make CLI execution (`makecli`), or CanvasTable rendering/editing (`canvas-table-integration`).
 
 ## Quick start
 
@@ -23,9 +23,10 @@ It does not own sorting behavior (`make-app-sort`), filtering behavior (`make-ap
 6. Do not read local DSL/YAML as a published runtime data source. Runtime schema and data come from Make/backend APIs or the host Service adapter.
 7. Use shared adapters for Make Meta/Data/Preset calls, candidate APIs, lookup, files, and schema normalization. Build Make adapter URLs and `appKey` from normalized runtime config, not from route-local domains or UI input.
 8. For generated Make Apps, include the required single-app permission Service proxy by using `make-app-permission`; do not leave `/api/make/app/principal/permission` as a later task unless the user explicitly opts out of permissions.
-9. For cancellable or supersedable requests, propagate a request-scoped `AbortSignal` from the Service boundary into every downstream adapter; read `references/service-api-contracts.md` before implementation.
-10. Add or update Service tests for every changed route, adapter, validation path, and error path.
-11. Read only the needed reference files from the map below.
+9. For Make record actions, implement the documented `record-write-permission` route before edit UI and the `records/bulk` route for batch edit; use `make-app-actions` for target, permission, and one-request semantics.
+10. For cancellable or supersedable requests, propagate a request-scoped `AbortSignal` from the Service boundary into every downstream adapter; read `references/service-api-contracts.md` before implementation.
+11. Add or update Service tests for every changed route, adapter, validation path, and error path.
+12. Read only the needed reference files from the map below.
 
 ## Topic reference map
 
@@ -44,6 +45,7 @@ It does not own sorting behavior (`make-app-sort`), filtering behavior (`make-ap
 | Record sorting, sortable capabilities, Preset sort, records sort | Use `make-app-sort` |
 | Advanced filter package behavior and Preset filter | Use `make-app-filter` |
 | Record grouping, groupable capabilities, Preset group, record-groups, groupFilter | Use `make-app-group` |
+| Record action precheck, strict selection target, one-request batch update | Use `make-app-actions` |
 
 ## Scope boundary
 
@@ -65,6 +67,7 @@ Generated or refactored Make App Service code should provide these capabilities 
 - runtime schema: `/api/schema`, `/api/entities/:entityKey/fields`
 - single-app permissions: `/api/make/app/principal/permission` through `make-app-permission` for generated Make Apps
 - records: list, get, create, update, delete, cell update
+- record actions when the list is writable: row-write permission precheck and one-request batch field update through `make-app-actions`
 - current-user Entity Preset: get and sparse filter/sort update when filtering or sorting is enabled
 - lookup options and safe lookup relation updates
 - user candidates and department candidates
@@ -109,6 +112,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - For cancellable or supersedable work, a client disconnect must abort downstream work through a request-scoped `AbortSignal`. Do not stop at ignoring a stale response, and do not treat an expected `AbortError` as a user-visible 5xx failure.
 - Tests are required for route contracts, invalid input, adapter payloads, Make error mapping, and any schema/value normalization added by this skill.
 - Generated Make App Services must not be reported complete without the required principal permission proxy from `make-app-permission`, unless the user explicitly opts out of permissions.
+- For `record-write-permission` and `records/bulk`, follow `make-app-actions`: precheck the complete target with one Make `/data/v1/permission` call, reuse that target for one Make `/data/v1/field` call, and never split diagnostics or loop single-record updates.
 
 ## Default route baseline
 
@@ -126,6 +130,8 @@ PATCH  /api/entities/:entityKey/preset
 GET    /api/entities/:entityKey/records
 GET    /api/entities/:entityKey/records/:recordID
 POST   /api/entities/:entityKey/records
+POST   /api/make/app/entities/:objectKey/record-write-permission
+POST   /api/make/app/entities/:objectKey/records/bulk
 PATCH  /api/entities/:entityKey/records/:recordID
 DELETE /api/entities/:entityKey/records/:recordID
 PATCH  /api/entities/:entityKey/records/:recordID/cells/:fieldKey
@@ -147,5 +153,6 @@ Lookup relation update routes are optional and should be generated only when the
 - With `make-app-sort`: this skill implements and tests Preset/records routes and Make adapters; `make-app-sort` owns sortable rules, draft/save timing, and header linkage.
 - With `make-app-filter`: this skill implements and tests Preset/records routes and Make adapters; `make-app-filter` owns package filter behavior, hydration, and save timing.
 - With `make-app-group`: this skill implements and tests Preset group, record-groups, records groupFilter, and Make adapters; `make-app-group` owns groupable rules, groupFilter composition, grouped data timing, and CanvasTable grouped-flow coordination.
+- With `make-app-actions`: this skill implements and tests `record-write-permission`, `records/bulk`, strict target parsing, Make adapters, and error mapping; `make-app-actions` owns selection intent, action timing, permission-key choice, frozen snapshots, and UI feedback.
 - With `make-app-auth`: this skill may preserve Service-fronted app route shape, but auth proxy and session behavior stay in auth.
 - With `make-app-runtime`: this skill writes Service source and tests; runtime build/start/port checks stay in runtime.

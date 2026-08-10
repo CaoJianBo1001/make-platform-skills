@@ -26,6 +26,7 @@ Codex 判断优先级：
 | Make 环境安装、更新 Make 环境、makecli 登录校验、Node/pnpm/git/makecli 版本检查 | `make-env-setup` | 只负责本地开发环境准备、工具链更新、Make skills 更新、环境选择和登录校验；不负责 PRD、DSL、Service、UI、apply、deploy 或 git 提交 |
 | 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、表单布局、响应式、UI 状态 | `makeui` | 只负责 UI 怎么展示，不负责认证、打包、Service、业务 API 设计和发布 |
 | CanvasTable、表格渲染、字段类型展示、表格编辑、序号列、行头详情图标、`showSN`、`bodyRowHeadSuffixOptions`、`GroupTableComponent` 底层接入 | `canvas-table-integration` | 只负责 `@qfei-design/canvas-table` 消费侧接入，不负责页面 Shell 和业务 API；Make 记录分组完整能力交给 `make-app-group` |
+| 操作按钮、行操作、复选框选择、编辑、删除、批量编辑、暂无可用操作、行级写权限预检、`selectAllMode`、`@qfei-design/make-app-actions` | `make-app-actions` | Make CanvasTable 记录列表默认能力；负责选择操作栏、独立操作权限、选择意图、预检、批量弹窗和一次批量写入编排，不负责 CanvasTable 内部、IAM 权限策略或 Service 分层实现 |
 | 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | 负责完整筛选能力：`@qfei-design/make-app-filter` 消费侧接入、高级筛选控件行为、CanvasTable 表头筛选联动和 `filter.expression` 合同；不负责页面 Shell、表格渲染 API 细节、Service 实现、认证或发布 |
 | 排序、高级排序、多字段排序、排序优先级、升序/降序、拖拽排序条件、表头排序、`openWithField`、`capabilities.sortable`、Entity Preset sort、records sort、dnd-kit | `make-app-sort` | 负责完整排序能力：五级排序纯模型、拖拽草稿、CanvasTable 表头联动、Preset 保存/读取/回显和 records sort 合同；不负责页面 Shell、CanvasTable API 细节、Service 实现或分组 |
 | 分组、高级分组、多级分组、分组条件、拖拽分组、表头分组、`capabilities.groupable`、Entity Preset group、record-groups、groupFilter、分组叶子明细分页、`@qfei-design/make-app-group` | `make-app-group` | 负责完整分组能力：三级分组模型、拖拽草稿、Preset 保存/回显、Service record-groups/groupFilter、CanvasTable 分组渲染和叶子分页；不负责页面 Shell、CanvasTable 内部或筛选/排序模型 |
@@ -39,7 +40,8 @@ Codex 判断优先级：
 
 常见组合：
 
-- 做一个对象列表页：`makeui` + `canvas-table-integration`
+- 做一个对象列表页：`makeui` + `canvas-table-integration` + `make-app-actions`，Make CanvasTable 记录列表默认包含复选框选择和标准操作栏，明确只读时才省略 actions
+- 做记录编辑、删除、批量编辑或行级写权限预检：`make-app-actions` + `make-app-permission` + `make-app-service` + `makeui` + `canvas-table-integration`
 - 做筛选、高级筛选、表格筛选或表头按字段筛选：`make-app-filter` + `make-app-permission` + `makeui` + `canvas-table-integration`，必须同时完成 package 高级筛选、权限感知 Preset 生命周期和 CanvasTable 表头筛选联动
 - 做筛选 Service 合同或 filter.expression 透传：`make-app-filter` + `make-app-service`
 - 做多字段排序、拖拽排序或表头升降序：`make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，必须同时完成权限感知的 Preset 保存/回显和 records sort
@@ -52,7 +54,7 @@ Codex 判断优先级：
 - 做 Service-fronted 登录后接口：`make-app-service` + `make-app-auth`
 - 打包发布失败或 Service 启动失败：`make-app-runtime`
 - 新增对象字段并部署：`makedsl` + `makecli`
-- 新建完整 Make App：默认包含 `make-app-permission`，通常组合 `makedsl` + `makecli` + `make-app-auth` + `make-app-service` + `make-app-permission` + `makeui` + `canvas-table-integration`
+- 新建完整 Make App：默认包含 `make-app-permission` 和 `make-app-actions`，通常组合 `makedsl` + `makecli` + `make-app-auth` + `make-app-service` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-actions`
 
 ## 可用 Skill 列表
 
@@ -108,7 +110,30 @@ npx skills update canvas-table-integration
 - 非 Make 表格使用 Track A 基础；Make schema 表格使用 Track C 展示基础；需要单元格编辑时在对应基础上叠加 Track B
 - 把 JSON meta 转成 `IColumn[]`
 - Make schema 表格默认按平台字段展示规范渲染附件、lookup、下拉标签、人员和部门，并仅在内容溢出时显示省略号和 tooltip
+- Make 记录列表默认通过 `make-app-actions` 接入复选框选择、底部操作栏和编辑/删除/批量编辑；CanvasTable skill 只负责公开选择、清空和行颜色 API
 - 切换左侧对象或动态路由时，canvas-table 默认重置滚动位置和对象级临时状态
+
+### make-app-actions
+指导生成、接入、重构或审查 Make CanvasTable 记录列表的标准操作能力。Make 可写记录列表默认启用，覆盖复选框选择、底部操作栏、单条编辑/删除、批量编辑、独立权限点、行级写权限预检和选择态并发安全。
+
+#### 升级 skill
+```bash
+npx skills update make-app-actions
+```
+
+**使用场景**
+- 接入 `@qfei-design/make-app-actions@^0.2.1`，按 `package.ai.json.readOrder` 读取公开文档，禁止复制包内 action 模型或批量弹窗
+- 一条选择显示编辑/删除，两条及以上显示批量编辑，无可用操作采用带锁提示的方案二
+- 独立使用 `data.record.update`、`data.record.delete`、`data.record.bulkUpdate`，不得把单条编辑与批量编辑权限耦合
+- 区分明确选择 `include` 与表头全选 `exclude`；手动或 Shift 选满全部数据仍是明确选择
+- 显式选择和全选排除列表分别遵循 200 ID 上限，改变搜索、筛选、排序、分组或对象时清空选择
+- 全选时将搜索、状态、快捷筛选和高级筛选统一为最后一次成功列表查询的 `effectiveFilter`，预检和批量写入复用同一目标
+- 预检前冻结不可变操作快照，Service 对完整目标只调用一次 `/data/v1/permission`，批量更新只调用一次 `/data/v1/field`
+- 批量弹窗按字段类型使用宿主控件，不降级复杂字段，不包含自动化流程选项
+- Ant Design 宿主使用包适配器；非 AntD 宿主不得混入 AntD 或复制弹窗，缺少公开适配器时按交付阻断处理
+- CanvasTable 1.3.0 分组表格不支持 Shift 区间选择，宿主不得自行模拟
+- 只有准确无权限行 ID 才触发行标红；后端仅返回布尔拒绝时只显示 toast
+- 页面布局交给 `makeui`，Canvas 选择 API 交给 `canvas-table-integration`，principal 权限交给 `make-app-permission`，Service 实现交给 `make-app-service`
 
 ### makeui
 指导生成或修改 Make App 前端 UI，覆盖页面布局、App Shell、列表页、抽屉表单、详情页和响应式样式。

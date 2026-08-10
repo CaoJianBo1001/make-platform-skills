@@ -124,10 +124,20 @@ function checkUiContract() {
   if (/(?:canEditEntityField|editableFieldKeysForEntity|editableFieldNames)\s*\([\s\S]{0,180}(?:DATA_RECORD_CREATE|DATA_RECORD_UPDATE|data\.record\.(?:create|update))/.test(uiText)) {
     failures.push('field_permission_tied_to_data_record: field visibility/editability must use meta.field.*, not data.record.create/update');
   }
-  if (/(?:canCreate\w*[\s\S]{0,200}\w*editable\w*\.(?:length|size)|\w*editable\w*\.(?:length|size)[\s\S]{0,200}canCreate\w*)/i.test(uiText)) {
+  if (hasRecordEntryEditableFieldCountGate(uiText, {
+    actionKeyPattern: '(?:create|new)',
+    fieldOperationPattern: 'canCreate\\w*(?:Cell|Field)\\w*',
+    jsxEntryPattern: 'onCreate',
+    operationPattern: 'canCreate\\w*',
+  })) {
     failures.push('create_entry_depends_on_editable_fields: create entry must depend on data.record.create only');
   }
-  if (/(?:(?:canUpdate\w*|canEdit\w*)[\s\S]{0,200}\w*editable\w*\.(?:length|size)|\w*editable\w*\.(?:length|size)[\s\S]{0,200}(?:canUpdate\w*|canEdit\w*))/i.test(uiText)) {
+  if (hasRecordEntryEditableFieldCountGate(uiText, {
+    actionKeyPattern: 'edit',
+    fieldOperationPattern: '(?:canUpdate|canEdit)\\w*(?:Cell|Field)\\w*',
+    jsxEntryPattern: 'onEdit',
+    operationPattern: '(?:canUpdate\\w*|canEdit\\w*)',
+  })) {
     failures.push('edit_entry_depends_on_editable_fields: edit entry must depend on data.record.update only');
   }
   if (!hasRouteGuardSignal(uiText)) {
@@ -189,6 +199,140 @@ function hasReadGateSignal(text) {
     /(canRead|DATA_RECORD_READ|data\.record\.read)/.test(text)
     && /(enabled\s*:|onDataLoad=\{[^}]*\?|openDetail|fetchEntityRecord|fetch.*Detail)/s.test(text)
   );
+}
+
+function hasRecordEntryEditableFieldCountGate(text, {
+  actionKeyPattern,
+  fieldOperationPattern,
+  jsxEntryPattern,
+  operationPattern,
+}) {
+  const operation = String.raw`\(*\s*${operationPattern}\s*\)*`;
+  const editableFieldCount = String.raw`(?:Boolean\s*\(\s*)?\(*\s*\w*editable\w*\s*\.\s*(?:length|size)(?:\s*>\s*0)?\s*\)*`;
+  const operationThenFields = `${operation}\\s*&&\\s*${editableFieldCount}`;
+  const fieldsThenOperation = `${editableFieldCount}\\s*&&\\s*${operation}`;
+  const jsxEntry = new RegExp(
+    String.raw`\b(?:${jsxEntryPattern})\s*=\s*\{([^}]{0,1000})\}`,
+    'gi',
+  );
+  const actionKey = String.raw`\b(?:key|id|type)\s*:\s*['"](?:${actionKeyPattern})['"]`;
+  const actionKeyMatcher = new RegExp(actionKey, 'i');
+  const actionVisibility = /\b(?:visible|enabled)\s*:\s*([^,}]{0,500})/gi;
+
+  for (const entry of text.matchAll(jsxEntry)) {
+    if (hasRecordDirectGate(entry[1], {
+      editableFieldCount,
+      fieldOperationPattern,
+      operationPattern,
+    })) return true;
+  }
+
+  return extractDirectBraceBlocks(text).some((action) => {
+    if (!actionKeyMatcher.test(action)) return false;
+    for (const visibility of action.matchAll(actionVisibility)) {
+      if (hasRecordDirectGate(visibility[1], {
+        editableFieldCount,
+        fieldOperationPattern,
+        operationPattern,
+      })) return true;
+    }
+    return false;
+  });
+}
+
+function hasRecordDirectGate(expression, {
+  editableFieldCount,
+  fieldOperationPattern,
+  operationPattern,
+}) {
+  const operation = String.raw`\(*\s*(${operationPattern})\s*\)*`;
+  const fieldOperation = new RegExp(String.raw`^(?:${fieldOperationPattern})$`, 'i');
+  const gatePatterns = [
+    new RegExp(`${operation}\\s*&&\\s*${editableFieldCount}`, 'gi'),
+    new RegExp(`${editableFieldCount}\\s*&&\\s*${operation}`, 'gi'),
+  ];
+
+  return gatePatterns.some((gatePattern) => (
+    [...expression.matchAll(gatePattern)]
+      .some((gate) => !fieldOperation.test(gate[1]))
+  ));
+}
+
+function extractDirectBraceBlocks(text) {
+  const blocks = [];
+  const stack = [];
+  let quote = null;
+  let escaped = false;
+  let lineComment = false;
+  let blockComment = false;
+
+  for (let index = 0; index < text.length; index += 1) {
+    const character = text[index];
+    const nextCharacter = text[index + 1];
+
+    if (lineComment) {
+      if (character === '\n') lineComment = false;
+      continue;
+    }
+    if (blockComment) {
+      if (character === '*' && nextCharacter === '/') {
+        blockComment = false;
+        index += 1;
+      }
+      continue;
+    }
+    if (quote) {
+      if (escaped) {
+        escaped = false;
+      } else if (character === '\\') {
+        escaped = true;
+      } else if (character === quote) {
+        quote = null;
+      }
+      continue;
+    }
+    if (character === '/' && nextCharacter === '/') {
+      lineComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === '/' && nextCharacter === '*') {
+      blockComment = true;
+      index += 1;
+      continue;
+    }
+    if (character === '"' || character === "'" || character === '`') {
+      quote = character;
+      continue;
+    }
+    if (character === '{') {
+      stack.push({ children: [], start: index });
+    } else if (character === '}' && stack.length > 0) {
+      const block = stack.pop();
+      blocks.push(readDirectBlockText(text, block, index + 1));
+      if (stack.length > 0) {
+        stack[stack.length - 1].children.push({
+          end: index + 1,
+          start: block.start,
+        });
+      }
+    }
+  }
+
+  return blocks;
+}
+
+function readDirectBlockText(text, block, end) {
+  const segments = [];
+  let cursor = block.start;
+
+  for (const child of block.children) {
+    segments.push(text.slice(cursor, child.start), ' ');
+    cursor = child.end;
+  }
+  segments.push(text.slice(cursor, end));
+
+  return segments.join('');
 }
 
 function failUsage(message) {
