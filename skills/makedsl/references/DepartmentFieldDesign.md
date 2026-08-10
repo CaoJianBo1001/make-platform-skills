@@ -32,7 +32,7 @@ DepartmentField 的字段类型定义以 @FieldDesign.md 为准：
 key: project
 name: 项目
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -80,17 +80,33 @@ HEADER
 
 Request Body
 
-`filter` 当前仅支持按 `departmentName` 过滤筛选；不支持通过 `departmentId`、`memberCount`、`platform` 等其它字段过滤。当前候选查询不支持排序；即使传入 `sort`，服务端也会忽略。`leader` 有值时使用 `userId`、`userName`、`avatar` 结构。
+`filter` 使用 `Expression` 对象，当前仅支持单个 `departmentName.contains('...')` 条件；不支持通过 `departmentId`、`memberCount`、`platform` 等其它字段过滤。当前候选查询不支持排序；即使传入 `sort`，服务端也会忽略。`leader` 有值时使用 `userId`、`userName`、`avatar` 结构。
 
 ```json
 {
   "fields": ["departmentId", "departmentName", "memberCount", "platform", "leader"],
-  "filter": [
-    {
-      "departmentName": { "contains": "产品研发" }
-    }
-  ],
+  "filter": {
+    "expression": "departmentName.contains('产品研发')"
+  },
   "pagination": { "page": 1, "size": 10 }
+}
+```
+
+Record 列表按 DepartmentField 筛选时，使用 `filter.expression` 直接引用业务字段 key；系统变量只作为右值使用。
+
+```json
+{
+  "filter": {
+    "expression": "ownerDepartment == _currentUserDepartment"
+  }
+}
+```
+
+```json
+{
+  "filter": {
+    "expression": "[_currentUserDepartment].exists(v, v in relatedDepartments)"
+  }
 }
 ```
 
@@ -209,11 +225,12 @@ Response Body
 
 - SingleDepartmentField 非必填时可以写入 `null` 或不提交该字段；必填时不能为 `null`。
 - MultiDepartmentField 非必填时可以写入 `[]` 或不提交该字段；必填时数组不能为空。
-- MultiDepartmentField 通过 `properties.maxCount` 控制最多可写入的部门数量，默认值以 @FieldDesign.md 为准；元数据消费方必须保留 `maxCount`，供下游按同一数量上限处理多部门值。
+- MultiDepartmentField 通过 `maxCount` 控制最多可选择的部门数量，默认值以 @FieldDesign.md 为准；元数据消费方必须保留 `maxCount`，供下游按同一数量上限处理多部门值。
 - MultiDepartmentField 中同一个部门 ID 不允许重复出现。
 - DataAPIDesign.md 中的接口写入的部门 ID 必须是字符串类型，并且必须来自 Department 分页查询接口返回的当前组织可见部门；候选查询响应 JSON 中的 `departmentId` 已是字符串。
 - 禁止通过前端实现 Department 数据过滤功能，必须使用后端接口`filter`参数实现。
-- 分页查询 Department 候选项时，`filter` 仅支持 `departmentName` 字段。
+- 分页查询 Department 候选项时，`filter.expression` 仅支持 `departmentName.contains('...')`。
+- Record 列表按 DepartmentField 筛选时，可用 `_currentUserDepartment` 表示当前用户主部门 departmentId。
 - 部门不存在、已删除、不可见或不属于当前组织时，创建或更新 Record 应失败。
 - DepartmentField 不支持通过数字 ID、`departmentName` 或完整 Department 对象作为唯一标识写入，避免重名造成歧义。
 - 返回 DepartmentField 时，服务端返回 `departmentId`、`departmentName` 精简字段；`departmentId` 是字符串形式的部门 ID。

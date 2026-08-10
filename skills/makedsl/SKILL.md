@@ -2,7 +2,7 @@
 name: makedsl
 description: Use when designing or generating Make platform DSL YAML — defining apps, entities, fields, relations, views, or record schemas. Also triggered by requests like "建模", "建表", "加字段", "定义关联", or "生成 DSL". Does not deploy resources (use makecli), build frontend UI (makeui), implement Service/API code (make-app-service), handle auth (make-app-auth), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior (use canvas-table-integration).
 metadata:
-  version: 0.2.2
+  version: 0.2.3
 ---
 
 # makedsl usage
@@ -81,7 +81,7 @@ properties:
 key: <KEY> # 仅英文字符、数字、下划线, 长度 2-20, 创建后不可更新
 name: String # 必填, 用户可见的展示名称, 允许中英文数字下划线, 长度 2-20
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: SemanticVersion
 properties:
@@ -105,7 +105,7 @@ properties:
 key: project
 name: 项目
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -130,7 +130,7 @@ properties:
 key: task
 name: 任务
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -152,7 +152,14 @@ properties:
       type: Make.Field.SingleSelect
       meta:
         version: 1.0.0
-      properties: null
+      properties:
+        options:
+          - label: "待处理"
+            value: "todo"
+          - label: "进行中"
+            value: "doing"
+          - label: "已完成"
+            value: "done"
 ```
 
 ## Relation | 关联
