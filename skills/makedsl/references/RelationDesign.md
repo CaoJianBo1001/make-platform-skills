@@ -13,7 +13,7 @@ Relation 与 LookupField 职责正交：
 key: <KEY>
 name: String # 必填, 用户可见的展示名称, 允许中英文数字下划线, 长度 2-20
 type: Make.Relation
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: SemanticVersion
 properties:
@@ -40,7 +40,7 @@ properties:
 key: user_has_profile
 name: 用户档案关联
 type: Make.Relation
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -55,7 +55,7 @@ properties:
 key: user
 name: 用户
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -74,12 +74,32 @@ properties:
       properties:
         relationKey: user_has_profile
         targetFieldKey: bio
+    - key: reputation_score
+      name: 口碑评分
+      type: Make.Field.Lookup
+      meta:
+        version: 1.0.0
+      properties:
+        relationKey: user_has_profile
+        targetFieldKey: score
+        # 显示 score 字段值，按 score 排序（默认排序字段）
+    - key: profile_summary
+      name: 档案摘要
+      type: Make.Field.Lookup
+      meta:
+        version: 1.0.0
+      properties:
+        relationKey: user_has_profile
+        targetFieldKey: bio
+        sortByFieldKey: updated_at
+        # 显示 bio 字段值，但按 updated_at 时间排序
+        # 场景：想看对端最新更新的档案描述
 
 # ===== 档案 Entity =====
 key: profile
 name: 档案
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -96,9 +116,26 @@ properties:
       meta:
         version: 1.0.0
       properties: null
+    - key: score
+      name: 评分
+      type: Make.Field.Number
+      meta:
+        version: 1.0.0
+      properties:
+        precision: 1
+    - key: updated_at
+      name: 最后更新
+      type: Make.Field.DateTime
+      meta:
+        version: 1.0.0
+      properties:
+        format: "yyyy-MM-dd HH:mm:ss"
 ```
 
-> 1:1 时 LookupField 对端永远只有一条记录。
+> **1:1 关联要点：**
+> - LookupField 对端永远只有一条记录
+> - `sortByFieldKey` 仅在 1:1 关联时有效，指定排序字段（可与显示字段不同）
+> - 若不指定 `sortByFieldKey`，默认按 `targetFieldKey` 排序
 
 ## 一对多：项目 ↔ 任务
 
@@ -107,7 +144,7 @@ properties:
 key: project_has_tasks
 name: 项目任务关联
 type: Make.Relation
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -122,7 +159,7 @@ properties:
 key: project
 name: 项目
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -160,7 +197,7 @@ properties:
 key: task
 name: 任务
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -210,7 +247,7 @@ properties:
 key: student_takes_course
 name: 学生选课关联
 type: Make.Relation
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -225,7 +262,7 @@ properties:
 key: student
 name: 学生
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -249,7 +286,7 @@ properties:
 key: course
 name: 课程
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:

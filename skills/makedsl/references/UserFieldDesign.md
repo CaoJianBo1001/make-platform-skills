@@ -32,7 +32,7 @@ UserField 的字段类型定义以 @FieldDesign.md 为准：
 key: project
 name: 项目
 type: Make.Entity
-app: <Make.App>
+appKey: <Make.App>
 meta:
   version: 1.0.0
 properties:
@@ -80,17 +80,41 @@ HEADER
 
 Request Body
 
-`filter` 当前仅支持按 `userName` 过滤筛选；不支持通过 `userId`、`email`、`mobile` 等其它字段过滤。当前候选查询不支持排序；即使传入 `sort`，服务端也会忽略。当前接口只返回 `userId`、`userName`、`avatar`。
+`filter` 使用 `Expression` 对象，当前仅支持单个 `userName.contains('...')` 条件；不支持通过 `userId`、`email`、`mobile` 等其它字段过滤。当前候选查询不支持排序；即使传入 `sort`，服务端也会忽略。当前接口只返回 `userId`、`userName`、`avatar`。
 
 ```json
 {
   "fields": ["userId", "userName", "avatar"],
-  "filter": [
-    {
-      "userName": { "contains": "张" }
-    }
-  ],
+  "filter": {
+    "expression": "userName.contains('张')"
+  },
   "pagination": { "page": 1, "size": 10 }
+}
+```
+
+Record 列表按 UserField 筛选时，使用 `filter.expression` 直接引用业务字段 key；系统变量只作为右值使用。
+
+```json
+{
+  "filter": {
+    "expression": "owner == _currentUser"
+  }
+}
+```
+
+```json
+{
+  "filter": {
+    "expression": "owner in _currentUserSubordinates || owner == _currentUserManagerLevel2"
+  }
+}
+```
+
+```json
+{
+  "filter": {
+    "expression": "members.exists(v, v in _currentUserDepartmentMembers)"
+  }
 }
 ```
 
@@ -209,11 +233,12 @@ Response Body
 
 - SingleUserField 非必填时可以写入 `null` 或不提交该字段；必填时不能为 `null`。
 - MultiUserField 非必填时可以写入 `[]` 或不提交该字段；必填时数组不能为空。
-- MultiUserField 通过 `properties.maxCount` 控制最多可写入的用户数量，默认值以 @FieldDesign.md 为准；元数据消费方必须保留 `maxCount`，供下游按同一数量上限处理多用户值。
+- MultiUserField 通过 `maxCount` 控制最多可选择的用户数量，默认值以 @FieldDesign.md 为准；元数据消费方必须保留 `maxCount`，供下游按同一数量上限处理多用户值。
 - MultiUserField 中同一个用户 ID 不允许重复出现。
 - DataAPIDesign.md 中的接口写入的用户 ID 必须是字符串类型，并且必须来自 User 分页查询接口返回的当前组织可见用户；候选查询响应 JSON 中的 `userId` 已是字符串。
 - 禁止通过前端实现 User 数据过滤功能，必须使用后端接口`filter`参数实现。
-- 分页查询 User 候选项时，`filter` 仅支持 `userName` 字段。
+- 分页查询 User 候选项时，`filter.expression` 仅支持 `userName.contains('...')`。
+- Record 列表按 UserField 筛选时，可使用 `_currentUser`、`_currentUserSubordinates`、`_currentUserManager`、`_currentUserManagerLevel2`、`_currentUserManagerLevel3`、`_currentUserDepartmentMembers` 等系统变量。
 - 用户不存在、已停用、不可见或不属于当前组织时，创建或更新 Record 应失败。
 - UserField 不支持通过数字 ID、`userName` 或完整 User 对象作为唯一标识写入，避免重名造成歧义。
 - 返回 UserField 时，服务端返回 `userId`、`userName`、`avatar` 精简字段；`userId` 是字符串形式的用户 ID，并根据访问者权限裁剪敏感信息。
