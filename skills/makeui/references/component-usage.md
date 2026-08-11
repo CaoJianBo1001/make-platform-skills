@@ -3,6 +3,7 @@
 ## Contents
 
 - [Selection strategy](#selection-strategy)
+- [Overlay portal contract](#overlay-portal-contract)
 - [Default candidate mapping](#default-candidate-mapping)
 - [Make field-metadata-driven components](#make-field-metadata-driven-components)
 - [Make field properties contract](#make-field-properties-contract)
@@ -23,6 +24,36 @@ Use this priority:
 Do not add a new component library to an existing project unless the user asks.
 
 Use this same rule for icons and styling tools.
+
+## Overlay portal contract
+
+For `Select`, `DatePicker`, `Popover`, user/department/lookup pickers, and other
+popup controls rendered inside a Modal, Drawer, panel, or scroll region, inspect
+the full ancestor chain before choosing the popup root. If a modal body, visual
+panel, table region, or intermediate wrapper uses `overflow: hidden`,
+`overflow: auto`, transforms, filters, or another stacking-context boundary,
+mount the popup through the component library's public portal hook such as
+`getPopupContainer` into a host-owned container outside the clipping ancestor.
+The prop name is only an example: do not impose AntD props on Arco, shadcn/ui,
+Radix, or another design system. Read the installed library contract and use its
+public overlay mechanism.
+
+Prefer the nearest owning Modal/Drawer wrapper when it sits outside the visual
+panel. Otherwise use a dedicated document-level overlay root. The overlay must
+remain in the owning surface's stacking context or have a z-index above that
+surface and its mask. Do not try to repair overflow clipping by increasing the
+z-index of a popup that is still nested under the clipped panel; z-index does not
+escape ancestor clipping.
+
+Apply the same popup-root policy to every control on one surface. Test both DOM
+containment and browser presentation: the popup is outside the clipped panel,
+appears above the Modal/Drawer, preserves its full border and last option/date
+row, and stays usable when the owning body scrolls.
+
+Portal placement is not complete until interaction semantics pass. Verify focus
+containment and return, keyboard navigation, Escape ordering, and outside-click
+behavior with the chosen Modal/Drawer and popup library. A document-level root
+that looks correct but escapes the library's focus or dismiss layer is invalid.
 
 For new projects, component-library selection is a blocking decision. Actively ask the user to choose one of these ordered options:
 

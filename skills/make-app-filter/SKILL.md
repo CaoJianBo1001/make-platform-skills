@@ -1,8 +1,8 @@
 ---
 name: make-app-filter
-description: "Use when integrating, generating, refactoring, or reviewing Make App record-list filtering with @qfei-design/make-app-filter, CanvasTable header linkage, permission-aware Entity Preset save/load/echo, and Service filter.expression payloads. Triggered by 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, 筛选保存/回显, CEL/DNF expressions, system variables, empty filters, field-type operators, DateRange/File/Lookup support, candidate values, URL echo, and tests. Uses make-app-permission for list-access policy. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, sorting, grouping, auth, runtime packaging, DSL modeling, Make CLI execution, or table cell editing."
+description: "Use when integrating, generating, refactoring, or reviewing Make App record-list filtering with @qfei-design/make-app-filter, CanvasTable header linkage, permission-aware Entity Preset save/load/echo, and Service filter.expression payloads. Triggered by 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, 筛选保存/回显, CEL/DNF expressions, system variables, empty filters, field-type operators, DateRange/File/Lookup support, candidate values, URL echo, and tests. Uses make-app-permission for list-access policy. When make-app-actions is present, a successfully applied filter must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, sorting, grouping, auth, runtime packaging, DSL modeling, Make CLI execution, or table cell editing."
 metadata:
-  version: 0.1.5
+  version: 0.1.6
 ---
 
 # make-app-filter
@@ -32,8 +32,9 @@ This skill owns the consumer-side package integration contract, advanced-filter 
 9. Align with the backend Record list filter contract: Service sends `filter: { expression }`, blank expressions mean no filter, and field support must match runtime metadata plus package public APIs. Submit `compileListFilter` output unchanged; never rewrite CEL/DNF in the host.
 10. For entity object lists, establish the permission-aware `{ enabled, entityKey, generation }` context from `make-app-permission`. Only while enabled, load the current Entity Preset before the first records query, hydrate the saved filter through package public APIs, and keep toolbar search session-only.
 11. On filter confirm, PATCH only the Preset `filter` dimension. After success, update applied state synchronously; let the records query react to applied state instead of reloading inside the persistence callback. Preserve the old applied filter and current draft on failure.
-12. Preserve the required fixed three-region advanced-filter layout: top fixed header, scrollable condition body, and bottom fixed footer. Header/footer controls must remain visible while condition rows scroll.
-13. Before finishing, verify tests or deterministic checks for package source usage, fixed panel layout, empty filter omission, search merge, Preset save/load/clear, draft confirm/discard, candidate sources, header linkage, package/backend field-support drift, and Service payload shape.
+12. When the writable list uses `make-app-actions`, hand off the successfully applied filter generation so actions clear selection and invalidate pending precheck/submit work before the new query is actionable. Draft edits, cancel, and save/apply failure preserve the current action selection.
+13. Preserve the required fixed three-region advanced-filter layout: top fixed header, scrollable condition body, and bottom fixed footer. Header/footer controls must remain visible while condition rows scroll.
+14. Before finishing, verify tests or deterministic checks for package source usage, fixed panel layout, empty filter omission, search merge, Preset save/load/clear, draft confirm/discard, candidate sources, header linkage, package/backend field-support drift, Service payload shape, and conditional action-selection invalidation.
 
 ## Package pre-flight
 
@@ -75,6 +76,7 @@ Required read procedure for installed `1.0.0+` packages:
 | Toolbar placement and surrounding page layout | Use `makeui` |
 | CanvasTable `suffixRender` mechanics | Use `canvas-table-integration` |
 | Service route implementation and adapter tests | Use `make-app-service` |
+| Writable-list selection actions and applied-query invalidation | Use `make-app-actions` |
 
 ## Hard rules
 
@@ -103,6 +105,10 @@ Required read procedure for installed `1.0.0+` packages:
 - Entity object-list filtering persists only the advanced-filter expression in the current user's Entity Preset. Load and hydrate Preset filter before the first records query.
 - Preset writes are sparse. Saving filter sends only `{ filter }`, never a possibly stale `sort` or `group`.
 - Save before apply. Preset save failure keeps the previous applied filter, open panel, and current draft; it must not reload records.
+- If `make-app-actions` is present, only a successfully applied filter generation
+  clears its selection and invalidates pending action work. Draft edits, panel
+  cancel, validation failure, Preset save failure, and failed list queries do not
+  clear or redefine the current action selection.
 - Clear advanced filter with `filter: null`. Toolbar keyword search remains session-only and must not be persisted.
 - When list access is disabled, block new schema/Preset GET, Preset PATCH, and records requests; invalidate in-flight results and close filter surfaces. Ignore stale Preset load/save responses after either `entityKey` or permission-enabled state changes.
 
@@ -124,4 +130,9 @@ Required read procedure for installed `1.0.0+` packages:
 - With `make-app-sort`: filter and sort share one parent-owned Entity Preset coordinator and load lifecycle but update their dimensions independently. This skill does not define sorting UI or sort validation.
 - With `make-app-group`: filter and group share expression syntax and Preset lifecycle but update dimensions independently. This skill owns global `filter.expression`; `make-app-group` owns transient path `groupFilter` composition and record-groups timing.
 - With `make-app-permission`: consume the resolved list-access gate and include its enabled state in the Preset request generation. This skill does not define permission policy or permission endpoints.
+- With `make-app-actions`: only for writable lists using the action workflow,
+  hand off a successfully applied filter generation before the new query becomes
+  actionable so actions clear selection and invalidate pending work. Draft and
+  failure paths preserve selection; this Skill does not manipulate CanvasTable
+  selection APIs directly.
 - With `makedsl`: read `EntityDataFilterUsage.md` to confirm backend filter semantics such as DNF, system variables, DateRange/File/Lookup, empty filter handling, and error cases. Do not generate DSL from this skill.

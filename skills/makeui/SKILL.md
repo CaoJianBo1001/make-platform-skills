@@ -2,7 +2,7 @@
 name: makeui
 description: Use when designing, generating, refactoring, or reviewing Make App frontend UI and `apps/ui` React UI code. Triggered by makeui, UI, 界面, app shell, layout, component structure, responsive behavior, dynamic object routes, field-metadata rendering, schema field properties, list pages, create/edit/detail drawers, controlled form fields, user/department selectors, and UI states. Requires Make record tables to use `canvas-table-integration`, writable record actions to use `make-app-actions`, advanced filters to use `make-app-filter`, grouping to use `make-app-group`, sorting to use `make-app-sort`, and permission gates to use `make-app-permission`. Does not own auth, build/publish, Service runtime, business APIs, permission logic, persistence, DSL, CanvasTable internals, action semantics, filtering, grouping, or sorting behavior.
 metadata:
-  version: 0.3.50
+  version: 0.3.52
 ---
 
 # makeui
@@ -121,6 +121,7 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 - Detail Drawer/page titles should show the complete selected object or record title whenever space permits. Give the title area flexible width and use ellipsis only for true overflow; keep the full title available through a tooltip or accessible title. Do not create a tiny title slot that truncates otherwise displayable titles.
 - Create/edit forms use type-appropriate controls. Date, select, user, department, file, and lookup fields must not silently degrade to plain text inputs. File upload is omitted in create mode when upload requires an existing record identity.
 - Create/edit custom form field controls must follow the host-form controlled contract from `component-usage.md`: forward `value/onChange/onBlur/id/disabled`, keep visual selection and form store synchronized, and treat local-only selected state as a delivery blocker.
+- Select, DatePicker, Popover, identity picker, and other popup controls inside Modal, Drawer, or scroll regions must follow the overlay portal contract from `component-usage.md` and `styling-and-responsive.md`: mount outside overflow-clipping ancestors and above the owning surface. Raising z-index inside a clipped panel is not a valid fix.
 - User and department selector UI must consume host candidate APIs and follow the canonical mapping in `references/component-usage.md`; host project documentation overrides the generated Make App default transport.
 - Do not use field schema `options`, local demo arrays, row samples, hardcoded names, or stale client-only lists as the source of truth for user/department selectors. Current record values may be merged into options only to echo existing selections while the real candidate API is loading or temporarily empty. If the selector appears inside advanced filter or CanvasTable cell editing, implement the surface with `make-app-filter` or `canvas-table-integration` while preserving this candidate-source contract.
 - Use dynamic object routes such as `/objects/:objectKey`. Do not generate one hard-coded route component per object.

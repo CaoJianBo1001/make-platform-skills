@@ -174,8 +174,16 @@ If recreation is unavoidable, reapply derived canvas state after `setData(...)`,
 
 - scrollLeft and scrollTop
 - dirty row colors
-- selection if the host owns selection state
+- selection only when the host owns a non-action selection model and has proved
+  that the replacement keeps the same semantic data/selection generation
 - any row/cell visual state stored outside row data
+
+For writable Make record lists whose selection drives `make-app-actions`, a table
+recreation/replacement is an action-selection boundary. Do not restore, reapply,
+or replay the action-owned selection from the old instance. Let
+`make-app-actions` publish one empty selection snapshot, invalidate pending action
+work, and accept only public selection events from the replacement instance.
+Generic edit-state restoration must not override that stricter action lifecycle.
 
 ## 12. Container sizing rule
 

@@ -61,10 +61,19 @@ Build batch candidates from runtime normalized schema:
 3. Exclude readonly/derived Lookup fields or any field the installed package
    reports unsupported.
 4. In an Ant Design host, pass the result to `AntdRecordBatchEditModal`. In other
-   design systems, require a published matching package adapter before claiming
-   the standard batch-edit modal is complete.
+   React design systems, pass it to `RecordBatchEditModal` and inject
+   `MakeAppBatchEditComponents` for the host `Modal`, `FieldSelect`, and
+   `ModeControl`.
 
-Use `renderValueControl(field)` to provide real host field controls:
+- `AntdRecordBatchEditModal` in `0.3.1` uses
+  `renderValueControl(field, control)`. Forward `control.disabled` to the actual
+  field control; one-argument callbacks are compatibility-only.
+- `RecordBatchEditModal` uses `renderValueControl(field, control)`. Forward
+  `control.value`, `control.onChange`, `control.disabled`, `control.invalid`, and
+  `control.ariaDescribedBy` to the real host input; do not replace package-owned
+  value or validation state with parallel host state.
+
+Use those callbacks to provide real host field controls:
 
 - Select for select/enum fields
 - Input/InputNumber/TextArea for compatible scalar fields
@@ -79,6 +88,42 @@ display labels, are submitted for user/department fields.
 The shared modal owns field selection, selected-count text, `新值 / 清空内容`,
 validation layout, and buttons. Use `resolveBatchEditClearValue` for clear mode.
 The modal must not include an automation or `是否触发自动化流程` option.
+
+The default title is `批量编辑`. Do not label the same operation `批量修改` in
+the modal title. Hosts may override other business copy through the package label
+contract, but keep this canonical title unless the product explicitly requires a
+different term.
+
+### Popup container contract
+
+The generic modal cannot choose a popup root for host controls. Configure
+`FieldSelect` and every popup value control (`Select`, `DatePicker`,
+`DateRangePicker`, User, Department, and editable Lookup pickers) through the
+installed design system's public portal or overlay API so the popup is outside
+every `overflow: hidden` or `overflow: auto` clipping ancestor.
+
+Do not make AntD's `getPopupContainer` name or semantics a generic contract.
+AntD hosts may pass the adapter's public `getPopupContainer` for its field
+selector and separately configure host-rendered value controls. Arco hosts use
+the installed Arco popup-container API. shadcn/ui or Radix hosts use the
+installed primitive's `Portal`/`container` mechanism. Read the installed library
+contract instead of copying one adapter's props into another design system.
+
+Prefer a library-supported target associated with the owning dialog; use a
+document-level overlay root only when the library supports it without breaking
+focus containment or dismiss layers. Keep the popup above the owning surface and
+mask. A larger z-index under a clipping ancestor cannot fix overflow clipping.
+The field selector and value controls must behave consistently, but they do not
+have to share one physical root when the design system manages separate layers.
+
+After portaling, verify keyboard navigation, focus return, Escape ordering,
+outside-click handling, and dialog scrolling in addition to visual containment.
+Opening or closing a popup must not unexpectedly close the batch dialog.
+
+The generic modal does not auto-detect a UI framework. Keep the host adapter
+thin: translate component props and render host visuals only. Do not move field
+selection, value mode, validation, safe error, or duplicate-submit state back
+into the host.
 
 ## Submit lifecycle
 

@@ -1,8 +1,8 @@
 ---
 name: make-app-group
-description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
+description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. When make-app-actions is present, a successfully applied group must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
 metadata:
-  version: 0.1.1
+  version: 0.1.2
 ---
 
 # make-app-group
@@ -41,18 +41,22 @@ their implementation surfaces.
 8. Let `onConfirm` persist only `{ group }`, let synchronous `onApplied` replace
    applied group state, and let a separate data lifecycle react to object context
    plus applied filter/sort/group. Always provide `onApplyError`.
-9. In Service, parse raw Preset and query input with a strict transport parser,
+9. When the writable list uses `make-app-actions`, hand off the successfully
+   applied group generation so actions clear selection and invalidate pending
+   precheck/submit work. Draft edits, cancel, and save/apply failure preserve the
+   current action selection.
+10. In Service, parse raw Preset and query input with a strict transport parser,
    validate group fields against current runtime schema, then forward the ordered
    group value to Make Data. Tolerant sanitization is only for saved/upstream reads.
-10. When applied group is empty, use ordinary records mode and omit Data API
+11. When applied group is empty, use ordinary records mode and omit Data API
     `group`. When applied group is non-empty, first request the root group page,
     then initialize or refresh `GroupTableComponent`.
-11. Compose `groupFilter` from the initial group filter plus selected group path
+12. Compose `groupFilter` from the initial group filter plus selected group path
     conditions using the backend DNF expression rules. Do not concatenate complex
     expressions by hand.
-12. Wire CanvasTable `group:load` to the remaining group levels and
+13. Wire CanvasTable `group:load` to the remaining group levels and
     `group:data:load` to ordinary records with full group path `groupFilter`.
-13. Add the model, UI, Preset, Service, groupFilter, CanvasTable, permission,
+14. Add the model, UI, Preset, Service, groupFilter, CanvasTable, permission,
     concurrency, stale request, and failure-page tests listed in the testing
     reference.
 
@@ -122,6 +126,9 @@ their implementation surfaces.
 - Writable grouped record lists may use the default `make-app-actions` selection
   workflow. Under CanvasTable 1.3.0, `GroupTableComponent` does not support Shift
   range selection; do not emulate it in the host.
+- When that action workflow is present, only a successfully applied group
+  generation clears selection and invalidates pending action work. Group drafts,
+  cancel, validation/Preset failure, and failed group queries preserve selection.
 - Add safe boundary logs at UI-Service adapters and Service route/adapters for
   entry, success, failure, and stale-result branches. Never log cookies, tokens,
   secrets, Authorization, full expressions, or record payloads.
@@ -144,3 +151,7 @@ their implementation surfaces.
 - With `make-app-sort`: sort and group share one Entity Preset lifecycle but update
   dimensions independently. Sort applies only to ordinary records and grouped leaf
   records, not to grouping-mode requests.
+- With `make-app-actions`: only for writable grouped lists using the action
+  workflow, hand off a successfully applied group generation so actions clear
+  selection and invalidate pending work. Draft and failure paths preserve the
+  current selection; this Skill does not emit CanvasTable selection events.

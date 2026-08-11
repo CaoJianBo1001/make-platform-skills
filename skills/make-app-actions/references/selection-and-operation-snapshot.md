@@ -130,3 +130,32 @@ search sends the same search expression to list, precheck, and mutation.
 Selection changes while precheck is pending invalidate the old precheck and
 allow a new action immediately. Do not serialize new selections behind an
 obsolete request.
+
+## Table instance and total-count lifecycle
+
+Treat a CanvasTable instance replacement or recreation as a selection boundary,
+even when the object and normalized applied query identity are unchanged. Before
+disposing the old instance, increment `selectionGeneration`, invalidate pending
+precheck/submit work, close action-owned edit surfaces, clear alerts, and publish
+exactly one empty selection snapshot to the action state. Do not replay the old
+action-owned selection into the replacement table: the old public snapshot was
+produced by a different Canvas instance and may no longer describe the rendered
+rows. Subscribe the replacement instance before accepting new user selection.
+
+Handle `totalCount` changes within the same object/query generation explicitly:
+
+- When `totalCount` increases, read the current public selection snapshot from the
+  active CanvasTable and pass it with the new total to
+  `resolveCanvasSelectedRecordSnapshot`. Replace action state with that normalized
+  result. If its intent or selected count changes, increment `selectionGeneration`
+  and invalidate pending action work before the new state becomes actionable.
+- When `totalCount` decreases, do not retain or reconstruct the old target. Call
+  the active instance's public `clearSelection()` once and use its canonical
+  `selection:change` as the sole empty selection snapshot/notification. If the
+  installed public contract explicitly says `clearSelection()` emits no event,
+  publish one host empty snapshot after the call; never emit both paths.
+
+Coalesce one logical recreation or total transition so it cannot clear the table,
+the package selection model, and host action state through separate duplicate
+notifications. Add a monotonic table-instance token when asynchronous setup can
+settle out of order; events from a disposed instance are stale and must be ignored.

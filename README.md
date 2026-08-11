@@ -122,7 +122,7 @@ npx skills update make-app-actions
 ```
 
 **使用场景**
-- 接入 `@qfei-design/make-app-actions@^0.2.1`，按 `package.ai.json.readOrder` 读取公开文档，禁止复制包内 action 模型或批量弹窗
+- 接入 `@qfei-design/make-app-actions@^0.3.1`，按 `package.ai.json.readOrder` 读取公开文档，禁止复制包内 action 模型或批量弹窗
 - 一条选择显示编辑/删除，两条及以上显示批量编辑，无可用操作采用带锁提示的方案二
 - 独立使用 `data.record.update`、`data.record.delete`、`data.record.bulkUpdate`，不得把单条编辑与批量编辑权限耦合
 - 区分明确选择 `include` 与表头全选 `exclude`；手动或 Shift 选满全部数据仍是明确选择
@@ -130,7 +130,8 @@ npx skills update make-app-actions
 - 全选时将搜索、状态、快捷筛选和高级筛选统一为最后一次成功列表查询的 `effectiveFilter`，预检和批量写入复用同一目标
 - 预检前冻结不可变操作快照，Service 对完整目标只调用一次 `/data/v1/permission`，批量更新只调用一次 `/data/v1/field`
 - 批量弹窗按字段类型使用宿主控件，不降级复杂字段，不包含自动化流程选项
-- Ant Design 宿主使用包适配器；非 AntD 宿主不得混入 AntD 或复制弹窗，缺少公开适配器时按交付阻断处理
+- Ant Design 宿主使用包适配器并转发 `0.3.1` 的 `control.disabled`；非 AntD React 宿主使用通用 `RecordBatchEditModal` 并注入自身设计系统组件，不得混入 AntD 或复制弹窗
+- 弹层按已安装组件库的公开 portal/overlay API 处理裁剪、焦点和关闭顺序，不把 AntD 的 prop 约定写成通用标准
 - CanvasTable 1.3.0 分组表格不支持 Shift 区间选择，宿主不得自行模拟
 - 只有准确无权限行 ID 才触发行标红；后端仅返回布尔拒绝时只显示 toast
 - 页面布局交给 `makeui`，Canvas 选择 API 交给 `canvas-table-integration`，principal 权限交给 `make-app-permission`，Service 实现交给 `make-app-service`

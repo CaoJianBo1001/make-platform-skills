@@ -1,8 +1,8 @@
 ---
 name: make-app-actions
-description: "Use when generating, integrating, refactoring, reviewing, or debugging Make CanvasTable record-list 操作按钮 and selection actions; this is the 默认 behavior for writable Make record lists unless explicitly opted out. Triggered by 复选框, 行操作, 选择操作栏, 编辑, 删除, 批量编辑, 暂无可用的操作, selectAll, Shift selection, selectionIntent, 200 条上限, 行级写权限预检, record-write-permission, records/bulk, @qfei-design/make-app-actions, or action tests. Covers package integration, independent update/delete/bulkUpdate permissions, Canvas selection intent, immutable snapshots, effective write filters, Service precheck/bulk contracts, UI-adapter compatibility, denial feedback, stale safety, and tests. Does not own CanvasTable internals, principal IAM policy, general Service layering, page shell, field editor internals, auth, runtime packaging, DSL, Make CLI, or filter/sort/group semantics."
+description: "Use when generating, integrating, refactoring, reviewing, or debugging Make CanvasTable record-list 操作按钮 and selection actions; this is the 默认 behavior for writable Make record lists unless explicitly opted out. Triggered by 复选框, 行操作, 选择操作栏, 编辑, 删除, 批量编辑, 暂无可用的操作, selectAll, Shift selection, selectionIntent, CanvasTable 重建, totalCount 变化, 200 条上限, 行级写权限预检, record-write-permission, records/bulk, @qfei-design/make-app-actions, or action tests. Covers package integration, independent update/delete/bulkUpdate permissions, Canvas selection intent, immutable snapshots, effective write filters, Service precheck/bulk contracts, UI-adapter compatibility, denial feedback, stale safety, and tests. Does not own CanvasTable internals, principal IAM policy, general Service layering, page shell, field editor internals, auth, runtime packaging, DSL, Make CLI, or filter/sort/group semantics."
 metadata:
-  version: 0.1.1
+  version: 0.1.7
 ---
 
 # make-app-actions
@@ -23,9 +23,10 @@ requests, query context, field controls, business feedback, and list refresh.
    installed CanvasTable version and docs, normalized runtime schema, principal
    permission model, records query state, Service routes, edit/detail surfaces,
    and related tests.
-2. Install `@qfei-design/make-app-actions@^0.2.1`. Read its
-   `package.ai.json`, parse `package.ai.json.readOrder`, read every declared file
-   in order, and use public exports only. Read
+2. Install `@qfei-design/make-app-actions@^0.3.1`. Read the installed
+   `package.json` first and verify its resolved version satisfies `^0.3.1`; then
+   read `package.ai.json`, parse `package.ai.json.readOrder`, read every declared
+   file in order, and use public exports only. Read
    `references/package-integration.md` before changing package integration.
 3. Ensure the installed CanvasTable exposes the public selection snapshot and
    clear/highlight APIs required by the package adapter. Use
@@ -33,7 +34,10 @@ requests, query context, field controls, business feedback, and list refresh.
    internals.
 4. Enable multiple selection and normalize every public Canvas selection event
    with `resolveCanvasSelectedRecordSnapshot`. Preserve `selectionIntent`; never
-   infer select-all from selected and total counts.
+   infer select-all from selected and total counts. Treat CanvasTable instance
+   replacement and same-query `totalCount` changes with the lifecycle in
+   `references/selection-and-operation-snapshot.md`; never replay an action-owned
+   selection into a replacement instance.
 5. Build single edit, single delete, and multiple batch-edit actions from the
    current cached principal snapshot. Keep `data.record.update`,
    `data.record.delete`, and `data.record.bulkUpdate` independent.
@@ -45,15 +49,20 @@ requests, query context, field controls, business feedback, and list refresh.
    denied multi-record request into diagnostic requests.
 8. For batch edit, filter fields by runtime read/update permissions and package
    capability. Ant Design hosts render package `AntdRecordBatchEditModal` with
-   host field controls. Non-AntD hosts must not mix in AntD or copy the modal;
-   treat the missing package adapter as a readiness blocker. Reuse the frozen
-   operation snapshot on submit.
+   host field controls. Other React hosts render package `RecordBatchEditModal`,
+   inject their design-system shell/select/mode controls, and provide Make field
+   controls through `renderValueControl`; never mix in AntD or copy the modal.
+   The host must use its installed design system's public overlay API to keep
+   injected popups outside clipping ancestors and above the owning dialog while
+   preserving focus, Escape, and outside-click behavior.
+   Reuse the frozen operation snapshot on submit.
 9. Send one host Service batch request. Service sends one Make
    `/data/v1/field` request; do not loop single-record updates and do not use
    `runRecordBatchMutation` as the Make default path.
 10. Invalidate stale prechecks and submissions on selection, object, access, or
     query-context changes. Clear selection when keyword, filter, sort, group, or
-    object context changes.
+    object context changes. A successful applied-query handoff clears selection;
+    draft edits and failed saves/queries do not redefine the action target.
 11. Remove edit/delete commands from detail surfaces when these actions are owned
     by the selection bar. Keep detail open as a read/display action.
 12. Add the tests in `references/testing-and-pitfalls.md` before reporting the
@@ -79,6 +88,10 @@ requests, query context, field controls, business feedback, and list refresh.
 
 ## Non-negotiable invariants
 
+- The installed `package.json` is the authoritative package-version source. For
+  this Skill, resolve `@qfei-design/make-app-actions@^0.3.1` before reading
+  `package.ai.json`; its published `0.3.1` manifest has stale `0.3.0` version and
+  install fields that must not downgrade the integration.
 - Make CanvasTable record lists get selectable rows and the standard action bar
   by default. A strictly read-only list may opt out explicitly only when
   read-only is an object/product capability, not merely the current user's lack
@@ -105,12 +118,15 @@ requests, query context, field controls, business feedback, and list refresh.
   Make mutation request. Never use per-ID diagnostics or per-record update loops.
 - Selection/query races must not open stale UI, apply stale feedback, clear a
   newer selection, or submit a target different from the prechecked target.
+- CanvasTable instance replacement clears action-owned selection exactly once.
+  Same-query total growth re-normalizes the current public snapshot; total shrink
+  clears through the installed public `clearSelection()` contract.
 - Use runtime schema and field permissions for batch fields. Never downgrade an
   unsupported complex field to a plain input.
 - The shared batch modal does not include automation-flow controls.
 - Do not introduce Ant Design into an Arco, shadcn/ui, or other non-AntD host.
-  Package core behavior remains reusable, but full batch-modal delivery waits for
-  a matching public adapter unless the package publishes one.
+  Use the package generic `RecordBatchEditModal` with host component injection;
+  the host must not copy package modal state or validation behavior.
 
 ## Handoffs
 
@@ -125,5 +141,6 @@ requests, query context, field controls, business feedback, and list refresh.
   and field-control visuals; this Skill owns package action state, the standard
   bottom action-bar placement, supported modal adapters, and action lifecycle.
 - With filter/sort/group Skills: consume their latest successfully applied query
-  context. Any applied query change clears selection; `groupFilter` composition
-  stays with `make-app-group`.
+  context. Any successfully applied query change clears selection and invalidates
+  pending action work; draft edits and failed saves/queries preserve the current
+  selection. `groupFilter` composition stays with `make-app-group`.
