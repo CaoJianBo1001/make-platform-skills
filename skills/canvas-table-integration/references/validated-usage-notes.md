@@ -187,6 +187,12 @@ Browser validation covered:
 
 The following capabilities still exist in package docs, but are not yet strongly validated by the current downstream sample.
 
+### Numeric decimal-place overflow validation status
+
+The Skill contract is validated by an executable raw-input oracle plus dedicated fresh-agent form and cell-edit scenarios. That validation covers `Number.precision`, `Currency.decimalPlaces`, `Percent.decimalPlaces`, raw plain-decimal text, trailing zeroes, scientific-notation rejection, frontend-only symbols, persistence-request blocking, keeping an invalid cell editor active, external validation guidance, and zero save calls.
+
+This repository does not contain a real downstream Make App browser fixture, so do not describe the Skill-level evidence as browser or production validation. Before reporting a generated app as ready, run the shared behavior vectors against its actual form adapter and CanvasTable editor, then verify the exact-limit and overflow paths in the selected component library. Record any library-specific raw-input mechanism, such as string mode or a wrapper-owned raw buffer, in the downstream test evidence.
+
 ### Group table
 
 Not yet validated here.

@@ -139,7 +139,9 @@ Concrete component expectations:
 
 - text and URL fields: host Input / native input, full-cell, borderless, select current value on focus
 - textarea fields: host TextArea / textarea, full-cell, borderless, no extra `Form.Item`
-- number, currency, and percent fields: host InputNumber / NumberInput / 数字输入框, full-cell, borderless, right-aligned when the table display is right-aligned, `controls={false}` or hidden steppers by default, finite numeric parser before commit. Number editors use `field.properties.precision`; Currency editors use `field.properties.symbol`, `field.properties.decimalPlaces`, and optional `field.properties.useGrouping` for formatter/parser display; Percent editors use `field.properties.decimalPlaces`
+- number, currency, and percent fields: host InputNumber / NumberInput / 数字输入框, full-cell, borderless, right-aligned when the table display is right-aligned, `controls={false}` or hidden steppers by default, raw plain-decimal text validation before finite parsing and commit. Number editors use `field.properties.precision`; Currency editors use `field.properties.symbol`, `field.properties.decimalPlaces`, and optional `field.properties.useGrouping` for formatter/parser display; Percent editors use `field.properties.decimalPlaces`
+
+Number-like editors must use the same separate pure decimal-place helper as Drawer/route forms; the field type registry only supplies normalized metadata. Resolve the maximum from `Make.Field.Number -> precision`, `Make.Field.Currency -> decimalPlaces`, and `Make.Field.Percent -> decimalPlaces`. Preserve the untouched input as diagnostic `rawText`, return `normalizedText = rawText.trim()`, and validate `normalizedText` before finite-number parsing. Only `normalizedText` may become the parsed value or backend-approved pure numeric-string submit value; whitespace-only input normalizes to `""`. Accept only plain decimal text, count trailing zeroes as decimal places, and reject scientific notation plus formatted currency, percent, and grouping text. When the raw text exceeds the limit, reject commit, keep the editor active, show `最多保留 N 位小数` through a tooltip or host external validation surface, and do not call the save API. Do not render helper text inside the cell. Silent rounding is forbidden unless the host project explicitly documents that policy; when explicit rounding applies, update the visible editor value before commit so the user sees the value that will be saved.
 
 ## 5. Attachment editor visual rule
 
@@ -167,7 +169,7 @@ A panel that contains a title, toolbar button, inner bordered list row, and card
 | ID | read-only | none |
 | Text / URL | non-popup inline host Input / 文本输入框, full-cell borderless, select current value on focus | string |
 | TextArea | non-popup inline host TextArea that fills the cell; commit on outside click or explicit key path | string |
-| Number / Currency / Percent | non-popup inline host InputNumber / NumberInput / 数字输入框, borderless, right-aligned display, `controls={false}` or hidden steppers by default; parser failures must not commit or backfill `NaN`; apply `Number.precision`, `Currency.symbol/decimalPlaces/useGrouping`, and `Percent.decimalPlaces` from `field.properties` | finite number |
+| Number / Currency / Percent | non-popup inline host InputNumber / NumberInput / 数字输入框, borderless, right-aligned display, `controls={false}` or hidden steppers by default; parser failures and decimal overflow must not commit or backfill; apply `Number.precision`, `Currency.symbol/decimalPlaces/useGrouping`, and `Percent.decimalPlaces` from `field.properties`; show `最多保留 N 位小数` outside the cell when over the limit | finite number or pure numeric string |
 | Date | popup host DatePicker / 日期选择器 opens immediately; use `field.properties.format` | `YYYY-MM-DD` or host agreed date string |
 | DateTime | popup host DatePicker / 日期时间选择器 opens immediately; use `field.properties.format`; resolve typed input before OK commit | `YYYY-MM-DD HH:mm:ss` or host agreed date-time string |
 | DateRange | popup host RangePicker / 日期区间选择器 opens immediately; use `field.properties.begin` and `field.properties.end` to disable dates outside the allowed range | `{ begin, end }` or host equivalent |
@@ -287,21 +289,25 @@ If normalized old and new values are equal, the host must only close/reset the e
 On commit:
 
 1. Read the current editor value through `updateVal()`.
-2. Compare normalized old value with `nextValue.submitValue` by field type.
-3. If unchanged, close/reset without calling the save API, creating draft state, or calling `setCellData(...)`.
-4. If changed, route the commit to the host draft or immediate-save layer.
-5. In `editApplyMode: "controlled"`, call `setCellData(...)` or `setRowData(...)` only after the host layer accepts the commit.
-6. On save failure, rollback the canvas cell to the old value and surface the error through the host UI.
+2. For Number, Currency, and Percent, read the raw plain-decimal input text and validate the schema decimal limit before parsing, dirty comparison, or any save side effect.
+3. If decimal validation fails, reject commit, keep the editor active, surface `最多保留 N 位小数` through a tooltip or host external validation surface, and do not call the save API, create draft state, or backfill canvas data.
+4. After validation succeeds, parse with a finite-number guard or keep the backend-approved pure numeric string, then compare the normalized old value with `nextValue.submitValue` by field type.
+5. If unchanged, close/reset without calling the save API, creating draft state, or calling `setCellData(...)`.
+6. If changed, route the commit to the host draft or immediate-save layer.
+7. In `editApplyMode: "controlled"`, call `setCellData(...)` or `setRowData(...)` only after the host layer accepts the commit.
+8. On save failure, rollback the canvas cell to the old value and surface the error through the host UI.
 
 The equality check must understand field types. Examples:
 
-- number-like fields compare finite numeric values after parsing and precision normalization; invalid parser results fail validation or cancel according to the host flow, never commit `NaN`
+- number-like fields compare finite numeric values only after raw-text decimal-place validation. Decimal overflow keeps the editor active and never reaches parsing, dirty comparison, or persistence; invalid parser results fail validation and never commit `NaN`
 - date range fields compare normalized `begin` and `end`
 - select fields compare option values, not labels
 - user and department fields compare stable ids
 - file fields compare stable file metadata, not generated local `uid`
 
 Field-property checks are part of edit readiness: verify `precision`, `decimalPlaces`, `symbol`, `format`, `DateRange.begin/end`, and `maxCount` behavior in the editor path, not only in Drawer forms.
+
+The default precision policy is validation, not silent normalization. Do not silently round or clamp extra decimal places unless an explicit host product/backend contract requires it. Form and cell editors must share the same pure validation result so the same input cannot pass one surface and fail the other.
 
 ## 10. Verification checklist
 
@@ -321,6 +327,8 @@ Before reporting an editable Make table as done, verify at least:
 - attachment fields use one connected popup/panel with compact thumbnails and one upload zone, not a nested form card
 - empty attachment editors show only the upload zone, not a fake `-` card or empty list row
 - date range, select, user, department, number, textarea, and file fields echo existing values on entry
+- Number, Currency, and Percent values at the configured decimal limit commit successfully; values one decimal place over the limit keep the editor active, show `最多保留 N 位小数` through the host validation surface, and make zero save API calls
+- form and cell-editor tests apply the same shared pure decimal-place validation cases, including `0`, negative values, numeric strings, trailing zeroes that count toward the limit, scientific notation rejection, and decimal overflow
 - user fields with current values from `{ recordID, name }`, `{ userId, userName }`, one-item arrays, or loaded candidate objects all show the selected person on entry; candidate loading must not blank the editor
 - unchanged close from outside click, picker/dropdown close, same-value selection, Enter, Tab, or `edit:end` fallback does not call save APIs, create dirty state, or backfill table data
 - changed commit sends normalized submit values and backfills accepted render values, not raw ids or formatted display labels

@@ -10,15 +10,23 @@
 
 | 字段类型 | properties | 语义 |
 | --- | --- | --- |
-| `Make.Field.Number` | `precision: Integer` | 数字精度，用于数字输入、展示和提交前归一化。 |
+| `Make.Field.Number` | `precision: Integer` | 最大允许小数位数，用于数字输入、展示和提交前校验。 |
 | `Make.Field.Date` | `format: String` | 日期展示/输入格式，如 `yyyy-MM-dd`、`yyyy/MM/dd`。 |
 | `Make.Field.DateTime` | `format: String` | 日期时间展示/输入格式，如 `yyyy-MM-dd HH:mm:ss`。 |
 | `Make.Field.DateRange` | `begin: Date`, `end: Date` | 日期范围字段允许选择的边界；记录值仍使用结构化范围值。 |
-| `Make.Field.Percent` | `decimalPlaces: Integer` | 百分比展示和输入的小数位数。 |
-| `Make.Field.Currency` | `symbol: String`, `decimalPlaces: Integer`, `useGrouping: Boolean` | 金额符号、小数位和分组展示规则。 |
+| `Make.Field.Percent` | `decimalPlaces: Integer` | 百分比最大允许小数位数，用于输入、展示和提交前校验。 |
+| `Make.Field.Currency` | `symbol: String`, `decimalPlaces: Integer`, `useGrouping: Boolean` | 金额符号、最大允许小数位数和分组展示规则。 |
 | `Make.Field.File` | `maxCount: Integer` | 最大文件数量，默认值为 `1`。FileField 始终是数组语义。 |
 | `Make.Field.MultiUser` | `maxCount: Integer` | 最大用户数量，默认值为 `1000`。 |
 | `Make.Field.MultiDepartment` | `maxCount: Integer` | 最大部门数量，默认值为 `1000`。 |
+
+### 数字类字段小数位契约
+
+- `Make.Field.Number` 的 `precision` 表示记录值最大允许的小数位数。
+- `Make.Field.Currency` 的 `decimalPlaces` 表示金额记录值最大允许的小数位数；`symbol` 和 `useGrouping` 只影响前端展示。
+- `Make.Field.Percent` 的 `decimalPlaces` 表示百分比记录值最大允许的小数位数；百分号只由前端展示。标准数值尺度是直接百分数：记录值 `85.00` 表示 `85%`，Data API、提交值和筛选表达式都使用 `85.00` 这一尺度，前端不得隐式乘除 `100`。
+- 这些属性是下游表单和单元格编辑器的输入约束，不只是展示提示。UI 必须在提交或 commit 之前校验小数位，不能等 Data API 拒绝后才暴露问题。
+- 当 schema 未提供对应属性时，消费方只能使用宿主项目或后端契约已明确记录的默认值；没有明确默认值时不得自行猜测小数位或静默改写用户输入。
 
 # 字段唯一性 | Uniqueness
 

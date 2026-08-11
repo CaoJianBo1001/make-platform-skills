@@ -2,7 +2,7 @@
 name: makeui
 description: Use when designing, generating, refactoring, or reviewing Make App frontend UI and `apps/ui` React UI code. Triggered by makeui, UI, 界面, app shell, layout, component structure, responsive behavior, dynamic object routes, field-metadata rendering, schema field properties, list pages, create/edit/detail drawers, controlled form fields, user/department selectors, and UI states. Requires Make record tables to use `canvas-table-integration`, writable record actions to use `make-app-actions`, advanced filters to use `make-app-filter`, grouping to use `make-app-group`, sorting to use `make-app-sort`, and permission gates to use `make-app-permission`. Does not own auth, build/publish, Service runtime, business APIs, permission logic, persistence, DSL, CanvasTable internals, action semantics, filtering, grouping, or sorting behavior.
 metadata:
-  version: 0.3.52
+  version: 0.3.53
 ---
 
 # makeui
@@ -71,10 +71,11 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 ### UI metadata and states
 
 - Generated UI consumes normalized, host-provided object/field metadata. Do not pass raw backend schema variants directly into table, form, detail, route, or shell components.
-- New Make POC UI must centralize host-owned field type semantics in `apps/ui/src/lib/make-field-types.ts` or an equivalent shared registry. Form controls, detail display, CanvasTable column/render dispatch, and table cell editors consume this registry instead of duplicating `Make.Field.*` string arrays or ad hoc switch statements. The registry must preserve normalized `field.properties` alongside field type hints so generated components can use schema-specific `format`, `precision`, `decimalPlaces`, `maxCount`, `begin`, `end`, `symbol`, and `useGrouping`. The registry must not decide advanced-filter operators, defaults, validation, or value-editor kinds; those come from `@qfei-design/make-app-filter` public APIs.
+- New Make POC UI must centralize host-owned field type semantics in `apps/ui/src/lib/make-field-types.ts` or an equivalent shared registry. Form controls, detail display, CanvasTable column/render dispatch, and table cell editors consume this registry instead of duplicating `Make.Field.*` string arrays or ad hoc switch statements. The registry must preserve normalized `field.properties` alongside field type hints so generated components can use schema-specific `format`, `precision`, `decimalPlaces`, `maxCount`, `begin`, `end`, `symbol`, and `useGrouping`. The registry only exposes normalized field metadata and presentation hints; keep host form/cell validation in separate pure helpers. Advanced-filter operators, defaults, validation, and value-editor kinds come from `@qfei-design/make-app-filter` public APIs, not this registry.
 - `apps/dsl` is a modeling artifact, not a UI runtime dependency. Generated UI must not read `apps/dsl/**`, `/dsl/**`, or copied `*.yaml` files as its field source.
 - If object/field metadata is missing or inconsistent, show a visible UI dependency/error state and report the missing dependency. Do not invent business API paths, parse local DSL, or create fake user/department/business fallback data in `makeui`.
 - Schema, data, route, and render failures must resolve to visible object-shell states: loading, empty, error, forbidden, expired-session, retry, not-found, or render-error. Do not let exceptions become a blank page.
+- `Make.Field.Number`, `Make.Field.Currency`, and `Make.Field.Percent` form adapters must enforce schema decimal limits before submit: `Number.precision`, `Currency.decimalPlaces`, and `Percent.decimalPlaces`. Preserve the raw plain-decimal input text and validate its decimal places before parsing; only then produce a finite number or backend-approved pure numeric string. Decimal overflow must produce a field-level `最多保留 N 位小数` error and block that invalid submit plus its persistence request; unrelated read-only metadata and candidate requests remain available. Do not silently round unless the host project explicitly documents that rounding policy.
 
 ### Form field controlled contract
 

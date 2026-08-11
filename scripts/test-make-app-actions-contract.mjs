@@ -87,7 +87,7 @@ const forwardTestScopeHash = computeForwardTestScopeHash(
     })),
   ),
 );
-const currentForwardTestBatch = '2026-08-11-make-app-actions-0.3.1-r5';
+const currentForwardTestBatch = '2026-08-11-make-app-actions-0.3.1-r8';
 
 const skillBundle = [
   skill,
@@ -402,6 +402,16 @@ assert.match(
   forwardTestRecord,
   /执行日期\s*[:：]\s*\d{4}-\d{2}-\d{2}[\s\S]*(独立|fresh)[^\n]*(Agent|代理)/i,
   'forward-test record must include the execution date and independent-agent method',
+);
+assert.match(
+  forwardTestRecord,
+  /fork_turns\s*[:=：]\s*`?["']?none["']?`?/i,
+  'forward-test record must attest that agents received no parent conversation history',
+);
+assert.doesNotMatch(
+  forwardTestRecord,
+  /(你是|you are)[^\n]*(fresh-agent|测试代理|test agent)/i,
+  'forward-test prompts must not tell agents that they are being evaluated',
 );
 for (const skillName of forwardTestScopeSkillNames) {
   assert.match(

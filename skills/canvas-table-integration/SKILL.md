@@ -2,7 +2,7 @@
 name: canvas-table-integration
 description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Make record lists use make-app-actions for the default selectable record-action workflow. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
 metadata:
-  version: 0.1.10
+  version: 0.1.11
 ---
 
 # canvas-table-integration
@@ -168,6 +168,7 @@ Treat these as safety rules:
 - never render numeric parser failures as `NaN`, `Infinity`, or exception text; normalize them to an empty display value before canvas rendering
 - never accept formatted currency or percent text as the normal backend contract. Values such as strings containing `¥`, `￥`, `%`, or thousands separators are dependency defects; render `-` or surface the data-contract issue instead of silently treating them as API-ready values
 - for Make schema tables, preserve normalized `field.properties` on generated columns/edit configs so renderers and editors can use `Number.precision`, `Date.format`, `DateRange.begin/end`, `Currency.symbol/decimalPlaces/useGrouping`, `Percent.decimalPlaces`, `File.maxCount`, and multi identity `maxCount`
+- number, currency, and percent cell editors must preserve raw plain-decimal input text and enforce `Number.precision`, `Currency.decimalPlaces`, or `Percent.decimalPlaces` before parsing and commit. Decimal overflow keeps the editor active, shows `最多保留 N 位小数` through a tooltip or external validation surface, and must not call the save API; silent rounding is forbidden unless the host project explicitly documents it
 - do not put `aria-hidden` or `inert` on the visual canvas-table host, or on any ancestor that can contain the package-created focusable canvas
 - if a screen-reader fallback table is needed, keep it as a separate visually-hidden structure and give the visual host its own non-hidden accessible label
 - pagination is opt-in: do not add visible pagination controls, page-size selectors, page state, page query params, total-count handling, paginated fetch logic, `virtualOptions`, or `data:load` wiring unless the user explicitly asks for pagination, virtual loading, or paginated backend integration

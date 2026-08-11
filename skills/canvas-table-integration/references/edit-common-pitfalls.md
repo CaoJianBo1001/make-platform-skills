@@ -266,10 +266,13 @@ Symptom:
 Fix:
 
 - read precision metadata such as `precision` or `decimalPlaces`
-- round or validate before commit according to the host backend rule
+- reuse the same shared pure decimal-place validation contract as the form surface
+- preserve raw plain-decimal input text, count trailing zeroes, reject scientific notation and formatted symbols/separators, validate before finite-number parsing, and keep the pure helper separate from the metadata-only field registry
+- validate before commit; when the value exceeds the limit, reject commit, keep the editor active, show `最多保留 N 位小数` through a tooltip or host external validation surface, and do not call the save API
+- do not silently round or clamp by default. Automatic rounding requires an explicit host project product/backend contract and must update the visible editor value before commit
 - require `Number.isFinite` before formatting, committing, or backfilling numeric values
 - render invalid display values as the empty placeholder instead of `NaN`
-- test the normalized submit value, not only the input display
+- test both the accepted boundary value and one-decimal-place overflow for Number, Currency, and Percent; assert zero save API calls on invalid input
 
 ## 23. Using fake identity options in production
 

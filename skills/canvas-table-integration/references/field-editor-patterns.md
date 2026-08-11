@@ -109,8 +109,10 @@ Recommended pattern:
 - keep precision and unit behavior in field metadata or field config: `Make.Field.Number` reads `field.properties.precision`, `Make.Field.Currency` reads `field.properties.symbol`, `field.properties.decimalPlaces`, and optional `field.properties.useGrouping`, and `Make.Field.Percent` reads `field.properties.decimalPlaces`
 - keep the row value and submit value as a finite number or pure numeric string, according to the backend contract
 - put currency, percent, thousands separators, and unit display in the editor formatter or table render layer
-- parse formatted input back to a number before commit
-- round or clamp to backend precision before submit when metadata such as `precision` or `decimalPlaces` is present
+- preserve a raw plain-decimal input buffer for validation; parse to a finite number only after the raw text passes the shared decimal-place contract
+- use one separate shared pure decimal-place helper for both form and cell surfaces; the field registry provides metadata only. Validate raw plain-decimal text before parsing. Count trailing zeroes, reject scientific notation and formatted symbols/separators, then apply `Make.Field.Number.properties.precision`, `Make.Field.Currency.properties.decimalPlaces`, or `Make.Field.Percent.properties.decimalPlaces`. Show `最多保留 N 位小数` on overflow
+- decimal overflow rejects commit, keeps the editor active, and must not call the save API, create dirty state, or backfill canvas data. Surface the error through a tooltip or host external validation area because visible helper text does not belong inside the active cell
+- do not silently round or clamp extra decimal places. Rounding is allowed only when an explicit host project product/backend contract requires it, and the normalized value must be written back into the visible editor before commit
 - parser failures are invalid editor state. Do not commit, backfill, display, or submit `NaN`/`Infinity`; show validation or close/cancel according to the host edit flow.
 
 Typical concerns:
@@ -126,7 +128,7 @@ Good defaults:
 - `Enter` may commit for simple number editors, similar to text fields.
 - `Escape` should cancel without writing the candidate value.
 - Do not pre-format the row data into a display string before it reaches the editor; that often makes initial values and submit payloads brittle.
-- Do not submit formatted values such as `¥3.005`, `3.005%`, or `85%`. If the backend field allows only two decimals, normalize to a finite number or pure numeric string such as `3.01` before calling the save API.
+- Do not submit formatted values such as `¥3.005`, `3.005%`, or `85%`. If the field allows only two decimals, `3.005` is invalid by default: keep editing, show `最多保留 2 位小数`, and do not call the save API. Only an explicitly documented rounding contract may convert it to `3.01`, and that visible value must be confirmed in the editor before commit.
 
 ## 5. Date fields
 

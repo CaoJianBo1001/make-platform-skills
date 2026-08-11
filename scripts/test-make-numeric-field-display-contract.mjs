@@ -25,6 +25,18 @@ const columnPatterns = read(
 );
 const makeuiComponentUsage = read('skills/makeui/references/component-usage.md');
 const dataApiDesign = read('skills/makedsl/references/DataAPIDesign.md');
+const entityDataFilterUsage = read(
+  'skills/makedsl/references/EntityDataFilterUsage.md',
+);
+
+for (const [index, block] of [
+  ...dataApiDesign.matchAll(/```json\n([\s\S]*?)\n```/g),
+].entries()) {
+  assert.doesNotThrow(
+    () => JSON.parse(block[1]),
+    `Data API json block ${index + 1} must be valid copyable JSON`,
+  );
+}
 
 const combined = [
   canvasSkill,
@@ -32,6 +44,7 @@ const combined = [
   columnPatterns,
   makeuiComponentUsage,
   dataApiDesign,
+  entityDataFilterUsage,
 ].join('\n');
 
 assert.match(
@@ -86,6 +99,18 @@ assert.match(
   dataApiDesign,
   /"completionRate":\s*"85\.00"/,
   'Data API examples should return percent as a pure numeric string',
+);
+
+assert.match(
+  entityDataFilterUsage,
+  /Make\.Field\.Percent[^\n]*completionRate\s*<\s*80/,
+  'Percent filter examples must use the same direct percentage-number scale as Data API values',
+);
+
+assert.doesNotMatch(
+  entityDataFilterUsage,
+  /Make\.Field\.Percent[^\n]*completionRate\s*<\s*0\.8/,
+  'Percent filter examples must not switch Data API percentage values to an implicit fraction scale',
 );
 
 console.log('make numeric field display contract passed');
