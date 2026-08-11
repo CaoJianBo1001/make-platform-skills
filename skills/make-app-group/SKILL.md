@@ -2,7 +2,7 @@
 name: make-app-group
 description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. When make-app-actions is present, a successfully applied group must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
 metadata:
-  version: 0.1.2
+  version: 0.1.4
 ---
 
 # make-app-group
@@ -35,9 +35,11 @@ their implementation surfaces.
 6. Establish a permission-aware object context. Load schema and Entity Preset,
    sanitize saved group, and only then choose plain-record or grouped-record
    loading.
-7. Use one host-owned outer Popover/Drawer/Modal with package `RecordGroupPanel`,
-   `useRecordGroupController`, the host component adapter, and a stable `resetKey`
-   token that changes whenever entity or access context changes.
+7. Use one controlled, click/press-opened host Popover/Drawer/Modal with package
+   `RecordGroupPanel`, `useRecordGroupController`, the host component adapter, and
+   a stable `resetKey`. Treat all portalled/teleported child popups as part of the
+   outer interaction boundary; never close from hover, pointer leave, blur, child
+   value selection, or child-overlay close.
 8. Let `onConfirm` persist only `{ group }`, let synchronous `onApplied` replace
    applied group state, and let a separate data lifecycle react to object context
    plus applied filter/sort/group. Always provide `onApplyError`.
@@ -99,8 +101,13 @@ their implementation surfaces.
   A project may add a temporary V1 policy, but this Skill must not encode that as a
   platform rule.
 - Keep applied group and panel draft separate. Editing, dragging, adding,
-  deleting, clearing, outside click, escape, and header `openWithField` must not
-  request groups or records before confirm.
+  deleting, clearing, true outside click, child-overlay interaction, and header
+  `openWithField` must not request groups or records before confirm.
+- The outer grouping overlay is controlled and opens only by explicit click/press,
+  never hover or focus. Close it after confirm succeeds or after a verified true
+  outside pointer interaction. A Select, picker, menu, tooltip, popover, or drag
+  overlay rendered through portal/teleport remains inside the owned interaction
+  boundary and must not close the grouping panel.
 - Use package `useRecordGroupController` with `resetKey`, `onConfirm`,
   synchronous `onApplied`, and required `onApplyError`. Do not put group-data
   requests in `onConfirm` or `onApplied`.

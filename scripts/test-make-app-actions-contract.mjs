@@ -87,7 +87,7 @@ const forwardTestScopeHash = computeForwardTestScopeHash(
     })),
   ),
 );
-const currentForwardTestBatch = '2026-08-11-make-app-actions-0.3.1-r3';
+const currentForwardTestBatch = '2026-08-11-make-app-actions-0.3.1-r5';
 
 const skillBundle = [
   skill,

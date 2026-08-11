@@ -110,3 +110,60 @@ AI 可以按统一规范完成完整分组功能，而不是只接一个弹窗�
   防回归断言，覆盖等价新引用分组配置、详情抽屉交互和父组件状态抖动。
 - 压缩 `canvas-table-integration` 的 frontmatter description，保留分组/排序/Track A/B/C
   触发语义，同时满足 `quick_validate.py` 的 1024 字符限制。
+
+## 2026-08-11 分组弹层交互边界修复
+
+- 明确根因包含两层：宿主把外层 Popover 留在组件库默认 `hover` 触发；以及下拉、日期、
+  菜单等子弹层通过 portal/teleport 脱离外层 DOM 后，被朴素 outside-click 误判为外部区域。
+- 外层分组弹层改为框架无关的受控 click/press 契约，禁止通过 hover、鼠标移出、blur 或
+  focusout 关闭；普通关闭只允许确认成功或经交互边界验证的真实外部点击。
+- 将分组面板和所有宿主子弹层根节点定义为同一交互边界。选值、搜索、滚动、子弹层开关和
+  拖拽只更新草稿或子层状态，不得关闭外层分组面板。
+- 要求优先使用当前组件库公开的 portal 容器、overlay branch、dismissable layer 或 outside
+  include 机制；必要时通过原始事件 `composedPath()` 对已登记根节点分类。禁止用额外的
+  document 全局监听或 `stopPropagation()` 作为主要修复。
+- Ant Design 的 `trigger="click"` 仅作为适配示例，同时补充 Radix/shadcn、MUI、Vue 和
+  其他组件库的等价能力映射，避免把 AntD 属性误写成平台通用协议。
+- Escape 默认不关闭外层；产品显式启用时必须先由最上层子弹层消费，不能一次同时关闭子层
+  和分组面板。
+- 扩充分组契约测试，覆盖 hover/移出/失焦不关闭、portal 子弹层选值不关闭、真实外部点击
+  关闭、Escape 层级顺序及禁止竞争性全局监听。
+
+### TDD、前向验证与回归结果
+
+- 先只增加 `test-make-app-group-contract.mjs` 的弹层契约断言，旧文档按预期在“外层必须
+  受控且禁止 hover/移出/失焦关闭”处失败；补充最小规范后测试通过。
+- 使用独立 fresh Agent 场景 `/root/forward_group_overlay_r1` 直接验证分组面板内 Select、
+  DatePicker 等 portal/teleport 子弹层。Agent 能从当前 Skill 自主恢复受控外层、owned
+  overlay boundary、`composedPath()` 外部判定、确认成功后关闭、失败保持打开，以及
+  AntD、Radix/shadcn、MUI、Vue 的等价适配，结论通过。
+- 因 `make-app-actions` 的组合前向测试范围包含 `make-app-group`，旧范围哈希按设计失效。
+  使用批次 `2026-08-11-make-app-actions-0.3.1-r4` 对当前 8 个关联 Skill 重新执行 7 个
+  互不共享上下文的 fresh Agent 场景，组合哈希为
+  `a861acd2e0bb2a8e51381378b16d0307957f72838cd2aa6f041020099d172ffd`，全部通过。
+- `skill-creator` 的 `quick_validate.py skills/make-app-group` 通过；系统 Python 缺少
+  PyYAML，使用 `/tmp` 临时虚拟环境补齐后校验，临时目录随后已清理。
+- 仓库全部 `scripts/*.mjs` 契约测试通过，包含 metadata lint、分组合同、actions 组合
+  前向门禁、平台通用性、CanvasTable、筛选和排序回归。
+
+### 2026-08-11 Review 问题修复
+
+- 修复分组弹层契约测试的假阳性：原断言使用跨全文贪婪匹配，即使把“子弹层选值不得关闭”
+  改成相反语义，相关关键词仍可能从不相干段落拼接并通过。
+- 新增 Markdown 小节提取，只在 `Outer overlay interaction boundary` 和
+  `UI component tests` 范围内验证对应行为。
+- 将普通关闭原因显式收敛为 `GroupOverlayCloseReason = "confirm-success" |
+  "true-outside-pointer"`，禁止把子弹层 `onOpenChange(false)`、选值、焦点变化或鼠标移出
+  直接映射为外层 `setOpen(false)`。
+- 增加反向突变测试：把 `must not close the outer panel` 改为
+  `must close the outer panel` 后，契约校验必须失败，防止核心 bug 被关键词测试掩盖。
+- `make-app-group` Skill revision 更新为 `0.1.4`。
+- TDD 首次运行按预期失败于缺少 `confirm-success | true-outside-pointer` 关闭原因白名单；
+  补充最小正文模型后，聚焦分组契约通过，反向突变被拒绝。
+- 使用 `/root/forward_group_overlay_r2` 重新执行直接分组弹层 fresh-agent 场景，Agent 能从
+  当前 Skill 自主使用 `GroupOverlayCloseReason`，并拒绝子层 `onOpenChange(false)`、选值、
+  失焦和鼠标移出关闭外层，结论通过。
+- 使用批次 `2026-08-11-make-app-actions-0.3.1-r5` 对当前 8 个关联 Skill 重新执行 7 个
+  fresh-agent 场景；组合哈希为
+  `a436603f7065f9288f0ff5fd5769ca1d3cb8293fcacfa827ef9d41676d469f3b`，全部通过。
+- `quick_validate.py skills/make-app-group` 通过，临时校验环境已清理。

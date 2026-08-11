@@ -198,6 +198,7 @@ npx skills update make-app-group
 - 按运行时 Schema `capabilities.groupable === true` 选择字段，不维护字段类型白名单；Lookup 是否可分组以运行时能力为准，不做平台级一律排除
 - 分组最多三级，字段唯一，数组顺序就是层级
 - 通过 `openWithField(fieldKey, order?)` 将可选 CanvasTable 表头分组入口接入同一个分组面板，确认前不刷新 records 或 record-groups
+- 外层分组弹层必须受控并由 click/press 打开，禁止 hover、移出和失焦关闭；下拉、日期等 portal/teleport 子弹层属于同一交互边界，选值不能关闭分组面板
 - 先读取 Entity Preset 再查询 records 或 root record-groups；确认时先保存 Preset，成功后才应用和刷新，失败保留旧应用态与当前草稿
 - Preset 按维度局部更新：分组只写 `{ group }`，不覆盖 filter 和 sort；Preset 清空使用 `{ group: [] }`
 - Data API 叶子明细回到普通 records 模式时必须省略 `group` 或传 `null`，不得传 `group: []`

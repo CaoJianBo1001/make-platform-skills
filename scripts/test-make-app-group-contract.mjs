@@ -16,6 +16,14 @@ const read = (relativePath) => {
   return fs.readFileSync(filePath, 'utf8');
 };
 
+const readMarkdownSection = (content, heading) => {
+  const marker = `## ${heading}`;
+  const start = content.indexOf(marker);
+  assert.notEqual(start, -1, `Expected Markdown section: ${marker}`);
+  const next = content.indexOf('\n## ', start + marker.length);
+  return content.slice(start, next === -1 ? content.length : next);
+};
+
 const skill = read('skills/make-app-group/SKILL.md');
 const groupModel = read('skills/make-app-group/references/group-model.md');
 const uiAndDrag = read('skills/make-app-group/references/ui-and-drag.md');
@@ -38,6 +46,11 @@ const sortServiceContract = read('skills/make-app-sort/references/service-contra
 const sortTesting = read('skills/make-app-sort/references/testing-and-pitfalls.md');
 const filterSkill = read('skills/make-app-filter/SKILL.md');
 const filterPreset = read('skills/make-app-filter/references/preset-integration.md');
+const outerOverlayInteraction = readMarkdownSection(
+  uiAndDrag,
+  'Outer overlay interaction boundary',
+);
+const uiComponentTests = readMarkdownSection(testing, 'UI component tests');
 
 const groupSkillBundle = [
   skill,
@@ -203,6 +216,80 @@ assert.match(
   uiAndDrag,
   /(group-data|records|record-groups|group request)[\s\S]*(must not|不得|不)[\s\S]*(onApplied|confirm)/i,
   'group data requests must not run inside onConfirm/onApplied',
+);
+const assertOuterOverlayInteractionContract = (section) => {
+  assert.match(
+    section,
+    /(controlled|受控)[\s\S]{0,240}(click|press)[\s\S]{0,240}(never|must not|不得)[\s\S]{0,160}(hover|mouseenter|mouseleave|blur|focusout)/i,
+    'the outer grouping overlay must be controlled and must not use hover, pointer-leave, or focus-loss dismissal',
+  );
+  assert.match(
+    section,
+    /(?:Opening or closing a child[\s\S]{0,220}|choosing a value[\s\S]{0,180})(?:must not close the outer panel|keeps? the outer (?:grouping )?panel open)/i,
+    'child-overlay value selection must keep the outer grouping panel open',
+  );
+  assert.doesNotMatch(
+    section,
+    /(?:child-overlay (?:interaction|close)|value selection|choosing a value)[\s\S]{0,220}(?:must close|closes) the outer/i,
+    'child-overlay interactions must never be documented as an outer close reason',
+  );
+  const closeReasonDeclaration = section.match(
+    /type GroupOverlayCloseReason\s*=([\s\S]*?);/,
+  );
+  assert.ok(
+    closeReasonDeclaration,
+    'the ordinary close path must declare GroupOverlayCloseReason',
+  );
+  const closeReasons = [...closeReasonDeclaration[1].matchAll(/["']([^"']+)["']/g)]
+    .map((match) => match[1]);
+  assert.deepEqual(
+    closeReasons,
+    ['confirm-success', 'true-outside-pointer'],
+    'the ordinary close reason allowlist must contain exactly confirm-success and true-outside-pointer',
+  );
+  assert.match(
+    section,
+    /event\.composedPath\(\)[\s\S]{0,320}(registered panel and child roots|panel nor any registered child-overlay root)/i,
+    'true outside classification must use the original event path and registered owned roots',
+  );
+  assert.match(
+    section,
+    /(Ant Design|AntD)[\s\S]*trigger=["']click["'][\s\S]{0,360}(adapter example|适配示例)[\s\S]{0,120}(not[\s\S]{0,40}(generic contract|platform rule)|不是通用|非通用)/i,
+    'Ant Design trigger="click" must be documented as one adapter example, not the generic platform contract',
+  );
+  assert.doesNotMatch(
+    section,
+    /(?:onMouseLeave|onBlur|onFocusOut)\s*=|trigger=["'](?:hover|focus)["']/i,
+    'grouping guidance must not show hover, focus, mouse-leave, or blur close recipes',
+  );
+};
+
+assertOuterOverlayInteractionContract(outerOverlayInteraction);
+
+const contradictoryOverlayInteraction = outerOverlayInteraction.replace(
+  'must not close the outer panel',
+  'must close the outer panel',
+);
+assert.notEqual(
+  contradictoryOverlayInteraction,
+  outerOverlayInteraction,
+  'the contradiction mutation must replace the child-overlay close invariant',
+);
+assert.throws(
+  () => assertOuterOverlayInteractionContract(contradictoryOverlayInteraction),
+  /child-overlay value selection must keep the outer grouping panel open/,
+  'the contract validator must reject guidance that closes after child-overlay interaction',
+);
+
+assert.match(
+  uiComponentTests,
+  /selecting[\s\S]{0,120}closing a child overlay[\s\S]{0,120}keeps the grouping[\s\S]{0,40}panel open/i,
+  'the UI test matrix must keep child-overlay selection and close interactions open',
+);
+assert.match(
+  uiComponentTests,
+  /true outside pointer interaction closes and discards the draft/i,
+  'the UI test matrix must cover verified outside dismissal',
 );
 
 assert.match(
