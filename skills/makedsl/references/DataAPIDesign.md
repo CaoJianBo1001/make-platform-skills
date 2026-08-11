@@ -355,9 +355,9 @@ Response Body
     ],
     "owner": [
       {
-        "userId": "101", //字符串形式的用户ID
-        "userName": "负责人A", //用户名称
-        "avatar": "https://example.com/avatar-a.png" //用户头像链接
+        "userId": "101",
+        "userName": "负责人A",
+        "avatar": "https://example.com/avatar-a.png"
       }
     ],
     "members": [
@@ -374,8 +374,8 @@ Response Body
     ],
     "ownerDepartment": [
       {
-        "departmentId": "201", //字符串形式的部门ID
-        "departmentName": "销售部" //部门名称
+        "departmentId": "201",
+        "departmentName": "销售部"
       }
     ],
     "relatedDepartments": [
@@ -894,7 +894,7 @@ Response Body
 | `Make.Field.URL`           | `"https://example.com/projects/1"`                                                                                                                     | URL 字符串                                                            |
 | `Make.Field.Number`        | `95.5`                                                                                                                                                 | 按 number 处理                                                        |
 | `Make.Field.Currency`      | `"1999.00"`                                                                                                                                            | 前后端交互保持数字或纯数字字符串；货币符号由前端按字段类型展示                                 |
-| `Make.Field.Percent`       | `"85.00"`                                                                                                                                              | 前后端交互保持数字或纯数字字符串；`%` 由前端按字段类型展示                                  |
+| `Make.Field.Percent`       | `"85.00"`                                                                                                                                              | 前后端交互和筛选均使用直接百分数尺度；`85.00` 表示 `85%`，`%` 由前端按字段类型展示，不隐式乘除 `100` |
 | `Make.Field.Date`          | `"2026-02-24"`                                                                                                                                         | 按 string 理解                                                        |
 | `Make.Field.DateTime`     | `"2026-02-24 17:00:00"`                                                                                                                                | 按 string 理解                                                        |
 | `Make.Field.DateRange`    | `{"begin":"2026-02-24","end":"2026-03-31"}`                                                                                                            | 固定对象结构                                                             |

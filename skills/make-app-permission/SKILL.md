@@ -1,8 +1,8 @@
 ---
 name: make-app-permission
-description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission management and frontend permission enforcement. Triggered by 权限, 单应用权限, app 权限, /principal/permission, /api/make/app/principal/permission, 按钮权限, 菜单权限, 路由权限, 字段可见, 字段可编辑, read/create/update/delete, data.record.*, meta.field.*, route guard, refresh permission, or preventing URL permission bypass. Covers the default required permission chain for Make projects: Service proxy to Make IAM, app-scope permission payloads, schema-vs-permission separation, route/menu guards, operation buttons, field visibility/editability, cell edit, form field filtering, refresh reload, tests, and audit. Does not own platform-admin permissions, auth mechanics, generic Service APIs, UI layout, CanvasTable internals, DSL modeling, Make CLI deploy, or runtime packaging."
+description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission management and frontend permission enforcement. Triggered by 权限, 单应用权限, app 权限, /principal/permission, /api/make/app/principal/permission, 按钮权限, 菜单权限, 路由权限, 字段可见, 字段可编辑, read/create/update/delete/bulkUpdate, data.record.*, meta.field.*, route guard, refresh permission, or preventing URL permission bypass. Covers the default required permission chain for Make projects: Service proxy to Make IAM, app-scope permission payloads, schema-vs-permission separation, route/menu guards, operation buttons, field visibility/editability, cell edit, form field filtering, refresh reload, tests, and audit. Use make-app-actions for Canvas record selection, independent action behavior, row precheck, and batch editing. Does not own platform-admin permissions, auth mechanics, generic Service APIs, UI layout, CanvasTable internals, DSL modeling, Make CLI deploy, or runtime packaging."
 metadata:
-  version: 0.1.2
+  version: 0.1.4
 ---
 
 # make-app-permission
@@ -33,8 +33,8 @@ This skill owns the permission contract. Use `make-app-auth` for login/session, 
 - Use schema for authorized menus, objects, and structural field definitions after backend permission trimming. Field visibility is `meta.field.read`; field editability is `meta.field.update`.
 - Add App/router guards. Hiding menus is not enough: direct URL access must not enter unauthorized Apps, objects, or fixed business routes.
 - Gate list/detail data reads with `data.record.read`.
-- Gate create/update/delete buttons with `data.record.create`, `data.record.update`, and `data.record.delete`.
-- Do not use editable field count to decide create/edit button visibility. If `data.record.create` or `data.record.update` is allowed, show the matching entry even when every visible field is readonly.
+- Gate create/update/delete/batch-edit buttons with `data.record.create`, `data.record.update`, `data.record.delete`, and `data.record.bulkUpdate`. The update, delete, and bulkUpdate keys are independent; never infer one from another. Use `make-app-actions` for selection/action behavior and row-write precheck timing.
+- For create and single-edit buttons, do not use editable field count to decide visibility. If `data.record.create` or `data.record.update` is allowed, show the matching entry even when every visible field is readonly. Batch edit is different: `make-app-actions` may hide it when no field remains after batch-edit permission and capability filtering.
 - Gate field rendering with `meta.field.read`: invisible fields are not rendered in list, detail, filter, create form, edit form, or cell editor candidates.
 - Gate field editing with `meta.field.update`: visible but non-editable fields render readonly/disabled in forms, have no cell editor, skip required validation, and are excluded from submit payloads.
 - Filter form and custom-page payloads before submit so unauthorized fields are not sent.
@@ -56,6 +56,7 @@ This skill owns the permission contract. Use `make-app-auth` for login/session, 
 | Generic Service API layering and docs | Use `make-app-service` |
 | UI shell and visual layout | Use `makeui` |
 | CanvasTable cell editor mechanics | Use `canvas-table-integration` |
+| Canvas record action bar, independent edit/delete/batch edit, row precheck | Use `make-app-actions` |
 | Runtime gateway origin, build, publish readiness | Use `make-app-runtime` |
 
 ## Audit

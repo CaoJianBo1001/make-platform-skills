@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(process.argv[2] ?? path.join(scriptDir, '..'));
 const skillsDir = path.join(repoRoot, 'skills');
+const MAX_DESCRIPTION_LENGTH = 1024;
 
 const cleanScalar = (rawValue) => {
   const value = rawValue.trim();
@@ -120,6 +121,13 @@ for (const relativePath of entryFiles) {
 
   for (const [field, value] of requiredFields) {
     if (!value) failures.push(`${relativePath}: ${field} is required`);
+  }
+
+  const description = topLevelValue(lines, 'description');
+  if ([...description].length > MAX_DESCRIPTION_LENGTH) {
+    failures.push(
+      `${relativePath}: description exceeds ${MAX_DESCRIPTION_LENGTH} characters`,
+    );
   }
 }
 

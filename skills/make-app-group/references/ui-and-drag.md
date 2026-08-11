@@ -45,6 +45,73 @@ as the only feedback for an entity that cannot be grouped.
 Toolbar order belongs to `makeui`; for list pages it should be search, filter,
 group, sort, refresh when those capabilities are enabled.
 
+## Outer overlay interaction boundary
+
+Keep the outer grouping overlay controlled. Open it from an explicit click or
+press. Never derive its `open` state from `hover`, `mouseenter`, `mouseleave`,
+focus, `blur`, or `focusout`; moving the pointer or focus between the panel and a
+child popup must not close the panel.
+
+Treat the panel and every overlay it owns as one interaction boundary. A Select,
+DatePicker, cascader, menu, tooltip, popover, color picker, or drag overlay may be
+rendered through a portal or teleport outside the panel DOM subtree, but its popup
+root remains inside the owned interaction boundary. Opening or closing a child
+overlay, choosing a value, searching its options, scrolling it, or dragging a
+group rule updates only child or draft state and must not close the outer panel.
+
+Allow an ordinary user dismissal only when:
+
+- the controller's confirm flow succeeds; or
+- an outside-interaction is a true outside pointer interaction, meaning its event
+  path belongs to neither the panel nor any registered child-overlay root. Close
+  and `discardDraft()` on this path.
+
+Use an explicit close-reason allowlist in the host adapter:
+
+```ts
+type GroupOverlayCloseReason =
+  | "confirm-success"
+  | "true-outside-pointer";
+```
+
+Only these reasons may enter the ordinary close path. Do not map a raw child
+`onOpenChange(false)`, value change, focus change, or pointer leave directly to
+the outer `setOpen(false)`.
+
+Preset failure, validation failure, child-overlay close, value selection,
+pointer leave, and focus transfer are not outer close reasons. Context reset,
+permission loss, and unmount may still tear down the surface as lifecycle events.
+Outer Escape dismissal is off by default. A product may explicitly opt in; then
+the topmost child overlay consumes Escape first, and only an Escape with no child
+overlay open may discard and close the grouping panel.
+
+Use the installed component library's public nested-overlay facilities. Prefer a
+host-owned portal container inside the boundary, or register portalled content as
+an overlay branch/owned layer with the library's dismissable layer. If the
+library exposes only an outside callback, classify the original pointer event
+from `event.composedPath()` against registered panel and child roots before a
+child popup unmounts. Do not add a competing document-level outside-click
+listener or use `stopPropagation()` as the primary fix; both break nested-layer,
+keyboard, and focus behavior easily.
+
+Translate the contract through the active UI library rather than copying one
+library's props:
+
+- Ant Design / AntD: use a controlled outer Popover with `trigger="click"`; route
+  child popups through the adapter or ConfigProvider's public popup-container API
+  so the parent treats them as owned. This is an adapter example, not the generic
+  contract or a platform rule.
+- Radix/shadcn-style primitives: use controlled roots plus their public Portal
+  container or nested dismissable-layer/branch mechanism.
+- MUI-style components: use controlled Popover/Menu state plus their public
+  container, portal, and click-away composition mechanisms.
+- Vue and other UI libraries: use the equivalent teleport/append target or
+  outside-interaction include list so owned child roots remain inside.
+
+When the component library has no safe nested-overlay composition API, prefer a
+Drawer or Modal that contains the grouping panel and its child portal root. Do not
+fall back to hover-driven Popover behavior.
+
 ## Controller contract
 
 Use `useRecordGroupController`:
@@ -76,9 +143,10 @@ Rules:
 - `resetKey` must be a stable token for the current entity/access generation, not a
   new object on every render.
 
-Panel opening calls `beginDraft()`. Outside close, escape, or trigger close calls
-`discardDraft()`. Save failure preserves previous applied group, keeps the draft,
-and displays a local error.
+Panel opening calls `beginDraft()`. A verified true outside close calls
+`discardDraft()`. Confirm success closes after apply; save failure preserves the
+previous applied group, keeps the draft and panel open, and displays a local
+error.
 
 ## Draft behavior
 

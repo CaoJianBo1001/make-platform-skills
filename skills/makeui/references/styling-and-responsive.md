@@ -24,6 +24,23 @@ For app shells and list pages:
 
 For list pages, the table region scrolls. For long side navigation, the sidebar navigation area scrolls. For drawers, the Drawer body scrolls. For route pages, the content region may scroll. The `body`, app root, shell, workspace, and list-page containers are not acceptable scroll containers for normal object-list browsing.
 
+## Overlay stacking and clipping
+
+Popup controls such as `Select`, `DatePicker`, `Popover`, and identity pickers
+must use a portal or `getPopupContainer`-style hook when their owning Modal,
+Drawer, panel, or scroll region contains an `overflow: hidden` / `overflow: auto`
+clipping ancestor. Mount them outside that ancestor, then keep the popup in the
+owning overlay's stacking context or assign a z-index above the owning surface
+and mask. Never treat a larger z-index inside the clipped ancestor as a fix.
+
+Verify the popup at the top, bottom, left, and right edges of the owning surface.
+Its border, final option, and date panel must remain visible, and scrolling the
+Modal/Drawer body must not clip or bury the popup.
+
+Use the installed design system's overlay API rather than standardizing on an
+AntD-specific prop. Also verify focus return, keyboard navigation, Escape
+ordering, and outside-click handling; visual z-index success alone is not enough.
+
 ## Density and spacing
 
 Make App pages are operational tools, not landing pages.

@@ -1,8 +1,8 @@
 ---
 name: make-app-sort
-description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list sorting with @qfei-design/make-app-sort. Triggered by 排序, 高级排序, 多字段排序, 排序优先级, 升序/降序, 排序条件拖拽, 表格/表头/列头排序, openWithField, sortable capabilities, Entity Preset sort save/load/echo, records sort payloads, or sorting tests. Covers one integrated toolbar, CanvasTable header, Entity Preset, and Service sorting flow. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, npm package internals, or grouping."
+description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list sorting with @qfei-design/make-app-sort. Triggered by 排序, 高级排序, 多字段排序, 排序优先级, 升序/降序, 排序条件拖拽, 表格/表头/列头排序, openWithField, sortable capabilities, Entity Preset sort save/load/echo, records sort payloads, or sorting tests. Covers one integrated toolbar, CanvasTable header, Entity Preset, and Service sorting flow. When make-app-actions is present, a successfully applied sort must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, npm package internals, or grouping."
 metadata:
-  version: 0.1.3
+  version: 0.1.4
 ---
 
 # make-app-sort
@@ -34,8 +34,12 @@ surfaces.
 8. In Service, parse raw PATCH and records input with a strict transport parser,
    validate fields against current runtime schema, then forward the ordered value
    to Make Data. Tolerant sanitization is only for saved/upstream reads.
-9. Add the model, UI, header, Preset, permission, concurrency, Service, and stale
-   request tests listed in the testing reference.
+9. When the writable list uses `make-app-actions`, hand off the successfully
+   applied sort generation so actions clear selection and invalidate pending
+   precheck/submit work before the new query is actionable. Draft edits, cancel,
+   and save/apply failure preserve the current action selection.
+10. Add the model, UI, header, Preset, permission, concurrency, Service, stale
+    request, and conditional action-selection tests listed in the testing reference.
 
 ## Topic reference map
 
@@ -52,6 +56,7 @@ surfaces.
 | Object/list access policy and permission gates | Use `make-app-permission` |
 | Advanced-filter state and Preset filter persistence | Use `make-app-filter` |
 | Grouping state, Preset group, record-groups, groupFilter | Use `make-app-group` |
+| Writable-list selection actions and applied-query invalidation | Use `make-app-actions` |
 
 ## Non-negotiable invariants
 
@@ -80,6 +85,10 @@ surfaces.
 - Package helpers own UI model/draft behavior. Service owns strict raw-input parsing;
   never use tolerant sanitization to accept an invalid PATCH or records query.
 - Search remains session-only. Do not persist keyword search in Entity Preset.
+- If `make-app-actions` is present, only a successfully applied sort generation
+  clears its selection and invalidates pending action work. Draft edits, panel
+  cancel, validation failure, Preset save failure, and failed list queries do not
+  clear or redefine the current action selection.
 - Add safe boundary logs at UI-Service adapters and Service route/adapters for
   entry, success, failure, and stale-result branches. Never log cookies, tokens,
   secrets, Authorization, or full sensitive record data.
@@ -105,3 +114,8 @@ Preset `group` writes. Sparse sort updates preserve the existing group dimension
 - With `make-app-group`: group and sort share one Entity Preset lifecycle but
   update dimensions independently. Sort applies to ordinary records and grouped
   leaf records, while grouping-mode record-groups requests ignore ordinary sort.
+- With `make-app-actions`: only for writable lists using the action workflow,
+  hand off a successfully applied sort generation before the new query becomes
+  actionable so actions clear selection and invalidate pending work. Draft and
+  failure paths preserve selection; this Skill does not manipulate CanvasTable
+  selection APIs directly.

@@ -1,8 +1,8 @@
 ---
 name: canvas-table-integration
-description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
+description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Make record lists use make-app-actions for the default selectable record-action workflow. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
 metadata:
-  version: 0.1.7
+  version: 0.1.11
 ---
 
 # canvas-table-integration
@@ -28,15 +28,16 @@ Hard Track B rule: every CanvasTable cell edit / 单元格编辑 implementation 
 5. Read only the base-track references and, when editing is in scope, the Track B references from the topic map.
 6. Start from the package recipe/example when available, then adapt with the smallest project-local diff.
 7. Enable table row defaults unless the user explicitly opts out: `showSN` sequence numbers plus a hover-revealed open-detail action through `bodyRowHeadSuffixOptions`.
-8. For Make schema tables, apply the platform field-renderer defaults. Text-bearing overflow must show ellipsis, and tooltip is enabled by default only for ellipsized overflow or hidden `+N` content; do not require the user to ask for it.
-9. When the object/entity/schema key changes, reset table interaction state and scroll position. Do not carry the previous object's horizontal or vertical scroll into the next object.
-10. Keep table initialization independent of row count: create the table after container size plus schema/columns are ready, then apply the latest rows with `setData(latestRows)` in local mode. In virtual mode, select the page-only or identity-aware callback from the installed public docs and preserve its page/request contract. Empty rows remain valid and must still render headers and the empty state.
-11. For large-data, fast-scroll, or scrollbar-drag virtual loading, follow `references/virtual-table-patterns.md`; installed-contract selection, request identity, bounded scheduling, stale-request cancellation, pending-page release, atomic total/page writes, and cache limits are delivery requirements for that path.
-12. If Track B is in scope, verify the mandatory cell-edit standard before finishing; a non-standard cell editor is not a shippable partial result.
-13. Add only the capabilities the user explicitly needs now; pagination, selection, sorting, grouping, and editing are not defaults.
-14. When table-header sorting is requested, use this Skill only for the documented header menu/suffix mechanics and route sorting behavior, `openWithField`, Preset, and records timing to `make-app-sort`.
-15. When Make record-list grouping is requested, use this Skill only for `GroupTableComponent` public API mechanics and route grouping behavior, Preset, `record-groups`, `groupFilter`, and leaf-page timing to `make-app-group`.
-16. Before finishing, read the relevant pitfalls reference and verify one concrete table path.
+8. For every writable Make record list, enable multiple selection and route the default edit/delete/batch-edit action workflow to `make-app-actions`. Only an explicitly read-only list opts out.
+9. For Make schema tables, apply the platform field-renderer defaults. Text-bearing overflow must show ellipsis, and tooltip is enabled by default only for ellipsized overflow or hidden `+N` content; do not require the user to ask for it.
+10. When the object/entity/schema key changes, reset table interaction state and scroll position. Do not carry the previous object's horizontal or vertical scroll into the next object.
+11. Keep table initialization independent of row count: create the table after container size plus schema/columns are ready, then apply the latest rows with `setData(latestRows)` in local mode. In virtual mode, select the page-only or identity-aware callback from the installed public docs and preserve its page/request contract. Empty rows remain valid and must still render headers and the empty state.
+12. For large-data, fast-scroll, or scrollbar-drag virtual loading, follow `references/virtual-table-patterns.md`; installed-contract selection, request identity, bounded scheduling, stale-request cancellation, pending-page release, atomic total/page writes, and cache limits are delivery requirements for that path.
+13. If Track B is in scope, verify the mandatory cell-edit standard before finishing; a non-standard cell editor is not a shippable partial result.
+14. Add only the capabilities the user explicitly needs now. Pagination, sorting, grouping, and cell editing remain opt-in; Make record-list selection actions are the default through `make-app-actions`.
+15. When table-header sorting is requested, use this Skill only for the documented header menu/suffix mechanics and route sorting behavior, `openWithField`, Preset, and records timing to `make-app-sort`.
+16. When Make record-list grouping is requested, use this Skill only for `GroupTableComponent` public API mechanics and route grouping behavior, Preset, `record-groups`, `groupFilter`, and leaf-page timing to `make-app-group`.
+17. Before finishing, read the relevant pitfalls reference and verify one concrete table path.
 
 ## Do not use this skill for
 
@@ -82,6 +83,7 @@ If an existing Make record list uses another table component, the expected integ
 | --- | --- |
 | Public props, methods, events, setup, cleanup | `references/core-props-methods-events.md` |
 | Row-head sequence number or open-detail action | `references/row-head-action-patterns.md` |
+| Make record-list default selection and edit/delete/batch-edit actions | Use `make-app-actions` |
 | Virtual loading, paginated backend integration, large-data fast scrolling, or scrollbar dragging | `references/virtual-table-patterns.md` |
 | Schema/meta to `IColumn[]` | `references/column-patterns.md` |
 | Custom clickable cell shapes | `references/shape-render-patterns.md` |
@@ -166,6 +168,7 @@ Treat these as safety rules:
 - never render numeric parser failures as `NaN`, `Infinity`, or exception text; normalize them to an empty display value before canvas rendering
 - never accept formatted currency or percent text as the normal backend contract. Values such as strings containing `¥`, `￥`, `%`, or thousands separators are dependency defects; render `-` or surface the data-contract issue instead of silently treating them as API-ready values
 - for Make schema tables, preserve normalized `field.properties` on generated columns/edit configs so renderers and editors can use `Number.precision`, `Date.format`, `DateRange.begin/end`, `Currency.symbol/decimalPlaces/useGrouping`, `Percent.decimalPlaces`, `File.maxCount`, and multi identity `maxCount`
+- number, currency, and percent cell editors must preserve raw plain-decimal input text and enforce `Number.precision`, `Currency.decimalPlaces`, or `Percent.decimalPlaces` before parsing and commit. Decimal overflow keeps the editor active, shows `最多保留 N 位小数` through a tooltip or external validation surface, and must not call the save API; silent rounding is forbidden unless the host project explicitly documents it
 - do not put `aria-hidden` or `inert` on the visual canvas-table host, or on any ancestor that can contain the package-created focusable canvas
 - if a screen-reader fallback table is needed, keep it as a separate visually-hidden structure and give the visual host its own non-hidden accessible label
 - pagination is opt-in: do not add visible pagination controls, page-size selectors, page state, page query params, total-count handling, paginated fetch logic, `virtualOptions`, or `data:load` wiring unless the user explicitly asks for pagination, virtual loading, or paginated backend integration
@@ -173,6 +176,7 @@ Treat these as safety rules:
 - virtual loading failures and cancellations must release the package pending-page marker through the installed package's documented public API; large-data or fast-scroll paths must also use a bounded host scheduler instead of firing every transient viewport page immediately
 - sorting is opt-in: when requested, expose header asc/desc only through the host's documented CanvasTable header menu/suffix API, then call the shared `make-app-sort` controller. Do not sort records locally, keep separate header sort state, or call records directly from a header action
 - grouping is opt-in: for Make record lists, use `make-app-group` for the package panel, Preset, Service, `groupFilter`, and records timing. This Skill may instantiate `GroupTableComponent` and wire `group:load` / `group:data:load`, but must not define grouping semantics itself
+- Make record actions are default: this Skill wires public selection snapshots, `clearSelection`, supported Shift/select-all behavior, and row colors; `make-app-actions` owns action state, permissions, precheck, batch modal, and mutation timing. Under the CanvasTable 1.3.0 contract, `GroupTableComponent` does not support Shift range selection; do not emulate it in the host
 
 ## Detailed workflows and maintenance references
 

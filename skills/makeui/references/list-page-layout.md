@@ -100,7 +100,11 @@ Recommended placement:
 - sort: after group and before refresh; use `make-app-sort` for the component, Preset, records, drag, and header linkage
 - column settings: near the table's right side or after sort/group
 - import/export: right action group, usually left of create/new or inside a more-actions menu
-- batch actions: appear only after rows are selected, in a selection-state toolbar above the table
+- writable Make record actions: use `make-app-actions`; its standard selection bar
+  appears only after rows are selected and stays centered near the bottom of the
+  table viewport, above summary/scroll affordances without changing table geometry
+- non-Make custom batch actions: follow the host's established placement; do not
+  override the Make action-bar contract
 - pagination: bottom-right or bottom-center inside the list/table container; do not reserve pagination space when pagination is not requested
 
 Do not add optional actions as decorative placeholders.
@@ -157,7 +161,11 @@ Default CanvasTable row behavior for every table unless the user explicitly says
 - normal state shows only the sequence number; row hover or keyboard focus reveals the detail icon
 - clicking the open-detail icon opens the row detail Drawer or the project's established detail surface
 - do not make the whole row a default detail trigger unless the user or existing project pattern requires it
-- do not enable row selection by default; enable it only when the user asks for selection, batch actions, or multi-record operations
+- writable Make record lists enable multiple selection by default through
+  `make-app-actions`; opt out only for an explicitly rejected action workflow or
+  an object/product that is strictly read-only, not merely for a user with no
+  available actions
+- non-Make and strictly read-only tables keep row selection opt-in
 
 ## Density
 

@@ -93,6 +93,47 @@ try {
 
   assert.match(runAudit(goodRoot), /status: PASS/);
 
+  const validFieldEditGates = [
+    {
+      name: 'cell-editable-field-count',
+      source: 'const cellEditable = canEditCell && updateEditableFieldKeys.size > 0;',
+    },
+    {
+      name: 'entity-field-editable-count',
+      source: 'const fieldEditable = canEditEntityField && updateEditableFieldKeys.size > 0;',
+    },
+    {
+      name: 'create-cell-editable-count',
+      source: 'const createCellEnabled = canCreateCell && updateEditableFieldKeys.size > 0;',
+    },
+    {
+      name: 'cell-editor-on-edit',
+      source: '<CellEditor onEdit={canEditCell && updateEditableFieldKeys.size > 0 ? commitCellEdit : undefined} />;',
+    },
+    {
+      name: 'independent-action-and-field-objects',
+      source: `
+        function buildUi() {
+          const recordAction = { key: 'edit', visible: true };
+          const fieldConfig = { visible: canEdit && updateEditableFieldKeys.size > 0 };
+          return { recordAction, fieldConfig };
+        }
+      `,
+    },
+  ];
+
+  for (const validGate of validFieldEditGates) {
+    const validGateRoot = createFixture(validGate.name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel,
+      router: goodFiles.router,
+      page: `${goodFiles.page}\n${validGate.source}`,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.doesNotMatch(runAudit(validGateRoot), /edit_entry_depends_on_editable_fields/);
+  }
+
   const missingPermissionRoot = createFixture('missing-permission', {
     app: `export function App() { return <AuthGate><MdmSchemaProvider><AppRouter /></MdmSchemaProvider></AuthGate>; }`,
     permissionModel: `export const DATA_RECORD_READ = 'data.record.read';`,
@@ -142,6 +183,110 @@ try {
     service: goodFiles.service,
   });
   assert.match(runAudit(editDependsOnEditableFieldsRoot, { expectFailure: true }), /edit_entry_depends_on_editable_fields/);
+
+  const invalidEditableFieldGates = [
+    {
+      name: 'edit-parenthesized-fields',
+      source: 'onEdit={canUpdateRecord ? openEdit : undefined}',
+      replacement: 'onEdit={canUpdateRecord && (updateEditableFieldKeys.size > 0) ? openEdit : undefined}',
+      failure: /edit_entry_depends_on_editable_fields/,
+    },
+    {
+      name: 'edit-boolean-fields',
+      source: 'onEdit={canUpdateRecord ? openEdit : undefined}',
+      replacement: 'onEdit={canUpdateRecord && Boolean(updateEditableFieldKeys.size > 0) ? openEdit : undefined}',
+      failure: /edit_entry_depends_on_editable_fields/,
+    },
+    {
+      name: 'edit-fields-first',
+      source: 'onEdit={canUpdateRecord ? openEdit : undefined}',
+      replacement: 'onEdit={(updateEditableFieldKeys.size > 0) && canUpdateRecord ? openEdit : undefined}',
+      failure: /edit_entry_depends_on_editable_fields/,
+    },
+    {
+      name: 'edit-generic-can-update',
+      source: 'onEdit={canUpdateRecord ? openEdit : undefined}',
+      replacement: 'onEdit={canUpdate && updateEditableFieldKeys.size > 0 ? openEdit : undefined}',
+      failure: /edit_entry_depends_on_editable_fields/,
+    },
+    {
+      name: 'edit-generic-can-edit',
+      source: 'onEdit={canUpdateRecord ? openEdit : undefined}',
+      replacement: 'onEdit={canEdit && updateEditableFieldKeys.size > 0 ? openEdit : undefined}',
+      failure: /edit_entry_depends_on_editable_fields/,
+    },
+    {
+      name: 'edit-multiline-generic-handler',
+      source: 'onEdit={canUpdateRecord ? openEdit : undefined}',
+      replacement: `onEdit={
+        canUpdate && updateEditableFieldKeys.size > 0
+          ? launchEditor
+          : undefined
+      }`,
+      failure: /edit_entry_depends_on_editable_fields/,
+    },
+    {
+      name: 'edit-record-gate-with-cell-condition',
+      source: 'onEdit={canUpdateRecord ? openEdit : undefined}',
+      replacement: 'onEdit={canUpdate && updateEditableFieldKeys.size > 0 && canEditCell ? openEdit : undefined}',
+      failure: /edit_entry_depends_on_editable_fields/,
+    },
+    {
+      name: 'create-parenthesized-fields',
+      source: 'onCreate={canCreateRecord ? openCreate : undefined}',
+      replacement: 'onCreate={canCreateRecord && (updateEditableFieldKeys.size > 0) ? openCreate : undefined}',
+      failure: /create_entry_depends_on_editable_fields/,
+    },
+  ];
+
+  for (const invalidGate of invalidEditableFieldGates) {
+    const invalidGateRoot = createFixture(invalidGate.name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel,
+      router: goodFiles.router,
+      page: goodFiles.page.replace(invalidGate.source, invalidGate.replacement),
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.match(runAudit(invalidGateRoot, { expectFailure: true }), invalidGate.failure);
+  }
+
+  const editActionDependsOnEditableFieldsRoot = createFixture('edit-action-depends-on-editable-fields', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: `${goodFiles.page}
+      const recordActions = [{
+        key: 'edit',
+        visible: canEdit && updateEditableFieldKeys.size > 0,
+        meta: { source: 'toolbar' },
+        onClick: openEdit,
+      }];
+    `,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(editActionDependsOnEditableFieldsRoot, { expectFailure: true }),
+    /edit_entry_depends_on_editable_fields/,
+  );
+
+  const batchEditDependsOnEditableFieldsRoot = createFixture('batch-edit-depends-on-editable-fields', {
+    app: goodFiles.app,
+    permissionModel: `${goodFiles.permissionModel}\nexport const DATA_RECORD_BULK_UPDATE = 'data.record.bulkUpdate';`,
+    router: goodFiles.router,
+    page: `${goodFiles.page}
+      const batchEditableFields = resolveBatchEditableFields(fields);
+      const recordSelectionActions = [{
+        key: 'bulk-edit',
+        visible: currentCanBulkUpdate && batchEditableFields.length > 0,
+      }];
+      const actionDependencies = [currentCanBulkUpdate, currentCanDelete, currentCanUpdate];
+    `,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(runAudit(batchEditDependsOnEditableFieldsRoot), /status: PASS/);
 
   console.log('audit-make-app-permission tests: PASS');
 } finally {

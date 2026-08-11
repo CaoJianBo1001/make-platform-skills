@@ -43,17 +43,27 @@ Verify:
 
 - toolbar trigger label is `分组` or `N 分组`
 - trigger is hidden when no groupable fields exist
+- outer overlay is controlled and opens by click/press, never hover or focus
+- pointer leave, blur, focus transfer, and ordinary rerender keep the panel open
+- Select, DatePicker, dropdown, menu, tooltip, popover, and drag-overlay roots
+  rendered by portal/teleport remain inside the owned interaction boundary
+- selecting, searching, scrolling, or closing a child overlay keeps the grouping
+  panel open and changes only draft/child state
+- a true outside pointer interaction closes and discards the draft
+- Escape keeps the outer panel open by default; an explicit product opt-in closes
+  the topmost child first and never closes child plus outer panel together
 - opening copies applied value into draft and adds a placeholder when empty
 - no applied change or records/group request before confirm
 - add action disappears at three rows
 - `清空所有` affects draft until confirm
-- outside close and escape discard unconfirmed changes
 - validation failure keeps the panel open
 - save success closes and updates applied state
 - save failure keeps previous applied state and current draft
 - duplicate confirm is blocked while saving
 - package panel drag changes hierarchy from the handle and remains keyboard accessible
 - host source has no direct dnd-kit imports or copied drag implementation
+- host source has no competing document-level outside-click listener and does not
+  rely on `stopPropagation()` to keep child overlays open
 - `onConfirm` persists only, synchronous `onApplied` changes controlled state, and
   `onApplyError` observes post-persistence application/close failures
 - `openWithField` rejects non-groupable fields, updates an existing row, and

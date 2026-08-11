@@ -81,7 +81,11 @@ Use for row selection:
 - `enabled: true`
 - `type: 'single' | 'multiple'`
 
-Do not enable row selection by default for Make record lists. Add it only when the user asks for selection, batch actions, or multi-record operations.
+For a writable Make record list, enable multiple selection by default through
+`make-app-actions`. Opt out only when the user explicitly rejects record actions
+or the object/product is strictly read-only. A current user with no write actions
+does not make the list strictly read-only; retain selection so scheme two can show
+`暂无可用的操作`. For non-Make tables, selection remains opt-in.
 
 #### `rowSortable`
 

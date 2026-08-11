@@ -119,7 +119,7 @@ name.contains('项目') || budget >= 100000
 | `Make.Field.MultiDepartment` | `hasAnyOf`、`hasAllOf`、`hasNoneOf`、`=`、`isEmpty`、`isNotEmpty` | `[_currentUserDepartment].exists(v, v in relatedDepartments)` |
 | `Make.Field.Number` | `=`、`!=`、`>`、`>=`、`<`、`<=`、`isEmpty`、`isNotEmpty` | `score >= 80` |
 | `Make.Field.Currency` | `=`、`!=`、`>`、`>=`、`<`、`<=`、`isEmpty`、`isNotEmpty` | `budget >= 100000` |
-| `Make.Field.Percent` | `=`、`!=`、`>`、`>=`、`<`、`<=`、`isEmpty`、`isNotEmpty` | `completionRate < 0.8` |
+| `Make.Field.Percent` | `=`、`!=`、`>`、`>=`、`<`、`<=`、`isEmpty`、`isNotEmpty` | `completionRate < 80` |
 | `Make.Field.Date` | `=`、`!=`、`>`、`>=`、`<`、`<=`、`isWithin`、`isNotWithin`、`isEmpty`、`isNotEmpty` | `startDate >= '2026-04-01'`、`startDate.isWithin({"begin":"2026-04-01","end":"2026-04-30"})` |
 | `Make.Field.DateTime` | `=`、`!=`、`>`、`>=`、`<`、`<=`、`isWithin`、`isNotWithin`、`isEmpty`、`isNotEmpty` | `createdAt >= '2026-04-22 09:00:00'` |
 | `Make.Field.DateRange` | `containsDate`、`doesNotContainDate`、`fullyContains`、`isContainedBy`、`=`、`isEmpty`、`isNotEmpty` | `deliveryPeriod.containsDate('2026-04-15')` |

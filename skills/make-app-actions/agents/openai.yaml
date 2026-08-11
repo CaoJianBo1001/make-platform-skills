@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make App Actions"
+  short_description: "Make CanvasTable record actions and batch editing"
+  default_prompt: "Use $make-app-actions to add the default Make CanvasTable record action bar with permission precheck and batch editing."

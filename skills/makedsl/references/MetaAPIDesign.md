@@ -124,13 +124,14 @@ X-Make-Target: MakeService.GetResource
             {
               "key": "total_amount",
               "name": "报销总额",
-              "type": "Make.Field.Amount",
+              "type": "Make.Field.Currency",
               "meta": {
                 "version": "1.0.0"
               },
               "properties": {
-                "precision": 2,
-                "currency": "CNY"
+                "symbol": "¥",
+                "decimalPlaces": 2,
+                "useGrouping": true
               }
             }
           ]
@@ -158,13 +159,14 @@ X-Make-Target: MakeService.GetResource
             {
               "key": "invoice_amount",
               "name": "发票金额",
-              "type": "Make.Field.Amount",
+              "type": "Make.Field.Currency",
               "meta": {
                 "version": "1.0.0"
               },
               "properties": {
-                "precision": 2,
-                "currency": "CNY"
+                "symbol": "¥",
+                "decimalPlaces": 2,
+                "useGrouping": true
               }
             }
           ]

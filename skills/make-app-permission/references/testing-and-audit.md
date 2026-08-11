@@ -63,6 +63,7 @@ Cover object behavior:
 - No delete means no delete entry and delete handler refuses action.
 - Create entry is visible with `data.record.create` even when no field is editable.
 - Edit entry is visible with `data.record.update` or matching wildcard even when no field is editable.
+- Batch edit remains independent from single edit and may be hidden when no batch-editable field remains; use `make-app-actions` for that action rule.
 - Fields without `meta.field.read` do not render.
 - Visible fields without `meta.field.update` render readonly/disabled, skip required validation, and do not submit.
 - Edit form and cell edit use `meta.field.update` editable fields.
@@ -87,7 +88,7 @@ node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-r
 
 Use `--help` for options.
 
-The audit checks static contract signals only. It can find missing providers, route guards, Service proxy paths, wrong IAM path, missing operation constants, missing field-edit checks, and missing refresh calls. It cannot prove full runtime correctness.
+The audit checks static contract signals only. It can find missing providers, route guards, Service proxy paths, wrong IAM path, missing operation constants, direct create/single-edit coupling to editable-field counts, missing field-edit checks, and missing refresh calls. Batch-edit field availability is a valid `make-app-actions` rule and must not be reported as single-edit coupling. The audit cannot prove full runtime correctness.
 
 Treat audit failures as blockers. Treat warnings as review items that require either code changes or explicit reasoning in the final response.
 

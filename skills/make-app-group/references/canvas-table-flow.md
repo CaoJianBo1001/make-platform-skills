@@ -159,8 +159,11 @@ Prefer `value + label`; do not use `label` as the stable group path.
 
 ## Editing and selection
 
-Selection can remain enabled if the product has batch actions for leaf records.
-Clear selection on entity/group changes.
+Writable grouped record lists enable supported selection actions through
+`make-app-actions` by default. Clear selection on entity/group changes. Under the
+CanvasTable 1.3.0 public contract, `GroupTableComponent` does not support Shift
+range selection; preserve individual/header selection and do not emulate Shift in
+the host. Re-check installed package docs before changing this capability rule.
 
 Grouped V1 should disable cell editing. If grouped editing is explicitly required,
 define and test how an edit that changes a grouped field affects:
