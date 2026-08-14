@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// make-app-permission contract version: 0.2.2
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';

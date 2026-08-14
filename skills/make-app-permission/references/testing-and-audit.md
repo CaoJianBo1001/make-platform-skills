@@ -67,9 +67,9 @@ Run:
 node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 ```
 
-The audit should fail on missing create permission helpers, missing/overwritten `createFields`, `createFields ?? fields`, runtime `editableFields` use, create fields built from visible/editable sets, unfiltered create payloads, operation entries tied to field count, and permission-only refresh without Schema refresh/invalidation.
+The audit should fail on missing create permission helpers, missing/overwritten `createFields`, `createFields ?? fields`, runtime `editableFields` use, create fields built from visible/editable sets, unfiltered create payloads, operation entries tied to field count, permission-only refresh without Schema refresh/invalidation, and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`.
 
-The audit is heuristic. Host tests must prove permission matching, actual form field sets, payloads, Lookup target visibility, generation safety, and server-side enforcement.
+The audit is heuristic. Its stringification rule is a targeted defense against known bad shapes, not complete data-flow proof. It must reject coercion that affects a normalization result or permission branch, including direct `if`/`switch`/loop conditions. It must lexically ignore comments and string literals and must not fail on diagnostic-only logging inside a named normalization helper, including structured log arguments, `fieldAccess`-specific parameter names, and semicolonless code where an earlier return ends through automatic semicolon insertion. Parenthesized, bracketed, or operator-continued returns remain result-affecting and must still fail. Host tests must prove permission matching, actual form field sets, payloads, Lookup target visibility, generation safety, and server-side enforcement.
 
 ## Executable behavior conformance
 
@@ -95,6 +95,22 @@ node skills/make-app-permission/scripts/permission-conformance-suite.mjs <adapte
 
 For TypeScript adapters, invoke the command with the project's existing TypeScript runner. The adapter must delegate to production code rather than duplicate permission logic. The suite proves missing operation denial, named-entity isolation, rejection of non-string/blank/wildcard requested identifiers, the fixed `* < App < entity/* < entity/exact` resource order, malformed permission-envelope and explicit App-resource rejection, valid state-list preservation, deny-wins, independent create/read/update fields, permissionKey-specific access values, wildcard exceptions, and the canonical create/edit system-field exclusions.
 
+## Host gate integration
+
+- Keep the audit and conformance runner project-local, or consume them from a versioned build dependency. Do not make CI depend on a sibling checkout or `~/.agents/skills`.
+- Make the host's default test, CI workflow, or publish verification invoke both checks. A change record stating that two projects passed once is acceptance evidence, not a continuing gate.
+- Add a host contract test that asserts the gate commands still exist and that the vendored/current runners contain the multi-state-array audit and behavior cases.
+- Treat source-to-installed-Skill comparison as a local install/release verification. Generic CI must not require a developer home-directory copy.
+
+For that local install/release verification, run the directory-level checker with explicit paths:
+
+```bash
+node skills/make-app-permission/scripts/check-installed-skill-sync.mjs \
+  skills/make-app-permission <installed-skill-dir>
+```
+
+It must fail on source-only, installed-only, or content-mismatch files. Do not replace this complete comparison with a hand-maintained file list.
+
 ## Completion rule
 
 Do not report complete until:
@@ -102,6 +118,7 @@ Do not report complete until:
 - new/changed tests pass;
 - the permission audit passes or every warning is explicitly resolved;
 - the executable permission conformance suite passes against production helpers;
+- the host's default test, CI, or publish gate invokes both permission checks;
 - Skill metadata/quick validation and cross-Skill contract tests pass;
 - a real reference project passes the audit without changing that project;
 - source and installed Skill copies are synchronized;

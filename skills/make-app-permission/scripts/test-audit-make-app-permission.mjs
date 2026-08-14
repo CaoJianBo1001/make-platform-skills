@@ -28,8 +28,14 @@ try {
       function evaluateOperation(access, entityKey, permissionKey) {
         return Boolean(access && entityKey && permissionKey);
       }
+      function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }
       function evaluateField(access, entityKey, fieldKey, permissionKey) {
-        return Boolean(access && entityKey && fieldKey && permissionKey);
+        const fieldAccess = access?.permissions?.[0]?.fieldAccess ?? {};
+        const states = normalizeFieldAccessStates(fieldAccess[fieldKey]);
+        return Boolean(entityKey && permissionKey && states.length > 0);
       }
       export function canUseEntityOperation(access, entityKey, permissionKey) { return evaluateOperation(access, entityKey, permissionKey); }
       export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, DATA_RECORD_CREATE); }
@@ -204,6 +210,315 @@ try {
   assert.match(
     runAudit(unconditionalAllowRoot, { expectFailure: true }),
     /permission_helper_unconditional_allow/,
+  );
+
+  const stringifiedFieldAccessRoot = createFixture('stringified-field-access', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      'const states = normalizeFieldAccessStates(fieldAccess[fieldKey]);',
+      'const states = [String(fieldAccess[fieldKey])];',
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(stringifiedFieldAccessRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+  );
+
+  const textHelperStringifiedAccessRoot = createFixture('text-helper-stringified-access', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel
+      .replace(
+        "export const META_FIELD_UPDATE = 'meta.field.update';",
+        "export const META_FIELD_UPDATE = 'meta.field.update';\n      const toText = (value) => String(value ?? '').trim();",
+      )
+      .replace(
+        "const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];",
+        "const states = [toText(fieldAccessValue)];",
+      ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(textHelperStringifiedAccessRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+  );
+
+  for (const [name, parameterName, coercion] of [
+    ['string-access-state', 'accessState', 'String(accessState)'],
+    ['text-helper-access', 'access', 'toText(access)'],
+  ]) {
+    const aliasedAccessRoot = createFixture(name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel
+        .replace(
+          "export const META_FIELD_UPDATE = 'meta.field.update';",
+          "export const META_FIELD_UPDATE = 'meta.field.update';\n      const toText = (value) => String(value ?? '').trim();",
+        )
+        .replaceAll('fieldAccessValue', parameterName)
+        .replace(
+          `const states = Array.isArray(${parameterName}) ? ${parameterName} : [${parameterName}];`,
+          `const states = [${coercion}];`,
+        ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.match(
+      runAudit(aliasedAccessRoot, { expectFailure: true }),
+      /field_access_state_stringified/,
+    );
+  }
+
+  const templateStringifiedAccessRoot = createFixture('template-stringified-access', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      'const states = normalizeFieldAccessStates(fieldAccess[fieldKey]);',
+      'const states = [`${fieldAccess[fieldKey]}`];',
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(templateStringifiedAccessRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+  );
+
+  const directBranchStringificationRoot = createFixture('direct-branch-stringification', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+      `function normalizeFieldAccessStates(value) {
+        if (String(value) === 'readonly') return ['readonly'];
+        return [];
+      }`,
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(directBranchStringificationRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+    'stringification used directly by a permission branch must fail the audit',
+  );
+
+  const diagnosticStringificationRoot = createFixture('diagnostic-stringification', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel
+      .replace(
+        'function normalizeFieldAccessStates(fieldAccessValue) {',
+        `function normalizeFieldAccessStates(value) {
+          if (value == null) console.warn('missing fieldAccess state', String(value));`,
+      )
+      .replaceAll('fieldAccessValue', 'value'),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.doesNotMatch(
+    runAudit(diagnosticStringificationRoot),
+    /field_access_state_stringified/,
+    'diagnostic-only stringification must not block an otherwise valid permission runtime',
+  );
+
+  for (const [name, diagnosticStatement] of [
+    [
+      'explicit-field-access-diagnostic',
+      "console.warn('missing fieldAccess state', String(fieldAccessValue));",
+    ],
+    [
+      'structured-field-access-diagnostic',
+      'console.warn({ state: String(fieldAccessValue) });',
+    ],
+    [
+      'comment-only-field-access-stringification',
+      '// Avoid String(fieldAccessValue) because it flattens state arrays.',
+    ],
+    [
+      'string-literal-only-field-access-stringification',
+      "const diagnosticGuidance = 'Avoid String(fieldAccessValue) here';",
+    ],
+  ]) {
+    const nonResultStringificationRoot = createFixture(name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel.replace(
+        'function normalizeFieldAccessStates(fieldAccessValue) {',
+        `function normalizeFieldAccessStates(fieldAccessValue) {
+          ${diagnosticStatement}`,
+      ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.doesNotMatch(
+      runAudit(nonResultStringificationRoot),
+      /field_access_state_stringified/,
+      `${name} must not block an otherwise valid permission runtime`,
+    );
+  }
+
+  const semicolonlessDiagnosticRoot = createFixture('semicolonless-diagnostic-stringification', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+      `function normalizeFieldAccessStates(value) {
+        if (value == null) return []
+        console.warn('missing fieldAccess state', String(value))
+        const states = Array.isArray(value) ? value : [value]
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim())
+      }`,
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.doesNotMatch(
+    runAudit(semicolonlessDiagnosticRoot),
+    /field_access_state_stringified/,
+    'ASI must end an earlier return before diagnostic-only stringification',
+  );
+
+  const continuedReturnStringificationRoot = createFixture('continued-return-stringification', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+      `function normalizeFieldAccessStates(value) {
+        return value ||
+          String(value)
+      }`,
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(continuedReturnStringificationRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+    'an operator-continued return still makes stringification affect the result',
+  );
+
+  for (const [name, coercion] of [
+    ['to-string-field-access', 'fieldAccess[fieldKey].toString()'],
+    ['join-field-access', "fieldAccess[fieldKey].join(',')"],
+  ]) {
+    const methodStringifiedAccessRoot = createFixture(name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel.replace(
+        'normalizeFieldAccessStates(fieldAccess[fieldKey])',
+        `[${coercion}]`,
+      ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.match(
+      runAudit(methodStringifiedAccessRoot, { expectFailure: true }),
+      /field_access_state_stringified/,
+    );
+  }
+
+  const indirectNormalizerStringificationRoot = createFixture(
+    'indirect-normalizer-stringification',
+    {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel.replace(
+        `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+        `function normalizeFieldAccessStates(value) {
+        const normalizedStates = [String(value)];
+        return normalizedStates;
+      }`,
+      ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    },
+  );
+  assert.match(
+    runAudit(indirectNormalizerStringificationRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+  );
+
+  for (const [name, replacement] of [
+    [
+      'multiline-normalizer-stringification',
+      `function normalizeFieldAccessStates(value) {
+        return [
+          String(value),
+        ];
+      }`,
+    ],
+    [
+      'arrow-object-normalizer-stringification',
+      `const normalizeFieldAccessStates = (value) => ({
+        states: [String(value)],
+      }).states;`,
+    ],
+  ]) {
+    const resultStringifiedAccessRoot = createFixture(name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel.replace(
+        `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+        replacement,
+      ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.match(
+      runAudit(resultStringifiedAccessRoot, { expectFailure: true }),
+      /field_access_state_stringified/,
+    );
+  }
+
+  const legitimateStringNormalizationRoot = createFixture('legitimate-string-normalization', {
+    app: goodFiles.app,
+    permissionModel: `${goodFiles.permissionModel}
+      const normalizedScope = String(permission.scope ?? '').trim();
+      const normalizedFieldKey = String(fieldKey ?? '').trim();
+      const normalizedFieldAccess = normalizeFieldAccessStates('readonly');
+      const normalizeLabel = (value) => String(value ?? '').trim();
+      const serializePermission = (access) => String(access);
+    `,
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.doesNotMatch(
+    runAudit(legitimateStringNormalizationRoot),
+    /field_access_state_stringified/,
   );
 
   const missingCreateFieldsRoot = createFixture('missing-create-fields', {

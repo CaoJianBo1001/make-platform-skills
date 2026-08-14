@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+// make-app-permission contract version: 0.2.2
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -141,6 +142,12 @@ function checkUiContract() {
   ) {
     failures.push('permission_helper_unconditional_allow: permission helpers must evaluate current access instead of returning true unconditionally');
   }
+  const stringificationFiles = findFieldAccessStateStringificationFiles(uiRuntimeFiles);
+  if (stringificationFiles.length > 0) {
+    failures.push(
+      `field_access_state_stringified: preserve fieldAccess state arrays instead of coercing them to text (${stringificationFiles.join(', ')})`,
+    );
+  }
   if (namedFunctionUsesMetaFieldPermission(uiRuntimeText, 'canCreateEntityField')) {
     failures.push('create_field_permission_uses_meta_field: create-field permission must use data.record.create, not meta.field.read/update');
   }
@@ -245,6 +252,365 @@ function namedFunctionAlwaysReturnsTrue(text, functionName) {
   ];
 
   return patterns.some((pattern) => pattern.test(text));
+}
+
+function findFieldAccessStateStringificationFiles(files) {
+  return files.flatMap((file) => {
+    const source = readFile(file);
+    if (!isFieldAccessPermissionSource(source) || !hasFieldAccessStateStringification(source)) {
+      return [];
+    }
+    return [path.relative(root, file)];
+  });
+}
+
+function isFieldAccessPermissionSource(source) {
+  return /\bfieldAccess\b/.test(source)
+    && /(?:can(?:Create|Read|Update).*Field|canUseEntityField|evaluateField|resolveFieldPermission|normalizeFieldAccess)/.test(source);
+}
+
+function hasFieldAccessStateStringification(source) {
+  const fieldAccessIdentifier = String.raw`(?:fieldAccess(?:Value|State|States)?|accessState(?:s)?|rawAccess(?:Value|State|States)?)`;
+  const fieldAccessExpression = String.raw`(?:(?:[A-Za-z_$][\w$]*\s*(?:\?\.)?\s*\.\s*)?fieldAccess\b[^,;)\n]{0,100}|\b${fieldAccessIdentifier}\b)`;
+  const directPatterns = [
+    new RegExp(String.raw`\bString\s*\(\s*${fieldAccessExpression}`, 'i'),
+    new RegExp(String.raw`\b(?:toText|asText|normalizeText|coerceText|stringifyValue)\s*\(\s*${fieldAccessExpression}`, 'i'),
+    new RegExp(String.raw`\$\{\s*${fieldAccessExpression}[^}]*\}`, 'i'),
+    new RegExp(String.raw`${fieldAccessExpression}\s*(?:\?\.)?\s*\.\s*(?:toString|join)\s*\(`, 'i'),
+  ];
+  const codeSource = maskJavaScriptNonCode(source);
+  if (
+    directPatterns.some((pattern) => (
+      findPatternMatches(codeSource, pattern).some((match) => (
+        !isDiagnosticCallArgument(codeSource.slice(0, match.index ?? 0))
+      ))
+    ))
+  ) {
+    return true;
+  }
+
+  const normalizationFunctionNames = new Set();
+  const functionNamePattern = String.raw`([A-Za-z_$][\w$]*(?:Field_?Access|Access_?State)[\w$]*)`;
+  const declarations = [
+    new RegExp(String.raw`\bfunction\s+${functionNamePattern}\s*\(`, 'gi'),
+    new RegExp(
+      String.raw`\b(?:const|let|var)\s+${functionNamePattern}\s*=\s*(?:async\s*)?(?:\([^)]*\)|[A-Za-z_$][\w$]*)\s*=>`,
+      'gi',
+    ),
+  ];
+  for (const declaration of declarations) {
+    for (const match of source.matchAll(declaration)) {
+      normalizationFunctionNames.add(match[1]);
+    }
+  }
+
+  return [...normalizationFunctionNames].some((functionName) => (
+    extractNamedFunctionSources(source, functionName).some((functionSource) => (
+      hasResultAffectingStateStringification(functionSource)
+    ))
+  ));
+}
+
+function hasResultAffectingStateStringification(functionSource) {
+  const stateValue = String.raw`(?:value|input|rawValue|access)`;
+  const patterns = [
+    new RegExp(String.raw`\bString\s*\(\s*${stateValue}\b`, 'i'),
+    new RegExp(
+      String.raw`\b(?:toText|asText|normalizeText|coerceText|stringifyValue)\s*\(\s*${stateValue}\b`,
+      'i',
+    ),
+    new RegExp(String.raw`\$\{\s*${stateValue}\b`, 'i'),
+    new RegExp(
+      String.raw`\b${stateValue}\s*(?:\?\.)?\s*\.\s*(?:toString|join)\s*\(`,
+      'i',
+    ),
+  ];
+
+  const codeSource = maskJavaScriptNonCode(functionSource);
+  return patterns.some((pattern) => {
+    return findPatternMatches(codeSource, pattern).some((match) => {
+      const matchIndex = match.index ?? 0;
+      const prefix = codeSource.slice(0, matchIndex);
+      if (isReturnExpressionResult(prefix)) return true;
+      if (isArrowExpressionResult(prefix)) return true;
+      if (isInsideControlCondition(prefix)) return true;
+
+      const assignedName = findAssignedName(prefix);
+      if (assignedName && variableAffectsFunctionResult(codeSource, matchIndex, assignedName)) {
+        return true;
+      }
+
+      const mutationTarget = findMutationTarget(prefix);
+      return Boolean(
+        mutationTarget
+        && variableAffectsFunctionResult(codeSource, matchIndex, mutationTarget),
+      );
+    });
+  });
+}
+
+function findPatternMatches(source, pattern) {
+  const matcher = new RegExp(pattern.source, `${pattern.flags.replace('g', '')}g`);
+  return [...source.matchAll(matcher)];
+}
+
+function isDiagnosticCallArgument(prefix) {
+  return findOpenGroupingContexts(prefix).some((group) => (
+    group.character === '('
+    && /\b(?:console|logger|log|[A-Za-z_$][\w$]*(?:Logger|Log))\s*(?:\?\.)?\.\s*(?:trace|debug|info|warn|error|log)\s*$/is.test(
+      group.beforeOpening,
+    )
+  ));
+}
+
+function isInsideControlCondition(prefix) {
+  return findOpenGroupingContexts(prefix).some((group) => (
+    group.character === '('
+    && /\b(?:if|switch|while|for)\s*$/.test(group.beforeOpening)
+  ));
+}
+
+function findOpenGroupingContexts(prefix) {
+  const source = maskJavaScriptNonCode(prefix);
+  const closingToOpening = new Map([
+    [')', '('],
+    [']', '['],
+    ['}', '{'],
+  ]);
+  const groupingStack = [];
+
+  for (let index = 0; index < source.length; index += 1) {
+    const character = source[index];
+    if (character === '(' || character === '[' || character === '{') {
+      groupingStack.push({
+        character,
+        beforeOpening: source.slice(0, index).trimEnd(),
+      });
+      continue;
+    }
+
+    const expectedOpening = closingToOpening.get(character);
+    if (expectedOpening && groupingStack.at(-1)?.character === expectedOpening) {
+      groupingStack.pop();
+    }
+  }
+
+  return groupingStack;
+}
+
+function isReturnExpressionResult(prefix) {
+  const returnMatches = [...prefix.matchAll(/\breturn\b/gi)];
+  const lastReturn = returnMatches.at(-1);
+  if (!lastReturn) return false;
+
+  const resultMarker = '__QFEI_STATE_STRINGIFICATION__';
+  const expressionPrefix = `${prefix.slice(
+    (lastReturn.index ?? 0) + lastReturn[0].length,
+  )}${resultMarker}`;
+  const boundarySource = maskJavaScriptNonCode(expressionPrefix);
+  const firstTokenIndex = boundarySource.search(/\S/);
+  if (
+    firstTokenIndex < 0
+    || /[\r\n]/.test(boundarySource.slice(0, firstTokenIndex))
+  ) {
+    return false;
+  }
+
+  const closingToOpening = new Map([
+    [')', '('],
+    [']', '['],
+    ['}', '{'],
+  ]);
+  const openingCharacters = new Set(closingToOpening.values());
+  const groupingStack = [];
+
+  for (let index = firstTokenIndex; index < boundarySource.length; index += 1) {
+    const character = boundarySource[index];
+    if (openingCharacters.has(character)) {
+      groupingStack.push(character);
+      continue;
+    }
+    const expectedOpening = closingToOpening.get(character);
+    if (expectedOpening && groupingStack.at(-1) === expectedOpening) {
+      groupingStack.pop();
+      continue;
+    }
+    if (groupingStack.length > 0) continue;
+    if (character === ';') return false;
+    if (character !== '\n' && character !== '\r') continue;
+
+    const nextIndex = character === '\r' && boundarySource[index + 1] === '\n'
+      ? index + 2
+      : index + 1;
+    if (!expressionContinuesAcrossLine(boundarySource.slice(0, index), boundarySource.slice(nextIndex))) {
+      return false;
+    }
+    index = nextIndex - 1;
+  }
+
+  return true;
+}
+
+function expressionContinuesAcrossLine(beforeLineBreak, afterLineBreak) {
+  const before = beforeLineBreak.trimEnd();
+  const after = afterLineBreak.trimStart();
+  if (!before || !after) return false;
+
+  if (/(?:\+\+|--)$/.test(before)) return false;
+  if (
+    /(?:=>|\?\?|\|\||&&|\*\*|===|!==|==|!=|<=|>=|<<|>>>?|[+\-*/%&|^<>=?:,.])$/.test(before)
+    || /\b(?:as|satisfies|in|instanceof|new|typeof|void|delete|await|yield|keyof)$/.test(before)
+  ) {
+    return true;
+  }
+
+  if (/^(?:\+\+|--)/.test(after)) return false;
+  return /^(?:\?\.|[.([`? :,]|\?\?|\|\||&&|\*\*|===|!==|==|!=|<=|>=|<<|>>>?|[+\-*/%&|^<>=]|(?:as|satisfies|in|instanceof)\b)/.test(
+    after,
+  );
+}
+
+function maskJavaScriptNonCode(source) {
+  const output = [];
+  const contexts = [{ type: 'code', templateExpression: false, braceDepth: 0 }];
+
+  for (let index = 0; index < source.length; index += 1) {
+    const context = contexts.at(-1);
+    const character = source[index];
+    const nextCharacter = source[index + 1];
+
+    if (context.type === 'line-comment') {
+      if (character === '\n' || character === '\r') {
+        contexts.pop();
+        output.push(character);
+      } else {
+        output.push(' ');
+      }
+      continue;
+    }
+
+    if (context.type === 'block-comment') {
+      if (character === '*' && nextCharacter === '/') {
+        output.push(' ', ' ');
+        contexts.pop();
+        index += 1;
+      } else {
+        output.push(character === '\n' || character === '\r' ? character : ' ');
+      }
+      continue;
+    }
+
+    if (context.type === 'string') {
+      if (character === '\\') {
+        output.push(' ');
+        if (index + 1 < source.length) {
+          output.push(' ');
+          index += 1;
+        }
+      } else {
+        output.push(' ');
+        if (character === context.quote) contexts.pop();
+      }
+      continue;
+    }
+
+    if (context.type === 'template') {
+      if (character === '\\') {
+        output.push(' ');
+        if (index + 1 < source.length) {
+          output.push(' ');
+          index += 1;
+        }
+      } else if (character === '`') {
+        output.push(' ');
+        contexts.pop();
+      } else if (character === '$' && nextCharacter === '{') {
+        output.push('$', '{');
+        contexts.push({ type: 'code', templateExpression: true, braceDepth: 0 });
+        index += 1;
+      } else {
+        output.push(' ');
+      }
+      continue;
+    }
+
+    if (context.templateExpression && character === '}') {
+      if (context.braceDepth === 0) {
+        output.push('}');
+        contexts.pop();
+      } else {
+        context.braceDepth -= 1;
+        output.push(character);
+      }
+      continue;
+    }
+    if (context.templateExpression && character === '{') {
+      context.braceDepth += 1;
+      output.push(character);
+      continue;
+    }
+    if (character === '/' && nextCharacter === '/') {
+      output.push(' ', ' ');
+      contexts.push({ type: 'line-comment' });
+      index += 1;
+      continue;
+    }
+    if (character === '/' && nextCharacter === '*') {
+      output.push(' ', ' ');
+      contexts.push({ type: 'block-comment' });
+      index += 1;
+      continue;
+    }
+    if (character === "'" || character === '"') {
+      output.push('_');
+      contexts.push({ type: 'string', quote: character });
+      continue;
+    }
+    if (character === '`') {
+      output.push('_');
+      contexts.push({ type: 'template' });
+      continue;
+    }
+    output.push(character);
+  }
+
+  return output.join('');
+}
+
+function isArrowExpressionResult(prefix) {
+  const arrowIndex = prefix.lastIndexOf('=>');
+  if (arrowIndex < 0) return false;
+  const expressionPrefix = prefix.slice(arrowIndex + 2).trimStart();
+  return !expressionPrefix.startsWith('{');
+}
+
+function findAssignedName(prefix) {
+  const declaration = prefix.match(
+    /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*[^;]*$/s,
+  );
+  if (declaration) return declaration[1];
+
+  const assignment = prefix.match(
+    /(?:^|[;{}])\s*([A-Za-z_$][\w$]*)\s*=\s*[^;]*$/s,
+  );
+  return assignment?.[1] ?? null;
+}
+
+function findMutationTarget(prefix) {
+  return prefix.match(
+    /\b([A-Za-z_$][\w$]*)\s*(?:\?\.)?\s*\.\s*(?:push|unshift|splice)\s*\([^;]*$/s,
+  )?.[1] ?? null;
+}
+
+function variableAffectsFunctionResult(functionSource, matchIndex, variableName) {
+  const escapedName = variableName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const suffix = functionSource.slice(matchIndex);
+  const returnUse = new RegExp(String.raw`\breturn\b[^;}]*(?:\b${escapedName}\b)`, 's');
+  const branchUse = new RegExp(
+    String.raw`\b(?:if|switch|while)\s*\([^)]*\b${escapedName}\b`,
+    's',
+  );
+  return returnUse.test(suffix) || branchUse.test(suffix);
 }
 
 function hasEditableFieldsRuntimeConsumption(text) {
@@ -540,13 +906,15 @@ function isRuntimeSourceFile(file) {
 }
 
 function readJoined(files) {
-  return files.map((file) => {
-    try {
-      return fs.readFileSync(file, 'utf8');
-    } catch {
-      return '';
-    }
-  }).join('\n');
+  return files.map(readFile).join('\n');
+}
+
+function readFile(file) {
+  try {
+    return fs.readFileSync(file, 'utf8');
+  } catch {
+    return '';
+  }
 }
 
 function printResult() {

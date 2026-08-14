@@ -433,10 +433,15 @@ for (const skillName of forwardTestScopeSkillNames) {
     `forward-test record must declare related scope ${skillName}`,
   );
 }
-assert.doesNotMatch(
+assert.match(
   forwardTestRecord,
-  /(沿用|baseline|基线结果)/i,
-  'current-scope forward tests must not reuse historical agent results',
+  /Action 语义前向测试基线 SHA-256[：:]\s*`69fb63b6b0419af55ea2bbe6021979b758e1a69150574b0b93718a8b64db6042`/,
+  'the previous action-semantic fresh-agent baseline must remain explicit',
+);
+assert.match(
+  forwardTestRecord,
+  /make-app-permission 0\.2\.2[\s\S]{0,500}(不改变|未变化)[^\n]*(选择|操作|批量写入|Action 语义)[\s\S]{0,700}(不作为|不声称)[^\n]*(执行证据|重新执行)/,
+  'an unrelated permission-audit revision must not be presented as freshly forward-tested action semantics',
 );
 assertForwardTestScope(forwardTestRecord, forwardTestScopeHash);
 const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\/root\/(?:actions_r1[45]|forward_numeric_r6_form)_[a-z0-9_]+)$/i;

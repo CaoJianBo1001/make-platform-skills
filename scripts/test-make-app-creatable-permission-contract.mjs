@@ -40,6 +40,15 @@ const systemFieldContract = read(
 const conformanceSuite = read(
   'skills/make-app-permission/scripts/permission-conformance-suite.mjs',
 );
+const permissionAudit = read(
+  'skills/make-app-permission/scripts/audit-make-app-permission.mjs',
+);
+const installedSkillSync = read(
+  'skills/make-app-permission/scripts/check-installed-skill-sync.mjs',
+);
+const installedSkillSyncTest = read(
+  'skills/make-app-permission/scripts/test-installed-skill-sync.mjs',
+);
 const serviceSkill = read('skills/make-app-service/SKILL.md');
 const serviceAdapter = read(
   'skills/make-app-service/references/make-data-adapter.md',
@@ -100,8 +109,8 @@ assert.match(
 );
 assert.match(
   permissionSkill,
-  /metadata:\s*\n\s*version:\s*0\.2\.1/,
-  'make-app-permission must use the planned 0.2.1 contract revision',
+  /metadata:\s*\n\s*version:\s*0\.2\.2/,
+  'make-app-permission must use the planned 0.2.2 contract revision',
 );
 assert.match(
   permissionBundle,
@@ -141,6 +150,33 @@ assert.match(
   /permission-conformance-suite\.mjs[\s\S]{0,500}(adapter|适配器)/i,
   'testing reference must require the executable permission conformance suite',
 );
+assert.match(
+  permissionAudit,
+  /field_access_state_stringified/,
+  'permission audit must reject obvious fieldAccess state-array stringification',
+);
+assert.match(
+  permissionTesting,
+  /(default test|默认测试|CI|publish gate|发布校验)[\s\S]{0,500}(audit|审计)[\s\S]{0,500}(conformance|一致性)/i,
+  'host automation must continuously invoke both permission gates',
+);
+assert.match(
+  permissionTesting,
+  /check-installed-skill-sync\.mjs[\s\S]{0,500}(source-only|source_only)[\s\S]{0,300}(installed-only|installed_only)[\s\S]{0,300}(content-mismatch|content_mismatch)/i,
+  'local release verification must compare the complete source and installed Skill trees',
+);
+for (const findingKind of ['source_only', 'installed_only', 'content_mismatch']) {
+  assert.match(
+    installedSkillSync,
+    new RegExp(findingKind),
+    `installed Skill sync checker must report ${findingKind}`,
+  );
+  assert.match(
+    installedSkillSyncTest,
+    new RegExp(findingKind),
+    `installed Skill sync tests must cover ${findingKind}`,
+  );
+}
 for (const conformanceCase of [
   'operation_create_absent_must_deny',
   'named_entity_permission_does_not_leak',
@@ -330,6 +366,16 @@ assert.match(
   'permission forward-test record must pin the tested Skill content hash',
 );
 assertForwardTestScope(forwardTestRecord, forwardTestScopeHash);
+assert.match(
+  forwardTestRecord,
+  /语义前向测试基线 SHA-256[：:]\s*`7f59d274bee3f60a224f0c438ef12d72cffb1182d3f4a9111906bdda9f1c47d2`/,
+  'the 0.2.1 fresh-agent semantic baseline must remain explicit',
+);
+assert.match(
+  forwardTestRecord,
+  /0\.2\.2[\s\S]{0,500}(未改变权限语义|不修改创建、读取、更新)[\s\S]{0,700}(静态审计|宿主自动门禁)/,
+  'the audit-only 0.2.2 validation boundary must not misrepresent old fresh-agent evidence',
+);
 for (const executionId of [
   '/root/permission_r10_create_only',
   '/root/permission_r10_legacy',

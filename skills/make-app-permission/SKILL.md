@@ -2,7 +2,7 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permissions. Triggered by 权限, 字段权限范围, 字段可新建, 可见, 可编辑, creatable, createFields, editableFields, /principal/permission, buttons, menus, routes, read/create/update/delete/bulkUpdate, data.record.*, meta.field.*, route guards, refresh permission, or URL bypass. Covers the required Service-to-IAM proxy, app-scope matching, permission-trimmed schema, independent create/read/update field gates, create payload filtering, route/action enforcement, refresh invalidation, tests, and audit. Use make-app-actions for selection and batch-action behavior. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.2.1
+  version: 0.2.2
 ---
 
 # make-app-permission
@@ -21,7 +21,8 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 6. Read `references/system-field-contract.md` before implementing ID/audit create or edit capability.
 7. Read `references/testing-and-audit.md` before implementation and before reporting completion.
 8. Implement tests first, then the Service/schema boundary, permission pure model, route/action gates, field-set consumers, submit allowlists, and refresh invalidation.
-9. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`.
+9. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. Wire both permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
+10. When publishing or installing this Skill, run `check-installed-skill-sync.mjs` with explicit source and installed directories. Keep this local release check out of portable host CI.
 
 ## Required contract
 
@@ -66,6 +67,7 @@ node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-r
 ```
 
 Treat failures as blockers and warnings as review items. The audit is heuristic and never replaces runtime tests.
+It rejects obvious `fieldAccess` state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()` when the coerced value affects normalization output or permission evaluation, including direct control-flow conditions. Diagnostic-only logging, comments, and string literals inside a named normalization helper must not fail the audit, regardless of whether the parameter uses a generic or `fieldAccess`-specific name. The executable behavior contract remains authoritative.
 
 Also expose a thin host adapter and run the executable behavior contract:
 
@@ -74,3 +76,13 @@ node skills/make-app-permission/scripts/permission-conformance-suite.mjs <host-a
 ```
 
 If the adapter is TypeScript, run the same command through the host's existing TypeScript runner. Do not add a runtime dependency only for this check. The adapter must delegate to the production permission helpers and create-capability guard; it must not reimplement them in the test.
+Keep the audit and conformance runner project-local or install them through a versioned dependency before making them a host gate. Do not hardcode another workspace checkout or a developer home-directory Skill path into portable CI.
+
+For local Skill install/release verification, compare the complete source and installed directories:
+
+```bash
+node skills/make-app-permission/scripts/check-installed-skill-sync.mjs \
+  skills/make-app-permission <installed-skill-dir>
+```
+
+The checker reports source-only, installed-only, and content-mismatch files. Pass an explicit install directory; do not embed a developer home path in the Skill or in host CI.
