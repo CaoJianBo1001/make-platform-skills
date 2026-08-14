@@ -25,9 +25,23 @@ try {
       export const DATA_RECORD_DELETE = 'data.record.delete';
       export const META_FIELD_READ = 'meta.field.read';
       export const META_FIELD_UPDATE = 'meta.field.update';
-      export function canUseEntityOperation() { return true; }
-      export function canReadEntityField() { return true; }
-      export function canUpdateEntityField() { return true; }
+      function evaluateOperation(access, entityKey, permissionKey) {
+        return Boolean(access && entityKey && permissionKey);
+      }
+      function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }
+      function evaluateField(access, entityKey, fieldKey, permissionKey) {
+        const fieldAccess = access?.permissions?.[0]?.fieldAccess ?? {};
+        const states = normalizeFieldAccessStates(fieldAccess[fieldKey]);
+        return Boolean(entityKey && permissionKey && states.length > 0);
+      }
+      export function canUseEntityOperation(access, entityKey, permissionKey) { return evaluateOperation(access, entityKey, permissionKey); }
+      export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, DATA_RECORD_CREATE); }
+      export function canReadEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_READ); }
+      export function canUpdateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_UPDATE); }
+      export function creatableFieldKeysForEntity(access, entityKey, fields) { return new Set(fields.map((field) => field.key)); }
       export function visibleFieldsForEntity(access, entityKey, fields) { return fields; }
       export function editableFieldKeysForEntity() { return new Set(['name']); }
     `,
@@ -47,16 +61,27 @@ try {
     `,
     page: `
       const { refreshPermissions } = useMdmPermissions();
+      const { refreshSchema } = useMakeSchemaEntities();
       const canReadRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_READ);
       const canCreateRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_CREATE);
       const canUpdateRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_UPDATE);
       const canDeleteRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_DELETE);
       const visibleFields = visibleFieldsForEntity(access, object.entityKey, fields);
+      const normalizedSchema = { ...object, properties: { ...object.properties, editableFields: object.properties?.editableFields ?? [] } };
+      const createSchemaFields = object.properties?.createFields ?? [];
+      const creatableFieldKeys = creatableFieldKeysForEntity(access, object.entityKey, createSchemaFields);
+      const createFormFields = createSchemaFields.filter((field) => creatableFieldKeys.has(field.key));
       const updateEditableFieldKeys = editableFieldKeysForEntity(access, object.entityKey, visibleFields);
       const recordState = useVirtualResourceItems(key, api, { enabled: canReadRecord });
       function filterDraftByEditableFields(draft) { return Object.fromEntries(Object.entries(draft).filter(([key]) => updateEditableFieldKeys.has(key))); }
+      function buildCreatePayload(values) { return Object.fromEntries(Object.entries(values).filter(([key]) => creatableFieldKeys.has(key))); }
+      async function submitCreate(values) {
+        if (!canUseEntityOperation(access, object.entityKey, DATA_RECORD_CREATE)) throw new Error('forbidden');
+        return createRecord(buildCreatePayload(values));
+      }
       async function refreshObjectWorkspace() {
         const nextAccess = await refreshPermissions();
+        await refreshSchema();
         closeWorkspaceForPermissionChange(nextAccess);
         if (canUseEntityOperation(nextAccess, object.entityKey, DATA_RECORD_READ)) await recordState.refresh();
       }
@@ -88,10 +113,586 @@ try {
         };
         return fetch('http://make-gateway.make-dev' + makeIamGatewayScope + PRINCIPAL_PERMISSION_PATH, { method: 'POST', headers, body: JSON.stringify(body) });
       }
+      export function normalizeEntitySchema(entity) {
+        return {
+          ...entity,
+          properties: {
+            ...entity.properties,
+            fields: Array.isArray(entity.properties?.fields) ? entity.properties.fields : [],
+            createFields: Array.isArray(entity.properties?.createFields) ? entity.properties.createFields : [],
+          },
+        };
+      }
     `,
   });
 
   assert.match(runAudit(goodRoot), /status: PASS/);
+
+  const sharedRuntimeRoot = createFixture('shared-permission-runtime', {
+    app: goodFiles.app,
+    permissionModel: `export * from '@example/permission-runtime';`,
+    sharedRuntime: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(sharedRuntimeRoot),
+    /status: PASS/,
+    'workspace permission runtime packages are part of the UI contract surface',
+  );
+
+  const sharedRuntimeOnlyRoot = path.join(tempRoot, 'shared-runtime-only');
+  write(
+    path.join(sharedRuntimeOnlyRoot, 'apps/packages/permission-runtime/src/index.js'),
+    goodFiles.permissionModel,
+  );
+  write(path.join(sharedRuntimeOnlyRoot, 'apps/service/src/app.js'), goodFiles.service);
+  assert.match(
+    runAudit(sharedRuntimeOnlyRoot, { expectFailure: true }),
+    /no_ui_source/,
+    'a shared package must not masquerade as the UI application root',
+  );
+
+  const testOnlySignalsRoot = createFixture('test-only-signals', {
+    app: `export function App() { return <AppRouter />; }`,
+    permissionModel: goodFiles.permissionModel,
+    router: `export function AppRouter() { return <Routes><Route path="objects/:objectKey" element={<SchemaObjectPage />} /></Routes>; }`,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+    tests: `
+      test('mentions missing production contracts', () => {
+        expect('PermissionProvider findObjectByKey schema.objects Result 404 forbidden Navigate').toBeTruthy();
+      });
+    `,
+    stories: `
+      export const PermissionStory = () => <PermissionProvider><Result status="404" /></PermissionProvider>;
+    `,
+  });
+  const testOnlySignalsOutput = runAudit(testOnlySignalsRoot, { expectFailure: true });
+  assert.match(testOnlySignalsOutput, /permission_provider_missing/);
+  assert.match(testOnlySignalsOutput, /route_guard_missing/);
+
+  const normalizedEditableFieldsRoot = createFixture('normalized-editable-fields', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      'const normalizedSchema = { ...object, properties: { ...object.properties, editableFields: object.properties?.editableFields ?? [] } };',
+      `const editableFields = Array.isArray(object.properties?.editableFields)
+        ? object.properties.editableFields.map((field) => ({ ...field }))
+        : [];
+      const normalizedSchema = { ...object, properties: { ...object.properties, editableFields } };`,
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(normalizedEditableFieldsRoot),
+    /status: PASS/,
+    'preserving and normalizing editableFields at the schema boundary is not runtime consumption',
+  );
+
+  const unconditionalAllowRoot = createFixture('unconditional-allow', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel
+      .replace('return evaluateOperation(access, entityKey, permissionKey);', 'return true;')
+      .replace('return evaluateField(access, entityKey, fieldKey, DATA_RECORD_CREATE);', 'return true;')
+      .replace('return evaluateField(access, entityKey, fieldKey, META_FIELD_READ);', 'return true;')
+      .replace('return evaluateField(access, entityKey, fieldKey, META_FIELD_UPDATE);', 'return true;'),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(unconditionalAllowRoot, { expectFailure: true }),
+    /permission_helper_unconditional_allow/,
+  );
+
+  const stringifiedFieldAccessRoot = createFixture('stringified-field-access', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      'const states = normalizeFieldAccessStates(fieldAccess[fieldKey]);',
+      'const states = [String(fieldAccess[fieldKey])];',
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(stringifiedFieldAccessRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+  );
+
+  const textHelperStringifiedAccessRoot = createFixture('text-helper-stringified-access', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel
+      .replace(
+        "export const META_FIELD_UPDATE = 'meta.field.update';",
+        "export const META_FIELD_UPDATE = 'meta.field.update';\n      const toText = (value) => String(value ?? '').trim();",
+      )
+      .replace(
+        "const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];",
+        "const states = [toText(fieldAccessValue)];",
+      ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(textHelperStringifiedAccessRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+  );
+
+  for (const [name, parameterName, coercion] of [
+    ['string-access-state', 'accessState', 'String(accessState)'],
+    ['text-helper-access', 'access', 'toText(access)'],
+  ]) {
+    const aliasedAccessRoot = createFixture(name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel
+        .replace(
+          "export const META_FIELD_UPDATE = 'meta.field.update';",
+          "export const META_FIELD_UPDATE = 'meta.field.update';\n      const toText = (value) => String(value ?? '').trim();",
+        )
+        .replaceAll('fieldAccessValue', parameterName)
+        .replace(
+          `const states = Array.isArray(${parameterName}) ? ${parameterName} : [${parameterName}];`,
+          `const states = [${coercion}];`,
+        ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.match(
+      runAudit(aliasedAccessRoot, { expectFailure: true }),
+      /field_access_state_stringified/,
+    );
+  }
+
+  const templateStringifiedAccessRoot = createFixture('template-stringified-access', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      'const states = normalizeFieldAccessStates(fieldAccess[fieldKey]);',
+      'const states = [`${fieldAccess[fieldKey]}`];',
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(templateStringifiedAccessRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+  );
+
+  const directBranchStringificationRoot = createFixture('direct-branch-stringification', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+      `function normalizeFieldAccessStates(value) {
+        if (String(value) === 'readonly') return ['readonly'];
+        return [];
+      }`,
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(directBranchStringificationRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+    'stringification used directly by a permission branch must fail the audit',
+  );
+
+  const diagnosticStringificationRoot = createFixture('diagnostic-stringification', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel
+      .replace(
+        'function normalizeFieldAccessStates(fieldAccessValue) {',
+        `function normalizeFieldAccessStates(value) {
+          if (value == null) console.warn('missing fieldAccess state', String(value));`,
+      )
+      .replaceAll('fieldAccessValue', 'value'),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.doesNotMatch(
+    runAudit(diagnosticStringificationRoot),
+    /field_access_state_stringified/,
+    'diagnostic-only stringification must not block an otherwise valid permission runtime',
+  );
+
+  for (const [name, diagnosticStatement] of [
+    [
+      'explicit-field-access-diagnostic',
+      "console.warn('missing fieldAccess state', String(fieldAccessValue));",
+    ],
+    [
+      'structured-field-access-diagnostic',
+      'console.warn({ state: String(fieldAccessValue) });',
+    ],
+    [
+      'comment-only-field-access-stringification',
+      '// Avoid String(fieldAccessValue) because it flattens state arrays.',
+    ],
+    [
+      'string-literal-only-field-access-stringification',
+      "const diagnosticGuidance = 'Avoid String(fieldAccessValue) here';",
+    ],
+  ]) {
+    const nonResultStringificationRoot = createFixture(name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel.replace(
+        'function normalizeFieldAccessStates(fieldAccessValue) {',
+        `function normalizeFieldAccessStates(fieldAccessValue) {
+          ${diagnosticStatement}`,
+      ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.doesNotMatch(
+      runAudit(nonResultStringificationRoot),
+      /field_access_state_stringified/,
+      `${name} must not block an otherwise valid permission runtime`,
+    );
+  }
+
+  const semicolonlessDiagnosticRoot = createFixture('semicolonless-diagnostic-stringification', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+      `function normalizeFieldAccessStates(value) {
+        if (value == null) return []
+        console.warn('missing fieldAccess state', String(value))
+        const states = Array.isArray(value) ? value : [value]
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim())
+      }`,
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.doesNotMatch(
+    runAudit(semicolonlessDiagnosticRoot),
+    /field_access_state_stringified/,
+    'ASI must end an earlier return before diagnostic-only stringification',
+  );
+
+  const continuedReturnStringificationRoot = createFixture('continued-return-stringification', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+      `function normalizeFieldAccessStates(value) {
+        return value ||
+          String(value)
+      }`,
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(continuedReturnStringificationRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+    'an operator-continued return still makes stringification affect the result',
+  );
+
+  for (const [name, coercion] of [
+    ['to-string-field-access', 'fieldAccess[fieldKey].toString()'],
+    ['join-field-access', "fieldAccess[fieldKey].join(',')"],
+  ]) {
+    const methodStringifiedAccessRoot = createFixture(name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel.replace(
+        'normalizeFieldAccessStates(fieldAccess[fieldKey])',
+        `[${coercion}]`,
+      ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.match(
+      runAudit(methodStringifiedAccessRoot, { expectFailure: true }),
+      /field_access_state_stringified/,
+    );
+  }
+
+  const indirectNormalizerStringificationRoot = createFixture(
+    'indirect-normalizer-stringification',
+    {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel.replace(
+        `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+        `function normalizeFieldAccessStates(value) {
+        const normalizedStates = [String(value)];
+        return normalizedStates;
+      }`,
+      ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    },
+  );
+  assert.match(
+    runAudit(indirectNormalizerStringificationRoot, { expectFailure: true }),
+    /field_access_state_stringified/,
+  );
+
+  for (const [name, replacement] of [
+    [
+      'multiline-normalizer-stringification',
+      `function normalizeFieldAccessStates(value) {
+        return [
+          String(value),
+        ];
+      }`,
+    ],
+    [
+      'arrow-object-normalizer-stringification',
+      `const normalizeFieldAccessStates = (value) => ({
+        states: [String(value)],
+      }).states;`,
+    ],
+  ]) {
+    const resultStringifiedAccessRoot = createFixture(name, {
+      app: goodFiles.app,
+      permissionModel: goodFiles.permissionModel.replace(
+        `function normalizeFieldAccessStates(fieldAccessValue) {
+        const states = Array.isArray(fieldAccessValue) ? fieldAccessValue : [fieldAccessValue];
+        return states.filter((state) => typeof state === 'string').map((state) => state.trim());
+      }`,
+        replacement,
+      ),
+      router: goodFiles.router,
+      page: goodFiles.page,
+      api: goodFiles.api,
+      service: goodFiles.service,
+    });
+    assert.match(
+      runAudit(resultStringifiedAccessRoot, { expectFailure: true }),
+      /field_access_state_stringified/,
+    );
+  }
+
+  const legitimateStringNormalizationRoot = createFixture('legitimate-string-normalization', {
+    app: goodFiles.app,
+    permissionModel: `${goodFiles.permissionModel}
+      const normalizedScope = String(permission.scope ?? '').trim();
+      const normalizedFieldKey = String(fieldKey ?? '').trim();
+      const normalizedFieldAccess = normalizeFieldAccessStates('readonly');
+      const normalizeLabel = (value) => String(value ?? '').trim();
+      const serializePermission = (access) => String(access);
+    `,
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.doesNotMatch(
+    runAudit(legitimateStringNormalizationRoot),
+    /field_access_state_stringified/,
+  );
+
+  const missingCreateFieldsRoot = createFixture('missing-create-fields', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      'const createSchemaFields = object.properties?.createFields ?? [];',
+      'const createSchemaFields = fields;',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service.replace(
+      'createFields: Array.isArray(entity.properties?.createFields) ? entity.properties.createFields : [],',
+      '',
+    ),
+  });
+  assert.match(
+    runAudit(missingCreateFieldsRoot, { expectFailure: true }),
+    /create_fields_contract_missing/,
+  );
+
+  const createFieldsFallbackRoot = createFixture('create-fields-fallback', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      'object.properties?.createFields ?? []',
+      'object.properties?.createFields ?? fields',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(createFieldsFallbackRoot, { expectFailure: true }),
+    /create_fields_fallback_to_visible_fields/,
+  );
+
+  const createFormUsesVisibleFieldsRoot = createFixture('create-form-uses-visible-fields', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      'const createFormFields = createSchemaFields.filter((field) => creatableFieldKeys.has(field.key));',
+      'const createFormFields = visibleFields.filter((field) => creatableFieldKeys.has(field.key));',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(createFormUsesVisibleFieldsRoot, { expectFailure: true }),
+    /create_form_uses_visible_fields/,
+  );
+
+  const missingCreateFieldHelperRoot = createFixture('missing-create-field-helper', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel
+      .replace('export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, DATA_RECORD_CREATE); }', '')
+      .replace('export function creatableFieldKeysForEntity(access, entityKey, fields) { return new Set(fields.map((field) => field.key)); }', ''),
+    router: goodFiles.router,
+    page: goodFiles.page
+      .replace(
+        'const creatableFieldKeys = creatableFieldKeysForEntity(access, object.entityKey, createSchemaFields);',
+        'const creatableFieldKeys = new Set(createSchemaFields.map((field) => field.key));',
+      ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(missingCreateFieldHelperRoot, { expectFailure: true }),
+    /create_field_permission_helper_missing/,
+  );
+
+  const createFieldHelperUsesReadPermissionRoot = createFixture('create-helper-uses-read', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      'export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, DATA_RECORD_CREATE); }',
+      'export function canCreateEntityField(access, entityKey, fieldKey) { return resolveFieldPermission(access, entityKey, fieldKey, META_FIELD_READ); }',
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(createFieldHelperUsesReadPermissionRoot, { expectFailure: true }),
+    /create_field_permission_uses_meta_field/,
+  );
+
+  const editableFieldsCreateRoot = createFixture('editable-fields-create', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      'object.properties?.createFields ?? []',
+      'object.properties?.editableFields ?? []',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(editableFieldsCreateRoot, { expectFailure: true }),
+    /editable_fields_consumed_by_runtime/,
+  );
+
+  const editableFieldsEditRoot = createFixture('editable-fields-edit', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: `${goodFiles.page}\nconst editFields = object.properties?.editableFields?.filter(Boolean) ?? [];`,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(editableFieldsEditRoot, { expectFailure: true }),
+    /editable_fields_consumed_by_runtime/,
+  );
+
+  const unfilteredCreatePayloadRoot = createFixture('unfiltered-create-payload', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      'return createRecord(buildCreatePayload(values));',
+      'return createRecord(values);',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(unfilteredCreatePayloadRoot, { expectFailure: true }),
+    /create_payload_filter_not_obvious/,
+  );
+
+  const spreadCreatePayloadRoot = createFixture('spread-create-payload', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      'return createRecord(buildCreatePayload(values));',
+      'return createRecord({ ...values });',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(spreadCreatePayloadRoot, { expectFailure: true }),
+    /create_payload_filter_not_obvious/,
+  );
+
+  const lookupTargetUsesCreateFieldsRoot = createFixture('lookup-target-uses-create-fields', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: `${goodFiles.page}\nconst targetDisplayFields = targetEntity.properties.createFields ?? [];`,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(lookupTargetUsesCreateFieldsRoot, { expectFailure: true }),
+    /lookup_target_uses_create_fields/,
+  );
+
+  const permissionOnlyRefreshRoot = createFixture('permission-only-refresh', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace('await refreshSchema();', ''),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(permissionOnlyRefreshRoot, { expectFailure: true }),
+    /permission_refresh_does_not_refresh_schema/,
+  );
 
   const validFieldEditGates = [
     {
@@ -237,6 +838,12 @@ try {
       replacement: 'onCreate={canCreateRecord && (updateEditableFieldKeys.size > 0) ? openCreate : undefined}',
       failure: /create_entry_depends_on_editable_fields/,
     },
+    {
+      name: 'create-depends-on-creatable-fields',
+      source: 'onCreate={canCreateRecord ? openCreate : undefined}',
+      replacement: 'onCreate={canCreateRecord && creatableFieldKeys.size > 0 ? openCreate : undefined}',
+      failure: /create_entry_depends_on_creatable_fields/,
+    },
   ];
 
   for (const invalidGate of invalidEditableFieldGates) {
@@ -301,6 +908,15 @@ function createFixture(name, files) {
   write(path.join(root, 'apps/ui/src/features/objects/SchemaObjectPage.jsx'), files.page);
   write(path.join(root, 'apps/ui/src/lib/service-api/permissions.js'), files.api);
   write(path.join(root, 'apps/service/src/app.js'), files.service);
+  if (files.tests) {
+    write(path.join(root, 'apps/ui/src/App.test.jsx'), files.tests);
+  }
+  if (files.stories) {
+    write(path.join(root, 'apps/ui/src/App.stories.jsx'), files.stories);
+  }
+  if (files.sharedRuntime) {
+    write(path.join(root, 'apps/packages/permission-runtime/src/index.js'), files.sharedRuntime);
+  }
 
   if (name === 'good-app') {
     Object.assign(goodFiles, files);

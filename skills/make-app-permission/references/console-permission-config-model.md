@@ -1,100 +1,40 @@
-# Console Permission Config Model
+# Console permission config model
 
-Use this reference when touching make-console single-app permission configuration or when interpreting what the frontend receives from IAM.
+Use this reference for make-console App permission configuration and for interpreting the policy expanded by IAM.
 
 ## Contents
 
-- Backend configuration owner
-- Permission group APIs
-- Policy shape
+- Ownership and policy shape
 - Operations
-- Resources
-- Field condition
-- Data condition
-- Default/all-form permissions
+- Independent field access
+- Wildcards and exceptions
+- System fields
+- Data condition and runtime handoff
 
-## Backend configuration owner
+## Ownership and policy shape
 
-Assume make-console owns permission-group management unless the user explicitly asks to build permission management pages inside a business App.
+make-console owns permission groups and policy editing unless the user explicitly requests in-App management UI. Business Apps consume `/principal/permission` and do not copy role/group management.
 
-Generated business Apps normally consume configured permissions through `/principal/permission`; they do not implement role/group management UI.
+Policy statements contain `effect`, `permissionKeys`, entity/App resources, optional `dataCondition`, and `fieldCondition.fields`.
 
-## Permission group APIs
+Representative independent fields:
 
-make-console single-app permission management uses App-scoped group APIs:
-
-```text
-POST /console/v1/permissions/groups/list
-POST /console/v1/permissions/groups/detail
-POST /console/v1/permissions/groups/create
-POST /console/v1/permissions/groups/copy
-POST /console/v1/permissions/groups/delete
-POST /console/v1/permissions/groups/config/check
-POST /console/v1/permissions/groups/save
+```yaml
+permissionKeys:
+  - data.record.create
+  - meta.field.read
+  - meta.field.update
+fieldCondition:
+  fields:
+    - fieldKey: create_only_field
+      access: creatable
+    - fieldKey: visible_field
+      access: readonly
+    - fieldKey: editable_field
+      access: editable
 ```
-
-Common payload fields:
-
-```text
-appKey
-key
-name
-rules
-subjects.users[].userId
-subjects.departments[].departmentId
-```
-
-Form/entity candidates come from Meta:
-
-```text
-GET/POST /meta/v1/entity
-X-Make-Target: MakeService.ListResources
-```
-
-## Policy shape
-
-Permission rules use `Make.IAM.Policy` style statements:
-
-```json
-{
-  "key": "rule_key",
-  "name": "权限规则1",
-  "type": "Make.IAM.Policy",
-  "meta": { "version": "1.0.0" },
-  "properties": {
-    "description": "",
-    "statements": [
-      {
-        "key": "Statement1",
-        "name": "媒体权限",
-        "effect": "allow",
-        "permissionKeys": [
-          "data.record.read",
-          "data.record.update",
-          "meta.field.read",
-          "meta.field.update"
-        ],
-        "resources": ["make://<tenantId>/meta/app/<appKey>/entity/<entityKey>"],
-        "dataCondition": { "expression": "" },
-        "fieldCondition": {
-          "fields": [
-            { "fieldKey": "name", "access": "editable" },
-            { "fieldKey": "status", "access": "readonly" }
-          ]
-        }
-      }
-    ]
-  }
-}
-```
-
-Unsupported legacy statement shapes should not be treated as allow in new UI.
-
-Record operation keys and field permission keys must both be present when a rule grants both record operations and field visibility/editability. `fieldCondition` constrains `meta.field.read/update`; it must not be interpreted as making `data.record.create/update` grant field permissions.
 
 ## Operations
-
-Known operation keys:
 
 ```text
 data.record.read
@@ -106,98 +46,86 @@ data.record.*
 *.*.*
 ```
 
-Frontend meanings:
+Keep normal edit, delete, and batch update independent. `data.record.create` controls create entry/submit and also carries create-field access in the expanded principal permission response.
 
-- `read`: list/detail/view data.
-- `create`: new record entry and create submit operation.
-- `update`: edit entry, edit route, cell edit commit operation, and update submit operation.
-- `bulkUpdate`: batch edit only when the UI has batch-edit capability.
-- `delete`: delete action.
-- `data.record.*`: all record operations.
-- `*.*.*`: full wildcard permission.
+## Independent field access
 
-Field permission keys:
-
-```text
-meta.field.read
-meta.field.update
-meta.field.*
-```
-
-Frontend meanings:
-
-- `meta.field.read`: field is visible/readable. Without it, do not render the field.
-- `meta.field.update`: field is editable. Without it, visible fields render readonly/disabled, skip required validation, and are excluded from submit payloads.
-- `editable` field configuration should produce both `meta.field.read` and `meta.field.update`; editable implies visible.
-- Do not use `data.record.create` or `data.record.update` as field visibility or field editability permission.
-
-## Resources
-
-All forms wildcard:
-
-```text
-*
-```
-
-Entity resource:
-
-```text
-make://<tenantId>/meta/app/<appKey>/entity/<entityKey>
-make://<tenantId>/*/app/<appKey>/entity/<entityKey>
-```
-
-App resource:
-
-```text
-make://<tenantId>/meta/app/<appKey>
-make://<tenantId>/*/app/<appKey>
-```
-
-The frontend runtime must match app-level resources, IAM namespace-wildcard App resources, and wildcard resources, not only exact entity resources.
-
-## Field condition
-
-Field access values:
+Field access values include:
 
 ```text
 hidden
 readonly
 editable
+creatable
 partialMask
 fullMask
+*
 ```
 
-Frontend editability:
+Console semantics:
 
-- `editable` means visible and editable.
-- `readonly` means visible but not editable.
-- `hidden` means not rendered.
-- `partialMask`, `fullMask`, missing field, or missing allow denies editing; render only if read visibility is allowed and the display layer supports masking.
-- No fieldCondition on a field-permission allow statement means unrestricted fields for that field permission.
-- A `*` field can express a default baseline.
+- `creatable`: field is creatable only; it does not become readable/editable.
+- `readonly`: visible only.
+- `editable`: grants the `meta.field.update` edit dimension and is not creatable. Selecting 可编辑 does not automatically select or grant the visibility dimension.
+- `*`: full field access in the permission dimensions generated for the statement.
+- `hidden`: no field grant.
+- masks: read/display semantics only.
 
-Use `fieldCondition` with `meta.field.read/update` for field visibility and editability. Use schema as the structural field source. Do not infer editability from visible fields or from `data.record.*`.
+可新建、可见、可编辑 are independent selections. Serializers must preserve multiple entries for the same field when needed.
 
-## Data condition
+Interpret an access value inside its expanded `permissionKey` row. On a `meta.field.read` row, `access: editable` is a readable state. This does not mean an editable selection may synthesize a read grant. A field present only in `meta.field.update` remains invisible and is therefore absent from list/detail/edit UI.
 
-`dataCondition.expression` expresses data range. The frontend must not evaluate it. Record APIs and backend authorization own row-level enforcement.
+Only `creatable` / 仅可新建 must serialize with both `data.record.create` and `meta.field.read`; the latter is required for Schema metadata delivery, not runtime visibility.
 
-## Default/all-form permissions
+For an allow statement, any `access: creatable` or `access: "*"` requires `data.record.create` in `permissionKeys`. A creatable-only selection correctly produces at least `data.record.create + meta.entity.read + meta.field.read`; runtime still interprets `creatable` as non-readable on the `meta.field.read` row. Do not derive create permission for deny statements, and do not reverse-generate creatable fields from a standalone record-create operation.
 
-A default full-access permission may use:
+`access: editable` and `access: "*"` are different current formats. Never rewrite editable to wildcard during unrelated saves.
 
-```text
-resources: ["*"]
-permissionKeys: ["*.*.*"]
-fieldCondition.fields: [{ fieldKey: "*", access: "editable" }]
+## Wildcards and exceptions
+
+“全部字段权限” for a selected entity uses:
+
+```yaml
+fieldCondition:
+  fields:
+    - fieldKey: "*"
+      access: "*"
 ```
 
-A default read-only permission must not use `*.*.*`. Use explicit read keys:
+This preserves future-field inheritance, subject to backend `createFields`/`fields` upper bounds and final write authorization.
 
-```text
-resources: ["*"]
-permissionKeys: ["data.record.read", "meta.field.read"]
-fieldCondition.fields: [{ fieldKey: "*", access: "readonly" }]
+A wildcard baseline plus named exceptions must round-trip without expansion:
+
+```yaml
+fields:
+  - fieldKey: "*"
+    access: "*"
+  - fieldKey: secret
+    access: hidden
 ```
 
-Do not treat `*`, `make://<tenantId>/*/app/<appKey>`, or app-level resource as platform permission. In App scope, they are valid single-app permission matches.
+These entries belong to the same allow statement/field range. Do not split `secret: hidden` into an `effect: deny` statement: runtime operation guards treat a matching deny as an operation denial, not merely a field exception.
+
+If the visual editor cannot represent wildcard + named exceptions losslessly, keep the statement YAML-only. Do not materialize only the currently known fields, because future fields would lose inheritance.
+
+An empty `fieldAccess` in expanded most-specific allow output means unrestricted for that permissionKey. Do not confuse it with missing `createFields`, which is an empty Schema upper bound.
+
+## System fields
+
+- Use `system-field-contract.md` as the exact source for ID types and system audit keys. Do not use fuzzy key matching.
+- 可编辑 candidates keep the existing rule: exclude ID only. Audit fields retain existing edit capability unless the product/backend contract explicitly changes it.
+- “全部字段权限” does not authorize creating fields omitted from backend `createFields`; server-side Schema/write enforcement remains mandatory.
+
+Add regression tests for “audit not creatable but still editable”.
+
+## Data condition and runtime handoff
+
+`dataCondition.expression` is backend-owned row-level authorization. UI does not evaluate it.
+
+The runtime consumes:
+
+- IAM `data.record.create.fieldAccess` for create fields;
+- IAM `meta.field.read.fieldAccess` and Schema `fields` for visibility;
+- IAM `meta.field.update.fieldAccess` after visibility for editability;
+- Schema `createFields` as the create upper bound;
+- no current behavior from `editableFields`.

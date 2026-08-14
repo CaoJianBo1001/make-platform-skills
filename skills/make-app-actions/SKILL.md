@@ -37,7 +37,10 @@ requests, query context, field controls, business feedback, and list refresh.
    infer select-all from selected and total counts. Treat CanvasTable instance
    replacement and same-query `totalCount` changes with the lifecycle in
    `references/selection-and-operation-snapshot.md`; never replay an action-owned
-   selection into a replacement instance.
+   selection into a replacement instance. CanvasTable 1.3.0
+   `GroupTableComponent` does not support Shift range selection; do not emulate
+   Shift ranges in the host unless the installed grouped-table public contract
+   explicitly adds that capability.
 5. Build single edit, single delete, and multiple batch-edit actions from the
    current cached principal snapshot. Keep `data.record.update`,
    `data.record.delete`, and `data.record.bulkUpdate` independent.
@@ -107,7 +110,9 @@ requests, query context, field controls, business feedback, and list refresh.
   The row precheck and final write endpoint remain authoritative.
 - Freeze target mode, IDs or exclusions, selected count, object/entity identity,
   `filter`, and `groupFilter` before precheck. Precheck and mutation must use the
-  same snapshot.
+  same snapshot. Do not invent an undocumented `snapshotToken`/opaque token or
+  replace the target with one; only use such a token when the installed host
+  Service contract explicitly defines and verifies it.
 - Keep `filter` and `groupFilter` separate and unchanged. They are accepted only
   for select-all targets and are combined by backend semantics, not by UI or
   Service string rewriting.

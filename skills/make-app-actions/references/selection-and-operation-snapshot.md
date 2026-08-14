@@ -105,7 +105,9 @@ The target includes copied IDs/exclusions plus copied canonical `effectiveFilter
 as `filter` and copied `groupFilter`. The precheck, opened edit surface,
 selected-count text, final mutation, and success text all reuse the same snapshot.
 Do not capture target fields after precheck starts or reconstruct them from
-current React state on submit.
+current React state on submit. Do not invent a `snapshotToken` or other opaque
+server handle as a replacement for this target unless the installed host Service
+contract already specifies issuance, binding, expiry, and mutation verification.
 
 Use separate monotonic generations for entity/query context and selection
 context. An old result is stale when either generation changes. A stale result

@@ -51,11 +51,14 @@ Default:
 Rules:
 
 - Normalize schema variants at the Service/API boundary before UI sees them.
+- Keep permission-trimmed `fields` and `createFields` independent in the normalized entity contract. Missing or invalid `createFields` is `[]`; it never falls back to `fields`.
+- Preserve unknown backend properties when lossless transport is required, including `editableFields`, but do not make Service derive the current edit-field set from `editableFields`; `make-app-permission` owns that runtime decision.
 - Keep entity key, entity display name, field key, field name, field type, options, relation metadata, required/read-only flags, and lookup target metadata when available.
 - Preserve normalized field `capabilities`, including `sortable` and `groupable`,
   so UI candidates and Service validation use the same runtime Schema contract.
 - Do not require local DSL/YAML files to serve schema in published runtime.
 - If remote schema is unavailable, return a visible error status; do not silently serve stale generated fields unless the project explicitly has an offline-dev fallback.
+- If Schema responses are cached, isolate permission-trimmed values by tenant, principal/session, App, and access generation and document an explicit invalidation/reload path for permission refresh.
 
 ## Record routes
 
@@ -71,7 +74,7 @@ Default:
   - response: `{ groups, pagination: { page, size, total } }`
 - `GET /api/entities/:entityKey/records/:recordID` -> record
 - `POST /api/entities/:entityKey/records`
-  - body: `{ data }`
+  - body: `{ data, relations?: { [lookupFieldKey]: recordID | recordID[] | null | [] } }`
   - response: `{ recordID }`
 - `PATCH /api/entities/:entityKey/records/:recordID`
   - body: `{ data }`
@@ -100,6 +103,7 @@ Rules:
   Service alias derived from `pagination.total`, not as the upstream response shape.
 - Do not infer returned fields from arbitrary UI row keys. The UI should request fields by schema keys when it needs a smaller payload.
 - Create/update payloads carry raw submit values, not formatted display labels.
+- For relation-backed `Make.Field.Lookup` during create, keep Lookup keys out of ordinary `data`. Reject client-supplied `data.qfei_relation`; validate `relations` keys against the permission-trimmed `createFields`, relation metadata, cardinality, target visibility/existence, and exact target identity, then let Service synthesize the backend `qfei_relation`.
 
 Use `make-app-sort` for the canonical five-level ordered sort model, sortable-field
 capability, save-before-apply behavior, and CanvasTable header linkage. Service
@@ -233,8 +237,10 @@ Rules:
 - Use an allowlist for editable lookup fields.
 - Read the current record relation snapshot before update when Make replaces `qfei_relation` as a whole.
 - Preserve unrelated relations in the submitted `qfei_relation`.
-- Ignore or reject client-provided `qfei_relation`; Service should synthesize it.
-- Reject unsupported cardinality, missing target records, and non-allowlisted fields with 400.
+- Reject client-provided `qfei_relation`; Service alone synthesizes the complete relation snapshot.
+- Validate the exact source identity, fail closed on malformed unrelated snapshot entries, and apply the current ordinary-field write allowlist to optional `data` in the same request.
+- Reject unsupported cardinality, invisible or missing target fields/records, mismatched target identities, and non-allowlisted fields with 400.
+- Backend `qfei_relation` items contain only `{ entityKey, id }`, not relationKey. If multiple independently writable relations from one source can target the same entity, do not guess which relation an item belongs to; reject the generic route unless the host API documents and tests an unambiguous backend mapping.
 
 ## File routes
 

@@ -49,6 +49,9 @@ const openai = read('skills/make-app-actions/agents/openai.yaml');
 const readme = read('README.md');
 const canvasSkill = read('skills/canvas-table-integration/SKILL.md');
 const permissionSkill = read('skills/make-app-permission/SKILL.md');
+const permissionRuntime = read(
+  'skills/make-app-permission/references/ui-permission-runtime.md',
+);
 const serviceSkill = read('skills/make-app-service/SKILL.md');
 const makeuiSkill = read('skills/makeui/SKILL.md');
 const makeuiListLayout = read('skills/makeui/references/list-page-layout.md');
@@ -87,7 +90,7 @@ const forwardTestScopeHash = computeForwardTestScopeHash(
     })),
   ),
 );
-const currentForwardTestBatch = '2026-08-11-make-app-actions-0.3.1-r8';
+const currentForwardTestBatch = '2026-08-13-make-app-actions-0.3.1-r15';
 
 const skillBundle = [
   skill,
@@ -235,6 +238,11 @@ assert.match(
   'selection flow must freeze and reuse one operation snapshot',
 );
 assert.match(
+  `${skill}\n${selectionFlow}`,
+  /(不得|do not|禁止)[^\n]*(snapshotToken|snapshot token|快照令牌|opaque token|不透明令牌)|(snapshotToken|snapshot token|快照令牌|opaque token|不透明令牌)[^\n]*(不得|do not|禁止)/i,
+  'hosts must not invent an undocumented snapshot token instead of reusing the frozen target',
+);
+assert.match(
   selectionFlow,
   /(filter|筛选)[\s\S]*(sort|排序)[\s\S]*(group|分组)[\s\S]*(object|entity|对象)[\s\S]*(清空|clear)[^\n]*(选择|selection)/i,
   'query-context changes must clear selection',
@@ -248,6 +256,11 @@ assert.match(
   selectionFlow,
   /(?:(GroupTableComponent|分组表格)[\s\S]{0,120}(不支持|unsupported|does not support)[\s\S]{0,80}Shift|(GroupTableComponent|分组表格)[\s\S]{0,120}Shift[\s\S]{0,80}(不支持|unsupported|不得|do not))/i,
   'grouped tables must explicitly record that CanvasTable 1.3.0 does not support Shift ranges',
+);
+assert.match(
+  skill,
+  /(CanvasTable 1\.3\.0|GroupTableComponent)[^\n]*(不支持|does not support|unsupported)[^\n]*Shift[^\n]*(不得|do not|禁止)[^\n]*(模拟|emulate)/i,
+  'the main workflow must make the grouped Shift non-capability impossible to miss',
 );
 assert.match(
   selectionFlow,
@@ -420,13 +433,18 @@ for (const skillName of forwardTestScopeSkillNames) {
     `forward-test record must declare related scope ${skillName}`,
   );
 }
-assert.doesNotMatch(
+assert.match(
   forwardTestRecord,
-  /(沿用|baseline|基线结果)/i,
-  'current-scope forward tests must not reuse historical agent results',
+  /Action 语义前向测试基线 SHA-256[：:]\s*`69fb63b6b0419af55ea2bbe6021979b758e1a69150574b0b93718a8b64db6042`/,
+  'the previous action-semantic fresh-agent baseline must remain explicit',
+);
+assert.match(
+  forwardTestRecord,
+  /make-app-permission 0\.2\.2[\s\S]{0,500}(不改变|未变化)[^\n]*(选择|操作|批量写入|Action 语义)[\s\S]{0,700}(不作为|不声称)[^\n]*(执行证据|重新执行)/,
+  'an unrelated permission-audit revision must not be presented as freshly forward-tested action semantics',
 );
 assertForwardTestScope(forwardTestRecord, forwardTestScopeHash);
-const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\/root\/forward_actions_[a-z0-9_]+)$/i;
+const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\/root\/(?:actions_r1[45]|forward_numeric_r6_form)_[a-z0-9_]+)$/i;
 const forwardScenarios = [
   {
     heading: '场景一：Ant Design 默认操作',
@@ -535,13 +553,23 @@ assert.match(
 );
 assert.match(
   permissionSkill,
-  /data\.record\.update[\s\S]*data\.record\.delete[\s\S]*data\.record\.bulkUpdate[\s\S]*(独立|independent)[\s\S]*make-app-actions/i,
-  'permission skill must preserve independent action permissions and hand off behavior',
+  /(data\.record\.update|update)[^\n]*(delete)[^\n]*(bulk[- ]?update|bulkUpdate)[^\n]*(独立|independent)|(独立|independent)[^\n]*(update)[^\n]*(delete)[^\n]*(bulk[- ]?update|bulkUpdate)/i,
+  'permission skill must preserve independent action permissions',
 );
 assert.match(
   permissionSkill,
-  /(单条|single)[^\n]*(编辑|edit)[^\n]*(可编辑字段|editable field|字段数量)[\s\S]{0,300}(批量|batch)[^\n]*(make-app-actions)/i,
-  'permission skill must distinguish single-edit visibility from batch-edit field availability',
+  /(Use|使用)[^\n]*make-app-actions[^\n]*(selection|选择|batch|批量)|(selection|选择|batch|批量)[^\n]*(Use|使用)[^\n]*make-app-actions/i,
+  'permission skill must hand selection and batch-action behavior to make-app-actions',
+);
+assert.match(
+  permissionRuntime,
+  /(field-count|字段数量)[^\n]*(hide|隐藏)[^\n]*(create|新建)[^\n]*(normal edit|单条编辑|普通编辑)/i,
+  'permission runtime must not hide normal edit by editable-field count',
+);
+assert.match(
+  permissionSkill,
+  /(selection|选择|batch|批量)[^\n]*make-app-actions|make-app-actions[^\n]*(selection|选择|batch|批量)/i,
+  'permission skill must hand batch field availability to make-app-actions',
 );
 assert.match(
   serviceSkill,

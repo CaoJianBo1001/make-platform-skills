@@ -1,70 +1,88 @@
 ---
 name: make-app-permission
-description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission management and frontend permission enforcement. Triggered by 权限, 单应用权限, app 权限, /principal/permission, /api/make/app/principal/permission, 按钮权限, 菜单权限, 路由权限, 字段可见, 字段可编辑, read/create/update/delete/bulkUpdate, data.record.*, meta.field.*, route guard, refresh permission, or preventing URL permission bypass. Covers the default required permission chain for Make projects: Service proxy to Make IAM, app-scope permission payloads, schema-vs-permission separation, route/menu guards, operation buttons, field visibility/editability, cell edit, form field filtering, refresh reload, tests, and audit. Use make-app-actions for Canvas record selection, independent action behavior, row precheck, and batch editing. Does not own platform-admin permissions, auth mechanics, generic Service APIs, UI layout, CanvasTable internals, DSL modeling, Make CLI deploy, or runtime packaging."
+description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permissions. Triggered by 权限, 字段权限范围, 字段可新建, 可见, 可编辑, creatable, createFields, editableFields, /principal/permission, buttons, menus, routes, read/create/update/delete/bulkUpdate, data.record.*, meta.field.*, route guards, refresh permission, or URL bypass. Covers the required Service-to-IAM proxy, app-scope matching, permission-trimmed schema, independent create/read/update field gates, create payload filtering, route/action enforcement, refresh invalidation, tests, and audit. Use make-app-actions for selection and batch-action behavior. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.1.4
+  version: 0.2.2
 ---
 
 # make-app-permission
 
-Use this skill for Make App single-app permission enforcement. For generated or refactored Make projects, treat this as a default required capability unless the user explicitly says to skip permissions.
+Use this skill for Make App single-app permission enforcement. Treat it as required for generated or refactored Make Apps unless the user explicitly opts out.
 
-This skill owns the permission contract. Use `make-app-auth` for login/session, `make-app-service` for general Service layering, `makeui` for layout, `canvas-table-integration` for table editor mechanics, and `make-app-runtime` for packaging/runtime.
+This skill owns permission semantics. Use `make-app-auth` for login/session, `make-app-service` for Service and Schema transport, `makeui` for rendering, `canvas-table-integration` for cell-editor mechanics, and `make-app-runtime` for packaging/runtime.
 
-## Quick Start
+## Quick start
 
-1. Inspect `apps/docs/api.md`, `apps/service/src`, `apps/ui/src`, auth adapter, schema API, record API, router, shell, table pages, form pages, and related tests.
-2. Read `references/permission-boundaries.md` before deciding permission scope, resource, or permissionKey.
-3. Read `references/service-principal-permission.md` before adding or reviewing `/principal/permission` Service code.
-4. Read `references/ui-permission-runtime.md` before adding or reviewing frontend permission state, route guards, buttons, field editability, or refresh behavior.
-5. Read `references/console-permission-config-model.md` when the task touches make-console permission configuration, policy rules, fieldCondition, dataCondition, or operation permission keys.
-6. Read `references/testing-and-audit.md` before reporting completion.
-7. Add or verify Service permission proxy first, then frontend permission provider/model, then route guards, then page-level read/create/update/delete and field-edit gates.
-8. Run the host project tests that cover changed Service/UI behavior and run this skill's audit script when a project tree is available.
+1. Inspect `apps/docs/api.md`, Service/UI schema adapters and types, principal-permission code, providers, router, object pages, create/edit forms, submit builders, refresh flow, and tests.
+2. Read `references/permission-boundaries.md` before selecting scope, permissionKey, schema collection, or field access state.
+3. Read `references/service-principal-permission.md` before changing `/principal/permission` or interpreting IAM `fieldAccess`.
+4. Read `references/ui-permission-runtime.md` before changing route/action gates, create/read/update field sets, payload filtering, or refresh.
+5. Read `references/console-permission-config-model.md` for make-console policy, `fieldCondition`, `creatable`, or wildcard work.
+6. Read `references/system-field-contract.md` before implementing ID/audit create or edit capability.
+7. Read `references/testing-and-audit.md` before implementation and before reporting completion.
+8. Implement tests first, then the Service/schema boundary, permission pure model, route/action gates, field-set consumers, submit allowlists, and refresh invalidation.
+9. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. Wire both permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
+10. When publishing or installing this Skill, run `check-installed-skill-sync.mjs` with explicit source and installed directories. Keep this local release check out of portable host CI.
 
-## Required Contract
+## Required contract
 
-- Make projects must include single-app permission enforcement by default. Do not defer it as a follow-up unless the user explicitly opts out.
-- Use `/api/make/app/principal/permission` as the published browser-facing Service endpoint for Service-fronted Apps. Legacy `/api/principal/permission` may exist only as compatibility.
-- Have Service call Make IAM through make-gateway at `/api/make/iam/v1/principal/permission` with `X-Make-Target: MakeService.GetResource`.
-- Send app scope by default: `make://<tenantId>/meta/app/<appKey>`. Do not default to tenant root scope and do not add a platform permission filter.
-- Match IAM permission resources in both legacy App scope form `make://<tenantId>/meta/app/<appKey>` and current wildcard namespace form `make://<tenantId>/*/app/<appKey>`, including entity suffixes.
-- Preserve the browser login context from UI to Service to make-gateway. Do not drop Cookie or trusted forwarded host/proto context.
-- Use schema for authorized menus, objects, and structural field definitions after backend permission trimming. Field visibility is `meta.field.read`; field editability is `meta.field.update`.
-- Add App/router guards. Hiding menus is not enough: direct URL access must not enter unauthorized Apps, objects, or fixed business routes.
-- Gate list/detail data reads with `data.record.read`.
-- Gate create/update/delete/batch-edit buttons with `data.record.create`, `data.record.update`, `data.record.delete`, and `data.record.bulkUpdate`. The update, delete, and bulkUpdate keys are independent; never infer one from another. Use `make-app-actions` for selection/action behavior and row-write precheck timing.
-- For create and single-edit buttons, do not use editable field count to decide visibility. If `data.record.create` or `data.record.update` is allowed, show the matching entry even when every visible field is readonly. Batch edit is different: `make-app-actions` may hide it when no field remains after batch-edit permission and capability filtering.
-- Gate field rendering with `meta.field.read`: invisible fields are not rendered in list, detail, filter, create form, edit form, or cell editor candidates.
-- Gate field editing with `meta.field.update`: visible but non-editable fields render readonly/disabled in forms, have no cell editor, skip required validation, and are excluded from submit payloads.
-- Filter form and custom-page payloads before submit so unauthorized fields are not sent.
-- Refresh permissions before refreshing data or retrying page data. Close open workspaces when refreshed permissions revoke access.
-- Fail closed when permission loading fails: no protected data request, no operation buttons, and visible forbidden/error state.
-- Let backend handle row-level data conditions. Do not implement `dataCondition` filtering in frontend.
-- Add tests for Service proxy, permission model, route bypass prevention, page gates, refresh behavior, and field payload filtering.
+- Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. Do not use tenant-root/platform permission filters.
+- Match exact, wildcard, parent, App, entity, IAM namespace-wildcard App resources, and deny correctly. Use the most-specific allow field range; deny wins.
+- Keep field creation, visibility, and editability independent:
+  - create form: `createFields ∩ data.record.create fieldAccess(creatable|*)`;
+  - list/detail/filter: `fields ∩ meta.field.read fieldAccess(readable states)`;
+  - edit/cell edit: visible `fields ∩ meta.field.update fieldAccess(editable|*)`.
+- Preserve every access state returned for a field. Current IAM responses may use arrays such as `["creatable", "readonly"]`; normalize legacy scalar strings to one-element arrays and authorize a permission dimension when any state is allowed for that dimension. Never coerce an array with `String(value)` or template interpolation.
+- Treat missing `createFields` as empty. Never fall back to `fields`, and do not consume `editableFields` for current edit behavior.
+- Gate the create entry and submit with `data.record.create` only; do not tie the entry to creatable/editable field count. Gate update/delete/bulk-update independently with their own operation keys.
+- Recompute the latest create/edit allowlist before submit and build payloads from it. Never spread the complete form store into a protected mutation.
+- Exclude ID and system audit fields from create capability. Keep existing audit-field edit capability when the field is visible, update-authorized, and supported by the host editor.
+- Keep create-only invisible fields available only in create mode. A `creatable` access state is not readable or editable.
+- Add App/object/fixed-route guards; hiding menus or buttons is not authorization. Recheck handlers before reads and mutations.
+- Refresh permission and permission-trimmed Schema in one access generation before data refresh. Invalidate stale permission, Schema, form, and record work; do not close a still-authorized create surface merely because read is revoked.
+- Fail closed on permission or Schema failure. Leave row-level `dataCondition` enforcement to backend APIs.
+- Add Service/schema, permission-model, route/page, payload, special-field, refresh, and negative audit tests.
 
-## Reference Map
+## Reference map
 
 | Task | Read |
 | --- | --- |
-| Platform vs single-app permission boundaries | `references/permission-boundaries.md` |
-| Service endpoint, Make IAM payload, gateway path, headers, tenant resolution | `references/service-principal-permission.md` |
-| Frontend provider/model, route guard, object pages, dictionaries/custom pages, refresh strategy | `references/ui-permission-runtime.md` |
-| make-console role/group/policy/form permission configuration model | `references/console-permission-config-model.md` |
-| Required tests and static audit | `references/testing-and-audit.md` |
-| Login/session/auth.api behavior | Use `make-app-auth` |
-| Generic Service API layering and docs | Use `make-app-service` |
-| UI shell and visual layout | Use `makeui` |
-| CanvasTable cell editor mechanics | Use `canvas-table-integration` |
-| Canvas record action bar, independent edit/delete/batch edit, row precheck | Use `make-app-actions` |
-| Runtime gateway origin, build, publish readiness | Use `make-app-runtime` |
+| Platform vs App scope, three field dimensions, Schema collections, matching | `references/permission-boundaries.md` |
+| Service endpoint, IAM request/response, `data.record.create.fieldAccess` | `references/service-principal-permission.md` |
+| Providers, helpers, routes, create/edit flow, payload, refresh, Lookup | `references/ui-permission-runtime.md` |
+| make-console operations, `fieldCondition`, wildcard, system fields | `references/console-permission-config-model.md` |
+| Exact ID/audit create exclusions and edit compatibility | `references/system-field-contract.md` |
+| Required tests, audit signals, completion blockers | `references/testing-and-audit.md` |
+| Auth/session | Use `make-app-auth` |
+| Schema/API transport and cache | Use `make-app-service` |
+| Form/empty-state presentation | Use `makeui` |
+| Table/cell-editor mechanics | Use `canvas-table-integration` |
+| Selection, row precheck, batch actions | Use `make-app-actions` |
+| Runtime gateway and packaging | Use `make-app-runtime` |
 
 ## Audit
-
-Run the audit when reviewing a project tree:
 
 ```bash
 node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 ```
 
-The audit is a contract check, not a replacement for tests. Treat failures as blockers and warnings as review items.
+Treat failures as blockers and warnings as review items. The audit is heuristic and never replaces runtime tests.
+It rejects obvious `fieldAccess` state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()` when the coerced value affects normalization output or permission evaluation, including direct control-flow conditions. Diagnostic-only logging, comments, and string literals inside a named normalization helper must not fail the audit, regardless of whether the parameter uses a generic or `fieldAccess`-specific name. The executable behavior contract remains authoritative.
+
+Also expose a thin host adapter and run the executable behavior contract:
+
+```bash
+node skills/make-app-permission/scripts/permission-conformance-suite.mjs <host-adapter-module>
+```
+
+If the adapter is TypeScript, run the same command through the host's existing TypeScript runner. Do not add a runtime dependency only for this check. The adapter must delegate to the production permission helpers and create-capability guard; it must not reimplement them in the test.
+Keep the audit and conformance runner project-local or install them through a versioned dependency before making them a host gate. Do not hardcode another workspace checkout or a developer home-directory Skill path into portable CI.
+
+For local Skill install/release verification, compare the complete source and installed directories:
+
+```bash
+node skills/make-app-permission/scripts/check-installed-skill-sync.mjs \
+  skills/make-app-permission <installed-skill-dir>
+```
+
+The checker reports source-only, installed-only, and content-mismatch files. Pass an explicit install directory; do not embed a developer home path in the Skill or in host CI.

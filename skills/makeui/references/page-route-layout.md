@@ -52,6 +52,9 @@ Form layout:
 - full-width rows for `TextArea`, long text, URL/link fields, `File`, `Lookup`, relation/association selectors, descriptions, and rich controls
 - normal fields such as text, number, date, date-time, date range, select, user, and department occupy one column by default
 - derive fields and control types from host-provided field metadata
+- create routes render the host permission layer's authorized `createFields` / create field set; edit routes render visible fields and apply the editable subset. Do not substitute visible fields when the create set is missing or empty.
+- required validation applies only to authorized fields rendered in the current mode
+- when creation is allowed but there are no creatable fields, show `暂无可新建字段`, disable submit, and preserve back/navigation actions
 - use type-appropriate controls; date, select, user, department, file, and lookup fields must not silently become plain text inputs
 - custom form field controls must follow the host-form controlled field contract from `component-usage.md`; forward `value/onChange/onBlur/id/disabled` through user, department, lookup, select, date, file, and relation adapters so the visual selection matches the submitted form value
 - user and department selectors use the host-provided candidate source and must include search/loading/empty/error UI states; use the canonical identity/label and generated-app transport contract in `component-usage.md`
