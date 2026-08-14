@@ -112,6 +112,19 @@ Form and field components should consume normalized UI field metadata, not raw b
 
 If no field metadata exists, stop and call out the missing UI dependency instead of inventing static form controls.
 
+### Permission-derived field-set handoff
+
+`makeui` receives authorized field metadata from the host permission layer; it does not calculate permission policy:
+
+- create mode receives the permission-derived `createFields` / create field set and renders only that set
+- edit mode receives visible fields plus an editable-key set; visible non-editable fields may render read-only, while invisible fields do not render
+- do not fall back from an empty or missing create field set to visible fields
+- do not read backend `editableFields` directly in a component; use the host's existing visible/editable result from `make-app-permission`
+
+Schema requiredness has one metadata source: `field.validations.isRequired`. Derive the UI control's `required` prop and 必填 validation from it, scoped only to rendered authorized fields in the active mode. A required field excluded by create or visibility permission must not leave a hidden validator that blocks submit. Before submit, the permission layer still owns rebuilding the authorized payload allowlist.
+
+If record creation is allowed but there are no creatable fields, render an explicit `暂无可新建字段` empty state and disable the create submit action. Do not synthesize inputs from visible or editable fields.
+
 For new Make POC projects, create or reuse a shared field type registry at `apps/ui/src/lib/make-field-types.ts` before implementing field-driven UI. The registry is the shared source for host-owned form controls, detail display, CanvasTable table display, and table cell editors; these consumers should resolve common `Make.Field.*` presentation behavior from the registry instead of carrying separate local mappings. The registry must preserve normalized `field.properties` and expose the properties needed by generated UI, including `format`, `precision`, `decimalPlaces`, `maxCount`, `begin`, `end`, `symbol`, and `useGrouping`. Advanced-filter controls resolve support and editor behavior through `make-app-filter` package APIs, not this registry.
 
 Use type-appropriate controls:
@@ -125,14 +138,14 @@ Use type-appropriate controls:
 | `SingleSelect`, `MultiSelect` | single or multiple select from schema options |
 | `SingleUser`, `MultiUser` | searchable user selector using the host-provided candidate source |
 | `SingleDepartment`, `MultiDepartment` | searchable department selector using the host-provided candidate source |
-| `File` | create: omit when upload requires a saved record identity; edit: attachment component only with saved record identity; detail: attachment display |
-| `Lookup` | read-only lookup display by default; association selector only when field metadata and host UI behavior explicitly support editing |
+| `File` | exact type `Make.Field.File`; create: omit for persisted-record-only upload, or accept only a backend-approved attachment array when an explicit pre-upload/direct-create host contract exists; edit: attachment component only with saved record identity; detail: attachment display |
+| `Lookup` | exact type `Make.Field.Lookup`; read-only by default; relation selector only when relation metadata plus dedicated candidate/write Service contracts are present |
 
 Do not silently degrade date, user, department, select, file, or lookup fields to a bare `Input`.
 
 If a field type is unknown, prefer a read-only display or an explicit unsupported-field fallback. Do not pretend it is a plain text field unless the user confirms that downgrade.
 
-File fields are mode-sensitive. If upload requires a persisted record identity, create forms must omit `Make.Field.File` controls. Render attachment upload/edit only after a record exists and the stable id is available. Detail views may display existing attachments.
+File fields are mode-sensitive. If the host exposes only `.../records/:recordID/files/:fieldKey`, create forms must omit `Make.Field.File` controls. A create control is allowed only when the host explicitly implements and tests pre-upload/direct-create returning the backend-approved attachment array without `recordID`; submit that array, never browser `File`, `blob:` or `data:` values. Render persisted-record attachment upload/edit only after a record exists and the stable id is available. Detail views may display existing attachments.
 
 ## Make field properties contract
 

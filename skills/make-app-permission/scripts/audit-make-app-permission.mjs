@@ -5,7 +5,7 @@ import path from 'node:path';
 const USAGE = `Usage:
   node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 
-Checks Make App single-app permission enforcement. This is a static contract audit; it does not replace Service/UI tests.`;
+Checks Make App single-app permission enforcement, including independent creatable/readable/editable fields. This is a static contract audit; it does not replace Service/UI tests.`;
 
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
@@ -23,8 +23,13 @@ if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
 const uiRoot = firstExisting(['apps/ui/src', 'apps/ui', 'ui/src', 'src']);
 const serviceRoot = firstExisting(['apps/service/src', 'apps/service', 'service/src', 'server/src']);
 const uiFiles = collectSourceFiles(uiRoot);
+const sharedUiRuntimeFiles = collectExistingSourceFiles([
+  'apps/packages/permission-runtime/src',
+  'packages/permission-runtime/src',
+]);
+const uiRuntimeFiles = [...uiFiles, ...sharedUiRuntimeFiles].filter(isRuntimeSourceFile);
 const serviceFiles = collectSourceFiles(serviceRoot).filter(isRuntimeSourceFile);
-const uiText = readJoined(uiFiles);
+const uiRuntimeText = readJoined(uiRuntimeFiles);
 const serviceText = readJoined(serviceFiles);
 
 const failures = [];
@@ -38,7 +43,7 @@ printResult();
 process.exit(failures.length > 0 ? 1 : 0);
 
 function checkSourceRoots() {
-  if (uiFiles.length === 0) {
+  if (uiFiles.filter(isRuntimeSourceFile).length === 0) {
     failures.push('no_ui_source: cannot find UI source under apps/ui/src, apps/ui, ui/src, or src');
   }
   if (serviceFiles.length === 0) {
@@ -85,46 +90,79 @@ function checkServiceContract() {
   if (!/(x-forwarded-host|X-Forwarded-Host)/i.test(serviceText)) {
     warnings.push('forwarded_host_not_obvious: could not find forwarded host handling for gateway calls');
   }
+  if (!/createFields/.test(serviceText)) {
+    failures.push('create_fields_contract_missing: Service schema normalization must preserve createFields independently from visible fields');
+  }
+  if (/createFields\s*:\s*[^,;\n]*(?:\?\?|\|\|)\s*(?:[^,;\n]*\.)?fields\b/.test(serviceText)) {
+    failures.push('create_fields_fallback_to_visible_fields: missing createFields must be empty, not fall back to fields');
+  }
 }
 
 function checkUiContract() {
-  if (!uiText) return;
+  if (!uiRuntimeText) return;
 
-  if (!/principal\/permission/.test(uiText)) {
+  if (!/principal\/permission/.test(uiRuntimeText)) {
     failures.push('ui_permission_api_missing: UI must call the Service principal permission endpoint');
   }
-  if (!/(PermissionProvider|MdmPermissionProvider)/.test(uiText)) {
+  if (!/(PermissionProvider|MdmPermissionProvider)/.test(uiRuntimeText)) {
     failures.push('permission_provider_missing: UI must provide app-level permission context after auth');
   }
-  if (!/refreshPermissions/.test(uiText)) {
+  if (!/refreshPermissions/.test(uiRuntimeText)) {
     failures.push('refresh_permissions_missing: UI must expose/use refreshPermissions for refresh-time reload');
   }
   checkProviderOrder();
 
   for (const key of ['read', 'create', 'update', 'delete']) {
-    if (!new RegExp(`data\\.record\\.${key}`).test(uiText)) {
+    if (!new RegExp(`data\\.record\\.${key}`).test(uiRuntimeText)) {
       failures.push(`operation_key_missing_${key}: UI permission model must include data.record.${key}`);
     }
   }
   for (const key of ['read', 'update']) {
-    if (!new RegExp(`meta\\.field\\.${key}`).test(uiText)) {
+    if (!new RegExp(`meta\\.field\\.${key}`).test(uiRuntimeText)) {
       failures.push(`field_permission_key_missing_${key}: UI permission model must include meta.field.${key}`);
     }
   }
 
-  if (!/(canUseEntityOperation|canUse.*Operation|has.*Permission)/.test(uiText)) {
+  if (!/(canUseEntityOperation|canUse.*Operation|has.*Permission)/.test(uiRuntimeText)) {
     failures.push('operation_helper_missing: UI must have a helper to evaluate entity operation permission');
   }
-  if (!/(canReadEntityField|visibleFieldsForEntity|visibleFieldKeys|META_FIELD_READ|meta\.field\.read)/.test(uiText)) {
+  if (!/(canReadEntityField|visibleFieldsForEntity|visibleFieldKeys|META_FIELD_READ|meta\.field\.read)/.test(uiRuntimeText)) {
     failures.push('field_visibility_helper_missing: UI must evaluate field visibility from meta.field.read');
   }
-  if (!/(canUpdateEntityField|editableFieldKeysForEntity|editableFieldNames|META_FIELD_UPDATE|meta\.field\.update)/.test(uiText)) {
+  if (!/(canUpdateEntityField|editableFieldKeysForEntity|editableFieldNames|META_FIELD_UPDATE|meta\.field\.update)/.test(uiRuntimeText)) {
     failures.push('field_edit_helper_missing: UI must evaluate field editability from meta.field.update');
   }
-  if (/(?:canEditEntityField|editableFieldKeysForEntity|editableFieldNames)\s*\([\s\S]{0,180}(?:DATA_RECORD_CREATE|DATA_RECORD_UPDATE|data\.record\.(?:create|update))/.test(uiText)) {
+  if (!/(canCreateEntityField|creatableFieldKeysForEntity)/.test(uiRuntimeText)) {
+    failures.push('create_field_permission_helper_missing: UI must evaluate create fields from data.record.create fieldAccess');
+  }
+  if (
+    ['canUseEntityOperation', 'canCreateEntityField', 'canReadEntityField', 'canUpdateEntityField']
+      .some((functionName) => namedFunctionAlwaysReturnsTrue(uiRuntimeText, functionName))
+  ) {
+    failures.push('permission_helper_unconditional_allow: permission helpers must evaluate current access instead of returning true unconditionally');
+  }
+  if (namedFunctionUsesMetaFieldPermission(uiRuntimeText, 'canCreateEntityField')) {
+    failures.push('create_field_permission_uses_meta_field: create-field permission must use data.record.create, not meta.field.read/update');
+  }
+  if (!/createFields/.test(uiRuntimeText)) {
+    failures.push('create_fields_contract_missing: UI schema and create form must preserve and consume createFields');
+  }
+  if (/createFields\s*(?:\?\?\s*|\|\|\s*)(?:[^;\n]*\.)?fields\b/.test(uiRuntimeText)) {
+    failures.push('create_fields_fallback_to_visible_fields: missing createFields must produce an empty create form');
+  }
+  if (hasEditableFieldsRuntimeConsumption(uiRuntimeText)) {
+    failures.push('editable_fields_consumed_by_runtime: current edit/create behavior must ignore backend editableFields');
+  }
+  if (/\b(?:createFormFields|writableFormFields)\s*=\s*(?:visibleFields|editableFields|updateEditableFields)\b/.test(uiRuntimeText)) {
+    failures.push('create_form_uses_visible_fields: create form fields must derive from createFields, not visible/editable fields');
+  }
+  if (/\btarget\w*(?:Display)?Fields\s*=\s*[^;\n]*\bcreateFields\b/i.test(uiRuntimeText)) {
+    failures.push('lookup_target_uses_create_fields: Lookup target display fields must come from visible fields, not target createFields');
+  }
+  if (/(?:canEditEntityField|editableFieldKeysForEntity|editableFieldNames)\s*\([\s\S]{0,180}(?:DATA_RECORD_CREATE|DATA_RECORD_UPDATE|data\.record\.(?:create|update))/.test(uiRuntimeText)) {
     failures.push('field_permission_tied_to_data_record: field visibility/editability must use meta.field.*, not data.record.create/update');
   }
-  if (hasRecordEntryEditableFieldCountGate(uiText, {
+  if (hasRecordEntryEditableFieldCountGate(uiRuntimeText, {
     actionKeyPattern: '(?:create|new)',
     fieldOperationPattern: 'canCreate\\w*(?:Cell|Field)\\w*',
     jsxEntryPattern: 'onCreate',
@@ -132,7 +170,10 @@ function checkUiContract() {
   })) {
     failures.push('create_entry_depends_on_editable_fields: create entry must depend on data.record.create only');
   }
-  if (hasRecordEntryEditableFieldCountGate(uiText, {
+  if (/\bonCreate\s*=\s*\{[^}]{0,1000}\b(?:creatable\w*|createFormFields|createSchemaFields)\s*\.\s*(?:length|size)/is.test(uiRuntimeText)) {
+    failures.push('create_entry_depends_on_creatable_fields: create entry must depend on data.record.create only');
+  }
+  if (hasRecordEntryEditableFieldCountGate(uiRuntimeText, {
     actionKeyPattern: 'edit',
     fieldOperationPattern: '(?:canUpdate|canEdit)\\w*(?:Cell|Field)\\w*',
     jsxEntryPattern: 'onEdit',
@@ -140,32 +181,131 @@ function checkUiContract() {
   })) {
     failures.push('edit_entry_depends_on_editable_fields: edit entry must depend on data.record.update only');
   }
-  if (!hasRouteGuardSignal(uiText)) {
+  if (!hasRouteGuardSignal(uiRuntimeText)) {
     failures.push('route_guard_missing: UI must block direct URL access to schema-missing objects and unauthorized fixed routes');
   }
-  if (!hasReadGateSignal(uiText)) {
+  if (!hasReadGateSignal(uiRuntimeText)) {
     failures.push('read_gate_missing: list/detail loading must be gated by data.record.read');
   }
-  if (!/DATA_RECORD_CREATE|data\.record\.create/.test(uiText) || !/(onCreate|openCreate|canCreate)/.test(uiText)) {
+  if (!/DATA_RECORD_CREATE|data\.record\.create/.test(uiRuntimeText) || !/(onCreate|openCreate|canCreate)/.test(uiRuntimeText)) {
     failures.push('create_gate_missing: create entry/handler must be gated by create permission');
   }
-  if (!/DATA_RECORD_UPDATE|data\.record\.update/.test(uiText) || !/(onEdit|openEdit|canUpdate|onCellEditCommit)/.test(uiText)) {
+  if (!/DATA_RECORD_UPDATE|data\.record\.update/.test(uiRuntimeText) || !/(onEdit|openEdit|canUpdate|onCellEditCommit)/.test(uiRuntimeText)) {
     failures.push('update_gate_missing: edit/cell edit must be gated by update permission');
   }
-  if (!/DATA_RECORD_DELETE|data\.record\.delete/.test(uiText) || !/(onDelete|deleteRecord|canDelete)/.test(uiText)) {
+  if (!/DATA_RECORD_DELETE|data\.record\.delete/.test(uiRuntimeText) || !/(onDelete|deleteRecord|canDelete)/.test(uiRuntimeText)) {
     failures.push('delete_gate_missing: delete entry/handler must be gated by delete permission');
   }
-  if (!/(filter.*Editable|editableFieldNames|editableFieldKeys|hiddenFields|formModel\.fields)/is.test(uiText)) {
+  if (!/(filter.*Editable|editableFieldNames|editableFieldKeys|hiddenFields|formModel\.fields)/is.test(uiRuntimeText)) {
     failures.push('payload_field_filter_not_obvious: form/custom-page submit payload must filter unauthorized fields');
   }
-  if (!/refreshPermissions[\s\S]{0,500}(refresh|loadPage|fetch|close)/.test(uiText)) {
+  if (!hasCreatePayloadFilterSignal(uiRuntimeText) || hasObviousUnfilteredCreatePayload(uiRuntimeText)) {
+    failures.push('create_payload_filter_not_obvious: create submit must build an allowlisted payload from current creatable fields');
+  }
+  if (!/refreshPermissions[\s\S]{0,500}(refresh|loadPage|fetch|close)/.test(uiRuntimeText)) {
     warnings.push('refresh_order_not_obvious: could not prove refreshPermissions runs before data refresh or workspace close');
+  }
+  if (
+    /refreshPermissions/.test(uiRuntimeText)
+    && !/(?:refreshSchema|reloadSchema|invalidateSchema|clearSchema)\s*\(|(?:schemaGeneration|accessGeneration|permissionGeneration)\s*(?:\+\+|[+]?=|:)/.test(uiRuntimeText)
+  ) {
+    failures.push('permission_refresh_does_not_refresh_schema: permission refresh must invalidate or reload permission-trimmed schema');
   }
 }
 
+function hasCreatePayloadFilterSignal(text) {
+  const hasCreateMutation = /(createRecord|createMakeEntityRecord|submitCreate|handleCreate|onCreate)/.test(text);
+  const hasCreateFieldSet = /(creatableFieldKeys|createFormFields|writableFormFields)/.test(text);
+  const hasAllowlistBuilder = /(buildCreateRecordPayload|buildCreatePayload|filter[^\n]*(?:Creatable|CreateFields)|Object\.fromEntries)/.test(text);
+
+  return hasCreateMutation && hasCreateFieldSet && hasAllowlistBuilder;
+}
+
+function hasObviousUnfilteredCreatePayload(text) {
+  const rawArgument = /(?:createRecord|createMakeEntityRecord)\s*\(\s*(?:values|formValues|draft)\s*\)/;
+  const spreadArgument = /(?:createRecord|createMakeEntityRecord)\s*\(\s*\{\s*\.\.\.(?:values|formValues|draft)\b/;
+  const rawProperty = /\b(?:data|payload|record)\s*:\s*(?:values|formValues|draft)\b/;
+  const spreadProperty = /\b(?:data|payload|record)\s*:\s*\{\s*\.\.\.(?:values|formValues|draft)\b/;
+
+  return rawArgument.test(text) || spreadArgument.test(text) || rawProperty.test(text) || spreadProperty.test(text);
+}
+
+function namedFunctionUsesMetaFieldPermission(text, functionName) {
+  return extractNamedFunctionSources(text, functionName).some((source) =>
+    /(?:META_FIELD_(?:READ|UPDATE)|meta\.field\.(?:read|update))/.test(source),
+  );
+}
+
+function namedFunctionAlwaysReturnsTrue(text, functionName) {
+  const escapedName = functionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const patterns = [
+    new RegExp(String.raw`\bfunction\s+${escapedName}\s*\([^)]*\)\s*\{\s*return\s+true\s*;?\s*\}`),
+    new RegExp(String.raw`\b(?:const|let|var)\s+${escapedName}\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*true\s*;?`),
+    new RegExp(String.raw`\b(?:const|let|var)\s+${escapedName}\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*\{\s*return\s+true\s*;?\s*\}`),
+  ];
+
+  return patterns.some((pattern) => pattern.test(text));
+}
+
+function hasEditableFieldsRuntimeConsumption(text) {
+  const directDerivation = /\b(?:create\w*Fields|edit(?!ableFields\b)\w*Fields|writable\w*Fields|form\w*Fields|fieldsForCreate|fieldsForEdit)\s*=\s*[^;\n]*(?:\.editableFields\b|\[['"]editableFields['"]\])/i;
+  const passedToPermissionOrFormLogic = /(?:canCreateEntityField|canUpdateEntityField|creatableFieldKeysForEntity|editableFieldKeysForEntity|buildCreate\w*|buildEdit\w*|render\w*Form)\s*\([^)]*(?:\.editableFields\b|\[['"]editableFields['"]\])/is;
+
+  return directDerivation.test(text)
+    || passedToPermissionOrFormLogic.test(text);
+}
+
+function extractNamedFunctionSources(text, functionName) {
+  const escapedName = functionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const declaration = new RegExp(
+    String.raw`(?:function\s+${escapedName}\b|(?:const|let|var)\s+${escapedName}\b)`,
+    'g',
+  );
+  const sources = [];
+
+  for (const match of text.matchAll(declaration)) {
+    const start = match.index ?? 0;
+    const arrowIndex = text.indexOf('=>', start);
+    const braceIndex = text.indexOf('{', start);
+    const isArrow = arrowIndex >= 0 && (braceIndex < 0 || arrowIndex < braceIndex);
+
+    if (isArrow) {
+      const expressionStart = arrowIndex + 2;
+      const firstCharacterIndex = text.slice(expressionStart).search(/\S/);
+      const bodyStart = firstCharacterIndex < 0
+        ? expressionStart
+        : expressionStart + firstCharacterIndex;
+      if (text[bodyStart] === '{') {
+        const bodyEnd = findMatchingBraceEnd(text, bodyStart);
+        sources.push(text.slice(start, bodyEnd));
+      } else {
+        const statementEnd = text.indexOf(';', bodyStart);
+        sources.push(text.slice(start, statementEnd < 0 ? text.length : statementEnd + 1));
+      }
+      continue;
+    }
+
+    if (braceIndex >= 0) {
+      sources.push(text.slice(start, findMatchingBraceEnd(text, braceIndex)));
+    }
+  }
+
+  return sources;
+}
+
+function findMatchingBraceEnd(text, openingIndex) {
+  let depth = 0;
+  for (let index = openingIndex; index < text.length; index += 1) {
+    if (text[index] === '{') depth += 1;
+    if (text[index] === '}') depth -= 1;
+    if (depth === 0) return index + 1;
+  }
+  return text.length;
+}
+
 function checkProviderOrder() {
-  const appFiles = uiFiles.filter((file) => /(?:^|[/\\])App\.[jt]sx?$/.test(file));
-  const appText = readJoined(appFiles) || uiText;
+  const appFiles = uiRuntimeFiles.filter((file) => /(?:^|[/\\])App\.[jt]sx?$/.test(file));
+  const appText = readJoined(appFiles) || uiRuntimeText;
   const authIndex = appText.search(/AuthGate|AuthProvider|useAuth/);
   const permissionIndex = appText.search(/PermissionProvider|MdmPermissionProvider/);
   const schemaIndex = appText.search(/SchemaProvider|MdmSchemaProvider/);
@@ -351,6 +491,13 @@ function firstExisting(candidates) {
   return null;
 }
 
+function collectExistingSourceFiles(candidates) {
+  return candidates.flatMap((candidate) => {
+    const absolute = path.join(root, candidate);
+    return fs.existsSync(absolute) ? collectSourceFiles(absolute) : [];
+  });
+}
+
 function collectSourceFiles(start) {
   if (!start) return [];
   const files = [];
@@ -388,7 +535,8 @@ function isSourceFile(file) {
 function isRuntimeSourceFile(file) {
   const basename = path.basename(file);
   return !/\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(basename)
-    && !/(?:^|[/\\])(?:__tests__|test|tests)(?:[/\\]|$)/i.test(file);
+    && !/\.(?:stories|story|mock|fixture)\.[cm]?[jt]sx?$/i.test(basename)
+    && !/(?:^|[/\\])(?:__tests__|test|tests|__mocks__|mocks?|__fixtures__|fixtures?)(?:[/\\]|$)/i.test(file);
 }
 
 function readJoined(files) {

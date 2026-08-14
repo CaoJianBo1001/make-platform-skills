@@ -99,6 +99,9 @@ Default create/edit field span mapping:
 Field-metadata-driven Make forms:
 
 - consume host-provided field metadata before rendering create/edit Drawer fields
+- consume the host permission layer's mode-specific field sets: create uses authorized `createFields`; edit uses visible fields and marks only the editable subset writable. Never use visible fields as a create fallback.
+- scope required validation to fields rendered in the active mode. Unauthorized required fields must not remain registered and block save.
+- when the create operation is allowed but the authorized create field set is empty, show `暂无可新建字段`, disable submit, and keep close available
 - derive field labels, readonly/editable presentation, and control choice from field metadata when available
 - use the field component mapping in `component-usage.md`
 - use the host-form controlled field contract in `component-usage.md` for every custom form field control; user, department, lookup, select, date, file, and relation selectors must forward `value/onChange/onBlur/id/disabled` so the displayed value and form store stay synchronized
@@ -110,6 +113,7 @@ Field-metadata-driven Make forms:
 - edit mode may render `Make.Field.File` controls only when a stable persisted record identity exists
 - detail mode may display file fields as attachments, thumbnails, or file links and may offer explicit follow-up actions when supported
 - if field metadata or candidate data is missing, state the UI dependency and render an explicit unsupported/degraded UI state only with user confirmation
+- when permission/schema refresh removes the current create or edit field set, clear stale form state and re-render the authorized empty/read-only state; permission logic and payload filtering remain owned by `make-app-permission`
 
 Action placement:
 

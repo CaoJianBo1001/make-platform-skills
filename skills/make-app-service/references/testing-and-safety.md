@@ -19,7 +19,8 @@ Route tests should cover:
 
 - `/api/health`, local/probe `/health` when present, and `/api/config` do not expose secrets
 - Service-fronted published routes for `gatewayBaseUrl: "/api/make"` projects use `/api/make/**`: at minimum test `/api/make/auth/**`, `/api/make/oauth/**`, and `/api/make/app/**` or the documented business paths; prefix-free compatibility routes alone are not enough. Older `/api` projects may keep `/api/auth/**` and `/api/app/**` only as an explicit legacy contract
-- schema routes return normalized schema and fields
+- schema routes return normalized `fields` and `createFields` independently; missing `createFields` returns `[]` and never falls back to visible `fields`
+- permission-trimmed Schema caches do not reuse one principal's result for another principal and permission refresh invalidates or reloads the cached generation
 - record list parses `fields`, `filter`, `groupFilter`, `sort`, `pagination`
 - record list sends Make filters as `{ expression }`, omits empty filters, and rejects malformed filter query/body values before calling the adapter
 - record-groups parses `filter`, `groupFilter`, `group`, `pagination`, requires non-empty group, and validates `capabilities.groupable === true`
@@ -32,7 +33,7 @@ Route tests should cover:
 - create/update/delete/cell-update call the adapter with the documented payload
 - detail uses the single-record adapter
 - user and department candidates return `{ users,total }` and `{ departments,total }`
-- lookup options reject non-lookup fields and return `{ options,total }`
+- lookup options reject non-lookup fields and return `{ options,total }`; create-only Lookup source fields may be resolved from `createFields`, while target display fields still come from visible `fields`
 - file upload/delete/download call the file adapter with safe path/body mapping
 - file download proxy returns binary bytes or a stream with content type/disposition preserved where safe
 - when a Service-side download token is configured, unauthenticated download requests fail before the Make download adapter is called
@@ -73,7 +74,7 @@ Adapter tests should cover:
 - file multipart body field names
 - download path stripping and query redaction
 - download adapter strips inbound browser `Authorization` before attaching a Service-side file download token
-- schema variant normalization
+- schema variant normalization, including independent `fields` / `createFields`, no fallback when `createFields` is missing, and lossless preservation of unrelated properties such as `editableFields`
 
 ## Safety review checklist
 
@@ -85,6 +86,7 @@ Before reporting Service work as ready:
 - route handlers remain thin: validation, delegation, error mapping, safe logs, and response sending only
 - Make request construction, schema normalization, lookup/file orchestration, and custom workflows live in adapters/services/helpers instead of route-local files
 - no runtime code reads local DSL/YAML as required schema/data source
+- no permission-trimmed Schema cache is keyed only by `appKey` or shared across principals; refresh has an explicit invalidation/reload path
 - no published runtime route uses `makecli`, `npx makecli`, local makecli config, or makecli stdout as a data source
 - Make-backed record reads go through the runtime-mode gateway scope and preserve the established login/session context: makecli token only in local preview, browser Cookie only in published runtime
 - no route leaks raw Make response envelopes unless documented
@@ -119,6 +121,8 @@ When route docs changed, also run any UI/service integration tests that consume 
 - route behavior changed but `apps/docs/api.md` stayed stale
 - Service started reading `apps/dsl/**` at runtime because schema API was missing
 - UI candidate dropdowns were backed by local demo arrays
+- Schema normalization replaced missing `createFields` with `fields`, silently exposing visible-only fields on create
+- Schema cache reused a permission-trimmed field set across principals or kept stale create fields after permission refresh
 - record detail route called list and returned the first row
 - Preset PATCH replaced the full object and erased a sibling sort/filter/group dimension
 - records accepted a syntactically valid field that runtime schema did not mark `capabilities.sortable === true`

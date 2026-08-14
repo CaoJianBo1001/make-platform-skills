@@ -2,12 +2,12 @@
 
 ## 执行信息
 
-- 执行日期：2026-08-11
-- Skill 内容 SHA-256：`50c2f8742bf904aa3971a96a15486300cc9dfdc3cee75ce485e12018aa157ab6`
+- 执行日期：2026-08-13
+- Skill 内容 SHA-256：`a33dd95a7ff72e34d2af2b0d0c6175d42d5216371217e96ad555e9a3e0f9ae6d`
 - 哈希算法：`qfei-forward-test-scope-v1` 长度前缀编码
 - 哈希范围：`skills/makedsl`、`skills/makeui`、`skills/canvas-table-integration` 三个目录的全部文件
-- 执行批次：`2026-08-11-make-numeric-field-precision-r3`
-- 执行方式：独立任务 `019ff009-e682-7f71-a59d-8e1abc960a06` 负责协调；两个场景分别由 `fork_turns: none` 创建、不继承父会话历史且彼此不共享上下文的新 Agent 读取当前 Skill 后执行
+- 执行批次：`2026-08-13-make-numeric-field-precision-r6`
+- 执行方式：当前任务根代理负责协调；两个场景分别由 `fork_turns: none` 创建、不继承父会话历史且彼此不共享上下文的新 Agent 读取当前 Skill 后执行
 - 输出限制：只输出实施方案、关键代码结构和测试计划，不修改仓库文件
 - 提示控制：只提供用户式需求，不提供预期算法、验收关键词或复审结论
 - 总体结果：两个场景全部通过
@@ -20,9 +20,9 @@
 
 执行方式：fresh-agent
 
-执行批次：2026-08-11-make-numeric-field-precision-r3
+执行批次：2026-08-13-make-numeric-field-precision-r6
 
-执行标识：019ff013-026a-7ef0-b1f4-4153d7a38046
+执行标识：/root/forward_numeric_r6_form
 
 输出证据：Agent 要求表单 store 同时保留原始文本 `rawText` 与 `rawText.trim()` 得到的 `normalizedText`，仅让后者进入解析或纯数字字符串提交；新增和编辑表单复用独立 shared pure helper。`Number` 使用 `precision`，`Currency` 使用 `decimalPlaces`，`Percent` 使用 `decimalPlaces`；尾随零计入小数位，科学计数法、货币符号、百分号和千分位均在提交边界拒绝。无效输入只阻止 create/update 持久化请求，metadata 与候选只读请求继续执行；金额符号和 `%` 仅由前端展示，`85.00` 仍按直接百分数尺度提交。
 
@@ -36,9 +36,9 @@
 
 执行方式：fresh-agent
 
-执行批次：2026-08-11-make-numeric-field-precision-r3
+执行批次：2026-08-13-make-numeric-field-precision-r6
 
-执行标识：019ff014-5408-7ed2-8c15-690a8d943021
+执行标识：/root/forward_numeric_r6_cell
 
 输出证据：Agent 使用 Track C 展示加 Track B 受控编辑，明确分离原始文本 `rawText`、`normalizedText`、`submitValue` 与 `renderValue/displayValue`，并要求表单与单元格共用独立 pure helper；字段 Registry 只提供元数据。尾随零计入小数位，科学计数法和格式化符号被拒绝。小数位超限时保持编辑器活动并显示“最多保留 N 位小数”，产生零次保存调用、零 dirty state 和零 Canvas 回填；校验成功后才转换为有限数字或后端约定的纯数字字符串，金额符号、百分号和千分位仅留在前端展示。
 

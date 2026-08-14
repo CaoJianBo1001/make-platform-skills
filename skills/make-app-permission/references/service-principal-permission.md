@@ -1,61 +1,30 @@
-# Service Principal Permission
+# Service principal permission
 
-Use this reference when adding or reviewing the Service route that reads current principal permissions for a single App.
+Use this reference for the current principal permission Service route and IAM response interpretation.
 
 ## Contents
 
-- Published UI-Service contract
-- Service route
-- Make IAM upstream
-- Payload
-- Tenant and app key
-- Gateway scopes
-- Header forwarding
-- Response
+- UI-Service endpoint
+- IAM request
+- Identity and forwarding
+- Response and field access
 - Failure behavior
 
-## Published UI-Service contract
+## UI-Service endpoint
 
-For Service-fronted Make Apps, expose:
+Expose for Service-fronted Apps:
 
 ```text
 GET /api/make/app/principal/permission
 ```
 
-The UI normally calls the shared auth API adapter with:
+Call it through the host auth/API adapter, usually `auth.api.get("/app/principal/permission")`. Do not call IAM directly from UI. Keep a legacy `/api/principal/permission` route only when the deployed host contract requires it.
 
-```text
-auth.api.get("/app/principal/permission")
-```
+Keep the Service route thin: log safe entry context, derive request context, call the IAM adapter, return the stable host envelope, and map upstream failures without secrets.
 
-Legacy projects may keep `GET /api/principal/permission`, but do not document it as the published default unless the deployed route really exposes that path.
+## IAM request
 
-## Service route
-
-Keep the route thin:
-
-1. Log route entry with safe context only.
-2. Build request context from inbound headers.
-3. Call the Make IAM client.
-4. Return the normalized Service envelope.
-5. Map IAM HTTP/API errors to Service errors.
-
-Preferred shape:
-
-```text
-registerPrincipalPermissionRoutes(app, {
-  prefix: "/api/make/app",
-  contextFromRequest,
-  makeIamClient,
-  logger,
-})
-```
-
-Do not let UI call Make IAM directly.
-
-## Make IAM upstream
-
-Service must call Make IAM through make-gateway:
+Call Make IAM through the gateway:
 
 ```text
 POST <gateway-origin>/api/make/iam/v1/principal/permission
@@ -63,10 +32,6 @@ X-Make-Target: MakeService.GetResource
 Content-Type: application/json
 Accept: application/json
 ```
-
-The path includes `/api/make`. Do not call published IAM as `/make/iam/v1/principal/permission`.
-
-## Payload
 
 Default body:
 
@@ -76,82 +41,50 @@ Default body:
 }
 ```
 
-Do not add a default `permissionKey in [...]` filter. The App frontend needs all current App permissions, including expanded `data.record.*`, `meta.field.*`, `*.*.*`, operation keys, field keys, app-level resources, entity resources, and field access.
+Do not add a tenant-root scope or platform permission filter. Only add a safe `permissionKey in [...]` expression for an explicitly requested diagnostic/constrained query.
 
-Only add a filter when the caller explicitly requests a diagnostic or constrained permission-key query:
+Published IAM uses `/api/make/iam/**`; do not rewrite it to `/make/iam/**`. Other published Service-to-gateway Meta/Data/Auth paths may use `/make/**`, while local preview uses the host public `/api/make/**` contract.
 
-```json
-{
-  "scope": "make://<tenantId>/meta/app/<appKey>",
-  "filter": {
-    "expression": "permissionKey in ['data.record.read', 'data.record.update']"
-  }
-}
-```
+## Identity and forwarding
 
-Escape single quotes in permission keys if building the expression.
+Resolve `appKey` from trusted runtime config such as `MAKE_APP_KEY`, never from browser input.
 
-## Tenant and app key
-
-Resolve `appKey` from deployment/runtime config, normally `MAKE_APP_KEY`. Do not accept `appKey` from the browser request for runtime authorization.
-
-Resolve `tenantId` in this order:
-
-1. Explicit Service config/env such as `MAKE_TENANT_ID`.
-2. Trusted inbound header such as `X-Tenant-ID`.
-3. Auth current context fallback through make-gateway, using the same browser login context.
-
-Current-context fallback uses the auth namespace, normally:
-
-```text
-GET <gateway-origin>/make/auth/current-context
-```
-
-Parse common tenant fields such as `tenantId`, `tenant_id`, `orgId`, `org_id`, nested tenant/organization fields, or `make://<tenantId>/...` scope.
-
-## Gateway scopes
-
-Keep gateway origin and gateway scope separate:
-
-- Published Meta/Data/Auth Service-to-gateway calls usually use gateway origin + `/make/**`.
-- Published IAM principal permission calls use gateway origin + `/api/make/iam/v1/principal/permission`.
-- Local preview may use public gateway origin + `/api/make/**`.
-
-Do not store `/make`, `/api/make`, `/meta`, `/data`, `/auth`, or `/iam` inside `MAKE_API_BASE_URL` when the project convention says that env is a strict gateway origin.
-
-## Header forwarding
+Resolve `tenantId` from trusted config, trusted request context, or an authenticated current-context request using the same login context. Parse known tenant/org fields or a trusted Make scope.
 
 Forward the established login context:
 
-- Preserve Cookie when the browser session is cookie-based.
-- Preserve Authorization only when the host contract already uses bearer auth or local preview server-side token mode.
-- Add `X-Make-Target: MakeService.GetResource`.
-- Add `X-Tenant-ID` and `X-Operator-ID` when known and missing.
-- Derive `X-Forwarded-Host` from inbound Host; do not trust client-supplied `X-Forwarded-Host`.
-- Add `X-Forwarded-Proto` according to the host/runtime contract.
+- Cookie for cookie sessions;
+- Authorization only when the host already uses bearer auth;
+- `X-Make-Target: MakeService.GetResource`;
+- trusted tenant/operator headers when available;
+- derived `X-Forwarded-Host` and host-correct `X-Forwarded-Proto`.
 
-Never log cookies, tokens, Authorization, API keys, or full signed URLs.
+Never log Cookie, Authorization, token, API key, or full signed URL values.
 
-## Response
+## Response and field access
 
-Return IAM data to the UI in the host Service envelope. The UI model expects these fields when present:
+Preserve IAM permission rows and normalize them at the UI boundary. A representative response is:
 
 ```json
 {
-  "principal": "user:87",
+  "principal": "user:<principalId>",
   "scope": "make://<tenantId>/meta/app/<appKey>",
   "permissions": [
     {
-      "permissionKey": "data.record.update",
+      "permissionKey": "data.record.create",
       "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
-      "effect": "allow"
+      "effect": "allow",
+      "fieldAccess": {
+        "create_only_field": "creatable"
+      }
     },
     {
       "permissionKey": "meta.field.read",
       "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
       "effect": "allow",
       "fieldAccess": {
-        "*": "readonly"
+        "create_only_field": "creatable",
+        "visible_field": "readonly"
       }
     },
     {
@@ -159,17 +92,26 @@ Return IAM data to the UI in the host Service envelope. The UI model expects the
       "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
       "effect": "allow",
       "fieldAccess": {
-        "name": "editable"
+        "editable_field": "editable"
       }
     }
   ]
 }
 ```
 
-Preserve unknown fields if useful, but normalize at the UI boundary before checks. If IAM returns `fieldAccess`, consume it only on `meta.field.read/update` permission rows as the field range for that field permission. Do not derive field visibility or editability from `data.record.*` rows, even if such rows contain `fieldAccess`.
+Consume `fieldAccess` by permission dimension:
 
-IAM may return permission resources in wildcard namespace form such as `make://<tenantId>/*/app/<appKey>`. Service should preserve the value; UI permission matching must treat it as the same current App resource represented by response scope `make://<tenantId>/meta/app/<appKey>`.
+- `data.record.create`: use `creatable` or `*` to choose fields from Schema `createFields`.
+- `meta.field.read`: use readable states to choose visible fields from Schema `fields`; `creatable` is not readable.
+- `meta.field.update`: use `editable` or `*` only after visibility is established.
+- Other `data.record.*` rows control operations and do not grant general field visibility/editability.
+
+An allow row with empty `fieldAccess` is unrestricted for that permissionKey at its resolved resource specificity. A matching deny wins. Named field entries override a wildcard field baseline.
+
+Keep an omitted/empty `fieldAccess` distinct from malformed IAM data. An omitted property or empty object is unrestricted; explicit `null`, a non-object, an array, a blank field key, an empty state list, an unknown state, or a state list containing non-strings is invalid and must fail the whole access snapshot closed at the Service validation or UI normalization boundary. Do not silently discard a malformed row while keeping sibling allows. Also reject an invalid effect, non-three-part permissionKey, missing/non-App scope, arbitrary namespace, or wildcard tenant/App resource instead of guessing intent. Null/primitive payloads or rows and non-array `permissions` must produce a denied snapshot without throwing.
+
+The Service preserves resources such as `make://<tenantId>/*/app/<appKey>`; UI segment matching treats that namespace wildcard as the same current App family represented by response scope.
 
 ## Failure behavior
 
-If IAM fails, the UI must fail closed. Service should return a clear non-secret error so UI can show an error/forbidden state and avoid protected data calls.
+Return a clear non-secret Service error. UI must fail closed: clear protected access, avoid protected reads/mutations, invalidate permission-dependent Schema, and render a visible retry/error/forbidden state.

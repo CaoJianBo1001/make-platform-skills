@@ -245,8 +245,8 @@ assert.match(
   'numeric forward-test record must attest that agents received no parent conversation history',
 );
 
-const forwardTestBatch = '2026-08-11-make-numeric-field-precision-r3';
-const executionIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const forwardTestBatch = '2026-08-13-make-numeric-field-precision-r6';
+const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\/root\/forward_numeric_[a-z0-9_]+)$/i;
 const scenarios = [
   {
     heading: '场景一：数字类表单字段',

@@ -92,12 +92,25 @@ Schema adapter should:
 
 - fetch remote runtime schema from Make/backend API
 - call the runtime-mode schema path with `POST`, `X-Make-Target: MakeService.GetResource`, JSON `Content-Type`, and body `{ appKey: config.appKey }`
-- normalize app display name, entities, fields, relations, options, and lookup metadata
-- support known backend variants such as `entity.properties.fields` and `entity.fields`
+- normalize app display name, entities, relations, options, lookup metadata, and the independent permission-trimmed field collections `fields` and `createFields`
+- support known backend variants such as `entity.properties.fields` and `entity.fields` for the visible collection without using that visible collection as a fallback for `createFields`
 - expose `getAppSchema()` and `getEntityFields(entityKey)` or host-equivalent methods
-- cache or reuse in-flight schema requests when the host project needs it, but provide a clear invalidation path for refresh
+- cache or reuse in-flight schema requests when the host project needs it, but provide a clear invalidation path for permission refresh
 
 Do not use local DSL/YAML as the only schema source for published runtime.
+
+Normalize the collections separately:
+
+```ts
+const fields = Array.isArray(properties.fields) ? properties.fields : [];
+const createFields = Array.isArray(properties.createFields)
+  ? properties.createFields
+  : [];
+```
+
+Missing `createFields` means an empty create collection; do not fall back to `fields`. Preserve unknown Schema properties when practical, including `editableFields`, but current edit-field permission semantics belong to `make-app-permission` and must not be inferred in this adapter.
+
+Because Make Meta Schema can be principal-permission-trimmed, cached results must be isolated by tenant, principal/session identity, App, and access generation, or remain request-local. A cache keyed only by `appKey` can leak one user's field set to another. Permission refresh must invalidate or reload the Schema cache before dependent data/form refresh.
 
 ## Record adapter
 
@@ -166,6 +179,7 @@ Rules:
 - target record reads still go through `/make/data/v1/record` with forwarded login context, not makecli
 - reject unsupported relation direction, non-lookup fields, and missing target metadata with 400
 - do not leak full target records into dropdown APIs by default
+- In create mode, the Lookup source field may come from `createFields`; resolve the Lookup target entity and target display fields from the target's visible `fields`. Do not expose a target field solely because it is creatable.
 
 ## Lookup relation update service
 
@@ -178,7 +192,9 @@ Rules:
 - synthesize the full relation snapshot server-side
 - preserve unrelated relations
 - validate single vs multiple cardinality
-- reject client-submitted `qfei_relation` or strip it before update
+- reject client-submitted `qfei_relation` before update
+- validate the exact source and target identities and fail closed on malformed unrelated snapshot entries
+- treat multiple independently writable relations to the same target entity as ambiguous because `qfei_relation` does not carry relationKey; require a documented host/backend disambiguation contract or reject that generic write
 - test clearing, replacing, multi-field updates, and non-allowlisted fields
 
 ## File adapter

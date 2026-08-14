@@ -30,8 +30,8 @@ Codex 判断优先级：
 | 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | 负责完整筛选能力：`@qfei-design/make-app-filter` 消费侧接入、高级筛选控件行为、CanvasTable 表头筛选联动和 `filter.expression` 合同；不负责页面 Shell、表格渲染 API 细节、Service 实现、认证或发布 |
 | 排序、高级排序、多字段排序、排序优先级、升序/降序、拖拽排序条件、表头排序、`openWithField`、`capabilities.sortable`、Entity Preset sort、records sort、dnd-kit | `make-app-sort` | 负责完整排序能力：五级排序纯模型、拖拽草稿、CanvasTable 表头联动、Preset 保存/读取/回显和 records sort 合同；不负责页面 Shell、CanvasTable API 细节、Service 实现或分组 |
 | 分组、高级分组、多级分组、分组条件、拖拽分组、表头分组、`capabilities.groupable`、Entity Preset group、record-groups、groupFilter、分组叶子明细分页、`@qfei-design/make-app-group` | `make-app-group` | 负责完整分组能力：三级分组模型、拖拽草稿、Preset 保存/回显、Service record-groups/groupFilter、CanvasTable 分组渲染和叶子分页；不负责页面 Shell、CanvasTable 内部或筛选/排序模型 |
-| Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema/records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排和 Make adapter 配置语义，不负责 UI、认证、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
-| 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、路由权限、按钮权限、字段可编辑、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、schema/permission 分工、路由和按钮/字段权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
+| Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema `fields/createFields`、records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排、Schema 集合无损传输和按主体隔离缓存，不负责 UI、认证、权限算法、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
+| 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、路由权限、按钮权限、字段可新建、可见、可编辑、`creatable`、`createFields`、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、`createFields` 与字段 `creatable/readable/editable` 独立权限、创建提交白名单、路由和按钮权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
 | 登录、认证、Token、统一登录、OAuth、Cookie、Session、logout、401/403、`/api/make/**` 鉴权请求 | `make-app-auth` | 只负责认证和鉴权请求，不负责 UI 布局和打包发布 |
 | 打包、发布、镜像入口、K8s、Service 启动失败、`apps/ui/dist`、`apps/service/dist/server.js`、Service 端口 `3000`、workspace/package.json、`X-Forwarded-Host` | `make-app-runtime` | 只负责运行态和打包发布契约，不负责 Service API、认证实现或 Make adapter 配置语义 |
 | App/Entity/Relation/Field 建模、DSL YAML、对象、字段、关系、选项 | `makedsl` | 只负责 DSL 设计和生成，不负责远端 apply |
@@ -42,6 +42,7 @@ Codex 判断优先级：
 
 - 做一个对象列表页：`makeui` + `canvas-table-integration` + `make-app-actions`，Make CanvasTable 记录列表默认包含复选框选择和标准操作栏，明确只读时才省略 actions
 - 做记录编辑、删除、批量编辑或行级写权限预检：`make-app-actions` + `make-app-permission` + `make-app-service` + `makeui` + `canvas-table-integration`
+- 做字段可新建、`createFields` 或新建页字段权限：`make-app-permission` + `make-app-service` + `makeui`；Permission 计算权限与提交白名单，Service 独立传输/缓存 Schema 集合，MakeUI 只渲染授权字段和空状态
 - 做筛选、高级筛选、表格筛选或表头按字段筛选：`make-app-filter` + `make-app-permission` + `makeui` + `canvas-table-integration`，必须同时完成 package 高级筛选、权限感知 Preset 生命周期和 CanvasTable 表头筛选联动
 - 做筛选 Service 合同或 filter.expression 透传：`make-app-filter` + `make-app-service`
 - 做多字段排序、拖拽排序或表头升降序：`make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，必须同时完成权限感知的 Preset 保存/回显和 records sort
@@ -261,7 +262,7 @@ npx skills update make-app-permission
 **使用场景**
 - 增加或审查 `/api/make/app/principal/permission` Service 接口
 - Service 调 Make IAM `/api/make/iam/v1/principal/permission`，使用 App scope，不混用平台权限
-- 前台登录后加载权限，结合 schema 控制菜单、路由、列表、详情、新建、编辑、删除、单元格编辑和表单字段
+- 前台登录后加载权限，结合 Schema 的 `fields` / `createFields` 和独立的 `creatable` / readable / editable 字段权限，控制菜单、路由、列表、详情、新建、编辑、删除、单元格编辑和提交白名单
 - 防止通过手动修改 URL 进入未授权 App、对象页或固定业务页面
 - 刷新时重新获取权限，再决定是否刷新数据或关闭已打开工作区
 - 使用 `scripts/audit-make-app-permission.mjs` 做权限合同检查
