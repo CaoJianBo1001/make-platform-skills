@@ -87,6 +87,12 @@ or the object/product is strictly read-only. A current user with no write action
 does not make the list strictly read-only; retain selection so scheme two can show
 `暂无可用的操作`. For non-Make tables, selection remains opt-in.
 
+For ordinary Make `CanvasTableComponent` lists, cap one Shift range-selection
+gesture at 200 records through the installed public selection contract. If the
+installed contract exposes no such capability, report a blocker and do not
+emulate Shift anchors or ranges in host code. Under CanvasTable 1.3.0,
+`GroupTableComponent` does not support Shift range selection at all.
+
 #### `rowSortable`
 
 Use for row drag sorting:
@@ -133,6 +139,7 @@ Use these methods first:
 - `getTableData()`
 - `setRowData(rowKey, data)`
 - `setCellData(rowKey, columnKey, data)`
+- `setRowColors(rowKeys, color)` when exposed by the installed public contract
 - `getSelectionInfo()`
 - `clearSelection()`
 - `updateSummaryData(newSummaryData)`

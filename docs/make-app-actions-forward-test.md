@@ -3,8 +3,8 @@
 ## 执行信息
 
 - 执行日期：2026-08-14
-- Skill 内容 SHA-256：`3ff72e7c21abb9b3f7b36bb2b4c69a3edcab48915ff895e4755bcab92c8c1ea2`
-- Action 语义前向测试基线 SHA-256：`69fb63b6b0419af55ea2bbe6021979b758e1a69150574b0b93718a8b64db6042`
+- Skill 内容 SHA-256：`5a9dcfa362b2847ca44c315fe52893c680fb325732de0ea47861d86ea4e62fc3`
+- 上一 Action 语义前向测试基线 SHA-256：`69fb63b6b0419af55ea2bbe6021979b758e1a69150574b0b93718a8b64db6042`
 - 哈希算法：`qfei-forward-test-scope-v1` 长度前缀编码
 - 哈希范围：以下 8 个关联 Skill 目录的全部文件：
   - `skills/make-app-actions`
@@ -15,17 +15,17 @@
   - `skills/make-app-filter`
   - `skills/make-app-sort`
   - `skills/make-app-group`
-- 执行批次：`2026-08-13-make-app-actions-0.3.1-r15`
-- 执行方式：当前任务根代理负责协调；7 个场景均使用 `fork_turns: none` 创建、不继承父会话历史且彼此不共享上下文的新 Agent，针对当前组合 Skill 内容执行。
+- 执行批次：`2026-08-14-make-app-actions-0.3.1-r16`
+- 执行方式：当前任务根代理负责协调；7 个场景均使用 `fork_turns: none` 创建、不继承父会话历史且彼此不共享上下文的 fresh Agent，针对当前组合 Skill 内容执行。
 - 输出限制：只输出实施方案、关键调用链和验证计划，不修改仓库文件。
-- 提示控制：执行前不向 Agent 提供验收标准或期望答案，只指定本地待验证 Skill 和用户式问题。
-- 总体结果：7 个场景在 Action 语义基线上全部通过。本次组合哈希变化仅来自 `make-app-permission 0.2.2` 的静态审计、审计测试、宿主门禁说明和本地安装同步检查，不改变选择、操作、批量写入或 CanvasTable 生命周期合同；旧 fresh-agent 结果不作为新权限脚本实现的执行证据。
+- 提示控制：提示词按真实用户任务描述，不提供验收标准、已知缺陷或期望答案。
+- 总体结果：7 个场景全部通过，覆盖 Ant Design、搜索全选、Arco、Shift 200 与分组边界、显式权限拒绝与全选回退、shadcn/Radix，以及查询交接与 CanvasTable 生命周期。
 
-## 2026-08-14 组合范围验证说明
+## 本次验证边界
 
-- 当前哈希继续覆盖八个关联 Skill，确保组合内容可追踪。
-- Action 语义文件未变化；权限 0.2.2 的确定性验证由权限审计负向/防误报夹具、40 项一致性套件和两个真实宿主门禁承担。
-- 七个 fresh-agent 场景只证明上方明确记录的 Action 语义基线，不声称重新执行了本次权限审计脚本。
+- 本批次重新验证了当前 8 个 Skill 组合中的 Action 行为，尤其是普通表单次 Shift 最多 200 条、显式权限拒绝精确整行爆红、超大 Record ID 无损映射及全选 403 无 ID 回退。
+- `make-app-permission 0.2.2` 不改变选择、操作或批量写入的 Action 语义；r16 Agent 虽读取当前组合 Skill，本记录不作为该版本权限审计脚本的重新执行证据。
+- 所有 Agent 均只读执行；个别 Agent 自行运行合同测试并识别出旧范围哈希门禁，不以该旧门禁替代本批次输出验收。
 
 ## 场景一：Ant Design 默认操作
 
@@ -35,11 +35,11 @@
 
 执行方式：fresh-agent
 
-执行批次：2026-08-13-make-app-actions-0.3.1-r15
+执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r15_antd
+执行标识：/root/actions_r16_antd
 
-输出证据：Agent 以已安装 `package.json` 为版本依据，按 `package.ai.json.readOrder` 读取公开合同；使用 `AntdRecordSelectionActionBar` 和 `AntdRecordBatchEditModal`，独立判断 update/delete/bulkUpdate。`renderValueControl(field, control)` 明确转发 `control.disabled`，标题固定为“批量编辑”；批量链路只执行一次 `/data/v1/permission` 和一次 `/data/v1/field`。验证计划同时覆盖批量字段的数值精度限制。
+输出证据：Agent 先以已安装 `package.json` 为版本依据，再按 `package.ai.json.readOrder` 读取公开合同；使用 `AntdRecordSelectionActionBar` 和 `AntdRecordBatchEditModal`，独立判断 update/delete/bulkUpdate。`renderValueControl(field, control)` 转发 `disabled`，标题固定为“批量编辑”；批量链路只执行一次 `/data/v1/permission` 和一次 `/data/v1/field`。它还独立要求从原始响应无损映射 `9007199254740993`，显式拒绝精确整行标红，全选 403 只提示。
 
 结论：通过。
 
@@ -51,11 +51,11 @@
 
 执行方式：fresh-agent
 
-执行批次：2026-08-13-make-app-actions-0.3.1-r15
+执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r14_search_final
+执行标识：/root/actions_r16_search
 
-输出证据：Agent 要求成功列表查询产出包含搜索、状态和快捷筛选条件的规范 `effectiveFilter`；表头全选保持 `exclude`，同步深拷贝唯一 target，并让一次预检和一次批量写入复用完全相同的 `filter`、独立 `groupFilter` 与排除 ID。它明确禁止发明未文档化 `snapshotToken`，提交不从实时 React 状态重建，generation 变化时旧结果无 UI 副作用。
+输出证据：Agent 将搜索、高级筛选、状态和快捷筛选统一编译为最后一次成功查询的 `effectiveFilter`；表头全选保持 `exclude`，冻结排除项、`filter` 和独立 `groupFilter`。列表、一次权限预检和一次批量写入复用完全相同的过滤目标；搜索草稿和失败查询不重定义操作目标，成功应用新搜索才清空旧选择并使 pending work 失效。
 
 结论：通过。
 
@@ -67,43 +67,43 @@
 
 执行方式：fresh-agent
 
-执行批次：2026-08-13-make-app-actions-0.3.1-r15
+执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/forward_numeric_r6_form_arco
+执行标识：/root/actions_r16_arco
 
-输出证据：Agent 使用通用 `RecordBatchEditModal` 和 `MakeAppBatchEditComponents` 注入 Arco Modal、字段选择器和模式控件，标题保持“批量编辑”，明确不引入 AntD 或复制包内弹窗。`renderValueControl(field, control)` 完整转发 `value`、`onChange`、`disabled`、`invalid`、`ariaDescribedBy`；通过 Arco 公开 portal API 避免裁剪，并验证焦点、Escape 和 outside-click 顺序。
-
-结论：通过。
-
-## 场景四：分组表选择和 Shift
-
-提示词：`为分组 CanvasTable 增加选择操作和 Shift 连选。`
-
-验收标准：保留分组表当前支持的选择操作；在 CanvasTable 1.3.0 合同下拒绝由宿主模拟 Shift 连选。
-
-执行方式：fresh-agent
-
-执行批次：2026-08-13-make-app-actions-0.3.1-r15
-
-执行标识：/root/actions_r15_grouped
-
-输出证据：Agent 为 `GroupTableComponent` 开启多选，只订阅一次父级 canonical `selection:change`；明确 CanvasTable 1.3.0 分组模式不支持 Shift 范围选择，禁止宿主监听键盘、保存范围锚点或推算跨组、跨页区间。成功应用分组或分组路径后清空选择并失效旧请求，草稿、取消和失败均保留选择；表格重建只发布一次空选择快照。
+输出证据：Agent 使用通用 `RecordBatchEditModal` 和 `MakeAppBatchEditComponents` 注入 Arco Modal、字段选择器和模式控件，不引入 AntD 或复制包内弹窗。`renderValueControl(field, control)` 依次转发 `value`、`onChange`、`disabled`、`invalid`、`ariaDescribedBy`；通过 Arco 公开 portal 能力将 popup 挂载到裁剪祖先之外，并验证 focus、Escape、outside-click 顺序，标题保持“批量编辑”。
 
 结论：通过。
 
-## 场景五：403 且没有无权限 ID
+## 场景四：Shift 200 与分组边界
 
-提示词：`批量权限预检返回 403，但没有无权限 ID。`
+提示词：`为 CanvasTable 增加 Shift 连选，单次最多 200 条；同时兼容分组表。`
 
-验收标准：显示标准 toast，不把全部选择行标红，不发逐 ID 诊断请求。
+验收标准：普通表只通过已安装公共合同限制单次 Shift 200；缺少公共能力时阻断；CanvasTable 1.3.0 分组表不得由宿主模拟 Shift。
 
 执行方式：fresh-agent
 
-执行批次：2026-08-13-make-app-actions-0.3.1-r15
+执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r15_403
+执行标识：/root/actions_r16_shift
 
-输出证据：Agent 将上游 403 映射为 `allowed: false` 和空 `unauthorizedRecordIDList`，阻止打开弹窗并保留选择，显示标准 toast。它明确不调用行标红 API、不把全部选择记录伪造成无权限记录，也不做逐 ID、拆分、分片或重试诊断；非 403 上游错误仍保持 operational error，整个拒绝链路为一次预检、零次写入。
+输出证据：Agent 区分单次 Shift 交互上限和最终显式目标上限，要求普通表通过已安装 CanvasTable 的公开 contract/API 将一次 Shift 限制为 200，并覆盖 199/200/201；公开能力缺失即报告 blocker/阻断，不监听宿主键盘或维护私有锚点。分组表继续使用父级唯一 `selection:change`，CanvasTable 1.3.0 下保留逐行/表头选择但不模拟 Shift。
+
+结论：通过。
+
+## 场景五：显式权限拒绝与全选回退
+
+提示词：`非全选批量权限预检返回 HTTP 200、code 20000032 和部分无权限 ID；表头全选仍返回 403 且没有 ID。`
+
+验收标准：显式模式无损规范化准确 ID、统一提示并只标记对应整行错误红；取消勾选/关闭时清理；全选模式只提示且不诊断。
+
+执行方式：fresh-agent
+
+执行批次：2026-08-14-make-app-actions-0.3.1-r16
+
+执行标识：/root/actions_r16_permission
+
+输出证据：Agent 在通用错误映射前处理 HTTP 200、`20000032` 和 `noPermissionRecordIds`，从原始响应无损映射为有序 `unauthorizedRecordIDList`，并覆盖 `9007199254740993`。显式拒绝显示统一 toast，只将准确返回的整行错误红，取消勾选时清理该行、关闭操作栏时清空全部；全选 403 返回空 ID，只提示，不标红、不发诊断请求。
 
 结论：通过。
 
@@ -115,11 +115,11 @@
 
 执行方式：fresh-agent
 
-执行批次：2026-08-13-make-app-actions-0.3.1-r15
+执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r15_radix
+执行标识：/root/actions_r16_radix
 
-输出证据：Agent 要求 `@qfei-design/make-app-actions@^0.3.1`，先读已安装 `package.json` 再按 `package.ai.json.readOrder` 读取公开合同。它使用 `RecordBatchEditModal` 和 `MakeAppBatchEditComponents` 注入 shadcn/Radix 薄包装，通过 Radix `Portal/container` 处理浮层，验证 focus、Escape、outside-click 顺序，并明确不引入 AntD 或 AntD 形状的通用属性。
+输出证据：Agent 要求 `@qfei-design/make-app-actions@^0.3.1`，先读已安装 `package.json` 再按 `package.ai.json.readOrder` 读取公开合同。它使用 `RecordBatchEditModal` 和 `MakeAppBatchEditComponents` 注入 shadcn/Radix 薄包装，通过 Radix `Portal/container` 逃离裁剪并验证 focus、Escape、outside-click 和焦点回归；明确不引入 AntD、不使用 AntD adapter 或 AntD 形状的 generic props。
 
 结论：通过。
 
@@ -131,14 +131,14 @@
 
 执行方式：fresh-agent
 
-执行批次：2026-08-13-make-app-actions-0.3.1-r15
+执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r15_403_lifecycle
+执行标识：/root/actions_r16_lifecycle
 
-输出证据：Agent 将筛选或排序的成功应用定义为完成校验并成功保存对应 Preset 后同步提交 applied state，随后递增 `queryGeneration`、清空选择并使 pending precheck/submit 失效；草稿、取消、Preset 保存失败均保留选择，applied 成功后的列表查询失败不恢复旧选择。CanvasTable 重建通过新的 `tableInstanceToken` 拒绝旧实例事件，发布且仅发布一次空选择快照并禁止回放旧选择；同查询总数增加时读取当前公开快照并调用 `resolveCanvasSelectedRecordSnapshot` 重新归一化，总数减少时只调用一次 `clearSelection()`，以 canonical `selection:change` 作为唯一空选择通知。
+输出证据：Agent 将筛选/排序的成功应用定义为校验和 Preset 保存成功后的同步查询交接，清空选择并失效旧请求；草稿、取消与保存失败都保留选择。CanvasTable 重建推进 instance/selection generation，发布一次空选择快照且不回放旧选择；同查询 `totalCount` 增加时读取公共快照并调用 `resolveCanvasSelectedRecordSnapshot` 重新归一化，减少时只调用一次 `clearSelection()`，最终只有一次通知。
 
 结论：通过。
 
 ## 总结
 
-当前 8 个关联 Skill 目录的组合哈希下，7 个执行标识互不重复的新 Agent 场景均在同一批次通过。覆盖范围包括 AntD 默认操作、搜索后表头全选、Arco 通用组件注入、分组 Shift 能力边界、无准确 ID 的 403 权限拒绝、shadcn/Radix 的版本与浮层契约，以及 applied-query 交接、CanvasTable 重建和同查询 `totalCount` 增减生命周期。本批次针对当前权限、Service 与 UI Skill 组合重新执行，未复用旧范围结果。
+当前 8 个关联 Skill 目录的组合哈希下，7 个执行标识互不重复的 fresh Agent 场景均在 r16 批次通过。输出覆盖新的 Shift 200、显式 `20000032` 精确反馈、无损大 ID、全选 403 回退，也保留了既有 UI 适配、查询目标一致性和生命周期安全规则。

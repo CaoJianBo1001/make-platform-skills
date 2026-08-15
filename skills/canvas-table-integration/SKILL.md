@@ -1,8 +1,8 @@
 ---
 name: canvas-table-integration
-description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Make record lists use make-app-actions for the default selectable record-action workflow. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
+description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, Shift 200 条上限, row colors, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Make record lists use make-app-actions for the default selectable record-action workflow. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
 metadata:
-  version: 0.1.11
+  version: 0.1.12
 ---
 
 # canvas-table-integration
@@ -177,6 +177,11 @@ Treat these as safety rules:
 - sorting is opt-in: when requested, expose header asc/desc only through the host's documented CanvasTable header menu/suffix API, then call the shared `make-app-sort` controller. Do not sort records locally, keep separate header sort state, or call records directly from a header action
 - grouping is opt-in: for Make record lists, use `make-app-group` for the package panel, Preset, Service, `groupFilter`, and records timing. This Skill may instantiate `GroupTableComponent` and wire `group:load` / `group:data:load`, but must not define grouping semantics itself
 - Make record actions are default: this Skill wires public selection snapshots, `clearSelection`, supported Shift/select-all behavior, and row colors; `make-app-actions` owns action state, permissions, precheck, batch modal, and mutation timing. Under the CanvasTable 1.3.0 contract, `GroupTableComponent` does not support Shift range selection; do not emulate it in the host
+- For ordinary Make `CanvasTableComponent` record lists, one Shift
+  range-selection gesture may select at most 200 records. Enforce the limit only
+  through the installed public selection contract; if that capability is absent,
+  report a blocker instead of implementing host keyboard anchors, range expansion,
+  or private selection state
 
 ## Detailed workflows and maintenance references
 

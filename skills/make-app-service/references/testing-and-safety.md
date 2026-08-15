@@ -30,6 +30,13 @@ Route tests should cover:
 - cancellable list/page routes abort their request-scoped signal when the client disconnects, propagate that signal to the downstream adapter, avoid writing a response or reporting a user-visible 5xx for `AbortError`, and remove lifecycle listeners after success, failure, or cancellation
 - normal completion does not abort downstream work; test the framework's completion guard such as `res.writableEnded`, a completed flag, or response finished state separately from premature close
 - invalid query/body returns 400 and does not call Make adapter
+- record-write permission explicit denial maps HTTP 200, business code
+  `20000032`, and ordered numeric `noPermissionRecordIds` to the documented stable
+  result; malformed or out-of-target IDs fail as a contract error, while
+  select-all 403 stays denied with no row IDs
+- the permission adapter decodes raw JSON losslessly before JavaScript `Number`
+  coercion, maps `9007199254740993` to the exact request string row key, and rejects
+  fractional, zero, negative, duplicate numeric identities, and rounded values
 - create/update/delete/cell-update call the adapter with the documented payload
 - detail uses the single-record adapter
 - user and department candidates return `{ users,total }` and `{ departments,total }`
@@ -64,6 +71,10 @@ Adapter tests should cover:
 - request wrappers preserve required inbound login context for gateway, such as `Cookie` for cookie/unified-login apps and host-approved auth headers when applicable
 - no record/candidate/lookup/file/custom route shells out to `makecli` or reads makecli command output as runtime data
 - Make response envelope `code !== 200`
+- permission precheck handles `20000032` as the documented expected explicit
+  denial before the generic non-200-code branch and preserves
+  `noPermissionRecordIds` through a lossless raw-response decoder, including IDs
+  above `Number.MAX_SAFE_INTEGER`; select-all 403 remains an opaque denial
 - invalid JSON response
 - non-2xx HTTP response
 - headers and target names

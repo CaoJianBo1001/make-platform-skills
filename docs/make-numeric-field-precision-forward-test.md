@@ -3,14 +3,20 @@
 ## 执行信息
 
 - 执行日期：2026-08-13
-- Skill 内容 SHA-256：`a33dd95a7ff72e34d2af2b0d0c6175d42d5216371217e96ad555e9a3e0f9ae6d`
+- Skill 内容 SHA-256：`146e4cee77562a7ea6dac20b75183035aaf18f21f88ddec07a720a76033e6170`
 - 哈希算法：`qfei-forward-test-scope-v1` 长度前缀编码
 - 哈希范围：`skills/makedsl`、`skills/makeui`、`skills/canvas-table-integration` 三个目录的全部文件
 - 执行批次：`2026-08-13-make-numeric-field-precision-r6`
 - 执行方式：当前任务根代理负责协调；两个场景分别由 `fork_turns: none` 创建、不继承父会话历史且彼此不共享上下文的新 Agent 读取当前 Skill 后执行
 - 输出限制：只输出实施方案、关键代码结构和测试计划，不修改仓库文件
 - 提示控制：只提供用户式需求，不提供预期算法、验收关键词或复审结论
-- 总体结果：两个场景全部通过
+- 总体结果：两个场景在 `2026-08-13-make-numeric-field-precision-r6` 语义基线上全部通过；当前组合哈希变化的非数字语义边界见下节。
+
+## 2026-08-14 CanvasTable 非数字语义边界说明
+
+- 当前组合哈希变化仅来自 `canvas-table-integration` 的 Make 操作选择能力：普通表单次 Shift 最多 200 条、分组表 Shift 边界和公共整行颜色 API 路由。
+- 本次没有修改数字/金额/百分比的字段元数据解析、原始文本精度校验、展示格式、Track B 编辑、提交值或保存失败生命周期，因此不重新执行下方两个数字精度场景。
+- 上方哈希锁定当前三个 Skill 目录；下方 fresh-agent 输出仍只证明 r6 数字语义基线，本说明不把 CanvasTable 选择能力的合同测试冒充为数字精度 fresh-agent 重新执行。
 
 ## 场景一：数字类表单字段
 

@@ -26,10 +26,16 @@ Action permissions:
 - principal cache is reused on click/submit; identity/tenant/explicit refresh can
   replace it
 - local partial denial returns exact row keys and drives toast/highlight cleanup
+- explicit Service denial with HTTP 200, business code `20000032`, and
+  `noPermissionRecordIds` drives the same canonical toast plus exact whole-row
+  error-red feedback
 
 Selection and limits:
 
 - manual and Shift selection stay `include`, including manually selecting all
+- one Shift range-selection gesture covers 199/200/201 boundaries, accepts at
+  most 200 through the installed public CanvasTable contract, and never adds
+  host-owned range-selection internals
 - header select-all produces `exclude` and preserves exclusions
 - never convert selection mode from `selectedCount === totalCount`
 - explicit 199/200/201 boundaries and exclusion 199/200/201 boundaries
@@ -63,7 +69,15 @@ Service:
 - exact 1-200 ID and 0-200 exclusion limits
 - one Service request causes exactly one Make `/data/v1/permission` call
 - denied multi-record request causes no per-ID diagnostic calls
-- 403 maps to denied; non-403 upstream error remains failed
+- explicit denial maps HTTP 200 + `code: 20000032` + numeric
+  `data.noPermissionRecordIds` to ordered canonical string
+  `unauthorizedRecordIDList`
+- raw-response lossless decoding preserves `9007199254740993` and maps it to the
+  exact frozen request row key without JavaScript `Number` coercion or rounding
+- malformed, duplicate, or out-of-target `noPermissionRecordIds` remains an
+  operational contract failure without guessed row feedback
+- select-all 403 maps to denied with an empty ID list; other upstream failures
+  remain failed
 - bulk route causes exactly one Make `/data/v1/field` call and zero
   `/data/v1/record` update loops
 - precheck and bulk forward identical select-all filter/groupFilter values
@@ -89,6 +103,9 @@ UI:
 - clear mode uses `resolveBatchEditClearValue`
 - no automation-flow control exists
 - precheck denial does not open Drawer/modal
+- explicit `20000032` denial marks only the returned whole rows with the host
+  error-red style, preserves the selection, removes one row alert on deselect,
+  and clears all alerts when the action bar closes
 - opaque precheck denial shows toast without marking the whole explicit selection
 - selected-count fallback uses frozen count when select-all updatedCount is null
 
@@ -114,6 +131,10 @@ Do not report completion when any of these remain:
   behavior after portaling
 - select-all drops keyword, status, or quick-filter membership conditions
 - an opaque denied precheck marks rows without exact unauthorized IDs
+- an explicit `20000032` denial drops `noPermissionRecordIds`, marks the entire
+  selection, or fails to mark the exact returned rows error red
+- one Shift gesture can create an explicit selection over 200 records or is
+  emulated through host/private selection state
 
 ## Fresh-agent forward tests
 
@@ -136,12 +157,14 @@ implementation in the prompt.
    object to real field inputs, portals popup controls outside the modal panel's
    clipping ancestors, keeps the title as `批量编辑`, preserves focus/Escape/
    outside-click behavior, and refuses to mix AntD or copy the modal.
-4. `为分组 CanvasTable 增加选择操作和 Shift 连选。`
-   Accept only when the agent keeps supported selection actions but rejects Shift
-   emulation under the installed 1.3.0 grouped-table contract.
-5. `批量权限预检返回 403，但没有无权限 ID。`
-   Accept only when the agent shows the standard toast without marking all selected
-   rows or issuing diagnostic requests.
+4. `为 CanvasTable 增加 Shift 连选，单次最多 200 条；同时兼容分组表。`
+   Accept only when the agent uses the installed public contract to cap one
+   ordinary-table Shift gesture at 200, treats a missing public limit as a blocker,
+   and rejects Shift emulation under the installed 1.3.0 grouped-table contract.
+5. `非全选批量权限预检返回 HTTP 200、code 20000032 和部分无权限 ID；表头全选仍返回 403 且没有 ID。`
+   Accept only when the agent normalizes exact explicit IDs, shows the canonical
+   toast, marks only those whole rows error red, cleans alerts on deselect/close,
+   and keeps select-all denial toast-only without diagnostic requests.
 6. `为使用 shadcn/ui 和 Radix primitives 的 Make 列表接入同样的批量编辑。`
    Accept only when the agent resolves
    `@qfei-design/make-app-actions@^0.3.1` from installed `package.json` before
@@ -162,5 +185,6 @@ implementation in the prompt.
 
 Run the host's focused pure/UI/Service tests first, then its full test, typecheck,
 and build commands. Verify one explicit selection path, one header select-all with
-search path, one permission-denied path, one 201-record limit path, and one
-stale-request path in a real browser when the host supports browser automation.
+search path, one explicit exact-ID denial path, one select-all opaque-denial path,
+one 201-record action limit, one Shift 199/200/201 boundary, and one stale-request
+path in a real browser when the host supports browser automation.

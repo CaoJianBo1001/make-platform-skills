@@ -18,6 +18,13 @@ Manual or Shift selection remains `include` even when every row is selected and
 the header checkbox becomes visually checked. Only the header select-all action
 creates `exclude`. Do not use `selectedCount === totalCount` to infer select-all.
 
+For `CanvasTableComponent`, one supported Shift range-selection gesture may add at
+most 200 records. Configure and verify that limit through the installed package's
+public selection contract. Test one-gesture ranges of 199, 200, and 201 records.
+If the installed public contract cannot prevent a single Shift gesture from
+selecting more than 200 records, report a capability blocker; do not emulate
+keyboard anchors, range expansion, or private selection state in the host.
+
 For the CanvasTable 1.3.0 public contract, `GroupTableComponent` does not support
 Shift range selection; Shift is supported only by `CanvasTableComponent`. Re-read
 the installed package docs for newer versions. Unless the installed grouped-table
@@ -36,6 +43,8 @@ subscribe to a second group selection event and report each click twice.
 ## Limits
 
 - Explicit `include` batch edit allows 1-200 `recordIDs`; 200 is valid.
+- One supported Shift range-selection gesture allows at most 200 records; this is
+  an interaction limit in addition to the final explicit-target limit.
 - More than 200 explicit IDs blocks opening the batch modal and shows
   `单次批量编辑数据上限为200条`.
 - Keep selection after that toast so the user can manually deselect rows.
