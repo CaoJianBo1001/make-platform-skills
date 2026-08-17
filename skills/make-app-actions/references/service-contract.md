@@ -26,8 +26,9 @@ Rules:
 
 - Accept only `data.record.update`, `data.record.delete`, or
   `data.record.bulkUpdate`.
-- Explicit mode accepts `recordIDList` with 1-200 unique positive numeric string
-  IDs and rejects exclusions/filter/groupFilter.
+- Explicit mode accepts `recordIDList` with 1-200 positive integer string IDs
+  whose arbitrary-precision numeric identities are unique, and rejects
+  exclusions/filter/groupFilter.
 - Select-all mode accepts 0-200 unique excluded IDs, rejects `recordIDList`, and
   strictly validates optional nonblank `filter`/`groupFilter` Expression objects.
 - Reject unknown properties and mixed target variants with 400. Never silently
@@ -55,17 +56,35 @@ Return a stable UI result:
 }
 ```
 
-- Upstream success with `data: true` maps to `allowed: true` and an empty list.
-- Upstream 403 maps to denied.
-- Other upstream errors remain operational errors and must not be downgraded to permission denial.
-- A denied single explicit target may return that one ID without another call.
-- For a denied multiple explicit or select-all target, `unauthorizedRecordIDList` is empty; do not perform diagnostic calls because the boolean upstream cannot identify rows.
+- Upstream success with `code: 200` and `data: true` maps to `allowed: true` and
+  an empty list.
+- In explicit mode (`selectAllMode=false`), an unauthorized target returns HTTP
+  200 with business code `20000032` and
+  `data.noPermissionRecordIds`. Treat this as an expected permission denial, not
+  an operational failure, and map the exact IDs to `unauthorizedRecordIDList`.
+- Decode numeric `noPermissionRecordIds` losslessly from the raw JSON response
+  before JavaScript `Number` coercion. Use a documented lossless JSON decoder that
+  exposes integer tokens as decimal strings or `BigInt`; never round IDs through
+  `Number` or impose an undocumented `Number.MAX_SAFE_INTEGER` limit.
+- Canonicalize both response integer tokens and frozen request ID strings as
+  arbitrary-precision positive decimal integers. Require unique response numeric
+  identities and membership in the request's unique numeric identities, map each
+  match back to the exact original request row key, and preserve the backend/request
+  order. Reject fractional, zero, negative, duplicate, malformed, or out-of-target
+  values as operational contract errors instead of guessing row IDs. Records
+  reported as missing, deleted, or outside the current tenant are still
+  permission-denied targets and must not be reclassified by UI copy.
+- In select-all mode (`selectAllMode=true`), preserve the documented opaque 403
+  denial with an empty `unauthorizedRecordIDList`; this mode does not return
+  `noPermissionRecordIds`.
+- Other upstream HTTP failures or business codes remain operational errors and
+  must not be downgraded to permission denial.
 
-UI shows the standard denial toast and blocks opening the edit surface. When the
-response does not contain exact unauthorized row IDs, use toast-only feedback and
-do not highlight rows. This applies to both multi-record explicit and select-all
-targets. Highlight only exact row IDs already known from local validation or a
-future authoritative response contract.
+UI always shows `勾选范围中存在无权限数据，请检查勾选范围` and blocks
+opening the edit surface for a permission denial. Explicit mode marks only the
+exact normalized `unauthorizedRecordIDList` rows with the host error-red whole-row
+style. Select-all mode has no exact IDs and remains toast-only. Never mark the
+complete selection or perform diagnostic requests to manufacture IDs.
 
 ## Batch update
 

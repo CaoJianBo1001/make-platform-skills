@@ -250,3 +250,32 @@
 - fresh-agent 在搜索全选场景中自行发明了未定义的 `snapshotToken`，说明“复用同一冻结 target”仍可能被错误解释为新增服务端令牌协议。
 - 将禁止发明未文档化 token 提升到主 Skill 和选择快照合同；只有宿主 Service 已明确规定令牌签发、目标绑定、过期和写入校验时才允许使用。
 - 新增机械合同断言，并在最终关联 Skill 哈希上重新执行独立前向场景。
+
+## 2026-08-14 行级权限预检错误 ID 与整行爆红
+
+### 问题背景
+
+- 行级写权限预检旧合同只处理无准确 ID 的 403 拒绝，因此前端只能显示吐司，不能确定具体异常行。
+- 新合同在非全选模式下通过 HTTP 200、业务码 `20000032` 和 `data.noPermissionRecordIds` 返回准确无权限记录；全选模式仍保持 403 且不返回记录 ID。
+- 原测试继续断言“多记录拒绝没有 ID”，会锁死旧行为；同时只限制最终显式操作目标为 200 条，没有固化单次 Shift 连选最多 200 条的交互约束。
+
+### TDD 与修复内容
+
+- 先扩展 `scripts/test-make-app-actions-contract.mjs`，增加新业务响应、数字 ID 规范化、精确整行错误红、取消勾选/关闭操作栏清理、全选无 ID 回退、Shift 199/200/201 和 Service 专用解析顺序断言；旧 Skill 首次运行按预期在 Shift 上限断言处失败。
+- `make-app-actions` revision 更新为 `0.1.8`：显式模式将 `noPermissionRecordIds` 规范化为稳定的 `unauthorizedRecordIDList`，只标记准确返回的整行并显示统一吐司；拒绝后保留当前选择，供用户逐行取消；全选 403 继续只显示吐司，禁止猜测、全量标红或逐 ID 诊断。
+- Service 响应解析要求将数字 ID 无损映射到冻结请求中的字符串行键，校验唯一性、请求成员关系并保持返回顺序；格式错误或越界 ID 作为上游合同错误处理，不制造行反馈。
+- `make-app-service` revision 更新为 `0.1.6`：权限预检在通用 `code !== 200` 错误映射之前识别 `20000032`，保留 `noPermissionRecordIds`，并补齐显式/全选两类 Service 测试要求。
+- `canvas-table-integration` revision 更新为 `0.1.12`：补充公共 `setRowColors` 能力路由；普通 CanvasTable 单次 Shift 连选最多 200 条，只能通过已安装包公开合同实现，缺少能力时报告阻断，不在宿主模拟私有选区；CanvasTable 1.3.0 分组表仍不支持 Shift。
+- 前向测试场景四改为同时验证普通表 Shift 200 上限和分组表能力边界；场景五改为验证显式 `20000032` 精确爆红与全选 403 无 ID 回退。
+
+### 验证说明
+
+- 新增语义合同断言全部通过；更新 fresh-agent 与关联范围记录后，仓库 18 个合同测试脚本全部通过。
+- `make-app-actions`、`make-app-service`、`canvas-table-integration` 的 Skill Creator 快速校验全部通过；metadata lint、Node 语法检查、`git diff --check` 均通过。
+- 关联 Skill 机械审查无 Critical/Major；唯一 `must/do not` 启发式 Minor 经人工复核，分别约束必须执行与禁止行为，不存在同一行为冲突。
+- 使用 `fork_turns: none` 为七个用户式场景分别创建互不共享上下文的 fresh Agent；r16 批次全部通过，并以真实执行标识更新 `docs/make-app-actions-forward-test.md`。权限与数字精度记录只更新当前组合哈希和非语义影响边界，明确没有把确定性合同测试冒充为对应领域的 fresh-agent 重跑。
+
+### 提交前复审修复
+
+- 先新增“超出 JavaScript 安全整数仍须精确映射”的合同断言，旧规则按预期失败；随后删除未经后端合同确认的安全整数上限：权限适配器必须从原始响应使用无损 JSON 解码器保留整数 token，再用任意精度十进制身份与冻结请求 ID 匹配并映射回原始行键；禁止先经过 `Number` 舍入。
+- 增加 `9007199254740993` 回归边界，以及小数、零、负数、数值身份重复、越界和已舍入值的失败测试要求。

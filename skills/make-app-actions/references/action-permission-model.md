@@ -64,21 +64,33 @@ row checks. Keep the App-level action visible and call
 
 ## Denial feedback
 
-When local validation returns exact unauthorized row keys:
+Use `勾选范围中存在无权限数据，请检查勾选范围` for both explicit and
+select-all precheck denial.
 
-1. Block the action.
-2. Show `勾选范围中存在无权限数据，请检查勾选范围`.
-3. Highlight the exact rows through CanvasTable public row-color APIs.
+When package local validation or an authoritative explicit-selection Service
+precheck returns exact unauthorized row keys:
+
+1. Block the action without clearing the current selection, so the user can
+   inspect or deselect the denied rows.
+2. Show the canonical toast above.
+3. Keep an alert set keyed by the normalized exact row IDs and mark only those
+   whole rows with the host's error-red row style through the installed
+   CanvasTable public row-color API, such as `setRowColors` when documented.
 4. Remove a row highlight when that row is deselected.
 5. Clear all action highlights when the action bar is closed or query context is
    reset.
+6. Reconcile the alert set when rows are loaded or rendered again in the same
+   selection generation, and ignore a stale precheck result after the generation
+   changes.
 
-When the Service denies a precheck without exact unauthorized row IDs, show the
-standard toast and block safely without row highlighting. Do not mark the full
-explicit selection as unauthorized, invent IDs, or issue diagnostic calls. A
-select-all denial follows the same toast-only fallback. Exact row highlighting
-requires exact IDs from package local validation or a future authoritative
-backend contract.
+For explicit mode, the Service maps backend `noPermissionRecordIds` to normalized
+`unauthorizedRecordIDList`; this is the authoritative backend source for exact
+row feedback. Do not replace it with loaded-record guesses or per-ID diagnostics.
+
+When select-all mode is denied, the backend returns no exact unauthorized row
+IDs. Show the same canonical toast and block safely without row highlighting. Do
+not mark the full selection as unauthorized, invent IDs, or issue diagnostic
+calls.
 
 ## Action surfaces
 

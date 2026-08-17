@@ -53,6 +53,12 @@ const permissionRuntime = read(
   'skills/make-app-permission/references/ui-permission-runtime.md',
 );
 const serviceSkill = read('skills/make-app-service/SKILL.md');
+const makeDataAdapter = read(
+  'skills/make-app-service/references/make-data-adapter.md',
+);
+const serviceTesting = read(
+  'skills/make-app-service/references/testing-and-safety.md',
+);
 const makeuiSkill = read('skills/makeui/SKILL.md');
 const makeuiListLayout = read('skills/makeui/references/list-page-layout.md');
 const makeuiDrawerLayout = read('skills/makeui/references/drawer-layout.md');
@@ -90,7 +96,7 @@ const forwardTestScopeHash = computeForwardTestScopeHash(
     })),
   ),
 );
-const currentForwardTestBatch = '2026-08-13-make-app-actions-0.3.1-r15';
+const currentForwardTestBatch = '2026-08-14-make-app-actions-0.3.1-r16';
 
 const skillBundle = [
   skill,
@@ -258,6 +264,16 @@ assert.match(
   'grouped tables must explicitly record that CanvasTable 1.3.0 does not support Shift ranges',
 );
 assert.match(
+  `${skill}\n${selectionFlow}\n${canvasSkill}\n${canvasCoreContract}`,
+  /(?:单次|single|one)[^\n]*Shift[^\n]*(?:上限|最多|at most|limit)[^\n]*200|Shift[^\n]*(?:单次|single|one)[^\n]*(?:上限|最多|at most|limit)[^\n]*200/i,
+  'one Shift range-selection gesture must be limited to at most 200 records',
+);
+assert.match(
+  `${selectionFlow}\n${canvasSkill}\n${canvasCoreContract}`,
+  /Shift[\s\S]{0,320}(?:public|公开)[^\n]*(?:contract|API|能力)[\s\S]{0,320}(?:blocker|阻断|不得模拟|do not emulate)/i,
+  'Shift range limiting must use the installed public CanvasTable contract or report a blocker',
+);
+assert.match(
   skill,
   /(CanvasTable 1\.3\.0|GroupTableComponent)[^\n]*(不支持|does not support|unsupported)[^\n]*Shift[^\n]*(不得|do not|禁止)[^\n]*(模拟|emulate)/i,
   'the main workflow must make the grouped Shift non-capability impossible to miss',
@@ -292,6 +308,11 @@ assert.match(
   /(make-app-actions|操作选择|action-owned)[\s\S]{0,320}(重建|recreat|replace)[\s\S]{0,320}(不得|do not|must not)[^\n]*(恢复|reapply|restore|replay)[\s\S]{0,120}(选择|selection)/i,
   'Canvas recreation guidance must not restore action-owned selection',
 );
+assert.match(
+  canvasCoreContract,
+  /setRowColors\s*\([^)]*rowKeys[^)]*color[^)]*\)/i,
+  'CanvasTable public-method guidance must expose whole-row color feedback',
+);
 
 assert.match(
   serviceContract,
@@ -305,13 +326,38 @@ assert.match(
 );
 assert.match(
   serviceContract,
-  /403[\s\S]*(拒绝|denied)[\s\S]*(其他|other)[^\n]*(错误|error)[^\n]*(不得|不|must not)[^\n]*(权限拒绝|denial)/i,
-  'service must distinguish permission denial from upstream failure',
+  /selectAllMode\s*=\s*false[\s\S]{0,520}HTTP\s*200[\s\S]{0,240}20000032[\s\S]{0,240}noPermissionRecordIds[\s\S]{0,320}unauthorizedRecordIDList/i,
+  'explicit precheck denial must map the new HTTP 200 business response and exact IDs',
 );
 assert.match(
   serviceContract,
-  /(多记录|multiple|全选|select-all)[\s\S]*(unauthorizedRecordIDList)[\s\S]*(空|empty)[\s\S]*(不|no|without)[^\n]*(诊断|diagnostic)/i,
-  'multi-record denial must not invent unauthorized IDs',
+  /(?:numeric|数字)[^\n]*noPermissionRecordIds[\s\S]{0,1100}(?:string|字符串|row[- ]key|行键)[\s\S]{0,320}(?:order|顺序)/i,
+  'backend numeric denial IDs must normalize to canonical row keys without reordering',
+);
+assert.match(
+  `${serviceContract}\n${makeDataAdapter}`,
+  /noPermissionRecordIds[\s\S]{0,520}(?:lossless|无损)[\s\S]{0,320}(?:raw (?:JSON|response)|原始(?: JSON)?响应|number coercion|Number 强制转换|BigInt|任意精度)/i,
+  'permission denial IDs must be decoded losslessly before JavaScript Number coercion',
+);
+assert.doesNotMatch(
+  serviceContract,
+  /Require positive safe integers|要求正安全整数|必须(?:为|是)[^\n]*安全整数/i,
+  'permission denial IDs must not depend on an undocumented JavaScript safe-integer limit',
+);
+assert.match(
+  `${testing}\n${serviceTesting}`,
+  /9007199254740993|Number\.MAX_SAFE_INTEGER[\s\S]{0,160}(?:above|超过|\+\s*1)/i,
+  'tests must cover a permission-denial Record ID above Number.MAX_SAFE_INTEGER',
+);
+assert.match(
+  serviceContract,
+  /selectAllMode\s*=\s*true[\s\S]{0,420}403[\s\S]{0,260}(?:不返回|without|empty|空)[^\n]*(?:noPermissionRecordIds|unauthorizedRecordIDList|ID)/i,
+  'select-all denial must retain the opaque 403 response without row IDs',
+);
+assert.match(
+  makeDataAdapter,
+  /permission[\s\S]{0,420}20000032[\s\S]{0,320}(?:expected|预期|业务拒绝|permission denial)[\s\S]{0,320}(?:generic|通用)[^\n]*(?:code\s*!==\s*200|error|failure|错误|失败)/i,
+  'Make adapter guidance must preserve the permission-specific 20000032 payload before generic error handling',
 );
 assert.match(
   serviceContract,
@@ -325,8 +371,33 @@ assert.doesNotMatch(
 );
 assert.match(
   `${permissionModel}\n${serviceContract}`,
-  /(without exact|没有准确|无法确定|不返回|opaque)[\s\S]{0,100}(unauthorized|无权限)[\s\S]{0,80}(ID|行)[\s\S]{0,200}(toast|提示)[\s\S]{0,160}(不标红|do not highlight|without row highlight)/i,
+  /(without exact|no exact|没有准确|无法确定|不返回|opaque)[\s\S]{0,100}(unauthorized|无权限)[\s\S]{0,80}(ID|行)[\s\S]{0,200}(toast|提示)[\s\S]{0,160}(不标红|do not highlight|without row highlight)/i,
   'opaque backend denial must use toast-only feedback when exact row IDs are unavailable',
+);
+assert.match(
+  permissionModel,
+  /(?:Service|服务端|预检)[\s\S]{0,220}(?:exact|准确|精确)[^\n]*(?:ID|row key|行键)[\s\S]{0,260}(?:整行|whole row|full row)[^\n]*(?:爆红|错误红|error red|red)[\s\S]{0,220}(?:CanvasTable|row-color|setRowColors)/i,
+  'authoritative explicit denial IDs must drive exact whole-row error-red feedback',
+);
+assert.match(
+  permissionModel,
+  /勾选范围中存在无权限数据，请检查勾选范围/,
+  'denial feedback must keep the canonical toast',
+);
+assert.match(
+  permissionModel,
+  /(?:remove|移除|清除)[^\n]*(?:row|行)[^\n]*(?:deselect|取消选中)|(?:deselect|取消选中)[^\n]*(?:remove|移除|清除)/i,
+  'denial feedback must clear one row error on deselect',
+);
+assert.match(
+  permissionModel,
+  /(?:block|阻止|拦截)[^\n]*(?:without clearing|不清空|保留)[^\n]*(?:selection|选择)/i,
+  'denial feedback must preserve selection so denied rows can be deselected',
+);
+assert.match(
+  permissionModel,
+  /(?:clear|清除)[^\n]*(?:all|全部)[^\n]*(?:highlight|alert|标红|提示)[^\n]*(?:action bar|操作栏)[^\n]*(?:closed|关闭)|(?:action bar|操作栏)[^\n]*(?:closed|关闭)[^\n]*(?:clear|清除)/i,
+  'denial feedback must clear all row errors when the action bar closes',
 );
 
 assert.match(
@@ -390,6 +461,21 @@ assert.match(
   /(重建|recreat)[\s\S]{0,280}(空选择快照|empty selection snapshot)[\s\S]{0,420}(totalCount|总数)[^\n]*(增加|增长|grow)[\s\S]{0,420}(totalCount|总数)[^\n]*(减少|收缩|shrink)[\s\S]{0,320}(一次|one|single|exactly one)[\s\S]{0,100}(通知|notification|selection:change)/i,
   'test matrix must cover recreation and both total-count transitions without duplicate notification',
 );
+assert.match(
+  testing,
+  /20000032[\s\S]{0,260}noPermissionRecordIds[\s\S]{0,360}(?:整行|whole[- ]row|full[- ]row)[\s\S]{0,100}(?:爆红|错误红|error[- ]red|red)/i,
+  'test matrix must cover new explicit denial IDs and exact whole-row feedback',
+);
+assert.match(
+  testing,
+  /(?:单次|single|one)[^\n]*Shift[^\n]*(?:199|200|201)[\s\S]{0,160}(?:199|200|201)/i,
+  'test matrix must cover the Shift gesture 199/200/201 boundary',
+);
+assert.match(
+  serviceTesting,
+  /permission[\s\S]{0,420}20000032[\s\S]{0,260}noPermissionRecordIds[\s\S]{0,320}(?:select-all|全选)[\s\S]{0,220}403/i,
+  'Service tests must cover both explicit exact-ID denial and select-all opaque denial',
+);
 for (const [dimension, relatedSkill] of [
   ['filter', filterSkill],
   ['sort', sortSkill],
@@ -435,7 +521,7 @@ for (const skillName of forwardTestScopeSkillNames) {
 }
 assert.match(
   forwardTestRecord,
-  /Action 语义前向测试基线 SHA-256[：:]\s*`69fb63b6b0419af55ea2bbe6021979b758e1a69150574b0b93718a8b64db6042`/,
+  /上一 Action 语义前向测试基线 SHA-256[：:]\s*`69fb63b6b0419af55ea2bbe6021979b758e1a69150574b0b93718a8b64db6042`/,
   'the previous action-semantic fresh-agent baseline must remain explicit',
 );
 assert.match(
@@ -444,7 +530,7 @@ assert.match(
   'an unrelated permission-audit revision must not be presented as freshly forward-tested action semantics',
 );
 assertForwardTestScope(forwardTestRecord, forwardTestScopeHash);
-const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\/root\/(?:actions_r1[45]|forward_numeric_r6_form)_[a-z0-9_]+)$/i;
+const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\/root\/actions_r16_[a-z0-9_]+)$/i;
 const forwardScenarios = [
   {
     heading: '场景一：Ant Design 默认操作',
@@ -482,15 +568,28 @@ const forwardScenarios = [
     requiredExecutionMethod: 'fresh-agent',
   },
   {
-    heading: '场景四：分组表选择和 Shift',
-    evidencePatterns: [/(分组|grouped)/i, /Shift/i],
+    heading: '场景四：Shift 200 与分组边界',
+    evidencePatterns: [
+      /(分组|grouped)/i,
+      /Shift/i,
+      /200/,
+      /(public|公开)[^\n]*(contract|API|能力)/i,
+      /(blocker|阻断|不得模拟|do not emulate)/i,
+    ],
     requiredExecutionBatch: currentForwardTestBatch,
     requiredExecutionIdPattern: executionIdPattern,
     requiredExecutionMethod: 'fresh-agent',
   },
   {
-    heading: '场景五：403 且没有无权限 ID',
-    evidencePatterns: [/unauthorizedRecordIDList/, /(toast|提示)/i, /(不调用行标红|without row highlight)/i],
+    heading: '场景五：显式权限拒绝与全选回退',
+    evidencePatterns: [
+      /20000032/,
+      /noPermissionRecordIds/,
+      /unauthorizedRecordIDList/,
+      /(whole[- ]row|整行)[\s\S]{0,120}(error[- ]red|爆红|错误红)/i,
+      /(select-all|全选)[\s\S]{0,160}403/i,
+      /(toast|提示)/i,
+    ],
     requiredExecutionBatch: currentForwardTestBatch,
     requiredExecutionIdPattern: executionIdPattern,
     requiredExecutionMethod: 'fresh-agent',

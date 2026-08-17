@@ -1,8 +1,8 @@
 ---
 name: make-app-actions
-description: "Use when generating, integrating, refactoring, reviewing, or debugging Make CanvasTable record-list 操作按钮 and selection actions; this is the 默认 behavior for writable Make record lists unless explicitly opted out. Triggered by 复选框, 行操作, 选择操作栏, 编辑, 删除, 批量编辑, 暂无可用的操作, selectAll, Shift selection, selectionIntent, CanvasTable 重建, totalCount 变化, 200 条上限, 行级写权限预检, record-write-permission, records/bulk, @qfei-design/make-app-actions, or action tests. Covers package integration, independent update/delete/bulkUpdate permissions, Canvas selection intent, immutable snapshots, effective write filters, Service precheck/bulk contracts, UI-adapter compatibility, denial feedback, stale safety, and tests. Does not own CanvasTable internals, principal IAM policy, general Service layering, page shell, field editor internals, auth, runtime packaging, DSL, Make CLI, or filter/sort/group semantics."
+description: "Use when generating, integrating, refactoring, reviewing, or debugging Make CanvasTable record-list 操作按钮 and selection actions; this is the 默认 behavior for writable Make record lists unless explicitly opted out. Triggered by 复选框, 行操作, 选择操作栏, 编辑, 删除, 批量编辑, 暂无可用的操作, selectAll, Shift selection, Shift 200 条上限, selectionIntent, CanvasTable 重建, totalCount 变化, 行级写权限预检, noPermissionRecordIds, 无权限行爆红, record-write-permission, records/bulk, @qfei-design/make-app-actions, or action tests. Covers package integration, independent update/delete/bulkUpdate permissions, Canvas selection intent, immutable snapshots, effective write filters, Service precheck/bulk contracts, UI-adapter compatibility, exact denial-row feedback, stale safety, and tests. Does not own CanvasTable internals, principal IAM policy, general Service layering, page shell, field editor internals, auth, runtime packaging, DSL, Make CLI, or filter/sort/group semantics."
 metadata:
-  version: 0.1.7
+  version: 0.1.8
 ---
 
 # make-app-actions
@@ -37,7 +37,10 @@ requests, query context, field controls, business feedback, and list refresh.
    infer select-all from selected and total counts. Treat CanvasTable instance
    replacement and same-query `totalCount` changes with the lifecycle in
    `references/selection-and-operation-snapshot.md`; never replay an action-owned
-   selection into a replacement instance. CanvasTable 1.3.0
+   selection into a replacement instance. Limit one supported Shift range gesture
+   to at most 200 records through the installed CanvasTable public contract; if
+   that contract cannot enforce the limit, report a capability blocker instead of
+   emulating private selection state in the host. CanvasTable 1.3.0
    `GroupTableComponent` does not support Shift range selection; do not emulate
    Shift ranges in the host unless the installed grouped-table public contract
    explicitly adds that capability.
@@ -49,7 +52,10 @@ requests, query context, field controls, business feedback, and list refresh.
    snapshot before any asynchronous precheck starts.
 7. Before opening single edit or batch-edit UI, send that complete frozen target
    to one host Service precheck. Do not call Make from UI and do not split a
-   denied multi-record request into diagnostic requests.
+   denied multi-record request into diagnostic requests. For explicit selection,
+   map authoritative `noPermissionRecordIds` from the documented HTTP 200 business
+   denial to exact whole-row error-red feedback. Select-all denial has no row IDs
+   and remains toast-only.
 8. For batch edit, filter fields by runtime read/update permissions and package
    capability. Ant Design hosts render package `AntdRecordBatchEditModal` with
    host field controls. Other React hosts render package `RecordBatchEditModal`,
@@ -119,6 +125,13 @@ requests, query context, field controls, business feedback, and list refresh.
 - Explicit selection and exclusion lists each allow at most 200 IDs. An explicit
   selection over 200 is blocked without opening the modal and keeps selection so
   the user can deselect rows.
+- One supported Shift range-selection gesture selects at most 200 records. Enforce
+  this through the installed CanvasTable public contract; do not add host-owned
+  keyboard/range-selection internals when that capability is unavailable.
+- An explicit precheck HTTP 200 business denial with authoritative
+  `noPermissionRecordIds` blocks the action, shows the canonical denial toast, and
+  marks only those exact rows with the host error-red row style. A select-all 403
+  returns no row IDs, shows the same toast, and never invents rows to highlight.
 - One action produces at most one Make permission-precheck request and one final
   Make mutation request. Never use per-ID diagnostics or per-record update loops.
 - Selection/query races must not open stale UI, apply stale feedback, clear a

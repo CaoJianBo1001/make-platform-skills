@@ -3,7 +3,7 @@
 ## 执行信息
 
 - 执行日期：2026-08-14
-- Skill 内容 SHA-256：`9935cb9a1a313f1942645d534b4e07b2dd7d74a5e26565bb6fc0f189087ab030`
+- Skill 内容 SHA-256：`aaf4410797e5104b8348c65b0cd085168458d94415b86a4b53362968de9aef52`
 - 语义前向测试基线 SHA-256：`7f59d274bee3f60a224f0c438ef12d72cffb1182d3f4a9111906bdda9f1c47d2`
 - 哈希算法：`qfei-forward-test-scope-v1` 长度前缀编码
 - 哈希范围：`skills/make-app-permission`、`skills/make-app-service`、`skills/makeui` 三个目录的全部文件
@@ -18,6 +18,12 @@
 - 修订范围：新增复合 `fieldAccess` 数组字符串化静态阻断、负向/防误报夹具、宿主自动门禁和本地安装副本同步检查，不修改创建、读取、更新、资源匹配或系统字段语义。
 - 验证方式：先运行失败夹具证明旧审计漏检，再实现最小规则；随后运行审计自测、40 项一致性套件、两个真实 POC 的生产 adapter、默认/发布门禁及完整测试构建。
 - 证据边界：上方当前哈希用于锁定本次确定性验证内容；五个 fresh-agent 场景只证明其明确标注的 `0.2.1` 语义基线。
+
+## 2026-08-14 Action Service 适配边界说明
+
+- 当前组合哈希变化来自 `make-app-service` 对 `record-write-permission` 端点的响应适配：显式 Action 拒绝解析 `20000032` 和无损 Record ID，全选 Action 拒绝保留 403 无 ID。
+- 本次没有修改 `make-app-permission` 的 principal 路由、App/实体/字段权限匹配、`fields/createFields`、刷新代次或 makeui 新建/编辑权限语义，因此不重新执行下方五个权限语义场景。
+- 上方哈希锁定当前三个 Skill 目录；下方 fresh-agent 输出仍只证明 `0.2.1` 语义基线，本说明不把 Action 适配器的确定性合同测试冒充为权限 fresh-agent 重新执行。
 
 ## 场景一：仅可新建不可见字段
 

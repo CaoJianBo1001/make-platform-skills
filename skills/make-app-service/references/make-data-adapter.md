@@ -32,11 +32,25 @@ The wrapper should:
 - send JSON or multipart bodies
 - parse JSON envelopes safely
 - treat non-2xx HTTP as errors
-- treat Make `code !== 200` as errors
+- treat Make `code !== 200` as errors except when an endpoint-specific Skill
+  documents an expected business result that must be normalized first
 - throw a typed adapter error with path, target, status, and Make code
 - log start/success/failure with redacted context
 
 Do not duplicate Make fetch logic in each route.
+
+For the `make-app-actions` row-write permission precheck, parse the documented
+permission-specific business result before generic `code !== 200` error handling.
+HTTP 200 with `code: 20000032` and `data.noPermissionRecordIds` is an expected
+explicit-selection permission denial whose exact IDs must remain available for
+normalization; it is not a generic Make failure. Read this endpoint's raw response
+text and use a documented lossless JSON decoder that preserves every
+`noPermissionRecordIds` integer token as a decimal string or `BigInt` before the
+shared wrapper can coerce it to JavaScript `Number`. Never recover an ID from an
+already-rounded `Number` and never add a `Number.MAX_SAFE_INTEGER` limit that the
+backend contract does not define. Select-all denial remains the documented opaque
+403 result. Delegate the stable UI mapping, arbitrary-precision ID validation, and
+row-feedback semantics to `make-app-actions` instead of duplicating them here.
 
 Do not implement Make-backed Service APIs by shelling out to `makecli` or reading makecli command output. `makecli` is a developer/deployment tool, not a published Service runtime dependency, and online Service containers should be assumed not to have it installed.
 

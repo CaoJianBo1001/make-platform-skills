@@ -2,7 +2,7 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Generated Apps coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.1.5
+  version: 0.1.6
 ---
 
 # make-app-service
@@ -116,7 +116,13 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - For cancellable or supersedable work, a client disconnect must abort downstream work through a request-scoped `AbortSignal`. Do not stop at ignoring a stale response, and do not treat an expected `AbortError` as a user-visible 5xx failure.
 - Tests are required for route contracts, invalid input, adapter payloads, Make error mapping, and any schema/value normalization added by this skill.
 - Generated Make App Services must not be reported complete without the required principal permission proxy from `make-app-permission`, unless the user explicitly opts out of permissions.
-- For `record-write-permission` and `records/bulk`, follow `make-app-actions`: precheck the complete target with one Make `/data/v1/permission` call, reuse that target for one Make `/data/v1/field` call, and never split diagnostics or loop single-record updates.
+- For `record-write-permission` and `records/bulk`, follow `make-app-actions`:
+  precheck the complete target with one Make `/data/v1/permission` call, parse the
+  explicit-selection HTTP 200 / business-code `20000032` denial and its
+  `noPermissionRecordIds` losslessly from the raw response before JavaScript
+  `Number` coercion and generic Make error mapping, keep select-all 403 denial
+  ID-less, reuse the target for one Make `/data/v1/field` call, and never split
+  diagnostics or loop single-record updates.
 
 ## Default route baseline
 
