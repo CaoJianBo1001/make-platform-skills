@@ -10,7 +10,7 @@ If an implementation misses this baseline, treat it as a readiness blocker / 交
 
 Use `editType: "custom"` plus a host `customEdit(options)` bridge for business fields.
 
-For generated Make App editable tables, the platform-standard cell editor is the required baseline. Do not invent a second cell-edit style for new POC projects.
+For generated Make App editable tables, the platform-standard cell editor is the required baseline. Do not invent a second cell-edit style for new Make App projects.
 
 For Make App editable tables, use the applicable required defaults:
 
@@ -42,7 +42,7 @@ Canonical flow:
 
 When the table enters edit mode, the editor must be usable immediately.
 
-Default Make editable-cell activation is double-click. A single click may only activate/select the cell; double-click must enter edit mode. Keyboard or programmatic edit entry may exist, but generated POC projects must support the double-click path. Once double-click has entered edit mode, popup-style fields must already be open. It is incorrect to first show a small input and require one more click to open the picker/dropdown.
+Default Make editable-cell activation is double-click. A single click may only activate/select the cell; double-click must enter edit mode. Keyboard or programmatic edit entry may exist, but generated Make App projects must support the double-click path. Once double-click has entered edit mode, popup-style fields must already be open. It is incorrect to first show a small input and require one more click to open the picker/dropdown.
 
 Before mounting the real field editor, make the target cell visible. If the clicked cell is partially clipped by horizontal scroll, vertical scroll, the fixed-left region, header/body viewport boundary, or the container edge, scroll just enough to bring the full editable cell into the visible body viewport. Only after that scroll has applied should the host mount/open the editor and calculate popup placement from the updated geometry. Do not mount the editor at the old clipped coordinates, do not show a pre-scroll popup, and do not rely on the popup to compensate.
 

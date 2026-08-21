@@ -3,7 +3,7 @@
 ## 执行信息
 
 - 执行日期：2026-08-13
-- Skill 内容 SHA-256：`146e4cee77562a7ea6dac20b75183035aaf18f21f88ddec07a720a76033e6170`
+- Skill 内容 SHA-256：`fdb2c60f060463fecf59aea4c1748eadd0b8dc520da6b48dc0f4ce18189113eb`
 - 哈希算法：`qfei-forward-test-scope-v1` 长度前缀编码
 - 哈希范围：`skills/makedsl`、`skills/makeui`、`skills/canvas-table-integration` 三个目录的全部文件
 - 执行批次：`2026-08-13-make-numeric-field-precision-r6`
@@ -14,7 +14,7 @@
 
 ## 2026-08-14 CanvasTable 非数字语义边界说明
 
-- 当前组合哈希变化仅来自 `canvas-table-integration` 的 Make 操作选择能力：普通表单次 Shift 最多 200 条、分组表 Shift 边界和公共整行颜色 API 路由。
+- 当前组合哈希变化来自 `canvas-table-integration` 的 Make 操作选择能力，以及 `makeui`、`canvas-table-integration` 的平台化表述清理。
 - 本次没有修改数字/金额/百分比的字段元数据解析、原始文本精度校验、展示格式、Track B 编辑、提交值或保存失败生命周期，因此不重新执行下方两个数字精度场景。
 - 上方哈希锁定当前三个 Skill 目录；下方 fresh-agent 输出仍只证明 r6 数字语义基线，本说明不把 CanvasTable 选择能力的合同测试冒充为数字精度 fresh-agent 重新执行。
 

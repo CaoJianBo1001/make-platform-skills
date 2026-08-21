@@ -99,7 +99,7 @@ For TypeScript adapters, invoke the command with the project's existing TypeScri
 
 ## Host gate integration
 
-- Keep the audit and conformance runner project-local, or consume them from a versioned build dependency. Do not make CI depend on a sibling checkout or `~/.agents/skills`.
+- Keep the audit and conformance runner project-local, or consume them from a versioned build dependency. Do not make CI depend on a sibling checkout or an unversioned local Skill installation.
 - Make the host's default test, CI workflow, or publish verification invoke both checks. A change record stating that two projects passed once is acceptance evidence, not a continuing gate.
 - Add a host contract test that asserts the gate commands still exist and that the vendored/current runners contain the multi-state-array audit and behavior cases.
 - Treat source-to-installed-Skill comparison as a local install/release verification. Generic CI must not require a developer home-directory copy.

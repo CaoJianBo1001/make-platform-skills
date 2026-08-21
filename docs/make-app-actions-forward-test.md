@@ -3,7 +3,7 @@
 ## 执行信息
 
 - 执行日期：2026-08-14
-- Skill 内容 SHA-256：`4a6054527514eab15440155ddf8dd9d2ca9637c4cbf1fb28953fc589f7c6a0fc`
+- Skill 内容 SHA-256：`12b1c155d9756d3d715f1fc20c1a47705993b0e3cbfa49672dcfc147a2fbfdfe`
 - 范围哈希同步日期：2026-08-21
 - 上一 Action 语义前向测试基线 SHA-256：`69fb63b6b0419af55ea2bbe6021979b758e1a69150574b0b93718a8b64db6042`
 - 哈希算法：`qfei-forward-test-scope-v1` 长度前缀编码
@@ -25,7 +25,7 @@
 ## 本次验证边界
 
 - 本批次重新验证了当前 8 个 Skill 组合中的 Action 行为，尤其是普通表单次 Shift 最多 200 条、显式权限拒绝精确整行爆红、超大 Record ID 无损映射及全选 403 无 ID 回退。
-- `make-app-permission 0.2.3` 不改变选择、操作或批量写入的 Action 语义；本次仅同步组合范围哈希，未重新执行 r16 Action 场景，本记录不作为该版本权限审计脚本或 Action 场景的重新执行证据。
+- `make-app-permission 0.2.3` 与前台 UI/CanvasTable 的平台化表述不改变选择、操作或批量写入的 Action 语义；本次仅同步组合范围哈希，未重新执行 r16 Action 场景，本记录不作为这些变更的 Action 场景重新执行证据。
 - 所有 Agent 均只读执行；个别 Agent 自行运行合同测试并识别出旧范围哈希门禁，不以该旧门禁替代本批次输出验收。
 
 ## 场景一：Ant Design 默认操作

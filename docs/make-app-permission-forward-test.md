@@ -3,7 +3,7 @@
 ## 执行信息
 
 - 执行日期：2026-08-21
-- Skill 内容 SHA-256：`836e222a78b80a90f5ac89bbff91d504239df73c3c98a77dd56343ffff443a95`
+- Skill 内容 SHA-256：`fa69eb6422c22cbbdec21fc30489e1ac798bc2a15d490f47442ce86cfe87451a`
 - 语义前向测试基线 SHA-256：`7f59d274bee3f60a224f0c438ef12d72cffb1182d3f4a9111906bdda9f1c47d2`
 - 哈希算法：`qfei-forward-test-scope-v1` 长度前缀编码
 - 哈希范围：`skills/make-app-permission`、`skills/make-app-service`、`skills/makeui` 三个目录的全部文件
@@ -12,7 +12,7 @@
 - 输出限制：只输出实现方案、审查清单和测试计划，不修改仓库文件。
 - 提示控制：提示词按真实用户任务描述，不提供验收答案或已知缺陷。
 - 总体结果：`0.2.3` 的 3 个独立场景均正确识别 `data.record.create` 与 `meta.field.create` 的职责、单边授权结果、字段交集和提交白名单，并主动否定从 `data.record.create.fieldAccess` 读取可新建字段的旧实现。新增场景还正确处理 IAM 展开结果的 wildcard 边界，并保持 operation deny 与 field deny 互不串联。历史 5 个场景继续只证明各自标注的 `0.2.1` 语义。
-- 范围哈希已随 2026-08-21 的 deny 术语修正和平台泛化门禁同步更新；这两项不改变权限行为，本记录不将其表述为 fresh-agent 场景的重新执行。
+- 范围哈希已随 2026-08-21 的 deny 术语修正、前台 Skill 平台化表述和通用性门禁同步更新；这些变更不改变权限行为，本记录不将其表述为 fresh-agent 场景的重新执行。
 
 ## 0.2.3 场景一：独立新建权限链路设计
 
