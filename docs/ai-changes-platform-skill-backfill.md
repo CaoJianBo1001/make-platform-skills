@@ -1,8 +1,8 @@
-# ExpensePoc 近期经验回填 Make skills
+# 通用经验回填 Make skills
 
 ## 背景
 
-复盘 `expensePoc` 最近的通用变更后，以下经验需要回填到 `makeui` 和 `canvas-table-integration`：
+复盘通用变更后，以下经验需要回填到 `makeui` 和 `canvas-table-integration`：
 
 - Service 型项目改 UI 本地端口时，要同步 Vite、Service CORS、环境示例、API 文档和测试。
 - Lookup 值打开关联详情需要使用抽屉栈，并防止异步响应重新打开已关闭来源抽屉。

@@ -30,7 +30,7 @@ const readme = read('README.md');
 
 assert.doesNotMatch(
   skill,
-  /BizFinancePoc|ExpensePoc|uju[-_]?mdm/i,
+  /\b[A-Za-z][A-Za-z0-9]*(?:Poc|Workbench)\b/i,
   'make-app-filter must describe the fixed advanced-filter layout without project names',
 );
 assert.match(

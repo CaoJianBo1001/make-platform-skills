@@ -246,7 +246,7 @@ assert.match(
 );
 
 const forwardTestBatch = '2026-08-13-make-numeric-field-precision-r6';
-const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\/root\/forward_numeric_[a-z0-9_]+)$/i;
+const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|numeric-r6-[a-z0-9-]+)$/i;
 const scenarios = [
   {
     heading: '场景一：数字类表单字段',

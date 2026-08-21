@@ -74,6 +74,12 @@ Preserve IAM permission rows and normalize them at the UI boundary. A representa
       "permissionKey": "data.record.create",
       "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
       "effect": "allow",
+      "fieldAccess": {}
+    },
+    {
+      "permissionKey": "meta.field.create",
+      "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
+      "effect": "allow",
       "fieldAccess": {
         "create_only_field": "creatable"
       }
@@ -101,10 +107,11 @@ Preserve IAM permission rows and normalize them at the UI boundary. A representa
 
 Consume `fieldAccess` by permission dimension:
 
-- `data.record.create`: use `creatable` or `*` to choose fields from Schema `createFields`.
+- `data.record.create`: operation permission only; use it for create route, entry, handler, and submit checks, never to choose fields.
+- `meta.field.create`: use `creatable` or `*` to choose fields from Schema `createFields`.
 - `meta.field.read`: use readable states to choose visible fields from Schema `fields`; `creatable` is not readable.
 - `meta.field.update`: use `editable` or `*` only after visibility is established.
-- Other `data.record.*` rows control operations and do not grant general field visibility/editability.
+- All `data.record.*` rows control operations and do not grant create/read/update field access. In particular, `data.record.create.fieldAccess` must not be used as the create-field dimension.
 
 An allow row with empty `fieldAccess` is unrestricted for that permissionKey at its resolved resource specificity. A matching deny wins. Named field entries override a wildcard field baseline.
 

@@ -81,7 +81,7 @@ const activeGroupingDocs = [
 
 assert.doesNotMatch(
   groupSkillBundle,
-  /(uju[-_]?mdm|expensePoc|ClaimTable|DemoWorkbench|\bClaim\b|\/Users\/|ZSQF|make-group)/i,
+  /\b[A-Za-z][A-Za-z0-9]*(?:Poc|Workbench)\b|\/(?:Users|home|var\/folders)(?:\/|$)/i,
   'make-app-group skill content must not contain project or local-machine names',
 );
 assert.doesNotMatch(

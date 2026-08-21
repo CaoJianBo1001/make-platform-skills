@@ -2,7 +2,7 @@
 
 ## 需求背景
 
-`uju_mdm` 和 `expensePoc` 已实现高级筛选、Entity Preset 和多字段排序，
+已有参考应用实现高级筛选、Entity Preset 和多字段排序，
 但当前 Make Platform Skills 只有完整筛选规范，缺少排序字段能力判断、五级
 排序、拖拽优先级、表头联动、Preset 保存/回显和 records 调用时序的统一
 标准。

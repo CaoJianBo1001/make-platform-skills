@@ -133,7 +133,7 @@ AI 可以按统一规范完成完整分组功能，而不是只接一个弹窗�
 
 - 先只增加 `test-make-app-group-contract.mjs` 的弹层契约断言，旧文档按预期在“外层必须
   受控且禁止 hover/移出/失焦关闭”处失败；补充最小规范后测试通过。
-- 使用独立 fresh Agent 场景 `/root/forward_group_overlay_r1` 直接验证分组面板内 Select、
+- 使用独立 fresh Agent 场景 `group-overlay-r1` 直接验证分组面板内 Select、
   DatePicker 等 portal/teleport 子弹层。Agent 能从当前 Skill 自主恢复受控外层、owned
   overlay boundary、`composedPath()` 外部判定、确认成功后关闭、失败保持打开，以及
   AntD、Radix/shadcn、MUI、Vue 的等价适配，结论通过。
@@ -160,7 +160,7 @@ AI 可以按统一规范完成完整分组功能，而不是只接一个弹窗�
 - `make-app-group` Skill revision 更新为 `0.1.4`。
 - TDD 首次运行按预期失败于缺少 `confirm-success | true-outside-pointer` 关闭原因白名单；
   补充最小正文模型后，聚焦分组契约通过，反向突变被拒绝。
-- 使用 `/root/forward_group_overlay_r2` 重新执行直接分组弹层 fresh-agent 场景，Agent 能从
+- 使用 `group-overlay-r2` 重新执行直接分组弹层 fresh-agent 场景，Agent 能从
   当前 Skill 自主使用 `GroupOverlayCloseReason`，并拒绝子层 `onOpenChange(false)`、选值、
   失焦和鼠标移出关闭外层，结论通过。
 - 使用批次 `2026-08-11-make-app-actions-0.3.1-r5` 对当前 8 个关联 Skill 重新执行 7 个

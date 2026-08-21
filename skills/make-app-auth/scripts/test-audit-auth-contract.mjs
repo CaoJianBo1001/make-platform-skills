@@ -793,7 +793,7 @@ overrides:
         await auth.login({ redirect: true });
       }
       export function ReceiptPreview() {
-        return <img src="/api/make/data/v1/download/ExpensePoc/receipt.jpg" />;
+        return <img src="/api/make/data/v1/download/SampleApp/receipt.jpg" />;
       }
       export async function loadSchema() {
         return auth.api.get('/app/schema', { credentials: 'include' });

@@ -3,7 +3,8 @@
 ## 执行信息
 
 - 执行日期：2026-08-14
-- Skill 内容 SHA-256：`5a9dcfa362b2847ca44c315fe52893c680fb325732de0ea47861d86ea4e62fc3`
+- Skill 内容 SHA-256：`4a6054527514eab15440155ddf8dd9d2ca9637c4cbf1fb28953fc589f7c6a0fc`
+- 范围哈希同步日期：2026-08-21
 - 上一 Action 语义前向测试基线 SHA-256：`69fb63b6b0419af55ea2bbe6021979b758e1a69150574b0b93718a8b64db6042`
 - 哈希算法：`qfei-forward-test-scope-v1` 长度前缀编码
 - 哈希范围：以下 8 个关联 Skill 目录的全部文件：
@@ -24,7 +25,7 @@
 ## 本次验证边界
 
 - 本批次重新验证了当前 8 个 Skill 组合中的 Action 行为，尤其是普通表单次 Shift 最多 200 条、显式权限拒绝精确整行爆红、超大 Record ID 无损映射及全选 403 无 ID 回退。
-- `make-app-permission 0.2.2` 不改变选择、操作或批量写入的 Action 语义；r16 Agent 虽读取当前组合 Skill，本记录不作为该版本权限审计脚本的重新执行证据。
+- `make-app-permission 0.2.3` 不改变选择、操作或批量写入的 Action 语义；本次仅同步组合范围哈希，未重新执行 r16 Action 场景，本记录不作为该版本权限审计脚本或 Action 场景的重新执行证据。
 - 所有 Agent 均只读执行；个别 Agent 自行运行合同测试并识别出旧范围哈希门禁，不以该旧门禁替代本批次输出验收。
 
 ## 场景一：Ant Design 默认操作
@@ -37,7 +38,7 @@
 
 执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r16_antd
+执行标识：actions-r16-antd
 
 输出证据：Agent 先以已安装 `package.json` 为版本依据，再按 `package.ai.json.readOrder` 读取公开合同；使用 `AntdRecordSelectionActionBar` 和 `AntdRecordBatchEditModal`，独立判断 update/delete/bulkUpdate。`renderValueControl(field, control)` 转发 `disabled`，标题固定为“批量编辑”；批量链路只执行一次 `/data/v1/permission` 和一次 `/data/v1/field`。它还独立要求从原始响应无损映射 `9007199254740993`，显式拒绝精确整行标红，全选 403 只提示。
 
@@ -53,7 +54,7 @@
 
 执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r16_search
+执行标识：actions-r16-search
 
 输出证据：Agent 将搜索、高级筛选、状态和快捷筛选统一编译为最后一次成功查询的 `effectiveFilter`；表头全选保持 `exclude`，冻结排除项、`filter` 和独立 `groupFilter`。列表、一次权限预检和一次批量写入复用完全相同的过滤目标；搜索草稿和失败查询不重定义操作目标，成功应用新搜索才清空旧选择并使 pending work 失效。
 
@@ -69,7 +70,7 @@
 
 执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r16_arco
+执行标识：actions-r16-arco
 
 输出证据：Agent 使用通用 `RecordBatchEditModal` 和 `MakeAppBatchEditComponents` 注入 Arco Modal、字段选择器和模式控件，不引入 AntD 或复制包内弹窗。`renderValueControl(field, control)` 依次转发 `value`、`onChange`、`disabled`、`invalid`、`ariaDescribedBy`；通过 Arco 公开 portal 能力将 popup 挂载到裁剪祖先之外，并验证 focus、Escape、outside-click 顺序，标题保持“批量编辑”。
 
@@ -85,7 +86,7 @@
 
 执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r16_shift
+执行标识：actions-r16-shift
 
 输出证据：Agent 区分单次 Shift 交互上限和最终显式目标上限，要求普通表通过已安装 CanvasTable 的公开 contract/API 将一次 Shift 限制为 200，并覆盖 199/200/201；公开能力缺失即报告 blocker/阻断，不监听宿主键盘或维护私有锚点。分组表继续使用父级唯一 `selection:change`，CanvasTable 1.3.0 下保留逐行/表头选择但不模拟 Shift。
 
@@ -101,7 +102,7 @@
 
 执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r16_permission
+执行标识：actions-r16-permission
 
 输出证据：Agent 在通用错误映射前处理 HTTP 200、`20000032` 和 `noPermissionRecordIds`，从原始响应无损映射为有序 `unauthorizedRecordIDList`，并覆盖 `9007199254740993`。显式拒绝显示统一 toast，只将准确返回的整行错误红，取消勾选时清理该行、关闭操作栏时清空全部；全选 403 返回空 ID，只提示，不标红、不发诊断请求。
 
@@ -117,7 +118,7 @@
 
 执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r16_radix
+执行标识：actions-r16-radix
 
 输出证据：Agent 要求 `@qfei-design/make-app-actions@^0.3.1`，先读已安装 `package.json` 再按 `package.ai.json.readOrder` 读取公开合同。它使用 `RecordBatchEditModal` 和 `MakeAppBatchEditComponents` 注入 shadcn/Radix 薄包装，通过 Radix `Portal/container` 逃离裁剪并验证 focus、Escape、outside-click 和焦点回归；明确不引入 AntD、不使用 AntD adapter 或 AntD 形状的 generic props。
 
@@ -133,7 +134,7 @@
 
 执行批次：2026-08-14-make-app-actions-0.3.1-r16
 
-执行标识：/root/actions_r16_lifecycle
+执行标识：actions-r16-lifecycle
 
 输出证据：Agent 将筛选/排序的成功应用定义为校验和 Preset 保存成功后的同步查询交接，清空选择并失效旧请求；草稿、取消与保存失败都保留选择。CanvasTable 重建推进 instance/selection generation，发布一次空选择快照且不回放旧选择；同查询 `totalCount` 增加时读取公共快照并调用 `resolveCanvasSelectedRecordSnapshot` 重新归一化，减少时只调用一次 `clearSelection()`，最终只有一次通知。
 

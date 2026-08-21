@@ -4,7 +4,7 @@ Use this reference before choosing scope, resource, permissionKey, Schema collec
 
 ## Contents
 
-- Permission systems
+- Front-end App scope
 - Single-App operations and resources
 - Independent field dimensions
 - Schema and permission intersection
@@ -12,14 +12,9 @@ Use this reference before choosing scope, resource, permissionKey, Schema collec
 - Route and backend boundaries
 - Common mistakes
 
-## Permission systems
+## Front-end App scope
 
-| Type | Used by | Scope | Permission keys |
-| --- | --- | --- | --- |
-| Platform/admin | make-console management | `make://<tenantId>` | `make.platform.*`, `meta.app.*` |
-| Single-App | Generated App runtime | `make://<tenantId>/meta/app/<appKey>` | `data.record.*`, `meta.field.*`, `*.*.*` |
-
-Never use platform/admin results or their fixed filters for business App routes, fields, buttons, or records.
+This skill only consumes the front-end App permission response. Use the exact App scope `make://<tenantId>/meta/app/<appKey>` with `data.record.*`, `meta.field.*`, and `*.*.*`; do not use tenant-root or unrelated permission results for App routes, fields, buttons, or records.
 
 ## Single-App operations and resources
 
@@ -57,7 +52,7 @@ Creation, visibility, and editability are independent:
 
 | Surface | Schema upper bound | permissionKey | Allowed access states |
 | --- | --- | --- | --- |
-| Create form | `createFields` | `data.record.create` | `creatable`, `*` |
+| Create form | `createFields` | `meta.field.create` | `creatable`, `*` |
 | List/detail/filter | `fields` | `meta.field.read` | `readonly`, `editable`, `partialMask`, `fullMask`, `*` |
 | Edit/cell edit | already-visible `fields` | `meta.field.update` | `editable`, `*` |
 
@@ -66,7 +61,8 @@ Therefore:
 - `creatable` does not grant visibility or editability.
 - `editable` does not grant creation.
 - Selecting edit permission does not synthesize visibility. The value `editable` is readable only when it is actually returned in a matched `meta.field.read` row.
-- `data.record.create` allows the operation entry/handler but does not make every field creatable.
+- `data.record.create` allows the operation entry/handler but grants no create-field access.
+- `meta.field.create` grants create-field access but does not allow opening or submitting the create operation. The operation and field dimensions are independent and neither may synthesize the other.
 - `meta.field.read` does not add fields to a create form.
 - An editable-but-invisible field remains absent from edit/list/detail.
 - A create-only invisible field appears in create mode and nowhere else.
@@ -84,7 +80,7 @@ Treat the permission-trimmed Schema collections as separate contracts:
 Compute:
 
 ```text
-create = createFields ∩ creatable permission ∩ create-capable UI fields
+create = createFields ∩ meta.field.create(creatable|*) ∩ create-capable UI fields
 display = fields ∩ readable permission
 edit = display ∩ editable permission ∩ edit-capable UI fields
 ```
@@ -100,17 +96,17 @@ Schema membership never replaces principal permission checks, and principal perm
 - Treat requested entity and field keys as concrete string identifiers, not policy patterns. Non-strings (including `null`, numbers, arrays, and objects), blank/whitespace strings, and the literal `*` must fail closed before resource or field wildcard matching; `*` is valid only inside permission statements.
 - Accept only the documented permission resource families: global `*`, or the current tenant/App with namespace `meta` or IAM alias `*`, optionally followed by an exact or wildcard entity. Do not treat arbitrary namespaces or wildcard tenant/App segments as App permission.
 - Resource specificity is a fixed semantic order: global `*` < current App (canonical or namespace alias) < current App `entity/*` < current App `entity/<exactEntityKey>`. Prefer the highest matching level for allow field ranges and merge allows only at that same level. Canonical `.../meta/app/<appKey>` and IAM namespace-alias `.../*/app/<appKey>` resources at the same App/entity level have equal semantic specificity; string length or wildcard character counts must not change this order.
-- Apply a matching `effect: deny` before allows; it denies the matching operation. Do not encode a field-only hidden exception as a deny statement.
+- Apply a matching `effect: deny` before allows; it denies the matching permission dimension. A `data.record.*` deny therefore denies its operation, while a `meta.field.*` deny denies only that field-access dimension. Do not encode a field-only hidden exception as a deny statement.
 - Let a named field entry override both `*` and empty/unrestricted baselines across all same-specificity allow ranges so broad policies can retain named exceptions. If any same-specificity allow names the field, evaluate only the named values and do not fall back to another row's `*` or empty `fieldAccess`. Within that named set, `hidden` is deny-like and wins over `creatable`, `readonly`, `editable`, masks, or `*`; conflicting same-level named allows must never widen a hidden field. This field decision does not convert the allow statement into an operation-level deny.
 - Treat empty `fieldAccess` on the most-specific allow as unrestricted for that permissionKey:
-  - all `createFields` for `data.record.create`;
+  - all `createFields` for `meta.field.create`;
   - all `fields` for `meta.field.read`;
   - all already-visible `fields` for `meta.field.update`.
 - Distinguish an omitted or empty `fieldAccess` from a malformed value. An omitted property or empty object is the intentional unrestricted form; explicit `null`, a non-object, an array, a blank field key, an empty state list, an unknown state, or a state list containing non-strings is invalid IAM data and the access snapshot must fail closed instead of being normalized to `{}`. Null/primitive envelopes or rows and non-array `permissions` must return denied access without throwing.
 
 Interpret access states inside the matched permissionKey. Do not treat a value such as `*` as a global field grant detached from its create/read/update dimension.
 
-For a wildcard field baseline with a field-only exception, keep both entries in the same allow field range, for example `{ "*": "creatable", "secret": "hidden" }`. The operation remains allowed, while `secret` is excluded. Reserve `effect: deny` for denying the matched operation; otherwise an operation gate would correctly fail closed for the whole statement.
+In an expanded IAM runtime response, a wildcard field baseline may coexist with a named exception, for example `{ "*": "creatable", "secret": "hidden" }`; evaluate that shape defensively as runtime `fieldAccess`. Reserve `effect: deny` for denying the whole matched permission dimension; a matching `data.record.*` deny correctly fails closed for that operation.
 
 ## Route and backend boundaries
 
@@ -125,8 +121,8 @@ For a wildcard field baseline with a field-only exception, keep both entries in 
 - Using tenant-root scope or a platform filter for App permissions.
 - Rendering create forms from `fields` or `editableFields`.
 - Falling back from missing `createFields` to visible `fields`.
-- Treating `creatable` as readable because a console statement also contains `meta.field.read`.
-- Using `data.record.update/create` as general field read/edit permission.
+- Treating `creatable` as readable because another permission statement also contains `meta.field.read`.
+- Using `data.record.update/create` as field create/read/edit permission.
 - Hiding create/edit because no writable field exists.
 - Filtering visible controls but submitting the complete form store.
 - Refreshing permissions without invalidating permission-trimmed Schema.

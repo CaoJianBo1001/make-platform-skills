@@ -64,7 +64,7 @@ Make App 字段权限新增“可新建”维度。该维度只在新建页面�
 - `review-skills` 对主权限 Skill 及两个关联 Skill 的复核无 Critical、Major；唯一 Minor 为“文档同时存在必须/禁止措辞”的机械提示，人工核对后分别约束正确门禁与错误实现，不构成语义冲突。
 - 源码与 `~/.agents/skills` 安装副本的本次相关文件已同步并比对一致。
 
-真实 `expensePoc` 已补齐“权限 → Schema → 数据”刷新顺序以及权限/Schema generation 防旧响应覆盖，并通过 Skill 静态审计与可执行行为一致性套件。
+参考应用已验证“权限 → Schema → 数据”刷新顺序以及权限/Schema generation 防旧响应覆盖，并通过 Skill 静态审计与可执行行为一致性套件。
 
 已完成五个 `fork_turns: none` 的 fresh-agent 场景并记录到 `docs/make-app-permission-forward-test.md`。场景覆盖仅可新建、旧 Schema 迁移、通配/deny、系统与复杂字段、权限/Schema 刷新；其中两个场景发现并推动修复了 hidden 例外与两阶段原子刷新的歧义。
 
@@ -74,7 +74,7 @@ Make App 字段权限新增“可新建”维度。该维度只在新建页面�
 - 将可执行权限一致性套件从 12 项扩展到 23 项，新增 `*.*.*`、合法三段 permissionKey 通配、实体/父级/全局 resource、带 `fieldAccess` 的 operation deny、同具体度 allow 并集、canonical/namespace 别名同具体度、跨行具名 hidden 覆盖通配、相似业务字段 key、审计字段更新能力和畸形 `fieldAccess` 失败关闭。
 - 为新增矩阵增加反例适配器，确保缺少全局通配、只读取第一条同级 allow、模糊匹配审计字段和误伤审计字段编辑能力都会失败。
 - 统一实施规划文档：`editable` 只授予更新维度且不自动授予可见；匹配的 `effect: deny` 拒绝整个操作，字段级排除必须使用同一 allow `fieldAccess` 中的具名 `hidden`。
-- 增强后的套件发现并推动修复 `expensePoc` 的真实 deny 字段判定、canonical/namespace 资源评分、跨行具名例外和畸形 `fieldAccess` 扩权问题；`bizFinancePoc` 同步修复，并补齐 create-only 实体导航、提交时按最新权限/Schema 重建白名单、权限与 Schema 两阶段刷新、旧 Schema 响应隔离，以及 Service 精确系统字段判断。两套参考项目最终均以 23 项一致性套件和权限静态审计验收。
+- 增强后的套件发现并推动修复参考应用中的 deny 字段判定、canonical/namespace 资源评分、跨行具名例外和畸形 `fieldAccess` 扩权问题，并补齐 create-only 实体导航、提交时按最新权限/Schema 重建白名单、权限与 Schema 两阶段刷新、旧 Schema 响应隔离，以及 Service 精确系统字段判断。参考应用均以 23 项一致性套件和权限静态审计验收。
 
 ## 2026-08-13 最终收敛
 
@@ -95,15 +95,37 @@ Make App 字段权限新增“可新建”维度。该维度只在新建页面�
 - 审计正例改为实际读取并保留 `fieldAccess` 状态数组；负向夹具覆盖直接字符串化、文本 helper 和模板字符串，另保留 scope、permissionKey、fieldKey 等正常字符串规范化的防误报用例。
 - 明确静态审计只能拦截已知坏形态，可执行 40 项一致性套件仍是权限语义真值；一次性跨项目验收记录不再视为持续门禁。
 - 要求宿主默认测试、CI 或发布校验持续调用静态审计和生产 adapter 一致性套件。宿主应保存本地 runner 或使用版本化构建依赖，禁止在可移植 CI 中硬编码其他工作区或 `~/.agents/skills` 路径。
-- `expensePoc` 新增项目本地审计/一致性 runner 和默认测试门禁；`bizFinancePoc` 将原 12 项项目 runner 替换为当前 40 项合同，并由宿主合同测试锁定数组专项规则。
+- 参考应用新增本地审计/一致性 runner 和默认测试门禁，并将旧 runner 替换为当前 40 项合同，由宿主合同测试锁定数组专项规则。
 - `make-app-actions` 的组合前向哈希因覆盖权限 Skill 全目录而同步变化；记录保留原 Action 语义基线哈希，并明确本次只由确定性权限门禁验证，禁止把旧 fresh-agent 结果表述为对新审计脚本的重新执行。
 - 新增目录级安装副本同步检查器及自测试，自动识别源码独有、安装副本独有和同路径内容不一致；它只用于显式路径的本地安装/发布校验，不把开发者主目录引入宿主 CI。
 - 修复命名权限规范化 helper 的诊断字符串化误报：只有字符串化结果进入规范化返回值或权限分支时才阻断，单纯 `console`/日志诊断不再导致宿主门禁失败。
 - 补充 `.toString()`、`.join()`、间接规范化返回值、多行返回值、箭头函数对象返回值和诊断日志防误报夹具，确保收紧误报时不削弱已声明的数组压平拦截范围。
 - 修复无分号代码的 ASI 边界误判：提前 `return []` 后的诊断 `String(value)` 不再被归入上一条返回表达式；审计通过屏蔽字符串/注释、跟踪分组层级和识别顶层跨行续写来确定返回值影响范围。
 - 新增“无分号提前返回 + 诊断日志”正向夹具及 `return value ||\n String(value)` 运算符续行负向夹具，确保消除误报的同时继续阻断实际参与返回值的数组字符串化。
-- 修复后通过仓库 21 个测试入口、官方 Skill 校验、安装副本 14 文件全量同步比对、两项跨 Skill 合同；`expensePoc` 通过 169 项 Service 测试、569 项 UI 测试、2 项门禁合同、40 项权限一致性、审计和构建，`bizFinancePoc` 通过 344 项测试、40 项权限一致性、审计、构建和发布产物校验。
+- 修复后通过仓库 21 个测试入口、官方 Skill 校验、安装副本 14 文件全量同步比对、两项跨 Skill 合同；参考应用通过 Service/UI 测试、权限一致性、审计、构建和发布产物校验。
 - 修复显式 `fieldAccessValue` 诊断误报：直接字段访问态模式现在先屏蔽注释与字符串字面量，并通过未闭合调用分组识别普通及结构化日志参数，不再把纯诊断文本当成权限结果。
 - 修复直接权限分支漏检：`String(value)`、文本 helper、模板插值、`.toString()` 或 `.join()` 位于 `if`、`switch`、`while`、`for` 条件时会被识别为影响权限控制流并阻断。
 - 新增显式参数日志、结构化日志、注释、字符串字面量四类正向夹具，以及直接 `if (String(value))` 负向夹具；模板插值、返回值、赋值回流和运算符续行的既有负例继续通过。
-- 本轮最终验证通过仓库 21 个测试入口、官方 Skill 校验、安装副本 14 文件全量同步比对、两项跨 Skill 合同；`expensePoc` 通过 163 项 Service 测试、572 项 UI 测试、2 项门禁合同、40 项权限一致性、审计和构建，`bizFinancePoc` 通过 345 项测试、40 项权限一致性、审计、构建和发布产物校验；当前工作区版审计与一致性脚本也分别直连两个生产 adapter 通过。
+- 本轮最终验证通过仓库 21 个测试入口、官方 Skill 校验、安装副本 14 文件全量同步比对、两项跨 Skill 合同；参考应用通过 Service/UI 测试、权限一致性、审计、构建和发布产物校验；当前工作区版审计与一致性脚本也分别直连生产 adapter 通过。
+
+## 2026-08-21 `meta.field.create` 独立字段维度
+
+- `make-app-permission` 升级到 `0.2.3`。记录新建操作与字段可新建拆为两个独立权限：`data.record.create` 只控制新建入口、路由、处理器和提交；`meta.field.create.fieldAccess` 只控制 `createFields` 中的可新建字段。任一维度都不能推导、补选或替代另一维度。
+- 新建表单合同统一为 `createFields ∩ meta.field.create(creatable|*) ∩ 宿主创建能力`；列表/详情继续使用 `meta.field.read`，编辑继续执行“可见字段 ∩ meta.field.update”，当前仍不消费 `editableFields`。
+- 前台 App 运行时只消费 IAM 已展开的权限行：`data.record.create` 不派生字段可新建权限，`meta.field.create` 也不派生记录新建操作权限。
+- IAM 响应示例与运行时说明改为独立的 `data.record.create` 操作行和 `meta.field.create` 字段行，禁止业务 App 继续从 `data.record.create.fieldAccess` 读取可新建字段。
+- 静态审计新增 `meta.field.create` 必需检查，并阻断 `canCreateEntityField` 依赖 `data.record.create`、`meta.field.read` 或 `meta.field.update`；一致性套件升级到 41 项，明确验证“操作权限可有字段访问态但不能授予字段可新建”和“仅字段权限不能执行记录新建”。
+- 参考应用同步增加 `META_FIELD_CREATE`，页面测试按独立操作行/字段行构造权限，本地审计与一致性 runner 同步升级到 `0.2.3`。
+- 安装副本与源码 Skill 继续按完整 14 文件目录比较，禁止同版本不同语义。
+- App 运行时仅对 IAM 已展开的 `fieldAccess` 做防御性解析；权限策略配置、序列化和校验不属于本 Skill。
+- 一致性套件由 41 项扩展为 42 项：记录新建 deny 不得否定 `meta.field.create` 字段授权，字段新建 deny 也不得否定 `data.record.create` 操作授权；操作与字段 deny 全程按权限维度独立判断。
+- 新增第 3 个 `0.2.3` fresh-agent 场景，独立验证 IAM 展开 wildcard 边界和 create operation/field deny 四象限，避免只依赖合同正则自证。
+- 审查修正 deny 文案：`effect: deny` 始终只否定命中的权限维度；`data.record.*` 才否定对应操作，`meta.field.*` 只否定相应字段维度，避免把字段新建 deny 误实现为记录新建 deny。平台泛化门禁覆盖发布文档与 Skill 资源，持续阻断具体项目标识和本机执行路径进入仓库。
+
+## 2026-08-21 前台权限边界与发布内容去项目化
+
+- `make-app-permission` 的职责收敛为前台 App 对 IAM 已展开权限结果的消费与执行；移除后台权限策略建模、序列化和配置内容，以及对应的引用入口。前台 Skill 不再依赖任何后台权限配置项目或实现。
+- `meta.field.create` 与 `data.record.create` 保持独立：前者只决定 `createFields` 的字段可新建性，后者只决定新建操作入口和提交；allow/deny 均按各自权限维度判断。
+- 删除后台策略模型参考文件后，源码与本地安装副本按完整目录同步，当前各为 13 个文件；不在 Skill、文档或便携式校验中写入开发者主目录或本机执行路径。
+- 平台通用性合同扩大检查范围至公开文档与 Skill 资源，并检查校验脚本中的本机路径；具体项目标识、个人路径和临时执行路径均视为发布阻断项。
+- 权限与 Action 前向记录的范围哈希已按当前 Skill 目录重新计算；该同步只锁定当前内容，不将历史前向测试表述为重新执行。

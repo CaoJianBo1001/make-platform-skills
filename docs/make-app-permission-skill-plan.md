@@ -16,7 +16,7 @@
 - 主 Skill：`skills/make-app-permission/`
 - 关联 Skill：`skills/make-app-service/`、`skills/makeui/`
 - 可执行验证：权限一致性套件、静态审计、自测试、宿主测试/构建和独立前向测试。
-- 参考宿主：`expensePoc`、`bizFinancePoc`。
+- 参考宿主：通用 Make App 适配器。
 
 ## 当前入口
 

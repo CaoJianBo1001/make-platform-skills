@@ -15,7 +15,7 @@
 
 ## 边界
 
-- 本次只修改 skill 规范和测试，不修改 `expensePoc` 或具体 POC 项目代码。
+- 本次只修改 skill 规范和测试，不修改具体业务应用代码。
 - `makeui` 负责 `apps/ui` 结构和字段类型 registry 的消费边界；CanvasTable 的具体渲染接入仍归 `canvas-table-integration`。
 - 字段类型 registry 不负责接口设计、数据持久化、认证或发布运行时。
 

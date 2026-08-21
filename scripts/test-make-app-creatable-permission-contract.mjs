@@ -28,9 +28,6 @@ const principalPermission = read(
 const runtime = read(
   'skills/make-app-permission/references/ui-permission-runtime.md',
 );
-const consoleModel = read(
-  'skills/make-app-permission/references/console-permission-config-model.md',
-);
 const permissionTesting = read(
   'skills/make-app-permission/references/testing-and-audit.md',
 );
@@ -88,7 +85,6 @@ const permissionBundle = [
   boundaries,
   principalPermission,
   runtime,
-  consoleModel,
   permissionTesting,
   systemFieldContract,
 ].join('\n');
@@ -109,23 +105,23 @@ assert.match(
 );
 assert.match(
   permissionSkill,
-  /metadata:\s*\n\s*version:\s*0\.2\.2/,
-  'make-app-permission must use the planned 0.2.2 contract revision',
+  /metadata:\s*\n\s*version:\s*0\.2\.3/,
+  'make-app-permission must use the planned 0.2.3 contract revision',
 );
 assert.match(
   permissionBundle,
-  /createFields[\s\S]{0,1200}data\.record\.create[\s\S]{0,1200}creatable/i,
-  'create fields must be the createFields and data.record.create creatable intersection',
+  /createFields[\s\S]{0,1200}meta\.field\.create[\s\S]{0,1200}creatable/i,
+  'create fields must be the createFields and meta.field.create creatable intersection',
 );
 assert.match(
-  consoleModel,
-  /editable[^\n]*(meta\.field\.update|更新维度|编辑维度)[^\n]*(不自动|does not automatically)[^\n]*(可见|visibility)/i,
-  'editable selection must not implicitly grant the visibility dimension',
+  boundaries,
+  /Apply a matching `effect: deny` before allows; it denies the matching permission dimension\./,
+  'deny semantics must be described per permission dimension, not as a record operation denial',
 );
-assert.match(
-  consoleModel,
-  /meta\.field\.read[^\n]*editable[^\n]*(readable|可读)/i,
-  'editable access returned in the read permission dimension must remain readable',
+assert.doesNotMatch(
+  permissionBundle,
+  /fieldCondition|policy editing|permission groups/i,
+  'the front-end App permission skill must not own back-office policy configuration',
 );
 for (const expectedValue of [
   'Make.Field.ID',
@@ -183,10 +179,12 @@ for (const conformanceCase of [
   'invalid_requested_identifiers_fail_closed',
   'operation_global_permission_wildcard_allows',
   'operation_segment_permission_wildcard_allows',
-  'field_scoped_effect_deny_denies_operation',
+  'operation_deny_does_not_deny_create_field_dimension',
+  'create_field_deny_does_not_deny_record_create_operation',
   'entity_resource_wildcard_matches',
   'parent_and_global_resources_match',
   'field_dimensions_are_independent',
+  'record_create_field_access_does_not_grant_meta_create',
   'explicit_null_field_access_fails_closed',
   'invalid_field_access_state_fails_closed',
   'valid_field_access_state_lists_are_preserved',
@@ -242,13 +240,8 @@ assert.match(
 );
 assert.match(
   permissionBundle,
-  /fieldKey:\s*["']?\*["']?[\s\S]{0,120}access:\s*["']?\*["']?/,
-  'all field permission must document fieldKey/access wildcard',
-);
-assert.match(
-  permissionBundle,
-  /(only|仅)[^\n]*(creatable|可新建)[^\n]*(data\.record\.create)[^\n]*(meta\.field\.read)/i,
-  'creatable-only console output must document data.record.create plus meta.field.read',
+  /data\.record\.create[^\n]*meta\.field\.create[^\n]*(independent|独立)|meta\.field\.create[^\n]*data\.record\.create[^\n]*(independent|独立)/i,
+  'record create and field create permissions must be independent',
 );
 assert.match(
   runtime,
@@ -298,26 +291,30 @@ assert.match(
 
 assert.match(
   principalPermission,
-  /permissionKey[^\n]*data\.record\.create[\s\S]{0,600}fieldAccess[\s\S]{0,300}creatable/,
-  'principal permission response must show creatable fieldAccess on data.record.create',
+  /permissionKey[^\n]*meta\.field\.create[\s\S]{0,600}fieldAccess[\s\S]{0,300}creatable/,
+  'principal permission response must show creatable fieldAccess on meta.field.create',
 );
 assert.doesNotMatch(
   principalPermission,
-  /consume it only on `meta\.field\.read\/update`/i,
-  'principal permission reference must not ignore create fieldAccess',
+  /data\.record\.create[^\n]*fieldAccess[^\n]*(creatable|可新建)/i,
+  'principal permission reference must not bind create fields to data.record.create',
 );
 
 assert.match(
-  consoleModel,
-  /access[^\n]*(creatable|可新建)[\s\S]{0,700}data\.record\.create/i,
-  'console model must derive record create from creatable allow fields',
+  permissionTesting,
+  /data\.record\.create[^\n]*deny[^\n]*meta\.field\.create[^\n]*allow[^\n]*(operation no|操作拒绝)[^\n]*(field yes|字段允许)/i,
+  'testing guidance must keep operation deny independent from create-field allow',
 );
 assert.match(
-  consoleModel,
-  /(wildcard|通配)[^\n]*(named|具名|例外)[\s\S]{0,700}(YAML-only|YAML only|YAML)/i,
-  'console model must preserve wildcard baselines with named exceptions',
+  permissionTesting,
+  /data\.record\.create[^\n]*allow[^\n]*meta\.field\.create[^\n]*deny[^\n]*(operation yes|操作允许)[^\n]*(field no|字段拒绝)/i,
+  'testing guidance must keep create-field deny independent from record-create allow',
 );
-
+assert.doesNotMatch(
+  permissionTesting,
+  /\|\s*create deny\s*\|[^\n]*(entry|handler)[^\n]*field denied/i,
+  'testing guidance must not couple an unspecified create deny to both dimensions',
+);
 assert.match(
   serviceBundle,
   /fields[\s\S]{0,500}createFields[\s\S]{0,700}(independent|separate|独立|分别)/i,
@@ -373,15 +370,23 @@ assert.match(
 );
 assert.match(
   forwardTestRecord,
-  /0\.2\.2[\s\S]{0,500}(未改变权限语义|不修改创建、读取、更新)[\s\S]{0,700}(静态审计|宿主自动门禁)/,
+  /0\.2\.2[\s\S]{0,500}(静态审计|宿主自动门禁)[\s\S]{0,500}(未改变权限语义|不修改创建、读取、更新)/,
   'the audit-only 0.2.2 validation boundary must not misrepresent old fresh-agent evidence',
 );
+assert.match(
+  forwardTestRecord,
+  /0\.2\.3[\s\S]{0,1800}data\.record\.create[\s\S]{0,1200}meta\.field\.create[\s\S]{0,1600}data\.record\.create\.fieldAccess/,
+  'the 0.2.3 forward test must prove independent operation and create-field semantics',
+);
 for (const executionId of [
-  '/root/permission_r10_create_only',
-  '/root/permission_r10_legacy',
-  '/root/permission_r10_wildcard',
-  '/root/permission_r10_special_fresh',
-  '/root/permission_r10_refresh',
+  'permission-023-design',
+  'permission-023-review',
+  'permission-023-runtime',
+  'permission-r10-create-only',
+  'permission-r10-legacy',
+  'permission-r10-wildcard',
+  'permission-r10-special',
+  'permission-r10-refresh',
 ]) {
   assert.match(
     forwardTestRecord,
@@ -389,6 +394,11 @@ for (const executionId of [
     `permission forward-test record must include ${executionId}`,
   );
 }
+assert.match(
+  forwardTestRecord,
+  /2026-08-21-make-app-permission-0\.2\.3-r12[\s\S]{0,700}permission-023-runtime/,
+  'the IAM runtime boundary follow-up must retain its fresh-agent batch evidence',
+);
 assert.doesNotMatch(
   forwardTestRecord,
   /(你是|you are)[^\n]*(fresh-agent|测试代理|test agent)/i,

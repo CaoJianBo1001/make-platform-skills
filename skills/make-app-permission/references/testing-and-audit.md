@@ -23,10 +23,12 @@ Required field cases:
 | creatable only | create yes; read/update no |
 | readonly only | read yes; create/update no |
 | editable with read | read/update yes; create no |
-| `data.record.create` with no creatable field | operation yes; field no |
-| create deny | entry/handler/field denied |
+| `data.record.create` with no `meta.field.create` | operation yes; field no |
+| `meta.field.create` with no `data.record.create` | field yes; operation no |
+| `data.record.create` deny + `meta.field.create` allow | operation no; field yes |
+| `data.record.create` allow + `meta.field.create` deny | operation yes; field no |
 | `* = creatable` on create | all `createFields` allowed |
-| wildcard creatable + named hidden in the same allow field range | operation yes; exception field denied |
+| expanded IAM runtime `meta.field.create` wildcard creatable + named hidden | exception field denied |
 | same-specificity named allow + named hidden | operation yes; named field denied |
 | same-specificity unrestricted allow + named hidden | operation yes; named field denied; unnamed field allowed |
 | empty most-specific allow fieldAccess | unrestricted in that permission dimension |
@@ -41,7 +43,7 @@ Required field cases:
 - A create-only invisible field renders and submits in create mode only.
 - A visible/editable but non-creatable field is absent from create.
 - Create operation with zero fields keeps the entry, shows “暂无可新建字段”, and prevents unsupported empty submission.
-- Create entry/handler depends only on current `data.record.create`.
+- Create entry/handler depends only on current `data.record.create`; create field sets depend only on current `meta.field.create`.
 - Edit remains visible-first then `meta.field.update`; `editableFields` is ignored.
 - ID/audit fields are absent from create; ID fields are also absent from edit forms, cell editors, and update payloads; audit fields remain editable when visible/update-authorized.
 - Persisted-record-only `Make.Field.File` is absent from create render/required/payload; an explicitly implemented pre-upload/direct-create contract may include only its backend-approved attachment array without a `recordID`. Read/edit behavior stays independent and follows visible fields, update permission, and the host edit capability.
@@ -67,7 +69,7 @@ Run:
 node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 ```
 
-The audit should fail on missing create permission helpers, missing/overwritten `createFields`, `createFields ?? fields`, runtime `editableFields` use, create fields built from visible/editable sets, unfiltered create payloads, operation entries tied to field count, permission-only refresh without Schema refresh/invalidation, and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`.
+The audit should fail on missing create permission helpers, create-field helpers tied to `data.record.create` instead of `meta.field.create`, missing/overwritten `createFields`, `createFields ?? fields`, runtime `editableFields` use, create fields built from visible/editable sets, unfiltered create payloads, operation entries tied to field count, permission-only refresh without Schema refresh/invalidation, and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`.
 
 The audit is heuristic. Its stringification rule is a targeted defense against known bad shapes, not complete data-flow proof. It must reject coercion that affects a normalization result or permission branch, including direct `if`/`switch`/loop conditions. It must lexically ignore comments and string literals and must not fail on diagnostic-only logging inside a named normalization helper, including structured log arguments, `fieldAccess`-specific parameter names, and semicolonless code where an earlier return ends through automatic semicolon insertion. Parenthesized, bracketed, or operator-continued returns remain result-affecting and must still fail. Host tests must prove permission matching, actual form field sets, payloads, Lookup target visibility, generation safety, and server-side enforcement.
 

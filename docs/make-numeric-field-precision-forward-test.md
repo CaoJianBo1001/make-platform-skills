@@ -28,7 +28,7 @@
 
 执行批次：2026-08-13-make-numeric-field-precision-r6
 
-执行标识：/root/forward_numeric_r6_form
+执行标识：numeric-r6-form
 
 输出证据：Agent 要求表单 store 同时保留原始文本 `rawText` 与 `rawText.trim()` 得到的 `normalizedText`，仅让后者进入解析或纯数字字符串提交；新增和编辑表单复用独立 shared pure helper。`Number` 使用 `precision`，`Currency` 使用 `decimalPlaces`，`Percent` 使用 `decimalPlaces`；尾随零计入小数位，科学计数法、货币符号、百分号和千分位均在提交边界拒绝。无效输入只阻止 create/update 持久化请求，metadata 与候选只读请求继续执行；金额符号和 `%` 仅由前端展示，`85.00` 仍按直接百分数尺度提交。
 
@@ -44,7 +44,7 @@
 
 执行批次：2026-08-13-make-numeric-field-precision-r6
 
-执行标识：/root/forward_numeric_r6_cell
+执行标识：numeric-r6-cell
 
 输出证据：Agent 使用 Track C 展示加 Track B 受控编辑，明确分离原始文本 `rawText`、`normalizedText`、`submitValue` 与 `renderValue/displayValue`，并要求表单与单元格共用独立 pure helper；字段 Registry 只提供元数据。尾随零计入小数位，科学计数法和格式化符号被拒绝。小数位超限时保持编辑器活动并显示“最多保留 N 位小数”，产生零次保存调用、零 dirty state 和零 Canvas 回填；校验成功后才转换为有限数字或后端约定的纯数字字符串，金额符号、百分号和千分位仅留在前端展示。
 

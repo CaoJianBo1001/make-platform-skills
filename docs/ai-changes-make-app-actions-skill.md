@@ -29,7 +29,7 @@
 
 - `node skills/make-app-permission/scripts/test-audit-make-app-permission.mjs`：通过。
 - `node scripts/test-make-app-actions-contract.mjs`：通过。
-- 新版 `audit-make-app-permission.mjs` 审计 InspectionPoc：`PASS`。
+- 新版 `audit-make-app-permission.mjs` 审计参考应用：`PASS`。
 - `node scripts/lint-skill-metadata.mjs`：14 个 Skill 入口、89 个 Markdown 文件通过。
 - Skill Creator `quick_validate.py skills/make-app-permission`：通过。
 - `node scripts/test-platform-skill-genericity-contract.mjs`：通过。
@@ -49,7 +49,7 @@
 - `node scripts/lint-skill-metadata.mjs`：14 个 Skill 入口、89 个 Markdown 文件通过。
 - 仓库级 `scripts/test-*.mjs` 全部通过。
 - Skill Creator `quick_validate.py`：`make-app-actions`、`canvas-table-integration`、`make-app-permission`、`make-app-service` 全部通过。
-- 新版权限审计检查 InspectionPoc：`PASS`。
+- 新版权限审计检查参考应用：`PASS`。
 - `review_skill.mjs`：无 Critical/Major；通用强约束词提示经人工确认不存在同一行为矛盾。
 - `git diff --check`：通过。
 
@@ -241,8 +241,7 @@
 - 仓库全部 15 个 `scripts/test-*.mjs` 通过；metadata lint 覆盖 14 个 Skill 入口和 89 个 Markdown 文件；`git diff --check` 通过。
 - `review_skill.mjs` 无 Critical/Major；唯一通用 `must/do not` Minor 经人工复核，约束的是不同允许/禁止行为，不存在同一行为冲突。
 - `quick_validate.py` 初次因系统缺少 PyYAML 未能启动；使用 `/tmp` 临时依赖补齐运行时后，`make-app-actions`、`make-app-filter`、`make-app-sort`、`make-app-group`、`canvas-table-integration` 五个修改 Skill 全部通过，临时目录随后已删除。
-- InspectionPoc 全量测试 347/347 通过，权限审计 PASS，生产构建通过。
-- ExpensePoc UI 测试 530/530、Service 测试 128/128 通过，生产构建通过。
+- 两组参考应用的全量测试、权限审计和生产构建均通过。
 - 两个 POC 构建仅保留既有的 Node 模块浏览器 externalize 与大 chunk 警告，无构建失败。
 
 ## 2026-08-13 前向歧义加固

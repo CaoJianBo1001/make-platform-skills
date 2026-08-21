@@ -2,7 +2,7 @@
 
 ## 背景
 
-BizFinancePoc 和 ExpensePoc 都出现过附件图片无法展示的问题：Make 原始文件下载接口需要 `Authorization`，但浏览器 `<img src>`、`object data` 和普通链接无法附带自定义请求头。如果生成 POC 时继续把 Make 原始下载地址直接交给 UI，后续项目会重复出现同类问题。
+参考应用曾出现附件图片无法展示的问题：Make 原始文件下载接口需要 `Authorization`，但浏览器 `<img src>`、`object data` 和普通链接无法附带自定义请求头。如果继续把 Make 原始下载地址直接交给 UI，后续应用会重复出现同类问题。
 
 ## 变更内容
 
@@ -27,4 +27,4 @@ BizFinancePoc 和 ExpensePoc 都出现过附件图片无法展示的问题：Mak
 ## 验证限制
 
 - `quick_validate.py` 依赖 Python `yaml` 模块；当前系统 Python 和 Codex bundled Python 均缺少该模块，因此未能完成该脚本校验。
-- 使用更新后的 audit 脚本抽检 ExpensePoc 时，本次新增的原始下载 URL 检查不再误报；剩余 `token_mode_present` 为该脚本既有 token 字符串规则命中，和本次附件下载代理规范无关。
+- 使用更新后的 audit 脚本抽检参考应用时，本次新增的原始下载 URL 检查不再误报；剩余 `token_mode_present` 为该脚本既有 token 字符串规则命中，和本次附件下载代理规范无关。

@@ -9,12 +9,12 @@
 - 新增 `skills/make-app-filter/SKILL.md`，定义高级筛选职责、边界、默认行为和协作方式。
 - 新增 `references/filter-model.md`，沉淀 Filter IR、草稿确认、搜索合并和对象切换重置规则。
 - 新增 `references/operator-matrix.md`，按 Make 字段类型定义默认操作符、值编辑器、候选接口和不支持字段。
-- 新增 `references/ui-style.md`，按 ExpensePoc 当前高级筛选样式沉淀默认面板布局、尺寸、颜色和校验反馈。
+- 新增 `references/ui-style.md`，沉淀默认面板布局、尺寸、颜色和校验反馈。
 - 新增 `references/header-table-linkage.md`，沉淀 CanvasTable 表头更多菜单与高级筛选 `openWithField(fieldKey)` 的联动规则。
 - 新增 `references/service-translation.md`，约束 `{ expression }` filter 合同、CEL 子集和空筛选处理。
 - 新增 `references/testing-and-pitfalls.md`，补充高级筛选、表头联动、Service payload 的测试要求和常见回归。
 - 更新根 `README.md`，让高级筛选相关问题路由到 `make-app-filter`。
-- 补充 ExpensePoc 高级筛选视觉细节：弹层是一个整体白色面板，根条件不放入第二层灰色背景；嵌套条件组只允许一层浅色块；值编辑器和删除按钮必须无缝连接，所有输入、下拉、日期、数字、人员、部门编辑器的连接处不得出现圆角或间隙。
+- 补充高级筛选视觉细节：弹层是一个整体白色面板，根条件不放入第二层灰色背景；嵌套条件组只允许一层浅色块；值编辑器和删除按钮必须无缝连接，所有输入、下拉、日期、数字、人员、部门编辑器的连接处不得出现圆角或间隙。
 - 补充高级筛选校验生命周期：点击 `确认` 后必须按条件 id 标记字段、操作符和值控件错误；下拉、日期、数字、人员、部门等值编辑器也必须显示错误态；用户输入或选择有效值后应立即重新校验并清除已修复控件的红框。
 
 ## 边界

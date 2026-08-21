@@ -111,7 +111,7 @@ const frontmatter = skill.split('---')[1] ?? '';
 
 assert.doesNotMatch(
   skillBundle,
-  /(inspectionPoc|expensePoc|uju[-_]?mdm|workorders|设备巡检|\/Users\/|ZSQF|make-group)/i,
+  /\b[A-Za-z][A-Za-z0-9]*(?:Poc|Workbench)\b|\/(?:Users|home|var\/folders)(?:\/|$)/i,
   'make-app-actions skill must not contain project, business, or local-machine names',
 );
 
@@ -526,11 +526,11 @@ assert.match(
 );
 assert.match(
   forwardTestRecord,
-  /make-app-permission 0\.2\.2[\s\S]{0,500}(不改变|未变化)[^\n]*(选择|操作|批量写入|Action 语义)[\s\S]{0,700}(不作为|不声称)[^\n]*(执行证据|重新执行)/,
+  /make-app-permission 0\.2\.3[\s\S]{0,500}(不改变|未变化)[^\n]*(选择|操作|批量写入|Action 语义)[\s\S]{0,700}(未重新执行|不作为|不声称)[^\n]*(Action 场景|执行证据|重新执行)/,
   'an unrelated permission-audit revision must not be presented as freshly forward-tested action semantics',
 );
 assertForwardTestScope(forwardTestRecord, forwardTestScopeHash);
-const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\/root\/actions_r16_[a-z0-9_]+)$/i;
+const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|actions-r16-[a-z0-9-]+)$/i;
 const forwardScenarios = [
   {
     heading: '场景一：Ant Design 默认操作',

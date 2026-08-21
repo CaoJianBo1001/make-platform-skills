@@ -18,5 +18,5 @@ Service 转发到内部 make-gateway 时，如果 `MAKE_API_BASE_URL` 配成 `ht
 ## 边界
 
 - 本次只调整 `make-app-service` 的 Service 内部 make-gateway 路径规范。
-- 不修改 `expensePoc` 或其他 Make App 业务代码。
+- 不修改任何 Make App 业务代码。
 - 不修改 `make-app-auth`、`makeui`、`canvas-table-integration`、`make-app-runtime`、`makecli`、`makedsl` 或 `make-integration`。

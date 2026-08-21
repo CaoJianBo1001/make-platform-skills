@@ -41,7 +41,7 @@ const sortSkillBundle = [
 
 assert.doesNotMatch(
   sortSkillBundle,
-  /(uju[-_]?mdm|expensePoc|ClaimTable|DemoWorkbench|\bClaim\b|\/Users\/|ZSQF|make-group)/i,
+  /\b[A-Za-z][A-Za-z0-9]*(?:Poc|Workbench)\b|\/(?:Users|home|var\/folders)(?:\/|$)/i,
   'make-app-sort skill content must not contain project or business-specific names',
 );
 assert.doesNotMatch(

@@ -25,5 +25,5 @@ Make App 前端页面如果把路由、数据加载、字段适配、表格配�
 ## 边界
 
 - 本次只调整 `makeui` 的前端组件化和模块化规范。
-- 不修改 `expensePoc` 或其他 Make App 业务代码。
+- 不修改任何 Make App 业务代码。
 - 不修改 `canvas-table-integration`、`make-app-auth`、`make-app-service`、`make-app-runtime`、`makecli`、`makedsl` 或 `make-integration`。
