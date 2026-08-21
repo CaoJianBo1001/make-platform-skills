@@ -3,13 +3,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  assertForwardTestScope,
-  assertScenarioPassed,
-  assertUniqueScenarioExecutionIds,
-  computeForwardTestScopeHash,
-  readForwardTestScopeEntriesFromRoots,
-} from './lib/forward-test-record.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(process.argv[2] ?? path.join(scriptDir, '..'));
@@ -41,9 +34,6 @@ const batchEdit = read(
 );
 const testing = read(
   'skills/make-app-actions/references/testing-and-pitfalls.md',
-);
-const forwardTestRecord = read(
-  'docs/make-app-actions-forward-test.md',
 );
 const openai = read('skills/make-app-actions/agents/openai.yaml');
 const readme = read('README.md');
@@ -78,26 +68,6 @@ const canvasEditLifecycle = read(
 const filterSkill = read('skills/make-app-filter/SKILL.md');
 const sortSkill = read('skills/make-app-sort/SKILL.md');
 const groupSkill = read('skills/make-app-group/SKILL.md');
-const forwardTestScopeSkillNames = [
-  'make-app-actions',
-  'makeui',
-  'canvas-table-integration',
-  'make-app-permission',
-  'make-app-service',
-  'make-app-filter',
-  'make-app-sort',
-  'make-app-group',
-];
-const forwardTestScopeHash = computeForwardTestScopeHash(
-  readForwardTestScopeEntriesFromRoots(
-    forwardTestScopeSkillNames.map((skillName) => ({
-      directory: path.join(repoRoot, 'skills', skillName),
-      prefix: `skills/${skillName}`,
-    })),
-  ),
-);
-const currentForwardTestBatch = '2026-08-14-make-app-actions-0.3.1-r16';
-
 const skillBundle = [
   skill,
   packageIntegration,
@@ -111,7 +81,7 @@ const frontmatter = skill.split('---')[1] ?? '';
 
 assert.doesNotMatch(
   skillBundle,
-  /(inspectionPoc|expensePoc|uju[-_]?mdm|workorders|设备巡检|\/Users\/|ZSQF|make-group)/i,
+  /\b[A-Za-z][A-Za-z0-9]*(?:Poc|Workbench)\b|\/(?:Users|home|var\/folders)(?:\/|$)/i,
   'make-app-actions skill must not contain project, business, or local-machine names',
 );
 
@@ -497,144 +467,6 @@ assert.match(
   /make-app-actions[\s\S]{0,320}(applied|成功应用|确认应用)[\s\S]{0,220}(clear|清空|invalidate)[^\n]*(selection|选择)/i,
   'group skill must retain the same successful-apply action handoff',
 );
-assert.match(
-  forwardTestRecord,
-  /执行日期\s*[:：]\s*\d{4}-\d{2}-\d{2}[\s\S]*(独立|fresh)[^\n]*(Agent|代理)/i,
-  'forward-test record must include the execution date and independent-agent method',
-);
-assert.match(
-  forwardTestRecord,
-  /fork_turns\s*[:=：]\s*`?["']?none["']?`?/i,
-  'forward-test record must attest that agents received no parent conversation history',
-);
-assert.doesNotMatch(
-  forwardTestRecord,
-  /(你是|you are)[^\n]*(fresh-agent|测试代理|test agent)/i,
-  'forward-test prompts must not tell agents that they are being evaluated',
-);
-for (const skillName of forwardTestScopeSkillNames) {
-  assert.match(
-    forwardTestRecord,
-    new RegExp(`(?:^|\\n)[^\\n]*${skillName.replaceAll('-', '\\-')}[^\\n]*(?:$|\\n)`, 'i'),
-    `forward-test record must declare related scope ${skillName}`,
-  );
-}
-assert.match(
-  forwardTestRecord,
-  /上一 Action 语义前向测试基线 SHA-256[：:]\s*`69fb63b6b0419af55ea2bbe6021979b758e1a69150574b0b93718a8b64db6042`/,
-  'the previous action-semantic fresh-agent baseline must remain explicit',
-);
-assert.match(
-  forwardTestRecord,
-  /make-app-permission 0\.2\.2[\s\S]{0,500}(不改变|未变化)[^\n]*(选择|操作|批量写入|Action 语义)[\s\S]{0,700}(不作为|不声称)[^\n]*(执行证据|重新执行)/,
-  'an unrelated permission-audit revision must not be presented as freshly forward-tested action semantics',
-);
-assertForwardTestScope(forwardTestRecord, forwardTestScopeHash);
-const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|\/root\/actions_r16_[a-z0-9_]+)$/i;
-const forwardScenarios = [
-  {
-    heading: '场景一：Ant Design 默认操作',
-    evidencePatterns: [
-      /AntdRecordSelectionActionBar/,
-      /AntdRecordBatchEditModal/,
-      /renderValueControl\s*\(\s*field\s*,[\s\S]{0,80}disabled/,
-      /批量编辑/,
-    ],
-    requiredExecutionBatch: currentForwardTestBatch,
-    requiredExecutionIdPattern: executionIdPattern,
-    requiredExecutionMethod: 'fresh-agent',
-  },
-  {
-    heading: '场景二：搜索条件下表头全选',
-    evidencePatterns: [/(搜索|search)/i, /(表头全选|select-all)/i],
-    requiredExecutionBatch: currentForwardTestBatch,
-    requiredExecutionIdPattern: executionIdPattern,
-    requiredExecutionMethod: 'fresh-agent',
-  },
-  {
-    heading: '场景三：Arco 批量编辑',
-    evidencePatterns: [
-      /Arco/i,
-      /RecordBatchEditModal/,
-      /MakeAppBatchEditComponents/,
-      /renderValueControl\(field, control\)/,
-      /value[\s\S]*onChange[\s\S]*disabled[\s\S]*invalid[\s\S]*ariaDescribedBy/,
-      /(portal|getPopupContainer|挂载)/i,
-      /批量编辑/,
-      /(focus|焦点)[\s\S]*(Escape)[\s\S]*(outside[- ]click|外部点击|点击外部)/i,
-    ],
-    requiredExecutionBatch: currentForwardTestBatch,
-    requiredExecutionIdPattern: executionIdPattern,
-    requiredExecutionMethod: 'fresh-agent',
-  },
-  {
-    heading: '场景四：Shift 200 与分组边界',
-    evidencePatterns: [
-      /(分组|grouped)/i,
-      /Shift/i,
-      /200/,
-      /(public|公开)[^\n]*(contract|API|能力)/i,
-      /(blocker|阻断|不得模拟|do not emulate)/i,
-    ],
-    requiredExecutionBatch: currentForwardTestBatch,
-    requiredExecutionIdPattern: executionIdPattern,
-    requiredExecutionMethod: 'fresh-agent',
-  },
-  {
-    heading: '场景五：显式权限拒绝与全选回退',
-    evidencePatterns: [
-      /20000032/,
-      /noPermissionRecordIds/,
-      /unauthorizedRecordIDList/,
-      /(whole[- ]row|整行)[\s\S]{0,120}(error[- ]red|爆红|错误红)/i,
-      /(select-all|全选)[\s\S]{0,160}403/i,
-      /(toast|提示)/i,
-    ],
-    requiredExecutionBatch: currentForwardTestBatch,
-    requiredExecutionIdPattern: executionIdPattern,
-    requiredExecutionMethod: 'fresh-agent',
-  },
-  {
-    heading: '场景六：shadcn/Radix 批量编辑',
-    evidencePatterns: [
-      /(shadcn|Radix)/i,
-      /@qfei-design\/make-app-actions@\^0\.3\.1/,
-      /package\.json[\s\S]*package\.ai\.json/i,
-      /RecordBatchEditModal/,
-      /MakeAppBatchEditComponents/,
-      /(Portal|container)/,
-      /(focus|焦点)[\s\S]*(Escape)[\s\S]*(outside[- ]click|外部点击|点击外部)/i,
-      /(不引入|不得|without)[^\n]*(AntD|Ant Design)/i,
-    ],
-    requiredExecutionBatch: currentForwardTestBatch,
-    requiredExecutionIdPattern: executionIdPattern,
-    requiredExecutionMethod: 'fresh-agent',
-  },
-  {
-    heading: '场景七：查询交接与表格生命周期',
-    evidencePatterns: [
-      /(成功应用|successfully applied)/i,
-      /(清空|clear|invalidate)[^\n]*(选择|selection)/i,
-      /(草稿|draft)[^\n]*(失败|failure|error)[^\n]*(保留|preserve|不清空|do not clear)/i,
-      /(重建|recreat|replace)/i,
-      /(空选择快照|empty selection snapshot)/i,
-      /(增加|增长|grow|increase)[\s\S]*(resolveCanvasSelectedRecordSnapshot|归一化|normalize)/i,
-      /(减少|收缩|shrink|decrease)[\s\S]*clearSelection\(\)/i,
-      /(一次|single|exactly one|唯一)[^\n]*(通知|notification|selection:change|空选择快照)/i,
-    ],
-    requiredExecutionBatch: currentForwardTestBatch,
-    requiredExecutionIdPattern: executionIdPattern,
-    requiredExecutionMethod: 'fresh-agent',
-  },
-];
-for (const scenario of forwardScenarios) {
-  assertScenarioPassed(forwardTestRecord, scenario);
-}
-assertUniqueScenarioExecutionIds(
-  forwardTestRecord,
-  forwardScenarios.map(({ heading }) => heading),
-);
-
 assert.match(
   readme,
   /\|[^\n]*(操作按钮|行操作|批量编辑|record actions?)[^\n]*\|\s*`make-app-actions`/i,

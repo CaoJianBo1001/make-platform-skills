@@ -121,7 +121,7 @@ try {
       const matched = matches(access, entityKey, permissionKey);
       return !matched.some((item) => item.effect === 'deny') && matched.some((item) => item.effect === 'allow');
     };
-    export const canCreateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['*', 'creatable']));
+    export const canCreateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.create', new Set(['*', 'creatable']));
     export const canReadEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.read', new Set(['*', 'editable', 'readonly', 'partialMask', 'fullMask']));
     export const canUpdateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.update', new Set(['*', 'editable']));
     export const isCreateCapableField = (field) => !new Set(['Make.Field.ID', 'IDField']).has(field.type) && !new Set([
@@ -155,7 +155,32 @@ try {
   );
   const noStateListResult = runSuite(noStateListAdapter);
   assert.notEqual(noStateListResult.status, 0);
-  assert.match(noStateListResult.output, /field_dimensions_are_independent|valid_field_access_state_lists_are_preserved/);
+  assert.match(noStateListResult.output, /operation_deny_does_not_deny_create_field_dimension|field_dimensions_are_independent|valid_field_access_state_lists_are_preserved/);
+
+  const createFieldUsesRecordOperationAdapter = writeAdapter(
+    'create-field-uses-record-operation.mjs',
+    correctAdapterSource.replace(
+      "fieldAllowed(access, entityKey, fieldKey, 'meta.field.create', new Set(['*', 'creatable']))",
+      "fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['*', 'creatable']))",
+    ),
+  );
+  const createFieldUsesRecordOperationResult = runSuite(createFieldUsesRecordOperationAdapter);
+  assert.notEqual(createFieldUsesRecordOperationResult.status, 0);
+  assert.match(createFieldUsesRecordOperationResult.output, /operation_deny_does_not_deny_create_field_dimension|field_dimensions_are_independent/);
+
+  const createFieldDependsOnRecordOperationAdapter = writeAdapter(
+    'create-field-depends-on-record-operation.mjs',
+    correctAdapterSource.replace(
+      "export const canCreateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.create', new Set(['*', 'creatable']));",
+      "export const canCreateEntityField = (access, entityKey, fieldKey) => canUseEntityOperation(access, entityKey, 'data.record.create') && fieldAllowed(access, entityKey, fieldKey, 'meta.field.create', new Set(['*', 'creatable']));",
+    ),
+  );
+  const createFieldDependsOnRecordOperationResult = runSuite(createFieldDependsOnRecordOperationAdapter);
+  assert.notEqual(createFieldDependsOnRecordOperationResult.status, 0);
+  assert.match(
+    createFieldDependsOnRecordOperationResult.output,
+    /operation_deny_does_not_deny_create_field_dimension/,
+  );
 
   const noParentResourceAdapter = writeAdapter(
     'no-parent-resource.mjs',

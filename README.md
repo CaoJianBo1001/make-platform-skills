@@ -266,7 +266,7 @@ npx skills update make-app-permission
 - 防止通过手动修改 URL 进入未授权 App、对象页或固定业务页面
 - 刷新时重新获取权限，再决定是否刷新数据或关闭已打开工作区
 - 使用 `scripts/audit-make-app-permission.mjs` 做权限合同检查
-- 不负责 make-console 平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 建模或部署
+- 不负责后台权限策略配置、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 建模或部署
 
 ### make-app-runtime
 指导 Make App 运行态和打包发布契约，覆盖 `apps/` workspace、`apps/ui/dist`、`apps/service` 构建产物、Service 端口、镜像启动入口和发布前契约检查。

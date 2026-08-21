@@ -2,7 +2,7 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permissions. Triggered by 权限, 字段权限范围, 字段可新建, 可见, 可编辑, creatable, createFields, editableFields, /principal/permission, buttons, menus, routes, read/create/update/delete/bulkUpdate, data.record.*, meta.field.*, route guards, refresh permission, or URL bypass. Covers the required Service-to-IAM proxy, app-scope matching, permission-trimmed schema, independent create/read/update field gates, create payload filtering, route/action enforcement, refresh invalidation, tests, and audit. Use make-app-actions for selection and batch-action behavior. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.2.2
+  version: 0.2.3
 ---
 
 # make-app-permission
@@ -17,24 +17,23 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 2. Read `references/permission-boundaries.md` before selecting scope, permissionKey, schema collection, or field access state.
 3. Read `references/service-principal-permission.md` before changing `/principal/permission` or interpreting IAM `fieldAccess`.
 4. Read `references/ui-permission-runtime.md` before changing route/action gates, create/read/update field sets, payload filtering, or refresh.
-5. Read `references/console-permission-config-model.md` for make-console policy, `fieldCondition`, `creatable`, or wildcard work.
-6. Read `references/system-field-contract.md` before implementing ID/audit create or edit capability.
-7. Read `references/testing-and-audit.md` before implementation and before reporting completion.
-8. Implement tests first, then the Service/schema boundary, permission pure model, route/action gates, field-set consumers, submit allowlists, and refresh invalidation.
-9. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. Wire both permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
-10. When publishing or installing this Skill, run `check-installed-skill-sync.mjs` with explicit source and installed directories. Keep this local release check out of portable host CI.
+5. Read `references/system-field-contract.md` before implementing ID/audit create or edit capability.
+6. Read `references/testing-and-audit.md` before implementation and before reporting completion.
+7. Implement tests first, then the Service/schema boundary, permission pure model, route/action gates, field-set consumers, submit allowlists, and refresh invalidation.
+8. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. Wire both permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
+9. When publishing or installing this Skill, run `check-installed-skill-sync.mjs` with explicit source and installed directories. Keep this local release check out of portable host CI.
 
 ## Required contract
 
 - Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. Do not use tenant-root/platform permission filters.
 - Match exact, wildcard, parent, App, entity, IAM namespace-wildcard App resources, and deny correctly. Use the most-specific allow field range; deny wins.
 - Keep field creation, visibility, and editability independent:
-  - create form: `createFields ∩ data.record.create fieldAccess(creatable|*)`;
+  - create form: `createFields ∩ meta.field.create fieldAccess(creatable|*)`;
   - list/detail/filter: `fields ∩ meta.field.read fieldAccess(readable states)`;
   - edit/cell edit: visible `fields ∩ meta.field.update fieldAccess(editable|*)`.
-- Preserve every access state returned for a field. Current IAM responses may use arrays such as `["creatable", "readonly"]`; normalize legacy scalar strings to one-element arrays and authorize a permission dimension when any state is allowed for that dimension. Never coerce an array with `String(value)` or template interpolation.
+- Preserve every access state returned for a field. Current IAM responses may use arrays such as `["creatable", "readonly"]` or scalar strings; normalize a supported scalar string to a one-element array and authorize a permission dimension when any state is allowed for that dimension. Never coerce an array with `String(value)` or template interpolation.
 - Treat missing `createFields` as empty. Never fall back to `fields`, and do not consume `editableFields` for current edit behavior.
-- Gate the create entry and submit with `data.record.create` only; do not tie the entry to creatable/editable field count. Gate update/delete/bulk-update independently with their own operation keys.
+- Gate the create entry and submit with `data.record.create` only; derive create fields from `meta.field.create` only. These permission dimensions are independent: neither one may synthesize, select, or imply the other. Gate update/delete/bulk-update independently with their own operation keys.
 - Recompute the latest create/edit allowlist before submit and build payloads from it. Never spread the complete form store into a protected mutation.
 - Exclude ID and system audit fields from create capability. Keep existing audit-field edit capability when the field is visible, update-authorized, and supported by the host editor.
 - Keep create-only invisible fields available only in create mode. A `creatable` access state is not readable or editable.
@@ -48,9 +47,8 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 | Task | Read |
 | --- | --- |
 | Platform vs App scope, three field dimensions, Schema collections, matching | `references/permission-boundaries.md` |
-| Service endpoint, IAM request/response, `data.record.create.fieldAccess` | `references/service-principal-permission.md` |
+| Service endpoint, IAM request/response, `meta.field.create.fieldAccess` | `references/service-principal-permission.md` |
 | Providers, helpers, routes, create/edit flow, payload, refresh, Lookup | `references/ui-permission-runtime.md` |
-| make-console operations, `fieldCondition`, wildcard, system fields | `references/console-permission-config-model.md` |
 | Exact ID/audit create exclusions and edit compatibility | `references/system-field-contract.md` |
 | Required tests, audit signals, completion blockers | `references/testing-and-audit.md` |
 | Auth/session | Use `make-app-auth` |

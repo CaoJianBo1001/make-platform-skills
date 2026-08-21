@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.2
+// make-app-permission contract version: 0.2.3
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -118,7 +118,7 @@ function checkUiContract() {
       failures.push(`operation_key_missing_${key}: UI permission model must include data.record.${key}`);
     }
   }
-  for (const key of ['read', 'update']) {
+  for (const key of ['create', 'read', 'update']) {
     if (!new RegExp(`meta\\.field\\.${key}`).test(uiRuntimeText)) {
       failures.push(`field_permission_key_missing_${key}: UI permission model must include meta.field.${key}`);
     }
@@ -134,7 +134,7 @@ function checkUiContract() {
     failures.push('field_edit_helper_missing: UI must evaluate field editability from meta.field.update');
   }
   if (!/(canCreateEntityField|creatableFieldKeysForEntity)/.test(uiRuntimeText)) {
-    failures.push('create_field_permission_helper_missing: UI must evaluate create fields from data.record.create fieldAccess');
+    failures.push('create_field_permission_helper_missing: UI must evaluate create fields from meta.field.create fieldAccess');
   }
   if (
     ['canUseEntityOperation', 'canCreateEntityField', 'canReadEntityField', 'canUpdateEntityField']
@@ -148,8 +148,26 @@ function checkUiContract() {
       `field_access_state_stringified: preserve fieldAccess state arrays instead of coercing them to text (${stringificationFiles.join(', ')})`,
     );
   }
-  if (namedFunctionUsesMetaFieldPermission(uiRuntimeText, 'canCreateEntityField')) {
-    failures.push('create_field_permission_uses_meta_field: create-field permission must use data.record.create, not meta.field.read/update');
+  if (!namedFunctionUsesPermissionKey(
+    uiRuntimeText,
+    'canCreateEntityField',
+    /(?:META_FIELD_CREATE|meta\.field\.create)/,
+  )) {
+    failures.push('create_field_permission_key_missing: create-field permission must use meta.field.create');
+  }
+  if (namedFunctionUsesPermissionKey(
+    uiRuntimeText,
+    'canCreateEntityField',
+    /(?:DATA_RECORD_CREATE|data\.record\.create)/,
+  )) {
+    failures.push('create_field_permission_uses_record_operation: create-field permission must not use data.record.create');
+  }
+  if (namedFunctionUsesPermissionKey(
+    uiRuntimeText,
+    'canCreateEntityField',
+    /(?:META_FIELD_(?:READ|UPDATE)|meta\.field\.(?:read|update))/,
+  )) {
+    failures.push('create_field_permission_uses_wrong_field_dimension: create-field permission must use meta.field.create, not meta.field.read/update');
   }
   if (!/createFields/.test(uiRuntimeText)) {
     failures.push('create_fields_contract_missing: UI schema and create form must preserve and consume createFields');
@@ -237,9 +255,9 @@ function hasObviousUnfilteredCreatePayload(text) {
   return rawArgument.test(text) || spreadArgument.test(text) || rawProperty.test(text) || spreadProperty.test(text);
 }
 
-function namedFunctionUsesMetaFieldPermission(text, functionName) {
+function namedFunctionUsesPermissionKey(text, functionName, permissionKeyPattern) {
   return extractNamedFunctionSources(text, functionName).some((source) =>
-    /(?:META_FIELD_(?:READ|UPDATE)|meta\.field\.(?:read|update))/.test(source),
+    permissionKeyPattern.test(source),
   );
 }
 

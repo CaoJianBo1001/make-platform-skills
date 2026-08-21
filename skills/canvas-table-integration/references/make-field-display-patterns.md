@@ -19,7 +19,7 @@ For new Make App projects, any Make schema-driven business table should follow t
 Default structure:
 
 - use `@qfei-design/canvas-table` as the table implementation; this baseline is not for UI-library tables
-- in new Make POC projects, create or reuse `apps/ui/src/lib/make-field-types.ts` as the shared Make field type registry before building table-specific config or renderers
+- in new Make App projects, create or reuse `apps/ui/src/lib/make-field-types.ts` as the shared Make field type registry before building table-specific config or renderers
 - wait for runtime schema fields before creating or updating the table columns
 - normalize remote schema variants before the table layer consumes them; handle shapes such as `entity.properties.fields`, `entity.fields`, or the host documented equivalent in a boundary adapter
 - derive `IColumn[]` from normalized runtime schema fields, not from a hand-maintained static column list
@@ -105,7 +105,7 @@ The exact type name can change. The important part is that renderers do not pars
 
 The current backend supports these 18 field types. Treat this list as the current contract, with a safe fallback for unknown future types.
 
-In new Make POC code, this table should be represented in the shared registry instead of being re-created separately in CanvasTable, detail, form, filter, and editor modules.
+In new Make App code, this table should be represented in the shared registry instead of being re-created separately in CanvasTable, detail, form, filter, and editor modules.
 
 | Field type | Group | Expected value formats | Display behavior |
 | --- | --- | --- | --- |

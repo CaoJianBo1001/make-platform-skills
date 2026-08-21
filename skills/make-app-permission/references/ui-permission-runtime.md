@@ -69,6 +69,7 @@ An omitted `fieldAccess` property or an empty object is the intentional unrestri
 - Bind fixed routes to an entity and permissionKey.
 - Require `data.record.read` before list/detail loading.
 - Require `data.record.create` for create routes, create entry, open handler, and submit.
+- Resolve create fields with `meta.field.create`; never read create-field access from `data.record.create`. Operation authorization and field authorization are independent and neither may alter the other.
 - Require `data.record.update` for edit routes/entry/submit/cell commit.
 - Keep delete and bulkUpdate independent.
 - Do not use field-count conditions to hide create or normal edit entries.
@@ -92,8 +93,8 @@ Do not require the field to be in visible `fields`, readable, or editable. A cre
 
 Before submit:
 
-1. Use the latest access generation and recheck `data.record.create`.
-2. Re-read latest `createFields` and recompute creatable keys.
+1. Use the latest access generation and recheck `data.record.create` for the operation.
+2. Re-read latest `createFields` and recompute creatable keys from `meta.field.create`.
 3. Validate only authorized, rendered fields, including `validations.isRequired` and type-specific validation.
 4. Build an allowlist payload from those fields; never spread all form values.
 5. Build relation/Lookup payloads from the same allowlist.
@@ -156,7 +157,7 @@ Fail closed when either permission or Schema refresh fails.
 
 - Create form reads `fields` or `editableFields` instead of `createFields`.
 - Missing `createFields` falls back to visible fields.
-- Create fields depend on `meta.field.read/update` or include `creatable` in readable states.
+- Create fields depend on `data.record.create`, `meta.field.read/update`, or include `creatable` in readable states instead of using `meta.field.create`.
 - Edit consumes `editableFields` or skips visibility.
 - Entries are hidden by writable-field count.
 - Submit expands raw form values or relation values without a latest allowlist.
