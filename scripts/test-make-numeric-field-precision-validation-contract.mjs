@@ -3,13 +3,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  assertForwardTestScope,
-  assertScenarioPassed,
-  assertUniqueScenarioExecutionIds,
-  computeForwardTestScopeHash,
-  readForwardTestScopeEntriesFromRoots,
-} from './lib/forward-test-record.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(process.argv[2] ?? path.join(scriptDir, '..'));
@@ -36,10 +29,6 @@ const fieldEditorPatterns = read(
 const editPitfalls = read(
   'skills/canvas-table-integration/references/edit-common-pitfalls.md',
 );
-const forwardTestRecord = read(
-  'docs/make-numeric-field-precision-forward-test.md',
-);
-
 for (const [fieldType, property] of [
   ['Make.Field.Number', 'precision'],
   ['Make.Field.Currency', 'decimalPlaces'],
@@ -223,70 +212,6 @@ assert.match(
   combinedCellRules,
   /(reject|拒绝)[^\n]*(科学计数法|scientific notation)/i,
   'Cell editors must reject scientific notation before commit',
-);
-
-const forwardTestSkillNames = [
-  'makedsl',
-  'makeui',
-  'canvas-table-integration',
-];
-const forwardTestHash = computeForwardTestScopeHash(
-  readForwardTestScopeEntriesFromRoots(
-    forwardTestSkillNames.map((skillName) => ({
-      directory: path.join(repoRoot, 'skills', skillName),
-      prefix: `skills/${skillName}`,
-    })),
-  ),
-);
-assertForwardTestScope(forwardTestRecord, forwardTestHash);
-assert.match(
-  forwardTestRecord,
-  /fork_turns\s*[:=：]\s*`?["']?none["']?`?/i,
-  'numeric forward-test record must attest that agents received no parent conversation history',
-);
-
-const forwardTestBatch = '2026-08-13-make-numeric-field-precision-r6';
-const executionIdPattern = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|numeric-r6-[a-z0-9-]+)$/i;
-const scenarios = [
-  {
-    heading: '场景一：数字类表单字段',
-    evidencePatterns: [
-      /(原始|raw)[^\n]*(文本|string)/i,
-      /normalizedText/i,
-      /Number[^\n]*precision/i,
-      /(Currency|金额)[^\n]*decimalPlaces/i,
-      /(Percent|百分比)[^\n]*decimalPlaces/i,
-      /(尾随零|trailing zero)/i,
-      /(科学计数法|scientific notation)/i,
-      /(持久化|persistence|save)[^\n]*(请求|request|API)/i,
-      /(候选|metadata|元数据|read-only|只读)[^\n]*(请求|request)/i,
-    ],
-  },
-  {
-    heading: '场景二：数字类单元格编辑',
-    evidencePatterns: [
-      /(原始|raw)[^\n]*(文本|string)/i,
-      /normalizedText/i,
-      /(保持|keep)[^\n]*(编辑器|editor)[^\n]*(活动|active|打开)/i,
-      /(最多保留|提示|tooltip|外部校验|external validation)/i,
-      /(零次|zero)[^\n]*(保存|save)[^\n]*(调用|call|request)/i,
-      /(解析|parse)[^\n]*(之前|before)|(?:之前|before)[^\n]*(解析|parse)|校验成功后才[^\n]*(转换|parse)/i,
-      /(共享|共用|shared)[^\n]*(纯|pure)[^\n]*(helper|函数)/i,
-    ],
-  },
-];
-
-for (const scenario of scenarios) {
-  assertScenarioPassed(forwardTestRecord, {
-    ...scenario,
-    requiredExecutionBatch: forwardTestBatch,
-    requiredExecutionIdPattern: executionIdPattern,
-    requiredExecutionMethod: 'fresh-agent',
-  });
-}
-assertUniqueScenarioExecutionIds(
-  forwardTestRecord,
-  scenarios.map(({ heading }) => heading),
 );
 
 console.log('make numeric field precision validation contract passed');

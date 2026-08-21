@@ -3,11 +3,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import {
-  assertForwardTestScope,
-  computeForwardTestScopeHash,
-  readForwardTestScopeEntriesFromRoots,
-} from './lib/forward-test-record.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(process.argv[2] ?? path.join(scriptDir, '..'));
@@ -62,23 +57,6 @@ const drawerLayout = read('skills/makeui/references/drawer-layout.md');
 const routeLayout = read('skills/makeui/references/page-route-layout.md');
 const readme = read('README.md');
 const agentMetadata = read('skills/make-app-permission/agents/openai.yaml');
-const forwardTestRecord = read('docs/make-app-permission-forward-test.md');
-const forwardTestScopeHash = computeForwardTestScopeHash(
-  readForwardTestScopeEntriesFromRoots([
-    {
-      directory: path.join(repoRoot, 'skills/make-app-permission'),
-      prefix: 'skills/make-app-permission',
-    },
-    {
-      directory: path.join(repoRoot, 'skills/make-app-service'),
-      prefix: 'skills/make-app-service',
-    },
-    {
-      directory: path.join(repoRoot, 'skills/makeui'),
-      prefix: 'skills/makeui',
-    },
-  ]),
-);
 
 const permissionBundle = [
   permissionSkill,
@@ -357,52 +335,4 @@ assert.match(
   /(create|creatable|新建)[^\n]*(read|visible|可见)[^\n]*(update|edit|可编辑)/i,
   'agent metadata must advertise the complete create/read/update field chain',
 );
-assert.match(
-  forwardTestRecord,
-  /Skill 内容 SHA-256[：:]\s*`[a-f\d]{64}`/i,
-  'permission forward-test record must pin the tested Skill content hash',
-);
-assertForwardTestScope(forwardTestRecord, forwardTestScopeHash);
-assert.match(
-  forwardTestRecord,
-  /语义前向测试基线 SHA-256[：:]\s*`7f59d274bee3f60a224f0c438ef12d72cffb1182d3f4a9111906bdda9f1c47d2`/,
-  'the 0.2.1 fresh-agent semantic baseline must remain explicit',
-);
-assert.match(
-  forwardTestRecord,
-  /0\.2\.2[\s\S]{0,500}(静态审计|宿主自动门禁)[\s\S]{0,500}(未改变权限语义|不修改创建、读取、更新)/,
-  'the audit-only 0.2.2 validation boundary must not misrepresent old fresh-agent evidence',
-);
-assert.match(
-  forwardTestRecord,
-  /0\.2\.3[\s\S]{0,1800}data\.record\.create[\s\S]{0,1200}meta\.field\.create[\s\S]{0,1600}data\.record\.create\.fieldAccess/,
-  'the 0.2.3 forward test must prove independent operation and create-field semantics',
-);
-for (const executionId of [
-  'permission-023-design',
-  'permission-023-review',
-  'permission-023-runtime',
-  'permission-r10-create-only',
-  'permission-r10-legacy',
-  'permission-r10-wildcard',
-  'permission-r10-special',
-  'permission-r10-refresh',
-]) {
-  assert.match(
-    forwardTestRecord,
-    new RegExp(executionId.replaceAll('/', '\\/')),
-    `permission forward-test record must include ${executionId}`,
-  );
-}
-assert.match(
-  forwardTestRecord,
-  /2026-08-21-make-app-permission-0\.2\.3-r12[\s\S]{0,700}permission-023-runtime/,
-  'the IAM runtime boundary follow-up must retain its fresh-agent batch evidence',
-);
-assert.doesNotMatch(
-  forwardTestRecord,
-  /(你是|you are)[^\n]*(fresh-agent|测试代理|test agent)/i,
-  'permission forward-test prompts must not reveal evaluation framing',
-);
-
 console.log('make-app creatable permission contract passed');

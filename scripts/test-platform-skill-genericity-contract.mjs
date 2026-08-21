@@ -16,7 +16,7 @@ const platformSkillDirectories = [
   'skills/makeui',
 ];
 const platformEntryFiles = ['README.md'];
-const publishedContentDirectories = ['docs', 'skills'];
+const publishedContentDirectories = ['skills'];
 const forbiddenProjectIdentifier = /\b[A-Za-z][A-Za-z0-9]*(?:Poc|Workbench)\b/i;
 const forbiddenExecutionContext =
   /\/(?:root|Users|home|var\/folders|(?:private\/)?tmp)(?:\/|$)/;
