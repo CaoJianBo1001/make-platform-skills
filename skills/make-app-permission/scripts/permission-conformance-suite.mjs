@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.3
+// make-app-permission contract version: 0.2.6
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -62,6 +62,15 @@ const cases = [
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.read'), true);
     assert.equal(adapter.canUseEntityOperation(current, 'invoice', 'data.record.read'), false);
   }],
+  ['entity_metadata_read_is_independent_from_record_read', () => {
+    const metadataOnly = access(permission('meta.entity.read'));
+    assert.equal(adapter.canUseEntityOperation(metadataOnly, 'order', 'meta.entity.read'), true);
+    assert.equal(adapter.canUseEntityOperation(metadataOnly, 'order', 'data.record.read'), false);
+
+    const recordsOnly = access(permission('data.record.read'));
+    assert.equal(adapter.canUseEntityOperation(recordsOnly, 'order', 'meta.entity.read'), false);
+    assert.equal(adapter.canUseEntityOperation(recordsOnly, 'order', 'data.record.read'), true);
+  }],
   ['invalid_requested_identifiers_fail_closed', () => {
     const current = access(
       permission('*.*.*', { fieldAccess: { '*': '*' }, resource: '*' }),
@@ -105,20 +114,20 @@ const cases = [
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
   }],
-  ['operation_deny_does_not_deny_create_field_dimension', () => {
+  ['operation_deny_does_not_deny_read_derived_create_field', () => {
     const current = access(
       permission('data.record.create'),
       permission('data.record.create', { effect: 'deny' }),
-      permission('meta.field.create', { fieldAccess: { title: 'creatable' } }),
+      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
   }],
-  ['create_field_deny_does_not_deny_record_create_operation', () => {
+  ['read_field_deny_does_not_deny_record_create_operation', () => {
     const current = access(
       permission('data.record.create'),
-      permission('meta.field.create', { fieldAccess: { title: 'creatable' } }),
-      permission('meta.field.create', { effect: 'deny' }),
+      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
+      permission('meta.field.read', { effect: 'deny' }),
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
@@ -141,9 +150,9 @@ const cases = [
     assert.equal(adapter.canUseEntityOperation(parentAccess, 'order', 'data.record.read'), true);
     assert.equal(adapter.canUseEntityOperation(globalAccess, 'order', 'data.record.update'), true);
   }],
-  ['field_dimensions_are_independent', () => {
+  ['create_field_uses_meta_field_read_dimension', () => {
     const current = access(
-      permission('meta.field.create', { fieldAccess: { createOnly: 'creatable' } }),
+      permission('meta.field.read', { fieldAccess: { createOnly: 'creatable' } }),
       permission('meta.field.read', { fieldAccess: { visibleOnly: 'readonly' } }),
       permission('meta.field.update', { fieldAccess: { editableOnly: 'editable' } }),
     );
@@ -152,16 +161,22 @@ const cases = [
     assert.equal(adapter.canReadEntityField(current, 'order', 'createOnly'), false);
     assert.equal(adapter.canUpdateEntityField(current, 'order', 'createOnly'), false);
     assert.equal(adapter.canReadEntityField(current, 'order', 'visibleOnly'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'visibleOnly'), false);
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'visibleOnly'), true);
     assert.equal(adapter.canUpdateEntityField(current, 'order', 'editableOnly'), true);
     assert.equal(adapter.canReadEntityField(current, 'order', 'editableOnly'), false);
   }],
-  ['record_create_field_access_does_not_grant_meta_create', () => {
+  ['record_create_field_access_does_not_grant_meta_read', () => {
     const current = access(permission('data.record.create', {
       fieldAccess: { createOnly: 'creatable' },
     }));
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'createOnly'), false);
+  }],
+  ['legacy_meta_field_create_does_not_grant_create_field', () => {
+    const current = access(permission('meta.field.create', {
+      fieldAccess: { title: 'creatable' },
+    }));
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
   }],
   ['read_dimension_access_states', () => {
     const current = access(permission('meta.field.read', {
@@ -172,6 +187,7 @@ const cases = [
       },
     }));
     assert.equal(adapter.canReadEntityField(current, 'order', 'creatable'), false);
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'creatable'), true);
     assert.equal(adapter.canReadEntityField(current, 'order', 'editable'), true);
     assert.equal(adapter.canReadEntityField(current, 'order', 'masked'), true);
   }],
@@ -182,11 +198,11 @@ const cases = [
     assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
     assert.equal(adapter.canReadEntityField(current, 'order', 'title'), false);
   }],
-  ['wildcard_create_with_named_hidden_exception', () => {
+  ['read_derived_create_with_named_hidden_exception', () => {
     const current = access(
       permission('data.record.create'),
-      permission('meta.field.create', {
-        fieldAccess: { '*': 'creatable', secret: 'hidden' },
+      permission('meta.field.read', {
+        fieldAccess: { '*': 'readonly', secret: 'hidden' },
       }),
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
@@ -194,7 +210,7 @@ const cases = [
     assert.equal(adapter.canCreateEntityField(current, 'order', 'secret'), false);
   }],
   ['empty_field_access_is_unrestricted_in_dimension', () => {
-    const current = access(permission('meta.field.create'));
+    const current = access(permission('meta.field.read'));
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
   }],
@@ -203,8 +219,8 @@ const cases = [
       permission('data.record.create'),
       {
         effect: 'allow',
-        fieldAccess: ['creatable'],
-        permissionKey: 'meta.field.create',
+        fieldAccess: ['readonly'],
+        permissionKey: 'meta.field.read',
         resource: ENTITY_RESOURCE,
       },
     ]));
@@ -216,7 +232,7 @@ const cases = [
       {
         effect: 'deny',
         fieldAccess: ['hidden'],
-        permissionKey: 'meta.field.create',
+        permissionKey: 'meta.field.read',
         resource: ENTITY_RESOURCE,
       },
     ]));
@@ -228,7 +244,7 @@ const cases = [
       {
         effect: 'allow',
         fieldAccess: null,
-        permissionKey: 'meta.field.create',
+        permissionKey: 'meta.field.read',
         resource: ENTITY_RESOURCE,
       },
     ]));
@@ -246,7 +262,7 @@ const cases = [
         {
           effect: 'allow',
           fieldAccess,
-          permissionKey: 'meta.field.create',
+          permissionKey: 'meta.field.read',
           resource: ENTITY_RESOURCE,
         },
       ]));
@@ -256,7 +272,7 @@ const cases = [
   }],
   ['valid_field_access_state_lists_are_preserved', () => {
     const current = access(
-      permission('meta.field.create', { fieldAccess: { title: ['creatable', 'readonly'] } }),
+      permission('meta.field.read', { fieldAccess: { title: ['creatable', 'readonly'] } }),
       permission('meta.field.read', { fieldAccess: { title: ['readonly', 'editable'] } }),
       permission('meta.field.update', { fieldAccess: { title: ['readonly', 'editable'] } }),
     );
@@ -267,7 +283,7 @@ const cases = [
   ['blank_field_key_poison_entire_access', () => {
     const current = adapter.normalizeAccess(basePayload([
       permission('data.record.create'),
-      permission('meta.field.create', { fieldAccess: { '   ': 'creatable' } }),
+      permission('meta.field.read', { fieldAccess: { '   ': 'readonly' } }),
     ]));
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
@@ -323,8 +339,8 @@ const cases = [
     ]) {
       const current = access(
         permission('data.record.create', { resource }),
-        permission('meta.field.create', {
-          fieldAccess: { title: 'creatable' },
+        permission('meta.field.read', {
+          fieldAccess: { title: 'readonly' },
           resource,
         }),
       );
@@ -337,8 +353,8 @@ const cases = [
       const current = adapter.normalizeAccess({
         permissions: [
           permission('data.record.create', { resource: '*' }),
-          permission('meta.field.create', {
-            fieldAccess: { title: 'creatable' },
+          permission('meta.field.read', {
+            fieldAccess: { title: 'readonly' },
             resource: '*',
           }),
         ],
@@ -356,8 +372,8 @@ const cases = [
         permission('data.record.create', {
           resource: 'make://tenant-2/meta/app/OtherApp/entity/order',
         }),
-        permission('meta.field.create', {
-          fieldAccess: { title: 'creatable' },
+        permission('meta.field.read', {
+          fieldAccess: { title: 'readonly' },
           resource: 'make://tenant-2/meta/app/OtherApp/entity/order',
         }),
       ],
@@ -373,8 +389,8 @@ const cases = [
         appResource,
         permissions: [
           permission('data.record.create', { resource: '*' }),
-          permission('meta.field.create', {
-            fieldAccess: { '*': 'creatable' },
+          permission('meta.field.read', {
+            fieldAccess: { '*': 'readonly' },
             resource: '*',
           }),
         ],
@@ -385,19 +401,19 @@ const cases = [
       assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
     }
   }],
-  ['most_specific_allow_restricts_parent_allow', () => {
+  ['most_specific_read_allow_restricts_parent_create_field_range', () => {
     const current = access(
-      permission('meta.field.create', { fieldAccess: {}, resource: APP_RESOURCE }),
-      permission('meta.field.create', { fieldAccess: { title: 'creatable' } }),
+      permission('meta.field.read', { fieldAccess: {}, resource: APP_RESOURCE }),
+      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
     );
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'amount'), false);
   }],
   ['entity_wildcard_allow_restricts_app_allow', () => {
     const current = access(
-      permission('meta.field.create', { fieldAccess: {}, resource: APP_RESOURCE }),
-      permission('meta.field.create', {
-        fieldAccess: { title: 'creatable' },
+      permission('meta.field.read', { fieldAccess: {}, resource: APP_RESOURCE }),
+      permission('meta.field.read', {
+        fieldAccess: { title: 'readonly' },
         resource: `${APP_RESOURCE}/entity/*`,
       }),
     );
@@ -406,8 +422,8 @@ const cases = [
   }],
   ['same_specificity_allow_fields_union', () => {
     const current = access(
-      permission('meta.field.create', { fieldAccess: { title: 'creatable' } }),
-      permission('meta.field.create', { fieldAccess: { amount: 'creatable' } }),
+      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
+      permission('meta.field.read', { fieldAccess: { amount: 'readonly' } }),
     );
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'amount'), true);
@@ -415,12 +431,12 @@ const cases = [
   }],
   ['namespace_alias_same_specificity_allow_union', () => {
     const current = access(
-      permission('meta.field.create', {
-        fieldAccess: { title: 'creatable' },
+      permission('meta.field.read', {
+        fieldAccess: { title: 'readonly' },
         resource: ENTITY_RESOURCE,
       }),
-      permission('meta.field.create', {
-        fieldAccess: { amount: 'creatable' },
+      permission('meta.field.read', {
+        fieldAccess: { amount: 'readonly' },
         resource: 'make://tenant-1/*/app/TestApp/entity/order',
       }),
     );
@@ -430,8 +446,8 @@ const cases = [
   ['same_specificity_named_hidden_overrides_wildcard', () => {
     const current = access(
       permission('data.record.create'),
-      permission('meta.field.create', { fieldAccess: { '*': 'creatable' } }),
-      permission('meta.field.create', { fieldAccess: { secret: 'hidden' } }),
+      permission('meta.field.read', { fieldAccess: { '*': 'readonly' } }),
+      permission('meta.field.read', { fieldAccess: { secret: 'hidden' } }),
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
@@ -440,8 +456,8 @@ const cases = [
   ['same_specificity_named_hidden_overrides_named_allow', () => {
     const current = access(
       permission('data.record.create'),
-      permission('meta.field.create', { fieldAccess: { title: 'creatable' } }),
-      permission('meta.field.create', { fieldAccess: { title: 'hidden' } }),
+      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
+      permission('meta.field.read', { fieldAccess: { title: 'hidden' } }),
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
@@ -449,8 +465,8 @@ const cases = [
   ['same_specificity_named_hidden_overrides_unrestricted_allow', () => {
     const current = access(
       permission('data.record.create'),
-      permission('meta.field.create', { fieldAccess: {} }),
-      permission('meta.field.create', { fieldAccess: { title: 'hidden' } }),
+      permission('meta.field.read', { fieldAccess: {} }),
+      permission('meta.field.read', { fieldAccess: { title: 'hidden' } }),
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);

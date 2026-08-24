@@ -2,7 +2,7 @@
 name: makeui
 description: Use when designing, generating, refactoring, or reviewing Make App frontend UI and `apps/ui` React UI code. Triggered by makeui, UI, 界面, app shell, layout, component structure, responsive behavior, dynamic object routes, field-metadata rendering, schema field properties, list pages, create/edit/detail drawers, permission-derived create/edit field sets, controlled form fields, user/department selectors, and UI states. Requires Make record tables to use `canvas-table-integration`, writable record actions to use `make-app-actions`, advanced filters to use `make-app-filter`, grouping to use `make-app-group`, sorting to use `make-app-sort`, and permission gates to use `make-app-permission`. Does not own auth, build/publish, Service runtime, business APIs, permission logic, persistence, DSL, CanvasTable internals, action semantics, filtering, grouping, or sorting behavior.
 metadata:
-  version: 0.3.54
+  version: 0.3.55
 ---
 
 # makeui
@@ -30,8 +30,9 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 15. If record grouping, multi-level grouping, drag priority, grouped CanvasTable, `record-groups`, or `groupFilter` is requested or already present, route the integrated behavior to `make-app-group`; `makeui` only places the toolbar trigger.
 16. If record sorting, multi-field sorting, drag priority, or table-header asc/desc is requested or already present, route the integrated behavior to `make-app-sort`; `makeui` only places the toolbar trigger.
 17. If Make record table cell editing is requested or already present, route the table to `canvas-table-integration` Track C as the Make display base plus Track B as the editing enhancement. `makeui` may place the table host, but must not invent a one-off cell editor in a page component. Non-standard CanvasTable cell editors are a readiness blocker / 交付阻断; do not report the UI as ready, complete, or delivered.
-18. Treat missing componentization as a readiness blocker for new Make App UI and non-trivial UI changes. Before reporting ready or complete, verify that `App.tsx` and route/page files only orchestrate and that implementation logic is split into page, shell, feature components, hooks, `lib/service-api`, field display/config adapters, table host, toolbar, and Drawer modules.
-19. Read only the needed reference files from the map below.
+18. If the task mentions 助手, AI助手, MakeAI AI 助手, Make AI 助手, AI 对话框, Artifact, SSE, Agent Gateway, or `@qfei-design/make-ai-assistant`, use `make-ai-assistant` for package, transport, Artifact, and assistant behavior. `makeui` only owns surrounding layout and placement decisions after that skill defines the integration. Generic dialogs remain ordinary UI work unless the request is explicitly about AI assistant interaction.
+19. Treat missing componentization as a readiness blocker for new Make App UI and non-trivial UI changes. Before reporting ready or complete, verify that `App.tsx` and route/page files only orchestrate and that implementation logic is split into page, shell, feature components, hooks, `lib/service-api`, field display/config adapters, table host, toolbar, and Drawer modules.
+20. Read only the needed reference files from the map below.
 
 ## Topic reference map
 
@@ -50,6 +51,7 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 | Advanced filter panel, condition builder, filter expression, header field filter | Use `make-app-filter` |
 | Record grouping, drag priority, Preset group, record-groups, grouped table flow | Use `make-app-group` |
 | Record sorting, drag priority, Preset sort, table-header asc/desc | Use `make-app-sort` |
+| Make AI 助手, AI助手, MakeAI AI 助手, AI 对话框, Artifact, SSE, Agent Gateway, make-ai-assistant package | Use `make-ai-assistant`; `makeui` only owns launcher/panel placement, shell fit, and responsive layout |
 | Single-app permissions, route guard, operation buttons, field editability, refresh permission reload | Use `make-app-permission` |
 | Authentication, login, logout handler, token, session behavior | Use `make-app-auth`; `makeui` only owns the current-user menu surface and placement |
 | Build output, Service runtime, packaging, publish readiness | Use `make-app-runtime`; `makeui` does not own runtime contracts |
@@ -66,6 +68,7 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 - If the task needs 筛选, advanced filtering, table filtering, filter builders, `filter.expression`, or header "按该字段筛选", use `make-app-filter`. `makeui` must not implement or fork `@qfei-design/make-app-filter` logic, and must not ship a Make record-list filtering UI without the paired CanvasTable header linkage owned by `make-app-filter` plus `canvas-table-integration`.
 - If the task needs 分组, multi-level grouping, drag priority, Preset group, `record-groups`, `groupFilter`, or grouped CanvasTable rendering, use `make-app-group`. `makeui` must not own the group model, dnd-kit behavior, Preset timing, Service payload, groupFilter composition, or grouped leaf pagination.
 - If the task needs 排序, multi-field sorting, drag priority, Preset sort, or header asc/desc, use `make-app-sort`. `makeui` must not own the sort model, dnd-kit behavior, Preset timing, Service payload, or table-header controller linkage.
+- If the task needs Make AI 助手, AI助手, MakeAI AI 助手, AI 对话框, Artifact, SSE, Agent Gateway, or make-ai-assistant 包接入, use `make-ai-assistant`. `makeui` must not own assistant transport, Artifact schema, template registry, backend capability negotiation, history restore, action intents, or Agent Gateway interface domains.
 - `makeui` may consume host-provided object/field metadata for UI rendering, but must not decide how that metadata is fetched, stored, authenticated, or deployed.
 
 ### UI metadata and states
@@ -125,6 +128,7 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 - Create/edit forms use type-appropriate controls. Date, select, user, department, file, and lookup fields must not silently degrade to plain text inputs. File upload is omitted in create mode when upload requires an existing record identity.
 - Create/edit custom form field controls must follow the host-form controlled contract from `component-usage.md`: forward `value/onChange/onBlur/id/disabled`, keep visual selection and form store synchronized, and treat local-only selected state as a delivery blocker.
 - When create permission exists but the authorized create field set is empty, keep the create surface explicit: render `暂无可新建字段` (or the host equivalent), disable submit, and do not invent fields from the visible/edit set.
+- For create, edit, and detail, derive the mode-specific renderable field collection after permission and host-capability filtering. When that collection is empty, render only an explicit empty state centered in the available content area; do not render a field grid, form/detail panel, section panel/card, placeholder `Form.Item`, border, shadow, or fixed minimum-height wrapper. A zero editable set does not trigger this state while visible read-only fields remain. Keep header/close usable; only create disables submit and uses `暂无可新建字段`.
 - Select, DatePicker, Popover, identity picker, and other popup controls inside Modal, Drawer, or scroll regions must follow the overlay portal contract from `component-usage.md` and `styling-and-responsive.md`: mount outside overflow-clipping ancestors and above the owning surface. Raising z-index inside a clipped panel is not a valid fix.
 - User and department selector UI must consume host candidate APIs and follow the canonical mapping in `references/component-usage.md`; host project documentation overrides the generated Make App default transport.
 - Do not use field schema `options`, local demo arrays, row samples, hardcoded names, or stale client-only lists as the source of truth for user/department selectors. Current record values may be merged into options only to echo existing selections while the real candidate API is loading or temporarily empty. If the selector appears inside advanced filter or CanvasTable cell editing, implement the surface with `make-app-filter` or `canvas-table-integration` while preserving this candidate-source contract.

@@ -54,7 +54,7 @@ Support exact and wildcard permission keys/resources, IAM namespace-wildcard App
 Allowed access states:
 
 ```text
-create:  *, creatable
+create:  *, creatable, editable, readonly, partialMask, fullMask
 read:    *, editable, readonly, partialMask, fullMask
 update:  *, editable
 ```
@@ -65,17 +65,33 @@ An omitted `fieldAccess` property or an empty object is the intentional unrestri
 
 ## Route and operation gates
 
-- Validate App entry and dynamic entity membership against permission-aware Schema.
+- Validate App entry and dynamic entity membership against permission-aware Schema, and require `meta.entity.read` before exposing an entity in left navigation or entering its dynamic object route. The route itself must return the host forbidden result before it mounts the object page; hiding the sidebar is not a route guard. When a host `ProtectedRoute`/`RouteGuard` is used instead of an explicit forbidden branch, return that guard from the dynamic route and bind it to the resolved current `entityKey`; merely declaring an unrelated guard does not protect the object page.
 - Bind fixed routes to an entity and permissionKey.
-- Require `data.record.read` before list/detail loading.
+- Require `data.record.read` before list/detail loading. It only gates record requests and values; it must not gate an entity-authorized navigation entry, table shell, or column headers.
 - Require `data.record.create` for create routes, create entry, open handler, and submit.
-- Resolve create fields with `meta.field.create`; never read create-field access from `data.record.create`. Operation authorization and field authorization are independent and neither may alter the other.
+- Resolve create fields with `meta.field.read`; never read create-field access from `data.record.create` or `meta.field.create`. The operation authorization and field intersection remain separate.
 - Require `data.record.update` for edit routes/entry/submit/cell commit.
 - Keep delete and bulkUpdate independent.
 - Do not use field-count conditions to hide create or normal edit entries.
 - Recheck each handler before its protected read or mutation.
 
 If create is allowed but no creatable fields remain, keep the create entry and render a “暂无可新建字段” empty state. Disable save unless the documented business API explicitly supports empty-record creation.
+
+## Entity navigation and table surface
+
+Derive the object surface in three independent steps:
+
+```text
+canViewEntity = canUseEntityOperation(access, entityKey, 'meta.entity.read')
+visibleFields = visibleFieldsForEntity(access, entityKey, entity.properties.fields ?? [])
+canReadRecords = canUseEntityOperation(access, entityKey, 'data.record.read')
+sourceRows = recordState.items
+tableRows = canReadRecords ? sourceRows : []
+```
+
+Render the navigation item and object route only when `canViewEntity` is true and the entity exists in permission-aware Schema. In the dynamic route, evaluate `canViewEntity` after resolving the Schema entity and return the host forbidden result when it is false. Render the table shell and its headers from `visibleFields`, not from `canReadRecords`. Gate the records query, row values, detail open action, pagination, and record-backed table controls with `canReadRecords`.
+
+When `canViewEntity` and `visibleFields` are authorized but `canReadRecords` is false, keep the table mounted with `columns={visibleFields}` and `rows={tableRows}` (or the equivalent CanvasTable API, where `tableRows` is explicitly `[]`). Do not execute `onDataLoad`, do not render cached/stale rows, and show a no-record-access/empty state without removing the headers. On a permission refresh that revokes record read, clear/invalidate the record store that supplies `sourceRows` before the next render or continue deriving `tableRows` from current access; changing only a request's `enabled` flag is insufficient. A record read grant never expands field visibility; a field read grant never authorizes a record request.
 
 ## Create flow
 
@@ -94,7 +110,7 @@ Do not require the field to be in visible `fields`, readable, or editable. A cre
 Before submit:
 
 1. Use the latest access generation and recheck `data.record.create` for the operation.
-2. Re-read latest `createFields` and recompute creatable keys from `meta.field.create`.
+2. Re-read latest `createFields` and recompute creatable keys from `meta.field.read`.
 3. Validate only authorized, rendered fields, including `validations.isRequired` and type-specific validation.
 4. Build an allowlist payload from those fields; never spread all form values.
 5. Build relation/Lookup payloads from the same allowlist.
@@ -117,13 +133,13 @@ editable = editableFieldKeysForEntity(access, entityKey, visible)
 - Do not attach cell editors or required validation to non-editable fields.
 - Build update payloads from latest visible/editable allowlists.
 - Ignore backend `editableFields`; editing remains “visible first, then `meta.field.update`”.
-- A create revoke closes create only. An update revoke closes edit only. A read revoke closes detail/edit and stops reads; it must not close a still-create-authorized create surface.
+- A create revoke closes create only. An update revoke closes edit only. A `data.record.read` revoke closes detail/edit and stops reads while retaining entity-authorized navigation and headers; it must not close a still-create-authorized create surface. A `meta.entity.read` revoke closes the object route and removes the navigation entry.
 
 ## Special fields and Lookup
 
 - Exclude ID and system-managed create/update audit fields from create capability even if malformed input Schema/permission includes them.
 - Preserve audit field edit capability when the field is visible, update-authorized, and host-editable.
-- Treat the exact type `Make.Field.File` as a host-contract capability, not an implicit permission result. The host adapter must declare which upload contract it implements: (a) persisted-record FileField routes such as `POST .../records/:recordID/files/:fieldKey`, which require an existing record identity and therefore make File create-incapable; or (b) an explicit pre-upload/direct-create contract that returns the backend-approved attachment array without requiring `recordID`, in which case the field may remain create-capable and only that attachment array enters `data[fieldKey]`. Never infer mode (b) merely from `required`, `createFields`, or a File permission. Apply this capability guard after `createFields ∩ create fieldAccess`. In mode (a), do not render, required-validate, or submit the File field during create. Its read/edit path remains independent and uses visible fields, update permission, an existing record identity, and the host edit-capability guard.
+- Treat the exact type `Make.Field.File` as a host-contract capability, not an implicit permission result. The host adapter must declare which upload contract it implements: (a) persisted-record FileField routes such as `POST .../records/:recordID/files/:fieldKey`, which require an existing record identity and therefore make File create-incapable; or (b) an explicit pre-upload/direct-create contract that returns the backend-approved attachment array without requiring `recordID`, in which case the field may remain create-capable and only that attachment array enters `data[fieldKey]`. Never infer mode (b) merely from `required`, `createFields`, or a File permission. Apply this capability guard after `createFields ∩ meta.field.read` for the documented create-state set. In mode (a), do not render, required-validate, or submit the File field during create. Its read/edit path remains independent and uses visible fields, update permission, an existing record identity, and the host edit-capability guard.
 - Treat the exact type `Make.Field.Lookup` as a relation-backed control only when Schema relation metadata and the host relation-write contract both support it; otherwise it is read-only/unsupported for write even if field permission allows it. Load candidates through the host Lookup option route (normally `GET .../lookup-options?sourceEntityKey=&lookupFieldKey=&keyword=&page=&size=`), never through an unrestricted target list.
 - Resolve a Lookup source definition from visible `fields` first, then `createFields` only for a create-only source field. Resolve the target entity and display field from visible target `fields` only; never use target `createFields` to bypass read visibility. Candidate values are target `recordID` strings; labels and option objects are presentation only.
 - Split ordinary and Lookup values before persistence, then filter both by the latest mode-specific field allowlist. For create, exclude Lookup field keys from ordinary `data`; UI sends `{ data: ordinaryAllowlistedData, relations: { [lookupFieldKey]: recordID | recordID[] | null | [] } }` to `POST .../records`. Service must reject any client-provided raw `data.qfei_relation` or Lookup key hidden in `data`, re-authorize each `relations` key against permission-trimmed `createFields`, validate relation metadata, cardinality, target visibility/existence and exact target `recordID`, then synthesize the Make payload `data.qfei_relation: [{ entityKey, id }]`. For edit, never let UI submit a partial raw `qfei_relation`; send authorized changes as `{ values: { [lookupFieldKey]: recordID | recordID[] | null | [] }, data?: ordinaryAllowlistedData }` to `PATCH .../records/:recordID/lookup-relations`. Service must re-authorize each source field, validate ordinary `data` against the current permission-trimmed visible/update contract, read the exact current source record, fail closed on malformed unrelated relation entries, preserve unrelated relations, and synthesize the complete `qfei_relation`. Reject client-provided raw `qfei_relation`, non-allowlisted fields, invalid cardinality, invisible targets, and missing/mismatched source or target identities. Because the backend `qfei_relation` item contains only `{ entityKey, id }`, relationKey is not encoded; if more than one independently writable relation from the source can point to the same target entity, this generic field-key route is ambiguous and must fail closed unless the host documents and tests a backend contract that disambiguates it.
@@ -157,7 +173,7 @@ Fail closed when either permission or Schema refresh fails.
 
 - Create form reads `fields` or `editableFields` instead of `createFields`.
 - Missing `createFields` falls back to visible fields.
-- Create fields depend on `data.record.create`, `meta.field.read/update`, or include `creatable` in readable states instead of using `meta.field.create`.
+- Create fields depend on `data.record.create` or `meta.field.update`, use `meta.field.create`, omit `createFields`, or treat `creatable` as readable instead of using `meta.field.read` with the documented create-state set.
 - Edit consumes `editableFields` or skips visibility.
 - Entries are hidden by writable-field count.
 - Submit expands raw form values or relation values without a latest allowlist.

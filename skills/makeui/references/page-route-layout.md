@@ -62,6 +62,10 @@ Form layout:
 - one-column layout on small screens
 - section headings rather than deeply nested cards
 
+### Zero-field page state
+
+Apply the same zero-field empty state as Drawer create/edit/detail surfaces. When the mode-specific renderable field collection is empty, render only the centered empty state in the available route content area; do not render a field grid, form/detail panel, section panel/card, placeholder `Form.Item`, border, shadow, or fixed minimum-height field wrapper. A zero editable set does not trigger this state while visible read-only fields remain. Create uses `暂无可新建字段` and disables submit; edit/detail use the host equivalent of `暂无可展示字段` while preserving navigation and non-mutating actions.
+
 ## Detail page
 
 Recommended structure:
@@ -83,6 +87,7 @@ Detail layout:
 - select, user, department, file, and lookup values use their type-specific read-only display renderers; empty values display `-`.
 - route detail titles use the record/object title with real overflow handling only. Do not allocate a tiny title slot that truncates otherwise displayable titles.
 - collapse to one column on small screens
+- when the visible renderable field collection is empty, apply the zero-field page state above instead of rendering an empty detail grid, panel, or card
 
 ## Navigation
 

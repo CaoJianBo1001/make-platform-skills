@@ -1,3 +1,5 @@
 .idea/
 .DS_Store
-/docs/
+/docs/*
+!/docs/
+!/docs/ai-changes-make-ai-assistant-skill.md

@@ -30,6 +30,12 @@ data.record.*
 *.*.*
 ```
 
+Entity metadata key:
+
+```text
+meta.entity.read
+```
+
 Normal edit/cell edit uses `data.record.update`; batch edit uses `data.record.bulkUpdate`. Keep all operation keys independent.
 
 Common resources:
@@ -46,28 +52,42 @@ make://<tenantId>/*/app/<appKey>/entity/*
 
 The namespace `*` in `make://<tenantId>/*/app/<appKey>` represents the same App family as response scope `make://<tenantId>/meta/app/<appKey>`; it is not tenant-wide platform permission.
 
+## Entity metadata, table structure, and record data
+
+The object, its visible columns, and its record values are three independent read surfaces:
+
+| Surface | Required permission | Behavior when denied |
+| --- | --- | --- |
+| Sidebar/navigation and object route | `meta.entity.read` | Hide the entity and reject its dynamic object route. |
+| Table shell and headers | `meta.entity.read` plus `fields ∩ meta.field.read` | Keep only the authorized field headers; an empty visible-field set uses the host's zero-column state. |
+| List rows, record details, pagination, and any record-backed header action | `data.record.read` | Do not issue a record request and do not render record values. |
+
+Schema membership remains an upper bound: an entity must exist in the permission-aware Schema before it can be displayed in navigation or entered by route. Within that bound, do not let `data.record.read` decide entity navigation or table-header visibility, and do not let `meta.entity.read` or `meta.field.read` authorize a record request.
+
+For an entity that has `meta.entity.read` and readable fields but lacks `data.record.read`, mount the normal table shell with `visibleFieldsForEntity(...)` as its columns, provide an empty row array, and use a clear no-record-access state if the host has one. Derive the table rows as `canReadRecords ? sourceRows : []`, or clear the record store that actually supplies the table rows before render; disabling only the next request is insufficient because previously loaded rows may remain cached. Do not replace the table with a forbidden page or remove its headers. Record-backed controls such as load-more, detail opening, filtering, sorting, grouping, or selection remain disabled unless their own record-read contract is satisfied.
+
 ## Independent field dimensions
 
-Creation, visibility, and editability are independent:
+Creation, visibility, and editability are separate field-set decisions:
 
 | Surface | Schema upper bound | permissionKey | Allowed access states |
 | --- | --- | --- | --- |
-| Create form | `createFields` | `meta.field.create` | `creatable`, `*` |
+| Create form | `createFields` | `meta.field.read` | `creatable`, `readonly`, `editable`, `partialMask`, `fullMask`, `*` |
 | List/detail/filter | `fields` | `meta.field.read` | `readonly`, `editable`, `partialMask`, `fullMask`, `*` |
 | Edit/cell edit | already-visible `fields` | `meta.field.update` | `editable`, `*` |
 
 Therefore:
 
-- `creatable` does not grant visibility or editability.
-- `editable` does not grant creation.
+- `creatable` in a matched `meta.field.read` row grants creation only; it does not grant visibility or editability.
+- A matched readable state can authorize a field only inside its relevant Schema collection: `createFields` for creation and `fields` for display.
 - Selecting edit permission does not synthesize visibility. The value `editable` is readable only when it is actually returned in a matched `meta.field.read` row.
 - `data.record.create` allows the operation entry/handler but grants no create-field access.
-- `meta.field.create` grants create-field access but does not allow opening or submitting the create operation. The operation and field dimensions are independent and neither may synthesize the other.
-- `meta.field.read` does not add fields to a create form.
+- `meta.field.read` determines both create and display field authorization, but it does not add fields outside `createFields` or `fields` respectively.
+- `meta.field.create` is not a platform permission point and must not be used as a create-field dimension.
 - An editable-but-invisible field remains absent from edit/list/detail.
 - A create-only invisible field appears in create mode and nowhere else.
 
-`partialMask` and `fullMask` are read/display states only. `hidden` grants no dimension.
+`partialMask` and `fullMask` preserve their masked display behavior in `fields`; when those states match a field in `createFields`, the platform mapping still makes that field create-eligible. `hidden` grants no create, read, or edit field access.
 
 ## Schema and permission intersection
 
@@ -80,9 +100,11 @@ Treat the permission-trimmed Schema collections as separate contracts:
 Compute:
 
 ```text
-create = createFields ∩ meta.field.create(creatable|*) ∩ create-capable UI fields
+entity = permission-aware Schema entity ∩ meta.entity.read
+create = createFields ∩ meta.field.read(creatable|readonly|editable|partialMask|fullMask|*) ∩ create-capable UI fields
 display = fields ∩ readable permission
 edit = display ∩ editable permission ∩ edit-capable UI fields
+records = data.record.read ? fetched rows : []
 ```
 
 ID and audit fields listed by `system-field-contract.md` must not enter the create set. An audit field may remain editable when it is in visible `fields`, has update permission, and has a supported editor.
@@ -99,19 +121,19 @@ Schema membership never replaces principal permission checks, and principal perm
 - Apply a matching `effect: deny` before allows; it denies the matching permission dimension. A `data.record.*` deny therefore denies its operation, while a `meta.field.*` deny denies only that field-access dimension. Do not encode a field-only hidden exception as a deny statement.
 - Let a named field entry override both `*` and empty/unrestricted baselines across all same-specificity allow ranges so broad policies can retain named exceptions. If any same-specificity allow names the field, evaluate only the named values and do not fall back to another row's `*` or empty `fieldAccess`. Within that named set, `hidden` is deny-like and wins over `creatable`, `readonly`, `editable`, masks, or `*`; conflicting same-level named allows must never widen a hidden field. This field decision does not convert the allow statement into an operation-level deny.
 - Treat empty `fieldAccess` on the most-specific allow as unrestricted for that permissionKey:
-  - all `createFields` for `meta.field.create`;
-  - all `fields` for `meta.field.read`;
+  - all `createFields` while evaluating `meta.field.read` for creation;
+  - all `fields` while evaluating `meta.field.read` for display;
   - all already-visible `fields` for `meta.field.update`.
 - Distinguish an omitted or empty `fieldAccess` from a malformed value. An omitted property or empty object is the intentional unrestricted form; explicit `null`, a non-object, an array, a blank field key, an empty state list, an unknown state, or a state list containing non-strings is invalid IAM data and the access snapshot must fail closed instead of being normalized to `{}`. Null/primitive envelopes or rows and non-array `permissions` must return denied access without throwing.
 
 Interpret access states inside the matched permissionKey. Do not treat a value such as `*` as a global field grant detached from its create/read/update dimension.
 
-In an expanded IAM runtime response, a wildcard field baseline may coexist with a named exception, for example `{ "*": "creatable", "secret": "hidden" }`; evaluate that shape defensively as runtime `fieldAccess`. Reserve `effect: deny` for denying the whole matched permission dimension; a matching `data.record.*` deny correctly fails closed for that operation.
+In an expanded IAM runtime response, a wildcard field baseline may coexist with a named exception, for example `{ "*": "readonly", "secret": "hidden" }`; evaluate that shape defensively as runtime `fieldAccess`. A legacy-compatible `creatable` state may also appear inside `meta.field.read`; it is create-only, not readable. Reserve `effect: deny` for denying the whole matched permission dimension; a matching `data.record.*` deny correctly fails closed for that operation.
 
 ## Route and backend boundaries
 
-- Protect App, object, create, and fixed routes; menu hiding is insufficient.
-- Do not load list/detail without `data.record.read`.
+- Protect App, object, create, and fixed routes; require `meta.entity.read` inside the dynamic object route as well as navigation, because menu hiding is insufficient and direct URLs bypass the sidebar.
+- Do not load list/detail without `data.record.read`; this must stop record requests and rows without hiding an entity-authorized table shell or its `meta.field.read` headers.
 - Recheck create/update/delete/cell/batch handlers immediately before mutation.
 - Let backend record APIs enforce row-level `dataCondition` and final write authorization.
 - Do not cache permission-trimmed Schema across principals. Refresh permission and Schema together when access is refreshed.
@@ -119,9 +141,12 @@ In an expanded IAM runtime response, a wildcard field baseline may coexist with 
 ## Common mistakes
 
 - Using tenant-root scope or a platform filter for App permissions.
+- Using `data.record.read` as the left-navigation, object-route, table-shell, or table-header gate.
+- Removing authorized table headers when record read is denied instead of rendering the authorized columns with no rows.
 - Rendering create forms from `fields` or `editableFields`.
 - Falling back from missing `createFields` to visible `fields`.
-- Treating `creatable` as readable because another permission statement also contains `meta.field.read`.
+- Treating `creatable` as readable because it appears in a matched `meta.field.read` row.
+- Using or requiring `meta.field.create` for a create form.
 - Using `data.record.update/create` as field create/read/edit permission.
 - Hiding create/edit because no writable field exists.
 - Filtering visible controls but submitting the complete form store.

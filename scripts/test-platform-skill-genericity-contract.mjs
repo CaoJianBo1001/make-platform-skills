@@ -10,6 +10,7 @@ const platformSkillDirectories = [
   'skills/canvas-table-integration',
   'skills/make-app-filter',
   'skills/make-app-group',
+  'skills/make-ai-assistant',
   'skills/make-app-permission',
   'skills/make-app-service',
   'skills/make-app-sort',

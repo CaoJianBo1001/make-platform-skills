@@ -71,18 +71,16 @@ Preserve IAM permission rows and normalize them at the UI boundary. A representa
   "scope": "make://<tenantId>/meta/app/<appKey>",
   "permissions": [
     {
-      "permissionKey": "data.record.create",
+      "permissionKey": "meta.entity.read",
       "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
       "effect": "allow",
       "fieldAccess": {}
     },
     {
-      "permissionKey": "meta.field.create",
+      "permissionKey": "data.record.create",
       "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
       "effect": "allow",
-      "fieldAccess": {
-        "create_only_field": "creatable"
-      }
+      "fieldAccess": {}
     },
     {
       "permissionKey": "meta.field.read",
@@ -107,9 +105,11 @@ Preserve IAM permission rows and normalize them at the UI boundary. A representa
 
 Consume `fieldAccess` by permission dimension:
 
+- `meta.entity.read`: entity metadata permission only; use it to include a Schema-present entity in navigation and allow its object route. It does not grant field visibility or record values.
+- `data.record.read`: record-data permission only; use it for list/detail/pagination requests and record rows. It must not remove `meta.field.read` headers when an entity remains metadata-readable.
 - `data.record.create`: operation permission only; use it for create route, entry, handler, and submit checks, never to choose fields.
-- `meta.field.create`: use `creatable` or `*` to choose fields from Schema `createFields`.
-- `meta.field.read`: use readable states to choose visible fields from Schema `fields`; `creatable` is not readable.
+- `meta.field.read`: use `creatable|readonly|editable|partialMask|fullMask|*` to choose fields from Schema `createFields`, and use readable states to choose visible fields from Schema `fields`; `creatable` is create-only, not readable.
+- `meta.field.create` is not a platform permission point. Do not require it, synthesize it, or use it as a create-field fallback.
 - `meta.field.update`: use `editable` or `*` only after visibility is established.
 - All `data.record.*` rows control operations and do not grant create/read/update field access. In particular, `data.record.create.fieldAccess` must not be used as the create-field dimension.
 

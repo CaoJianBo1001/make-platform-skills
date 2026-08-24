@@ -30,8 +30,9 @@ Codex 判断优先级：
 | 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | 负责完整筛选能力：`@qfei-design/make-app-filter` 消费侧接入、高级筛选控件行为、CanvasTable 表头筛选联动和 `filter.expression` 合同；不负责页面 Shell、表格渲染 API 细节、Service 实现、认证或发布 |
 | 排序、高级排序、多字段排序、排序优先级、升序/降序、拖拽排序条件、表头排序、`openWithField`、`capabilities.sortable`、Entity Preset sort、records sort、dnd-kit | `make-app-sort` | 负责完整排序能力：五级排序纯模型、拖拽草稿、CanvasTable 表头联动、Preset 保存/读取/回显和 records sort 合同；不负责页面 Shell、CanvasTable API 细节、Service 实现或分组 |
 | 分组、高级分组、多级分组、分组条件、拖拽分组、表头分组、`capabilities.groupable`、Entity Preset group、record-groups、groupFilter、分组叶子明细分页、`@qfei-design/make-app-group` | `make-app-group` | 负责完整分组能力：三级分组模型、拖拽草稿、Preset 保存/回显、Service record-groups/groupFilter、CanvasTable 分组渲染和叶子分页；不负责页面 Shell、CanvasTable 内部或筛选/排序模型 |
+| 助手、AI助手、MakeAI AI 助手、Make AI 助手、AI 对话框、Artifact、SSE、Agent Gateway、`@qfei-design/make-ai-assistant`、make-ai-assistant 包 | `make-ai-assistant` | 负责 Make AI 助手平台接入：npm 包公开能力读取、助手入口和面板包接入、Artifact V1、能力协商、Make App/Console adapter、Agent Gateway SSE、history restore、action intent 和接口域名配置；不负责普通 Dialog、表单/详情抽屉、业务 Agent 提示词、权限算法、认证实现、发布或 DSL |
 | Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema `fields/createFields`、records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排、Schema 集合无损传输和按主体隔离缓存，不负责 UI、认证、权限算法、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
-| 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、路由权限、按钮权限、字段可新建、可见、可编辑、`creatable`、`createFields`、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、`createFields` 与字段 `creatable/readable/editable` 独立权限、创建提交白名单、路由和按钮权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
+| 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、对象导航、路由权限、按钮权限、字段可新建、可见、可编辑、`creatable`、`createFields`、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、`meta.entity.read` 对象导航、`meta.field.read` 表头和 `data.record.read` 数据行的独立权限，以及 `createFields` 与字段 `creatable/readable/editable` 独立权限、创建提交白名单、路由和按钮权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
 | 登录、认证、Token、统一登录、OAuth、Cookie、Session、logout、401/403、`/api/make/**` 鉴权请求 | `make-app-auth` | 只负责认证和鉴权请求，不负责 UI 布局和打包发布 |
 | 打包、发布、镜像入口、K8s、Service 启动失败、`apps/ui/dist`、`apps/service/dist/server.js`、Service 端口 `3000`、workspace/package.json、`X-Forwarded-Host` | `make-app-runtime` | 只负责运行态和打包发布契约，不负责 Service API、认证实现或 Make adapter 配置语义 |
 | App/Entity/Relation/Field 建模、DSL YAML、对象、字段、关系、选项 | `makedsl` | 只负责 DSL 设计和生成，不负责远端 apply |
@@ -49,6 +50,7 @@ Codex 判断优先级：
 - 同时做筛选和排序：`make-app-filter` + `make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，共享一次权限感知的 Entity Preset 加载与并发请求协调器，但按维度独立保存
 - 做多级分组、拖拽分组或分组表格：`make-app-group` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，必须同时完成权限感知的 Preset 保存/回显、record-groups、groupFilter、CanvasTable 分组和叶子明细分页
 - 同时做筛选、分组和排序：`make-app-filter` + `make-app-group` + `make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，共享一次权限感知的 Entity Preset 加载与并发请求协调器，但按维度独立保存
+- 做 Make AI 助手、AI 对话框或 AI 助手 Artifact 展示：`make-ai-assistant` + `makeui` + `make-app-service` + `make-app-auth` + `make-app-permission`，需要发布或接口域名注入时加 `make-app-runtime`；`make-ai-assistant` 主责 Artifact、SSE、Agent Gateway、make-ai-assistant 包和接口域名配置规范
 - 做 UI 需要的 Service 接口：`make-app-service` + `makeui`
 - 做 Make 项目默认权限体系：`make-app-permission` + `make-app-service` + `make-app-auth` + `makeui`，涉及表格编辑时加 `canvas-table-integration`
 - 做一个登录后的页面：`makeui` + `make-app-auth`
@@ -229,6 +231,23 @@ npx skills update make-app-sort
 - 分组使用独立 `make-app-group` 和 `capabilities.groupable`
 - 页面位置交给 `makeui`，CanvasTable 表头菜单机制交给 `canvas-table-integration`，Service 路由和 Make adapter 交给 `make-app-service`
 
+### make-ai-assistant
+指导在 Make App / Make Console / 平台应用中接入 `@qfei-design/make-ai-assistant`，覆盖助手、AI助手、MakeAI AI 助手、Make AI 助手、AI 对话框、Artifact、SSE、Agent Gateway、make-ai-assistant 包、接口合同和域名配置。
+
+#### 升级 skill
+```bash
+npx skills update make-ai-assistant
+```
+
+**使用场景**
+- 接入或升级 `@qfei-design/make-ai-assistant`，先读取包内 `package.ai.json.readOrder` 声明的公开文档，不导入包内 `src`、`dist`、示例或 gallery 文件
+- 使用正式组件 `MakeAiAssistant`、`AssistantPanel`、`ArtifactRenderer` 和 `styles.css`；演示能力只通过公开 testing/mock 入口在开发、测试或受控演示中启用
+- 设计 Artifact V1 结果展示，覆盖 `metric`、`comparison`、`trend`、`ranking`、`record-list`、`notice` 六类结构化展示
+- 约束后端返回语义化 Artifact 和能力协商信息，而不是 React 组件名、HTML/JSX 或需要前端从 Markdown 猜测的表格
+- 对接 Make App / Make Console adapter、SSE 消息流、历史恢复、取消/过期流处理、action intent 和宿主权限校验
+- 规范 AI 助手接口域名：浏览器同源调用 `/api/make/app/ai/**`；Service 读取统一 Make Gateway origin，通过 adapter 拼接发布态 `/make/app/ai/**`；`MAKE_API_BASE_URL` / `MAKE_SERVER_URL` 只能是严格 origin，不能包含 `/api/make`、`/make` 或其他路径，也不能硬编码环境域名
+- 页面布局、入口位置和响应式交给 `makeui`；Service route/proxy/log/test 交给 `make-app-service`；登录态交给 `make-app-auth`；权限策略交给 `make-app-permission`；运行时变量注入和发布检查交给 `make-app-runtime`
+
 ### make-app-service
 指导生成、重构或审查 Make App 的 `apps/service` API，覆盖 UI-Service 合同、Service 路由、Make Meta/Data API adapter、`MAKE_APP_KEY` / Make adapter 环境变量/config 语义、schema/records/users/departments/lookup/file 代理接口和 Service API 测试。
 
@@ -262,7 +281,7 @@ npx skills update make-app-permission
 **使用场景**
 - 增加或审查 `/api/make/app/principal/permission` Service 接口
 - Service 调 Make IAM `/api/make/iam/v1/principal/permission`，使用 App scope，不混用平台权限
-- 前台登录后加载权限，结合 Schema 的 `fields` / `createFields` 和独立的 `creatable` / readable / editable 字段权限，控制菜单、路由、列表、详情、新建、编辑、删除、单元格编辑和提交白名单
+- 前台登录后加载权限，使用 `meta.entity.read` 控制对象导航和路由、`meta.field.read` 控制表头、`data.record.read` 控制数据加载；即使没有数据读取权限，只要对象和字段已授权仍展示左侧对象与表头，并在撤销数据读取权限后清空缓存行数据，结合 Schema 的 `fields` / `createFields` 和独立的 `creatable` / readable / editable 字段权限，控制列表、详情、新建、编辑、删除、单元格编辑和提交白名单
 - 防止通过手动修改 URL 进入未授权 App、对象页或固定业务页面
 - 刷新时重新获取权限，再决定是否刷新数据或关闭已打开工作区
 - 使用 `scripts/audit-make-app-permission.mjs` 做权限合同检查

@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.3
+// make-app-permission contract version: 0.2.6
 import fs from 'node:fs';
 import path from 'node:path';
 
 const USAGE = `Usage:
   node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 
-Checks Make App single-app permission enforcement, including independent creatable/readable/editable fields. This is a static contract audit; it does not replace Service/UI tests.`;
+Checks Make App single-app permission enforcement, including create operations and read-derived create fields. This is a static contract audit; it does not replace Service/UI tests.`;
 
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
@@ -118,7 +118,10 @@ function checkUiContract() {
       failures.push(`operation_key_missing_${key}: UI permission model must include data.record.${key}`);
     }
   }
-  for (const key of ['create', 'read', 'update']) {
+  if (!/meta\.entity\.read/.test(uiRuntimeText)) {
+    failures.push('entity_metadata_permission_key_missing: UI permission model must include meta.entity.read for entity navigation and routes');
+  }
+  for (const key of ['read', 'update']) {
     if (!new RegExp(`meta\\.field\\.${key}`).test(uiRuntimeText)) {
       failures.push(`field_permission_key_missing_${key}: UI permission model must include meta.field.${key}`);
     }
@@ -134,7 +137,7 @@ function checkUiContract() {
     failures.push('field_edit_helper_missing: UI must evaluate field editability from meta.field.update');
   }
   if (!/(canCreateEntityField|creatableFieldKeysForEntity)/.test(uiRuntimeText)) {
-    failures.push('create_field_permission_helper_missing: UI must evaluate create fields from meta.field.create fieldAccess');
+    failures.push('create_field_permission_helper_missing: UI must evaluate create fields from meta.field.read fieldAccess');
   }
   if (
     ['canUseEntityOperation', 'canCreateEntityField', 'canReadEntityField', 'canUpdateEntityField']
@@ -151,9 +154,9 @@ function checkUiContract() {
   if (!namedFunctionUsesPermissionKey(
     uiRuntimeText,
     'canCreateEntityField',
-    /(?:META_FIELD_CREATE|meta\.field\.create)/,
+    /(?:META_FIELD_READ|meta\.field\.read)/,
   )) {
-    failures.push('create_field_permission_key_missing: create-field permission must use meta.field.create');
+    failures.push('create_field_permission_key_missing: create-field permission must use meta.field.read');
   }
   if (namedFunctionUsesPermissionKey(
     uiRuntimeText,
@@ -165,9 +168,9 @@ function checkUiContract() {
   if (namedFunctionUsesPermissionKey(
     uiRuntimeText,
     'canCreateEntityField',
-    /(?:META_FIELD_(?:READ|UPDATE)|meta\.field\.(?:read|update))/,
+    /(?:META_FIELD_(?:CREATE|UPDATE)|meta\.field\.(?:create|update))/,
   )) {
-    failures.push('create_field_permission_uses_wrong_field_dimension: create-field permission must use meta.field.create, not meta.field.read/update');
+    failures.push('create_field_permission_uses_wrong_field_dimension: create-field permission must use meta.field.read, not meta.field.create/update');
   }
   if (!/createFields/.test(uiRuntimeText)) {
     failures.push('create_fields_contract_missing: UI schema and create form must preserve and consume createFields');
@@ -209,8 +212,20 @@ function checkUiContract() {
   if (!hasRouteGuardSignal(uiRuntimeText)) {
     failures.push('route_guard_missing: UI must block direct URL access to schema-missing objects and unauthorized fixed routes');
   }
+  if (!hasEntityRouteGuardSignal(uiRuntimeText)) {
+    failures.push('entity_route_not_gated_by_meta_entity_read: dynamic entity routes must require meta.entity.read');
+  }
+  if (!hasEntityNavigationGateSignal(uiRuntimeText)) {
+    failures.push('entity_navigation_not_gated_by_meta_entity_read: entity navigation must use meta.entity.read rather than data.record.read');
+  }
   if (!hasReadGateSignal(uiRuntimeText)) {
     failures.push('read_gate_missing: list/detail loading must be gated by data.record.read');
+  }
+  if (hasRecordReadGatedTableHeaders(uiRuntimeText)) {
+    failures.push('table_headers_tied_to_record_read: table headers must derive from meta.field.read visible fields even when data.record.read is denied');
+  }
+  if (!hasRecordRowsClearSignal(uiRuntimeText)) {
+    failures.push('record_rows_not_cleared_on_read_revoke: denied data.record.read must render an empty row set and clear cached record values');
   }
   if (!/DATA_RECORD_CREATE|data\.record\.create/.test(uiRuntimeText) || !/(onCreate|openCreate|canCreate)/.test(uiRuntimeText)) {
     failures.push('create_gate_missing: create entry/handler must be gated by create permission');
@@ -718,11 +733,165 @@ function hasRouteGuardSignal(text) {
   );
 }
 
+function hasEntityRouteGuardSignal(text) {
+  const dynamicRouteFunctionNames = [
+    'ObjectRoutePage',
+    'EntityRoutePage',
+  ];
+  const routeGuardFunctionNames = [
+    'SchemaObjectPage',
+    'ObjectRouteGuard',
+    'EntityRouteGuard',
+  ];
+  const dynamicRouteSources = dynamicRouteFunctionNames.flatMap((functionName) => (
+    extractNamedFunctionSources(text, functionName)
+  ));
+  const routeGuardSources = routeGuardFunctionNames.flatMap((functionName) => (
+    extractNamedFunctionSources(text, functionName)
+  ));
+  const preferredRouteSources = dynamicRouteSources.length > 0
+    ? dynamicRouteSources
+    : routeGuardSources;
+  const sources = preferredRouteSources.length > 0 ? preferredRouteSources : [text];
+  const entityGateVariable = String.raw`(?:can|has)(?:View|Read|Access|Use)\w*(?:Entity|Object|Metadata)\w*`;
+  const directGuard = new RegExp(
+    String.raw`\bif\s*\(\s*!\s*can(?:UseEntityOperation|Use.*Operation|Has.*Permission)\([^)]*(?:META_ENTITY_READ|meta\.entity\.read)[^)]*\)\s*\)\s*(?:\{\s*)?return\s+<(?:Result|Forbidden|Navigate|Redirect)`,
+    'is',
+  );
+  const variableGuard = new RegExp(
+    String.raw`\b(?:const|let)\s+(${entityGateVariable})\s*=\s*can(?:UseEntityOperation|Use.*Operation|Has.*Permission)\([^;\n]*(?:META_ENTITY_READ|meta\.entity\.read)[^;\n]*;[\s\S]{0,240}\bif\s*\(\s*!\s*\1\s*\)\s*(?:\{\s*)?return\s+<(?:Result|Forbidden|Navigate|Redirect)`,
+    'is',
+  );
+  const protectedRoute = new RegExp(
+    String.raw`\breturn\s*(?:\(\s*)?<(?:ProtectedRoute|AuthorizedRoute|RouteGuard)\b(?=[^>]*\b(?:permissionKey|permission)\s*=\s*\{?[^>]*(?:META_ENTITY_READ|meta\.entity\.read))(?=[^>]*\b(?:entityKey|objectKey)\s*=\s*\{?[^>]*(?:object|entity)\s*\.\s*(?:entityKey|key))[^>]*>`,
+    'is',
+  );
+
+  return sources.some((source) => (
+    directGuard.test(source)
+      || variableGuard.test(source)
+      || protectedRoute.test(source)
+  ));
+}
+
 function hasReadGateSignal(text) {
   return (
     /(canRead|DATA_RECORD_READ|data\.record\.read)/.test(text)
     && /(enabled\s*:|onDataLoad=\{[^}]*\?|openDetail|fetchEntityRecord|fetch.*Detail)/s.test(text)
   );
+}
+
+function hasEntityNavigationGateSignal(text) {
+  const navigationComponent = String.raw`<\w*(?:Navigation|Sidebar|SideBar|Menu)\w*\b[^>]*>`;
+  const directMetaEntityGate = new RegExp(
+    `${navigationComponent.slice(0, -1)}[^>]*\\b(?:visible|enabled)\\s*=\\s*\\{[^}]*meta\\.entity\\.read[^}]*\\}[^>]*>`,
+    'is',
+  );
+  const entityGateVariable = String.raw`can(?:View|Read)(?:Entity|Object|Metadata)\w*`;
+  const gatedNavigation = new RegExp(
+    `${navigationComponent.slice(0, -1)}[^>]*\\b(?:visible|enabled)\\s*=\\s*\\{[^}]*${entityGateVariable}[^}]*\\}[^>]*>`,
+    'is',
+  );
+  const entityGateDefinition = new RegExp(
+    `\\b${entityGateVariable}\\s*=\\s*can(?:UseEntityOperation|Use.*Operation|Has.*Permission)\\([^;\\n]*(?:META_ENTITY_READ|meta\\.entity\\.read)`,
+    'is',
+  );
+  const navigationCollectionProp = String.raw`(?:objects|entities|items|menuItems|navigationItems)`;
+  const directFilteredNavigation = new RegExp(
+    `${navigationComponent.slice(0, -1)}[^>]*\\b${navigationCollectionProp}\\s*=\\s*\\{\\s*(?:objects|entities)\\s*\\.\\s*filter\\s*\\([\\s\\S]{0,400}?(?:META_ENTITY_READ|meta\\.entity\\.read)[\\s\\S]{0,400}?\\)\\s*\\}[^>]*>`,
+    'is',
+  );
+  const filteredEntityCollections = /\b(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:objects|entities)\s*\.\s*filter\s*\([\s\S]{0,400}?(?:META_ENTITY_READ|meta\.entity\.read)/gi;
+  const filteredCollectionFeedsNavigation = [...text.matchAll(filteredEntityCollections)]
+    .some((match) => {
+      const collectionName = match[1];
+      const escapedCollectionName = collectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const navigationConsumesCollection = new RegExp(
+        `${navigationComponent.slice(0, -1)}[^>]*\\b${navigationCollectionProp}\\s*=\\s*\\{\\s*${escapedCollectionName}\\s*\\}[^>]*>`,
+        'is',
+      );
+      return navigationConsumesCollection.test(text);
+    });
+
+  return directMetaEntityGate.test(text)
+    || (gatedNavigation.test(text) && entityGateDefinition.test(text))
+    || directFilteredNavigation.test(text)
+    || filteredCollectionFeedsNavigation;
+}
+
+function hasRecordReadGatedTableHeaders(text) {
+  const recordReadGate = String.raw`(?:can\w*(?:Read|View)\w*Record\w*|DATA_RECORD_READ|data\.record\.read)`;
+  const visibleColumns = String.raw`(?:visible\w*(?:Fields|Columns|Headers)|fieldsFor(?:List|Table)|table\w*(?:Fields|Columns|Headers))`;
+  const directColumnGate = new RegExp(
+    `\\b(?:columns|fields|headers)\\s*=\\s*\\{[^}]{0,220}${recordReadGate}[^}]{0,220}${visibleColumns}|\\b(?:columns|fields|headers)\\s*=\\s*\\{[^}]{0,220}${visibleColumns}[^}]{0,220}${recordReadGate}`,
+    'is',
+  );
+  const conditionalTableMount = new RegExp(
+    `${recordReadGate}\\s*&&\\s*<[^>]*(?:Table|Grid|Canvas)[^>]*>|<[^>]*(?:Table|Grid|Canvas)[^>]*>[^<]{0,80}\\{\\s*${recordReadGate}\\s*&&`,
+    'is',
+  );
+  const ternaryTableMount = new RegExp(
+    `${recordReadGate}\\s*\\?\\s*<[^>]*(?:Table|Grid|Canvas)|<[^>]*(?:Table|Grid|Canvas)[^>]*>[^<]{0,80}\\{\\s*${recordReadGate}\\s*\\?`,
+    'is',
+  );
+  const earlyReturnWithoutTable = new RegExp(
+    `\\bif\\s*\\(\\s*!\\s*${recordReadGate}\\s*\\)\\s*(?:\\{\\s*)?return\\s+<(?:Empty|Result|Forbidden|NoData|AccessDenied|Placeholder)\\b`,
+    'is',
+  );
+  const derivedColumnGate = new RegExp(
+    `\\b(?:const|let)\\s+\\w*(?:Columns|Fields|Headers)\\w*\\s*=\\s*[^;\\n]*${recordReadGate}|\\b(?:const|let)\\s+\\w*(?:Columns|Fields|Headers)\\w*\\s*=\\s*[^;\\n]*${visibleColumns}[^;\\n]*${recordReadGate}`,
+    'is',
+  );
+
+  return directColumnGate.test(text)
+    || conditionalTableMount.test(text)
+    || ternaryTableMount.test(text)
+    || earlyReturnWithoutTable.test(text)
+    || derivedColumnGate.test(text);
+}
+
+function hasRecordRowsClearSignal(text) {
+  const recordReadGate = String.raw`(?:can\w*(?:Read|View)\w*Record\w*|DATA_RECORD_READ|data\.record\.read)`;
+  const emptyRows = String.raw`(?:\[\s*\]|EMPTY_ROWS|emptyRows|noRows)`;
+  const directTableRows = new RegExp(
+    `<[^>]*(?:Table|Grid|Canvas)[^>]*\\b(?:rows|data|items|records)\\s*=\\s*\\{[^}]*${recordReadGate}[^}]*\\?[^}:]*(?:\\:\\s*${emptyRows})|<[^>]*(?:Table|Grid|Canvas)[^>]*\\b(?:rows|data|items|records)\\s*=\\s*\\{[^}]*${emptyRows}[^}]*\\:[^}]*${recordReadGate}`,
+    'is',
+  );
+  const guardedRows = new RegExp(
+    `\\b(?:const|let)\\s+(\\w*(?:Rows|Data|Items|Records)\\w*)\\s*=\\s*${recordReadGate}\\s*\\?[^;\\n]*\\:\\s*${emptyRows}`,
+    'is',
+  );
+  const guardedRowsBoundToTable = [...text.matchAll(new RegExp(guardedRows.source, 'gi'))]
+    .some((match) => {
+      const rowsVariable = match[1];
+      const escapedRowsVariable = rowsVariable.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const tableConsumesRows = new RegExp(
+        `<[^>]*(?:Table|Grid|Canvas)[^>]*\\b(?:rows|data|items|records)\\s*=\\s*\\{\\s*${escapedRowsVariable}\\s*\\}`,
+        'is',
+      );
+      return tableConsumesRows.test(text);
+    });
+  const boundTableRowsCleared = hasBoundTableRowsClearSignal(text, recordReadGate, emptyRows);
+
+  return directTableRows.test(text) || guardedRowsBoundToTable || boundTableRowsCleared;
+}
+
+function hasBoundTableRowsClearSignal(text, recordReadGate, emptyRows) {
+  const tableRowsBinding = /<[^>]*(?:Table|Grid|Canvas)[^>]*\b(?:rows|data|items|records)\s*=\s*\{\s*([A-Za-z_$][\w$]*)(?:\s*\.\s*((?:rows|data|items|records)))?\s*\}/gi;
+
+  return [...text.matchAll(tableRowsBinding)].some((match) => {
+    const rowSource = match[1];
+    const escapedRowSource = rowSource.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const rowSourceHasProperty = Boolean(match[2]);
+    const clearExpression = rowSourceHasProperty
+      ? String.raw`\b${escapedRowSource}\s*(?:\?\.)?\.\s*(?:clear|reset)\s*\(`
+      : String.raw`\b(?:set|clear|reset)${rowSource[0].toUpperCase()}${rowSource.slice(1)}\s*\(\s*${emptyRows}`;
+    const guardedClear = new RegExp(
+      String.raw`\bif\s*\(\s*!\s*${recordReadGate}\s*\)[\s\S]{0,180}${clearExpression}`,
+      'is',
+    );
+    return guardedClear.test(text);
+  });
 }
 
 function hasRecordEntryEditableFieldCountGate(text, {

@@ -83,13 +83,23 @@ assert.match(
 );
 assert.match(
   permissionSkill,
-  /metadata:\s*\n\s*version:\s*0\.2\.3/,
-  'make-app-permission must use the planned 0.2.3 contract revision',
+  /metadata:\s*\n\s*version:\s*0\.2\.6/,
+  'make-app-permission must use the 0.2.6 read-derived create-field contract revision',
 );
 assert.match(
   permissionBundle,
-  /createFields[\s\S]{0,1200}meta\.field\.create[\s\S]{0,1200}creatable/i,
-  'create fields must be the createFields and meta.field.create creatable intersection',
+  /meta\.entity\.read[\s\S]{0,1000}(导航|navigation)[\s\S]{0,1000}meta\.field\.read[\s\S]{0,1000}(表头|headers|columns|列)[\s\S]{0,1000}data\.record\.read/i,
+  'entity navigation, table headers, and record data must use independent meta.entity/meta.field/data.record read gates',
+);
+assert.match(
+  permissionBundle,
+  /createFields[\s\S]{0,1200}meta\.field\.read[\s\S]{0,1200}(creatable|readonly|editable|partialMask|fullMask|\*)/i,
+  'create fields must be the createFields and meta.field.read create-state intersection',
+);
+assert.match(
+  permissionBundle,
+  /meta\.field\.create[^\n]*(not a platform permission point|不是平台权限点|must not be required)/i,
+  'meta.field.create must be documented as an unsupported create-field permission point',
 );
 assert.match(
   boundaries,
@@ -130,6 +140,11 @@ assert.match(
   'permission audit must reject obvious fieldAccess state-array stringification',
 );
 assert.match(
+  permissionAudit,
+  /entity_route_not_gated_by_meta_entity_read[\s\S]{0,800}entity_navigation_not_gated_by_meta_entity_read[\s\S]{0,800}table_headers_tied_to_record_read[\s\S]{0,800}record_rows_not_cleared_on_read_revoke/i,
+  'permission audit must reject missing entity route guards, record-read header gates, and stale record rows',
+);
+assert.match(
   permissionTesting,
   /(default test|默认测试|CI|publish gate|发布校验)[\s\S]{0,500}(audit|审计)[\s\S]{0,500}(conformance|一致性)/i,
   'host automation must continuously invoke both permission gates',
@@ -153,16 +168,19 @@ for (const findingKind of ['source_only', 'installed_only', 'content_mismatch'])
 }
 for (const conformanceCase of [
   'operation_create_absent_must_deny',
+  'entity_metadata_read_is_independent_from_record_read',
   'named_entity_permission_does_not_leak',
   'invalid_requested_identifiers_fail_closed',
   'operation_global_permission_wildcard_allows',
   'operation_segment_permission_wildcard_allows',
-  'operation_deny_does_not_deny_create_field_dimension',
-  'create_field_deny_does_not_deny_record_create_operation',
+  'operation_deny_does_not_deny_read_derived_create_field',
+  'read_field_deny_does_not_deny_record_create_operation',
   'entity_resource_wildcard_matches',
   'parent_and_global_resources_match',
-  'field_dimensions_are_independent',
-  'record_create_field_access_does_not_grant_meta_create',
+  'create_field_uses_meta_field_read_dimension',
+  'read_dimension_access_states',
+  'record_create_field_access_does_not_grant_meta_read',
+  'legacy_meta_field_create_does_not_grant_create_field',
   'explicit_null_field_access_fails_closed',
   'invalid_field_access_state_fails_closed',
   'valid_field_access_state_lists_are_preserved',
@@ -193,8 +211,8 @@ for (const conformanceCase of [
 }
 assert.match(
   permissionBundle,
-  /(independent|独立)[^\n]*(creatable|可新建)[^\n]*(visible|可见)[^\n]*(editable|可编辑)|(creatable|可新建)[^\n]*(visible|可见)[^\n]*(editable|可编辑)[^\n]*(independent|独立)/i,
-  'creatable, visible, and editable field permissions must be independent',
+  /(create|新建)[^\n]*(visibility|可见)[^\n]*(editability|可编辑)[^\n]*(separate|独立)|(separate|独立)[^\n]*(create|新建)[^\n]*(visibility|可见)[^\n]*(editability|可编辑)/i,
+  'create, visible, and editable field sets must remain separate',
 );
 assert.match(
   permissionBundle,
@@ -218,8 +236,8 @@ assert.match(
 );
 assert.match(
   permissionBundle,
-  /data\.record\.create[^\n]*meta\.field\.create[^\n]*(independent|独立)|meta\.field\.create[^\n]*data\.record\.create[^\n]*(independent|独立)/i,
-  'record create and field create permissions must be independent',
+  /data\.record\.create[^\n]*meta\.field\.read[^\n]*(separate|independent|独立)|meta\.field\.read[^\n]*data\.record\.create[^\n]*(separate|independent|独立)/i,
+  'record create and read-derived create-field permissions must be independent',
 );
 assert.match(
   runtime,
@@ -269,8 +287,8 @@ assert.match(
 
 assert.match(
   principalPermission,
-  /permissionKey[^\n]*meta\.field\.create[\s\S]{0,600}fieldAccess[\s\S]{0,300}creatable/,
-  'principal permission response must show creatable fieldAccess on meta.field.create',
+  /permissionKey[^\n]*meta\.field\.read[\s\S]{0,600}fieldAccess[\s\S]{0,300}creatable/,
+  'principal permission response must show creatable fieldAccess on meta.field.read',
 );
 assert.doesNotMatch(
   principalPermission,
@@ -280,12 +298,12 @@ assert.doesNotMatch(
 
 assert.match(
   permissionTesting,
-  /data\.record\.create[^\n]*deny[^\n]*meta\.field\.create[^\n]*allow[^\n]*(operation no|操作拒绝)[^\n]*(field yes|字段允许)/i,
+  /data\.record\.create[^\n]*deny[^\n]*meta\.field\.read[^\n]*allow[^\n]*(operation no|操作拒绝)[^\n]*(field yes|字段允许)/i,
   'testing guidance must keep operation deny independent from create-field allow',
 );
 assert.match(
   permissionTesting,
-  /data\.record\.create[^\n]*allow[^\n]*meta\.field\.create[^\n]*deny[^\n]*(operation yes|操作允许)[^\n]*(field no|字段拒绝)/i,
+  /data\.record\.create[^\n]*allow[^\n]*meta\.field\.read[^\n]*deny[^\n]*(operation yes|操作允许)[^\n]*(field no|字段拒绝)/i,
   'testing guidance must keep create-field deny independent from record-create allow',
 );
 assert.doesNotMatch(
