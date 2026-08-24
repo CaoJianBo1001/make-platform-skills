@@ -96,6 +96,19 @@ Default create/edit field span mapping:
 | `TextArea`, long text, URL/link, `File`, `Lookup`, relation/association selector, rich custom control | full row |
 | `ID`, generated, readonly-only fields | usually omit from create/edit; if shown in edit, one column unless value is long |
 
+## Zero-field state
+
+For create, edit, and detail, derive the mode-specific renderable field collection after permission and host-capability filtering. Create uses authorized and create-capable fields; edit and detail use visible, renderable fields. A zero editable set does not trigger this state while visible read-only fields remain.
+
+When the renderable field collection is empty:
+
+- create: show `暂无可新建字段`, disable save/submit, and keep close available
+- edit and detail: show the host equivalent of `暂无可展示字段` and keep their non-mutating header/close actions available
+- render only the empty state in the available Drawer body; center it horizontally and vertically
+- do not render the field grid, form panel, detail panel, section panel/card, placeholder `Form.Item`, border, shadow, padding-only shell, or fixed minimum-height field wrapper
+
+The form provider may remain mounted when the host needs it for lifecycle consistency, but it must not produce visible empty form chrome.
+
 Field-metadata-driven Make forms:
 
 - consume host-provided field metadata before rendering create/edit Drawer fields
@@ -137,6 +150,8 @@ Read-only information can use:
 - description list
 - information grid
 - sectioned cards or panels
+
+Apply the zero-field state above before selecting a detail grid, list, card, or panel. An empty detail field collection is not a reason to render an empty bordered container.
 
 Use horizontal label/value alignment by default on desktop:
 
