@@ -20,6 +20,9 @@ const skill = read('skills/make-ai-assistant/SKILL.md');
 const packageIntegration = read('skills/make-ai-assistant/references/package-integration.md');
 const artifactContract = read('skills/make-ai-assistant/references/artifact-contract.md');
 const transportContract = read('skills/make-ai-assistant/references/transport-and-service-contract.md');
+const consoleServiceContract = read(
+  'skills/make-ai-assistant/references/make-console-service-contract.md',
+);
 const uiTemplates = read('skills/make-ai-assistant/references/ui-and-templates.md');
 const testing = read('skills/make-ai-assistant/references/testing-and-pitfalls.md');
 const agentMetadata = read('skills/make-ai-assistant/agents/openai.yaml');
@@ -32,6 +35,7 @@ const skillBundle = [
   packageIntegration,
   artifactContract,
   transportContract,
+  consoleServiceContract,
   uiTemplates,
   testing,
   agentMetadata,
@@ -84,6 +88,26 @@ assert.match(
   /(makeui|make-app-service|make-app-auth|make-app-permission|make-app-runtime)/,
   'skill must define cross-skill handoffs',
 );
+assert.match(
+  skill,
+  /(Adapter|适配器).{0,80}(选择|selection)[\s\S]{0,1000}(Make Console|make-console)[\s\S]{0,1000}(Make App|make-app)/i,
+  'skill must require an adapter selection gate before implementation',
+);
+assert.match(
+  skill,
+  /(已配置|configured)[\s\S]{0,500}(Agent|Agent Gateway)[\s\S]{0,500}(make-console|Make Console)/i,
+  'configured Console Agent or Agent Gateway must select the make-console adapter',
+);
+assert.match(
+  skill,
+  /(未确认|unconfirmed|cannot confirm|neither)[\s\S]{0,500}(停止|stop|ask|确认)/i,
+  'skill must stop for confirmation when neither adapter contract is confirmed',
+);
+assert.match(
+  skill,
+  /(页面|page)[\s\S]{0,300}(Make App)[\s\S]{0,300}(不得|must not|不能)[\s\S]{0,300}(默认|default)[\s\S]{0,300}(make-app|Make App)/i,
+  'a Make App page alone must not default the integration to the make-app adapter',
+);
 
 assert.match(
   packageIntegration,
@@ -99,6 +123,11 @@ assert.match(
   packageIntegration,
   /(demo|mock|testing)[\s\S]*(only|仅)[\s\S]*(开发|测试|演示|非生产)/i,
   'package integration must keep mock/demo transport out of production semantics',
+);
+assert.match(
+  packageIntegration,
+  /recipes\.json[\s\S]*(capabilities\.json|capabilities)[\s\S]*(selected|选中|adapter|适配器)/i,
+  'package integration must require selected-adapter recipes and capabilities metadata when published',
 );
 
 assert.match(
@@ -172,6 +201,42 @@ assert.match(
   /(Cookie|Authorization|token|令牌)[\s\S]*(不得|不要|must not)[\s\S]*(log|日志|UI|前端)/i,
   'transport contract must protect credentials and avoid UI token handling/logging',
 );
+assert.match(
+  transportContract,
+  /make-console-service-contract\.md/,
+  'transport contract must route Console integrations to their dedicated service contract',
+);
+
+assert.match(
+  consoleServiceContract,
+  /(Agent 查询|Agent query)[\s\S]*(Session|会话)[\s\S]*(持久事件|durable event)[\s\S]*(发送消息|send message)[\s\S]*(Run SSE|run stream)/i,
+  'Console BFF must allow only Agent query, Session, durable-event, send-message, and Run-SSE operations',
+);
+assert.match(
+  consoleServiceContract,
+  /(白名单|allowlist)[\s\S]*(跨 App|cross-app)[\s\S]*(未知路径|unknown path)[\s\S]*(查询参数|query)[\s\S]*(请求体|body)/i,
+  'Console BFF must reject cross-App, unknown-path, invalid-query, and invalid-body input before proxying',
+);
+assert.match(
+  consoleServiceContract,
+  /(稳定|stable)[\s\S]*(错误|error)[\s\S]*(不得|must not|never|not)[\s\S]*(诊断|diagnostic|upstream body)/i,
+  'Console BFF must map upstream failures to stable errors without exposing diagnostics',
+);
+assert.match(
+  consoleServiceContract,
+  /(Run SSE|run stream)[\s\S]*(text\/event-stream|SSE)[\s\S]*(only|仅|只能)/i,
+  'only the Console Run operation may return SSE',
+);
+assert.match(
+  consoleServiceContract,
+  /(headers (?:are )?sent|已写入|首帧|first frame)[\s\S]*(关闭|close)[\s\S]*(JSON|error middleware|错误中间件)/i,
+  'Console SSE failures after the first frame must close the stream instead of writing JSON',
+);
+assert.match(
+  consoleServiceContract,
+  /(client disconnect|客户端断开)[\s\S]*(AbortSignal|abort|中止)[\s\S]*(upstream|上游)/i,
+  'Console BFF must abort upstream Run work after client disconnect',
+);
 
 assert.match(
   uiTemplates,
@@ -209,6 +274,21 @@ assert.match(
   /(pitfall|陷阱|常见回归)[\s\S]*(Markdown|capabilities|history|demo|mock)/i,
   'testing guidance must list common pitfalls around markdown, capabilities, history, and demo/mock',
 );
+assert.match(
+  testing,
+  /(错误适配器|wrong adapter)[\s\S]*(错误路由|wrong route|route)/i,
+  'testing guidance must require a regression test for wrong adapter and route selection',
+);
+assert.match(
+  testing,
+  /(首帧|first frame)[\s\S]*(断流|stream failure|upstream)[\s\S]*(关闭|close)/i,
+  'testing guidance must cover Console SSE failure after the first frame',
+);
+assert.match(
+  testing,
+  /(既有|existing)[\s\S]*(页面|路由|page|route)[\s\S]*(render|渲染|lint|typecheck|build)/i,
+  'testing guidance must require a render or equivalent smoke check for the modified host route',
+);
 
 assert.match(
   agentMetadata,
@@ -234,6 +314,30 @@ assert.match(
   service,
   /Make AI 助手|make-ai-assistant|Artifact/i,
   'make-app-service must hand assistant protocol details to make-ai-assistant',
+);
+assert.match(
+  service,
+  /(make-app|Make App)[\s\S]{0,300}(only|仅|已选择|selected)[\s\S]{0,300}\/api\/make\/app\/ai/i,
+  'make-app-service must present /api/make/app/ai routes as Make App adapter-only',
+);
+assert.match(
+  service,
+  /(make-console|Make Console)[\s\S]{0,500}(通用代理|generic proxy|不得|must not)/i,
+  'make-app-service must prevent Console work from becoming a generic proxy',
+);
+const consoleContractReferences = [
+  ...service.matchAll(/`[^`]*make-console-service-contract\.md`/g),
+].map(([reference]) => reference);
+assert.ok(
+  consoleContractReferences.length >= 2,
+  'make-app-service must reference the Console BFF contract wherever it documents Console routes',
+);
+assert.ok(
+  consoleContractReferences.every(
+    (reference) =>
+      reference === '`make-ai-assistant/references/make-console-service-contract.md`',
+  ),
+  'make-app-service must use the fully qualified make-ai-assistant Console contract reference',
 );
 
 console.log('make-ai-assistant contract passed');

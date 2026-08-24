@@ -2,11 +2,17 @@
 
 ## Host boundary
 
-The UI consumes an `AssistantTransport`. The host decides how to implement that
-transport with Make App, Make Console, or another Agent Gateway. The package must
-not hard-code URLs, cookies, tokens, tenants, or gateway domains.
+The UI consumes an `AssistantTransport`. Select the adapter before defining any
+route. This reference is only for the confirmed `make-app` / Make App AI Chat
+adapter. A configured or queryable Console Agent, or an explicit Agent Gateway
+request, selects `make-console` and requires
+`references/make-console-service-contract.md` instead. The package must not
+hard-code URLs, cookies, tokens, tenants, or gateway domains.
 
-For Make App pages, prefer same-origin Service routes under:
+## Make App adapter routes
+
+For a confirmed Make App AI Chat backend contract, use same-origin Service routes
+under:
 
 ```text
 POST /api/make/app/ai/chats/locate
@@ -15,10 +21,17 @@ POST /api/make/app/ai/chats/:chatId/messages
 GET  /api/make/app/ai/chats/:chatId/events?responseId=<responseId>&cursor=<cursor>
 ```
 
-Service may proxy these to Agent Gateway, but UI still calls the host's
-authenticated request boundary. UI must not call Make data/model APIs directly.
+Service may proxy these to the confirmed App AI backend, but UI still calls the
+host's authenticated request boundary. UI must not call Make data/model APIs
+directly. Do not use this route family for the `make-console` adapter, and do not
+select it solely because the UI page is a Make App page.
 
-## Domain configuration
+Before implementation, read the selected adapter's public `recipes.json` recipe
+and matching `capabilities.json` entry. Add a test that rejects a wrong adapter
+or route family; it must fail if Console code creates the Make App adapter or
+calls `/api/make/app/ai/**`.
+
+## Make App adapter domain configuration
 
 Use the host's existing Make Gateway origin configuration instead of creating an
 assistant-only domain variable:
@@ -32,7 +45,7 @@ assistant-only domain variable:
   `/app/ai`, `/console`, `/meta`, `/data`, or another service path in the base
   URL.
 
-The adapter owns the service scope:
+The Make App adapter owns this service scope:
 
 - Browser-facing and same-origin UI routes use `/api/make/app/ai/**`.
 - Local preview that talks to a public gateway origin also uses
@@ -45,7 +58,7 @@ App ids, Agent ids, or local callback domains. If an environment needs a
 different gateway origin, configure it through the runtime/config layer owned by
 `make-app-service` and `make-app-runtime`.
 
-Recommended config shape:
+Recommended Make App adapter config shape:
 
 ```ts
 type MakeAiAssistantGatewayConfig = {

@@ -9,7 +9,14 @@
 3. Read package docs from `package.ai.json`:
    - `node_modules/@qfei-design/make-ai-assistant/package.ai.json`
    - every file listed in `package.ai.json.readOrder`
-4. Import only public entrypoints:
+4. Before building a transport, select the adapter under `SKILL.md` and read the
+   selected public recipe from `recipes.json` plus its matching capability entry
+   from `capabilities.json`. These files define which adapter operations, route
+   shapes, SSE events, and feature flags are actually published. If the selected
+   adapter or its required recipe/capability metadata is unavailable, report the
+   package version and stop for confirmation; do not infer it from package source
+   or the host page type.
+5. Import only public entrypoints:
    - `@qfei-design/make-ai-assistant`
    - `@qfei-design/make-ai-assistant/react`
    - `@qfei-design/make-ai-assistant/sse`
@@ -21,6 +28,18 @@
 Do not import package `src`, `dist`, examples, gallery files, or other internal
 paths. Do not copy package templates, reducers, SSE parsers, state machines, or
 CSS into the host.
+
+The selected adapter is a backend capability choice, not a UI framework choice:
+
+- a configured/queryable Console Agent or an explicit Agent Gateway request uses
+  `@qfei-design/make-ai-assistant/make-console`;
+- a confirmed Make App AI Chat backend contract uses
+  `@qfei-design/make-ai-assistant/make-app`;
+- a Make App page alone does not select `make-app`.
+
+Add a regression test that rejects the wrong adapter and route family. In
+particular, a Console selection must not instantiate the Make App adapter or call
+`/api/make/app/ai/**`.
 
 ## Public React surfaces
 

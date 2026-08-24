@@ -4,8 +4,8 @@
 
 Use TDD / Test first for non-trivial assistant changes:
 
-1. Add failing tests for the expected package import, context, transport, Artifact
-   shape, or UI behavior.
+1. Add failing tests for the expected package import, selected adapter/route
+   family, context, transport, Artifact shape, or UI behavior.
 2. Implement the smallest change.
 3. Add regression checks around cancellation, stale responses, history restore,
    permissions, and error rendering.
@@ -22,6 +22,11 @@ Package integration:
 
 Transport:
 
+- adapter selection test: a configured/queryable Console Agent or explicit Agent
+  Gateway request selects `make-console`; a confirmed Make App AI Chat contract
+  selects `make-app`; neither contract stops for confirmation
+- wrong adapter / wrong route regression: Console code cannot construct the Make
+  App adapter or call `/api/make/app/ai/**`
 - locate, history, send, and events use the host authenticated request boundary
 - send request includes stable `messageId`
 - capabilities are included or explicitly documented as unsupported
@@ -47,6 +52,10 @@ UI:
 - current user name/avatar and `privacyNotice` render when provided
 - suggestions can be customized or hidden
 - action intents call host handlers and permission failures are visible
+- when an existing host page or route changes, run lint/typecheck or a build that
+  catches missing imports and undefined Hook references; also run a page-level
+  render/smoke test when the host test setup supports it. Cover the assistant
+  mount, newly added Hook/callback imports, prop chain, and first paint state.
 
 Service:
 
@@ -54,6 +63,14 @@ Service:
 - unsafe browser writes enforce same-origin checks
 - upstream error codes map to stable UI messages
 - logs redact Cookie, Authorization, token, and sensitive payload data
+- for `make-console`, use the five-operation BFF allowlist from
+  `make-console-service-contract.md`; reject cross-App input, unknown paths,
+  repeated/unknown query parameters, and illegal request bodies before proxying
+- Console upstream failures expose stable errors only; they never expose upstream
+  diagnostics or raw response bodies
+- only Console Run SSE returns `text/event-stream`; an upstream failure after the
+  first frame closes the stream without JSON error middleware, and client
+  disconnect aborts the upstream run
 
 ## Common pitfalls
 
@@ -76,3 +93,10 @@ Service:
   reusable package or Skill guidance.
 - Replacing the package registry with host-specific one-off render switches that
   cannot be reused across Make Apps.
+- Selecting `make-app` only because the page is a Make App page. Adapter choice
+  follows the confirmed backend capability, not the UI container.
+- Treating Console as a generic proxy. Its Agent query, Session, durable event,
+  send message, and Run SSE operations require an explicit allowlist and separate
+  JSON/SSE error handling.
+- Letting a Run SSE upstream failure after its first frame flow into JSON error
+  middleware. Close the stream instead.

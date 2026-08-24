@@ -2,7 +2,7 @@
 name: make-ai-assistant
 description: "Use when integrating, generating, refactoring, reviewing, or debugging 助手 / AI助手 / MakeAI AI 助手 / Make AI 助手 / AI 对话框 with @qfei-design/make-ai-assistant, Artifact, SSE, Agent Gateway, make-ai-assistant 包, including floating assistant launcher, AssistantPanel/ArtifactRenderer, Artifact V1 templates, capabilities negotiation, Make App adapter, Make Console adapter, history restore, mock/demo transport, user identity/avatar, privacyNotice, action intents, interface domain configuration, and tests. Does not own generic dialogs, business Agent prompts, model reasoning, Make data APIs, auth policy, runtime packaging, DSL modeling, Make CLI execution, or project-specific analytics."
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # make-ai-assistant
@@ -23,34 +23,50 @@ their implementation surfaces.
 2. Install or upgrade `@qfei-design/make-ai-assistant`. Read its
    `package.ai.json` first, parse `package.ai.json.readOrder`, read every
    declared file in order, and use only public exports plus `styles.css`.
-3. Choose the host surface:
+3. Select the adapter before writing transport or Service code. Read the selected
+   adapter's public `recipes.json` and `capabilities.json` entry in addition to
+   `package.ai.json.readOrder`:
+   - Select `make-console` when a Console Agent is already configured, the user
+     names Agent Gateway, or the environment can query the Console Agent list.
+     Read `references/make-console-service-contract.md`.
+   - Select `make-app` only when the host has a confirmed Make App AI Chat
+     backend contract. Read `references/transport-and-service-contract.md`.
+   - A page being a Make App page must not default the adapter to `make-app`.
+     When both are available, use the explicitly requested backend; otherwise
+     prefer the configured/queryable Console Agent.
+   - When neither contract is confirmed, stop implementation and ask for the
+     backend choice. Do not guess an adapter, route family, Agent id, or gateway
+     path from the host page type.
+4. Choose the host surface:
    - `MakeAiAssistant` for the package default floating launcher and assistant panel.
    - `AssistantPanel` for an embedded panel inside an existing surface.
    - `ArtifactRenderer` only when rendering one Artifact outside the full chat UI.
-4. Pass a complete host context: App identity, location, optional resource,
+5. Pass a complete host context: App identity, location, optional resource,
    optional selection, locale, timezone, and safe extension metadata. Context is
    for understanding the workspace, not for authorization.
-5. Use the host's authenticated request boundary to build a transport. UI must
+6. Use the host's authenticated request boundary to build a transport. UI must
    not call Make data/model APIs directly, store tokens, or construct raw gateway
    credentials.
-6. Configure assistant API domains through the host Service/runtime contract:
+7. Configure assistant API domains through the host Service/runtime contract:
    browser calls remain same-origin, while Service reads the unified Make Gateway
    origin and owns the upstream service path.
-7. Negotiate Artifact support. The request or run context must tell the backend
+8. Negotiate Artifact support. The request or run context must tell the backend
    the frontend-supported `schemaVersion`, `artifactKinds`, and template ids.
-8. Require the backend or adapter to return structured Artifact results. Do not
+9. Require the backend or adapter to return structured Artifact results. Do not
    infer components from Markdown, headings, tables, or natural-language text.
-9. Render with the package registry. Backend returns semantic `kind` plus data;
+10. Render with the package registry. Backend returns semantic `kind` plus data;
    frontend chooses a whitelisted renderer by `kind`, optional
    `presentation.template`, `canRender`, and priority.
-10. Wire Artifact actions as intents such as `open-record`, `open-list`,
+11. Wire Artifact actions as intents such as `open-record`, `open-list`,
    `navigate`, or `invoke`. The host validates permission and maps each intent to
    routes or service actions.
-11. Preserve history. If a live answer contains Artifacts, refreshed history must
+12. Preserve history. If a live answer contains Artifacts, refreshed history must
     restore the same Artifact snapshots, not only assistant text.
-12. Add tests before implementation for package imports, context, transport,
-    SSE event order, Artifact validation, history restore, action handling,
-    demo isolation, and permission/auth failure states.
+13. Add tests before implementation for adapter selection, package imports,
+    context, transport, SSE event order, Artifact validation, history restore,
+    action handling, demo isolation, and permission/auth failure states. For an
+    existing host page or route, also run lint/typecheck or a build and a
+    page-level render/smoke check when the host test setup supports one.
 
 ## Topic reference map
 
@@ -58,7 +74,8 @@ their implementation surfaces.
 | --- | --- |
 | Package install, public imports, React components, props, demo mode | `references/package-integration.md` |
 | Artifact V1 kinds, capability negotiation, template hints, actions | `references/artifact-contract.md` |
-| Make App/Console transport, Service proxy, SSE, history restore | `references/transport-and-service-contract.md` |
+| Adapter selection, Make App AI Chat transport, history restore | `references/transport-and-service-contract.md` |
+| Make Console Agent/Session/events/message/Run SSE BFF | `references/make-console-service-contract.md` |
 | Launcher/panel UI, host context, display templates, custom registry | `references/ui-and-templates.md` |
 | TDD, smoke checks, common regressions and readiness blockers | `references/testing-and-pitfalls.md` |
 | Page shell, launcher placement, surrounding layout, responsive behavior | Use `makeui` |
@@ -110,6 +127,13 @@ their implementation surfaces.
 - Safe boundary logs are required for Service/transport entry, success, failure,
   stale result, and cancellation branches. Never log cookies, tokens,
   Authorization, raw prompts with sensitive data, or full private record payloads.
+- Never select `make-app` merely because the host UI is a Make App. Adapter
+  selection is a backend capability decision: a configured/queryable Console
+  Agent or an explicit Agent Gateway request selects `make-console`; a confirmed
+  Make App AI Chat contract selects `make-app`; otherwise stop for confirmation.
+- Do not implement a generic Console proxy. Console BFF routes, query/body
+  validation, error mapping, SSE lifecycle, and disconnect cancellation must
+  follow `references/make-console-service-contract.md`.
 
 ## Handoffs
 
@@ -117,8 +141,10 @@ their implementation surfaces.
   assistant panel/container sizing, responsive behavior, and surrounding visual polish.
   This Skill owns assistant package integration and Artifact rendering semantics.
 - With `make-app-service`: this Skill defines assistant route and payload
-  contracts. Service owns route handlers, gateway proxying, request validation,
-  upstream error mapping, AbortSignal propagation, and safe logs.
+  contracts after adapter selection. Service owns route handlers, adapter-specific
+  proxying, request validation, upstream error mapping, AbortSignal propagation,
+  and safe logs. `make-app` uses its confirmed App AI Chat contract;
+  `make-console` uses the fixed Console BFF contract and is never a generic proxy.
 - With `make-app-auth`: auth owns unified login, cookies, redirects, and
   authenticated request wrappers. This Skill consumes those wrappers and must not
   introduce token handling in UI.
