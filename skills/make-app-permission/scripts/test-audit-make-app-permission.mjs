@@ -24,7 +24,6 @@ try {
       export const DATA_RECORD_UPDATE = 'data.record.update';
       export const DATA_RECORD_DELETE = 'data.record.delete';
       export const META_ENTITY_READ = 'meta.entity.read';
-      export const META_FIELD_CREATE = 'meta.field.create';
       export const META_FIELD_READ = 'meta.field.read';
       export const META_FIELD_UPDATE = 'meta.field.update';
       function evaluateOperation(access, entityKey, permissionKey) {
@@ -40,7 +39,7 @@ try {
         return Boolean(entityKey && permissionKey && states.length > 0);
       }
       export function canUseEntityOperation(access, entityKey, permissionKey) { return evaluateOperation(access, entityKey, permissionKey); }
-      export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_CREATE); }
+      export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_READ); }
       export function canReadEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_READ); }
       export function canUpdateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_UPDATE); }
       export function creatableFieldKeysForEntity(access, entityKey, fields) { return new Set(fields.map((field) => field.key)); }
@@ -527,7 +526,7 @@ try {
     app: goodFiles.app,
     permissionModel: goodFiles.permissionModel
       .replace('return evaluateOperation(access, entityKey, permissionKey);', 'return true;')
-      .replace('return evaluateField(access, entityKey, fieldKey, META_FIELD_CREATE);', 'return true;')
+      .replace('export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_READ); }', 'export function canCreateEntityField() { return true; }')
       .replace('return evaluateField(access, entityKey, fieldKey, META_FIELD_READ);', 'return true;')
       .replace('return evaluateField(access, entityKey, fieldKey, META_FIELD_UPDATE);', 'return true;'),
     router: goodFiles.router,
@@ -903,7 +902,7 @@ try {
   const missingCreateFieldHelperRoot = createFixture('missing-create-field-helper', {
     app: goodFiles.app,
     permissionModel: goodFiles.permissionModel
-      .replace('export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_CREATE); }', '')
+      .replace('export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_READ); }', '')
       .replace('export function creatableFieldKeysForEntity(access, entityKey, fields) { return new Set(fields.map((field) => field.key)); }', ''),
     router: goodFiles.router,
     page: goodFiles.page
@@ -922,7 +921,7 @@ try {
   const createFieldHelperUsesRecordOperationRoot = createFixture('create-helper-uses-record-operation', {
     app: goodFiles.app,
     permissionModel: goodFiles.permissionModel.replace(
-      'export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_CREATE); }',
+      'export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_READ); }',
       'export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, DATA_RECORD_CREATE); }',
     ),
     router: goodFiles.router,
@@ -933,6 +932,22 @@ try {
   assert.match(
     runAudit(createFieldHelperUsesRecordOperationRoot, { expectFailure: true }),
     /create_field_permission_uses_record_operation/,
+  );
+
+  const createFieldHelperUsesLegacyMetaCreateRoot = createFixture('create-helper-uses-legacy-meta-create', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace(
+      'export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, META_FIELD_READ); }',
+      "export function canCreateEntityField(access, entityKey, fieldKey) { return evaluateField(access, entityKey, fieldKey, 'meta.field.create'); }",
+    ),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(createFieldHelperUsesLegacyMetaCreateRoot, { expectFailure: true }),
+    /create_field_permission_uses_wrong_field_dimension/,
   );
 
   const editableFieldsCreateRoot = createFixture('editable-fields-create', {

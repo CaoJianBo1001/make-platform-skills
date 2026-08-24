@@ -24,7 +24,7 @@ qfei_update_user
 qfei_update_time
 ```
 
-Apply this guard after the `createFields ∩ meta.field.create.fieldAccess` intersection. The backend remains the final authority and should normally omit these fields from `createFields`; the UI guard is defense in depth for malformed or stale Schema responses.
+Apply this guard after the `createFields ∩ meta.field.read.fieldAccess` intersection. The backend remains the final authority and should normally omit these fields from `createFields`; the UI guard is defense in depth for malformed or stale Schema responses.
 
 Do not exclude a business field merely because its key contains `create`, `update`, `user`, or `time`. When the platform adds a real system type or audit key, update this reference, the host guard, and the conformance suite together.
 

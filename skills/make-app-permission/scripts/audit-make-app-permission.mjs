@@ -1,12 +1,12 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.5
+// make-app-permission contract version: 0.2.6
 import fs from 'node:fs';
 import path from 'node:path';
 
 const USAGE = `Usage:
   node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 
-Checks Make App single-app permission enforcement, including independent creatable/readable/editable fields. This is a static contract audit; it does not replace Service/UI tests.`;
+Checks Make App single-app permission enforcement, including create operations and read-derived create fields. This is a static contract audit; it does not replace Service/UI tests.`;
 
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
@@ -121,7 +121,7 @@ function checkUiContract() {
   if (!/meta\.entity\.read/.test(uiRuntimeText)) {
     failures.push('entity_metadata_permission_key_missing: UI permission model must include meta.entity.read for entity navigation and routes');
   }
-  for (const key of ['create', 'read', 'update']) {
+  for (const key of ['read', 'update']) {
     if (!new RegExp(`meta\\.field\\.${key}`).test(uiRuntimeText)) {
       failures.push(`field_permission_key_missing_${key}: UI permission model must include meta.field.${key}`);
     }
@@ -137,7 +137,7 @@ function checkUiContract() {
     failures.push('field_edit_helper_missing: UI must evaluate field editability from meta.field.update');
   }
   if (!/(canCreateEntityField|creatableFieldKeysForEntity)/.test(uiRuntimeText)) {
-    failures.push('create_field_permission_helper_missing: UI must evaluate create fields from meta.field.create fieldAccess');
+    failures.push('create_field_permission_helper_missing: UI must evaluate create fields from meta.field.read fieldAccess');
   }
   if (
     ['canUseEntityOperation', 'canCreateEntityField', 'canReadEntityField', 'canUpdateEntityField']
@@ -154,9 +154,9 @@ function checkUiContract() {
   if (!namedFunctionUsesPermissionKey(
     uiRuntimeText,
     'canCreateEntityField',
-    /(?:META_FIELD_CREATE|meta\.field\.create)/,
+    /(?:META_FIELD_READ|meta\.field\.read)/,
   )) {
-    failures.push('create_field_permission_key_missing: create-field permission must use meta.field.create');
+    failures.push('create_field_permission_key_missing: create-field permission must use meta.field.read');
   }
   if (namedFunctionUsesPermissionKey(
     uiRuntimeText,
@@ -168,9 +168,9 @@ function checkUiContract() {
   if (namedFunctionUsesPermissionKey(
     uiRuntimeText,
     'canCreateEntityField',
-    /(?:META_FIELD_(?:READ|UPDATE)|meta\.field\.(?:read|update))/,
+    /(?:META_FIELD_(?:CREATE|UPDATE)|meta\.field\.(?:create|update))/,
   )) {
-    failures.push('create_field_permission_uses_wrong_field_dimension: create-field permission must use meta.field.create, not meta.field.read/update');
+    failures.push('create_field_permission_uses_wrong_field_dimension: create-field permission must use meta.field.read, not meta.field.create/update');
   }
   if (!/createFields/.test(uiRuntimeText)) {
     failures.push('create_fields_contract_missing: UI schema and create form must preserve and consume createFields');
