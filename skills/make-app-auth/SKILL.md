@@ -92,7 +92,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - Service-fronted unified-login mode: `references/service-fronted-mode.md`
 - 401, 403, and logout behavior: `references/logout-and-401.md`
 - Auth incident diagnosis: `references/troubleshooting.md`
-- Minimal Service-fronted sample project: `examples/service-fronted-node/`; use only as a reference shape after reading `references/service-fronted-mode.md`.
+- Minimal Service-fronted route-shape example: `references/service-fronted-node-example.md`; read it only after `references/service-fronted-mode.md`.
 
 ## Deterministic Checks
 

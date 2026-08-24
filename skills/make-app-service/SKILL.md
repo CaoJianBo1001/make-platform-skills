@@ -11,7 +11,7 @@ Use this skill for Make App Service API work in `apps/service`.
 
 `make-app-service` owns the Service API contract between `apps/ui` and `apps/service`, thin Make Data API orchestration, Service route shape, Make adapter runtime config semantics, request/response normalization, Service-side validation, error mapping, boundary logging, and Service API tests.
 
-It does not own record-action behavior (`make-app-actions`), sorting behavior (`make-app-sort`), filtering behavior (`make-app-filter`), grouping behavior (`make-app-group`), UI layout (`makeui`), authentication implementation (`make-app-auth`), single-app permission logic (`make-app-permission`), runtime build/start contracts (`make-app-runtime`), DSL modeling (`makedsl`), Make CLI execution (`makecli`), or CanvasTable rendering/editing (`canvas-table-integration`).
+It does not own record-action behavior (`make-app-actions`), sorting behavior (`make-app-sort`), filtering behavior (`make-app-filter`), grouping behavior (`make-app-group`), Make AI 助手 Artifact/transport semantics (`make-ai-assistant`), UI layout (`makeui`), authentication implementation (`make-app-auth`), single-app permission logic (`make-app-permission`), runtime build/start contracts (`make-app-runtime`), DSL modeling (`makedsl`), Make CLI execution (`makecli`), or CanvasTable rendering/editing (`canvas-table-integration`).
 
 ## Quick start
 
@@ -27,8 +27,9 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 10. If Schema is cached, isolate permission-trimmed results by tenant, principal/session, App, and access generation, and expose explicit invalidation for permission refresh.
 11. For Make record actions, implement the documented `record-write-permission` route before edit UI and the `records/bulk` route for batch edit; use `make-app-actions` for target, permission, and one-request semantics.
 12. For cancellable or supersedable requests, propagate a request-scoped `AbortSignal` from the Service boundary into every downstream adapter; read `references/service-api-contracts.md` before implementation.
-13. Add or update Service tests for every changed route, adapter, validation path, and error path.
-14. Read only the needed reference files from the map below.
+13. If the Service change is for Make AI 助手, AI助手, AI 对话框, Artifact, SSE, Agent Gateway, or `@qfei-design/make-ai-assistant`, use `make-ai-assistant` for the assistant protocol first. Service then implements only the documented route handlers, proxy adapter, config validation, logging, cancellation, and tests.
+14. Add or update Service tests for every changed route, adapter, validation path, and error path.
+15. Read only the needed reference files from the map below.
 
 ## Topic reference map
 
@@ -48,6 +49,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 | Advanced filter package behavior and Preset filter | Use `make-app-filter` |
 | Record grouping, groupable capabilities, Preset group, record-groups, groupFilter | Use `make-app-group` |
 | Record action precheck, strict selection target, one-request batch update | Use `make-app-actions` |
+| Make AI 助手, AI助手, AI 对话框, Artifact, SSE, Agent Gateway, assistant capabilities, interface domain config | Use `make-ai-assistant`; Service owns only route handlers, proxying, validation, logs, cancellation, and runtime config consumption |
 
 ## Scope boundary
 
@@ -59,6 +61,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 - It must not decide build output, Service port, Docker/K8s entrypoint, package scripts, workspace manifests, or publish readiness; those belong to `make-app-runtime`.
 - It must not define business models, entities, field meanings, relations, or DSL YAML; those belong to `makedsl`.
 - It must not decide UI layout, component choice, Drawer layout, or CanvasTable rendering; those belong to `makeui` and `canvas-table-integration`.
+- It must not define Make AI 助手 Artifact kinds, template selection, SSE event semantics, capability negotiation, history Artifact semantics, or action intents; those belong to `make-ai-assistant`.
 - It must not hard-code environment-to-domain mapping. Make API base URL, gateway routing, and secret injection come from runtime config, backend/operations, or Make tooling.
 
 ## Default Service responsibilities
@@ -68,6 +71,7 @@ Generated or refactored Make App Service code should provide these capabilities 
 - public health/config: `/api/health`, `/api/config` for published UI access; `/health` may exist as local or k8s-probe compatibility
 - runtime schema: `/api/schema`, `/api/entities/:entityKey/fields`
 - single-app permissions: `/api/make/app/principal/permission` through `make-app-permission` for generated Make Apps
+- Make AI assistant routes only when requested by the host and specified by `make-ai-assistant`: `/api/make/app/ai/chats/locate`, `/api/make/app/ai/chats/:chatId/messages`, `/api/make/app/ai/chats/:chatId/events`
 - records: list, get, create, update, delete, cell update
 - record actions when the list is writable: row-write permission precheck and one-request batch field update through `make-app-actions`
 - current-user Entity Preset: get and sparse filter/sort update when filtering or sorting is enabled
@@ -97,6 +101,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - If neither `MAKE_API_BASE_URL` nor `MAKE_SERVER_URL` is configured for a Make-backed Service, config loading must fail with a clear non-secret error before the Service is reported ready.
 - Published `MAKE_API_BASE_URL` / `MAKE_SERVER_URL` values are strict k8s gateway origins such as `http://make-gateway.make-dev`. New generated Service code must not put `/make`, `/api/make`, `/meta`, `/data`, `/auth`, or another service path scope in this env var. Local-preview resolve output must be consumed as `make_api_origin`; if older makecli fallback returns or reads a path-scoped public `/api/make` API base, normalize that only inside the local-preview adapter.
 - Make platform adapters own the service path scope. Generated Service code derives upstream URLs from an explicit runtime mode: local preview uses public gateway origin + `/api/make/**`; published uses k8s gateway origin + `/make/**`, such as `http://make-gateway.make-dev/make/meta/**` and `http://make-gateway.make-dev/make/data/**`.
+- For Make AI 助手 routes, follow `make-ai-assistant`: browser and local same-origin paths are `/api/make/app/ai/**`; published Service-to-gateway upstream paths are gateway-origin plus `/make/app/ai/**`. The same strict origin validation applies to `MAKE_API_BASE_URL` / `MAKE_SERVER_URL`; Service source must not configure an assistant-only domain or hard-code Agent Gateway domains.
 - If the same Service calls other gateway services, those adapters define their own explicit service scopes from the same gateway origin. Do not strip `/make` out of `MAKE_API_BASE_URL`, and do not overload a path-scoped base URL to reach unrelated services.
 - Service-to-gateway calls inside the cluster must not use the browser-facing `/api/make` prefix. `/api/make/**` belongs to same-origin browser access, Service ingress, and local-preview public gateway calls; published Service internal upstream URLs use gateway-origin plus `/make`.
 - Service source must not hard-code concrete Make dev/test/prod domains, infer namespace-local gateway addresses, or map deployment environments to domains.
@@ -164,5 +169,6 @@ Lookup relation update routes are optional and should be generated only when the
 - With `make-app-filter`: this skill implements and tests Preset/records routes and Make adapters; `make-app-filter` owns package filter behavior, hydration, and save timing.
 - With `make-app-group`: this skill implements and tests Preset group, record-groups, records groupFilter, and Make adapters; `make-app-group` owns groupable rules, groupFilter composition, grouped data timing, and CanvasTable grouped-flow coordination.
 - With `make-app-actions`: this skill implements and tests `record-write-permission`, `records/bulk`, strict target parsing, Make adapters, and error mapping; `make-app-actions` owns selection intent, action timing, permission-key choice, frozen snapshots, and UI feedback.
+- With `make-ai-assistant`: this skill implements assistant route handlers, proxy adapters, runtime config validation, safe logs, AbortSignal propagation, and Service tests; `make-ai-assistant` owns package integration, Artifact V1, SSE event mapping, capabilities, history restore, action intents, and interface domain rules.
 - With `make-app-auth`: this skill may preserve Service-fronted app route shape, but auth proxy and session behavior stay in auth.
 - With `make-app-runtime`: this skill writes Service source and tests; runtime build/start/port checks stay in runtime.

@@ -7,6 +7,14 @@ const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(process.argv[2] ?? path.join(scriptDir, '..'));
 const skillsDir = path.join(repoRoot, 'skills');
 const MAX_DESCRIPTION_LENGTH = 1024;
+const DESCRIPTION_BOUNDARY_PATTERN = /\b(?:does not|do not)\b|不负责|不覆盖|不适用/i;
+const ALLOWED_SKILL_TOP_LEVEL_ENTRIES = new Set([
+  'SKILL.md',
+  'agents',
+  'references',
+  'scripts',
+  'assets',
+]);
 
 const cleanScalar = (rawValue) => {
   const value = rawValue.trim();
@@ -128,6 +136,21 @@ for (const relativePath of entryFiles) {
     failures.push(
       `${relativePath}: description exceeds ${MAX_DESCRIPTION_LENGTH} characters`,
     );
+  }
+
+  if (description && !DESCRIPTION_BOUNDARY_PATTERN.test(description)) {
+    failures.push(
+      `${relativePath}: description must state an ownership boundary`,
+    );
+  }
+
+  const skillDirectory = path.dirname(absolutePath);
+  for (const entry of fs.readdirSync(skillDirectory, { withFileTypes: true })) {
+    if (!ALLOWED_SKILL_TOP_LEVEL_ENTRIES.has(entry.name)) {
+      failures.push(
+        `${relativePath}: unexpected top-level entry ${entry.name}`,
+      );
+    }
   }
 }
 

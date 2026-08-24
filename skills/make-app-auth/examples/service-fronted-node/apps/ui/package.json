@@ -1,6 +1,0 @@
-{
-  "private": true,
-  "dependencies": {
-    "@qfeius/make-app-auth": "^0.1.3"
-  }
-}
