@@ -23,6 +23,7 @@ try {
       export const DATA_RECORD_CREATE = 'data.record.create';
       export const DATA_RECORD_UPDATE = 'data.record.update';
       export const DATA_RECORD_DELETE = 'data.record.delete';
+      export const META_ENTITY_READ = 'meta.entity.read';
       export const META_FIELD_CREATE = 'meta.field.create';
       export const META_FIELD_READ = 'meta.field.read';
       export const META_FIELD_UPDATE = 'meta.field.update';
@@ -52,6 +53,8 @@ try {
         const { objectKey } = useParams();
         const object = findObjectByKey(schema, objectKey);
         if (!object) return <Result status="404" title="not-found" />;
+        const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);
+        if (!canViewEntity) return <Result status="403" title="forbidden" />;
         return <SchemaObjectPage object={object} />;
       }
       function DefaultObjectRedirect() {
@@ -63,6 +66,7 @@ try {
     page: `
       const { refreshPermissions } = useMdmPermissions();
       const { refreshSchema } = useMakeSchemaEntities();
+      const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);
       const canReadRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_READ);
       const canCreateRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_CREATE);
       const canUpdateRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_UPDATE);
@@ -74,6 +78,7 @@ try {
       const createFormFields = createSchemaFields.filter((field) => creatableFieldKeys.has(field.key));
       const updateEditableFieldKeys = editableFieldKeysForEntity(access, object.entityKey, visibleFields);
       const recordState = useVirtualResourceItems(key, api, { enabled: canReadRecord });
+      const tableRows = canReadRecord ? recordState.items : [];
       function filterDraftByEditableFields(draft) { return Object.fromEntries(Object.entries(draft).filter(([key]) => updateEditableFieldKeys.has(key))); }
       function buildCreatePayload(values) { return Object.fromEntries(Object.entries(values).filter(([key]) => creatableFieldKeys.has(key))); }
       async function submitCreate(values) {
@@ -87,7 +92,8 @@ try {
         if (canUseEntityOperation(nextAccess, object.entityKey, DATA_RECORD_READ)) await recordState.refresh();
       }
       <MasterDataToolbar onCreate={canCreateRecord ? openCreate : undefined} />
-      <MasterDataCanvasTable onDataLoad={canReadRecord ? recordState.loadPage : undefined} onCellEditCommit={canUpdateRecord ? commit : undefined} />
+      <ObjectNavigation object={object} visible={canViewEntity} />
+      <MasterDataCanvasTable columns={visibleFields} rows={tableRows} onDataLoad={canReadRecord ? recordState.loadPage : undefined} onCellEditCommit={canUpdateRecord ? commit : undefined} />
       <Detail onEdit={canUpdateRecord ? openEdit : undefined} onDelete={canDeleteRecord ? deleteRecord : undefined} />
     `,
     api: `
@@ -128,6 +134,327 @@ try {
   });
 
   assert.match(runAudit(goodRoot), /status: PASS/);
+
+  const missingEntityMetadataPermissionRoot = createFixture('missing-entity-metadata-permission', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel.replace("      export const META_ENTITY_READ = 'meta.entity.read';\n", ''),
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(missingEntityMetadataPermissionRoot, { expectFailure: true }),
+    /entity_metadata_permission_key_missing/,
+  );
+
+  const entityNavigationUsesRecordReadRoot = createFixture('entity-navigation-uses-record-read', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      '<ObjectNavigation object={object} visible={canViewEntity} />',
+      '<ObjectNavigation object={object} visible={canReadRecord} />',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(entityNavigationUsesRecordReadRoot, { expectFailure: true }),
+    /entity_navigation_not_gated_by_meta_entity_read/,
+  );
+
+  const entityNavigationUsesUnboundEntityFilterRoot = createFixture('entity-navigation-uses-unbound-entity-filter', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page
+      .replace(
+        'const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);',
+        `const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);
+      const unrelatedEntities = entities.filter((candidate) => canUseEntityOperation(access, candidate.entityKey, META_ENTITY_READ));`,
+      )
+      .replace(
+        '<ObjectNavigation object={object} visible={canViewEntity} />',
+        '<ObjectNavigation object={object} visible={canReadRecord} />',
+      ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(entityNavigationUsesUnboundEntityFilterRoot, { expectFailure: true }),
+    /entity_navigation_not_gated_by_meta_entity_read/,
+    'an unrelated entity filter must not satisfy the navigation gate',
+  );
+
+  const entityNavigationUsesBoundEntityFilterRoot = createFixture('entity-navigation-uses-bound-entity-filter', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page
+      .replace(
+        'const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);',
+        `const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);
+      const visibleEntities = entities.filter((candidate) => canUseEntityOperation(access, candidate.entityKey, META_ENTITY_READ));`,
+      )
+      .replace(
+        '<ObjectNavigation object={object} visible={canViewEntity} />',
+        '<ObjectNavigation entities={visibleEntities} />',
+      ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(entityNavigationUsesBoundEntityFilterRoot),
+    /status: PASS/,
+    'a metadata-filtered entity collection must satisfy the navigation gate when it is consumed by navigation',
+  );
+
+  const entityRouteMissingMetadataGuardRoot = createFixture('entity-route-missing-metadata-guard', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router.replace(
+      "        const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);\n        if (!canViewEntity) return <Result status=\"403\" title=\"forbidden\" />;\n",
+      '',
+    ),
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(entityRouteMissingMetadataGuardRoot, { expectFailure: true }),
+    /entity_route_not_gated_by_meta_entity_read/,
+  );
+
+  const entityRouteUsesUnrelatedProtectedRouteRoot = createFixture('entity-route-uses-unrelated-protected-route', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router
+      .replace(
+        "        const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);\n        if (!canViewEntity) return <Result status=\"403\" title=\"forbidden\" />;\n",
+        '',
+      )
+      .concat('\nconst protectedSettingsRoute = <ProtectedRoute permissionKey={META_ENTITY_READ} />;'),
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(entityRouteUsesUnrelatedProtectedRouteRoot, { expectFailure: true }),
+    /entity_route_not_gated_by_meta_entity_read/,
+    'a protected route outside the dynamic entity route must not satisfy the entity-route gate',
+  );
+
+  const entityRouteUsesDetachedProtectedRouteRoot = createFixture('entity-route-uses-detached-protected-route', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router
+      .replace(
+        "        const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);\n        if (!canViewEntity) return <Result status=\"403\" title=\"forbidden\" />;\n",
+        '        const detachedGuard = <ProtectedRoute permissionKey={META_ENTITY_READ} entityKey={object.entityKey} />;\n',
+      ),
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(entityRouteUsesDetachedProtectedRouteRoot, { expectFailure: true }),
+    /entity_route_not_gated_by_meta_entity_read/,
+    'a detached protected route inside ObjectRoutePage must not satisfy the entity-route gate',
+  );
+
+  const entityRouteUsesBoundProtectedRouteRoot = createFixture('entity-route-uses-bound-protected-route', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router.replace(
+      `        const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);
+        if (!canViewEntity) return <Result status="403" title="forbidden" />;
+        return <SchemaObjectPage object={object} />;`,
+      '        return <ProtectedRoute permissionKey={META_ENTITY_READ} entityKey={object.entityKey}><SchemaObjectPage object={object} /></ProtectedRoute>;',
+    ),
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(entityRouteUsesBoundProtectedRouteRoot),
+    /status: PASS/,
+    'a protected route returned from ObjectRoutePage and bound to the current entity must satisfy the entity-route gate',
+  );
+
+  const entityRouteUsesUnrelatedSchemaObjectGuardRoot = createFixture('entity-route-uses-unrelated-schema-object-guard', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router
+      .replace(
+        "        const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);\n        if (!canViewEntity) return <Result status=\"403\" title=\"forbidden\" />;\n",
+        '',
+      )
+      .concat(`
+      function SchemaObjectPage() {
+        const canViewEntity = canUseEntityOperation(access, object.entityKey, META_ENTITY_READ);
+        if (!canViewEntity) return <Result status="403" title="forbidden" />;
+        return <section />;
+      }`),
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(entityRouteUsesUnrelatedSchemaObjectGuardRoot, { expectFailure: true }),
+    /entity_route_not_gated_by_meta_entity_read/,
+    'a metadata guard in a different page component must not satisfy ObjectRoutePage',
+  );
+
+  const tableHeadersUseRecordReadRoot = createFixture('table-headers-use-record-read', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      'columns={visibleFields}',
+      'columns={canReadRecord ? visibleFields : []}',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(tableHeadersUseRecordReadRoot, { expectFailure: true }),
+    /table_headers_tied_to_record_read/,
+  );
+
+  const tableHeadersHiddenByEarlyReturnRoot = createFixture('table-headers-hidden-by-early-return', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: `${goodFiles.page}\nif (!canReadRecord) return <Empty />;`,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(tableHeadersHiddenByEarlyReturnRoot, { expectFailure: true }),
+    /table_headers_tied_to_record_read/,
+  );
+
+  const tableHeadersHiddenByTernaryRoot = createFixture('table-headers-hidden-by-ternary', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      '<MasterDataCanvasTable columns={visibleFields} rows={tableRows} onDataLoad={canReadRecord ? recordState.loadPage : undefined} onCellEditCommit={canUpdateRecord ? commit : undefined} />',
+      '{canReadRecord ? <MasterDataCanvasTable columns={visibleFields} rows={tableRows} onDataLoad={recordState.loadPage} onCellEditCommit={canUpdateRecord ? commit : undefined} /> : <Empty />}',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(tableHeadersHiddenByTernaryRoot, { expectFailure: true }),
+    /table_headers_tied_to_record_read/,
+  );
+
+  const tableHeadersHiddenByDerivedColumnsRoot = createFixture('table-headers-hidden-by-derived-columns', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page
+      .replace(
+        'const tableRows = canReadRecord ? recordState.items : [];',
+        'const tableRows = canReadRecord ? recordState.items : [];\nconst tableColumns = canReadRecord ? visibleFields : [];',
+      )
+      .replace('columns={visibleFields}', 'columns={tableColumns}'),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(tableHeadersHiddenByDerivedColumnsRoot, { expectFailure: true }),
+    /table_headers_tied_to_record_read/,
+  );
+
+  const recordRowsNotClearedRoot = createFixture('record-rows-not-cleared', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace(
+      'const tableRows = canReadRecord ? recordState.items : [];',
+      'const tableRows = recordState.items;',
+    ),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(recordRowsNotClearedRoot, { expectFailure: true }),
+    /record_rows_not_cleared_on_read_revoke/,
+  );
+
+  const guardedRowsNotBoundToTableRoot = createFixture('guarded-rows-not-bound-to-table', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page.replace('rows={tableRows}', 'rows={recordState.items}'),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(guardedRowsNotBoundToTableRoot, { expectFailure: true }),
+    /record_rows_not_cleared_on_read_revoke/,
+  );
+
+  const recordRowsUseUnrelatedClearRoot = createFixture('record-rows-use-unrelated-clear', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page
+      .replace(
+        'const tableRows = canReadRecord ? recordState.items : [];',
+        'const tableRows = recordState.items;\nif (!canReadRecord) unrelatedRows.clear();',
+      )
+      .replace('rows={tableRows}', 'rows={recordState.items}'),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(recordRowsUseUnrelatedClearRoot, { expectFailure: true }),
+    /record_rows_not_cleared_on_read_revoke/,
+    'clearing an unrelated store must not satisfy the table row-revocation gate',
+  );
+
+  const recordRowsUseUnrelatedDirectRowsRoot = createFixture('record-rows-use-unrelated-direct-rows', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page
+      .replace(
+        'const tableRows = canReadRecord ? recordState.items : [];',
+        'const tableRows = recordState.items;',
+      )
+      .replace('rows={tableRows}', 'rows={recordState.items}')
+      .concat('\n<Summary rows={canReadRecord ? summaryRows : []} />;'),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(recordRowsUseUnrelatedDirectRowsRoot, { expectFailure: true }),
+    /record_rows_not_cleared_on_read_revoke/,
+    'a non-table rows prop must not satisfy the table row-revocation gate',
+  );
+
+  const recordRowsClearedByBoundStoreRoot = createFixture('record-rows-cleared-by-bound-store', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page
+      .replace(
+        'const tableRows = canReadRecord ? recordState.items : [];',
+        'if (!canReadRecord) recordState.clear();',
+      )
+      .replace('rows={tableRows}', 'rows={recordState.items}'),
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(recordRowsClearedByBoundStoreRoot),
+    /status: PASS/,
+    'clearing the store that supplies table rows must satisfy the row-revocation gate',
+  );
 
   const sharedRuntimeRoot = createFixture('shared-permission-runtime', {
     app: goodFiles.app,

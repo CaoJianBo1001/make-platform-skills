@@ -1,8 +1,8 @@
 ---
 name: make-app-permission
-description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permissions. Triggered by 权限, 字段权限范围, 字段可新建, 可见, 可编辑, creatable, createFields, editableFields, /principal/permission, buttons, menus, routes, read/create/update/delete/bulkUpdate, data.record.*, meta.field.*, route guards, refresh permission, or URL bypass. Covers the required Service-to-IAM proxy, app-scope matching, permission-trimmed schema, independent create/read/update field gates, create payload filtering, route/action enforcement, refresh invalidation, tests, and audit. Use make-app-actions for selection and batch-action behavior. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
+description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permissions. Triggered by 权限, 对象导航, 字段权限范围, 字段可新建, 可见, 可编辑, creatable, createFields, editableFields, /principal/permission, buttons, menus, routes, read/create/update/delete/bulkUpdate, data.record.*, meta.entity.*, meta.field.*, route guards, refresh permission, or URL bypass. Covers the required Service-to-IAM proxy, app-scope matching, permission-trimmed schema, independent entity/read/create/update field gates, table-header/data separation, create payload filtering, route/action enforcement, refresh invalidation, tests, and audit. Use make-app-actions for selection and batch-action behavior. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.2.3
+  version: 0.2.5
 ---
 
 # make-app-permission
@@ -31,6 +31,7 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
   - create form: `createFields ∩ meta.field.create fieldAccess(creatable|*)`;
   - list/detail/filter: `fields ∩ meta.field.read fieldAccess(readable states)`;
   - edit/cell edit: visible `fields ∩ meta.field.update fieldAccess(editable|*)`.
+- Keep entity navigation, table headers, and record data independent: `meta.entity.read` controls whether a Schema-present entity appears in navigation and can enter its object route; both the navigation and the dynamic route must reject the entity when this permission is absent. `meta.field.read` controls the authorized columns/table headers; `data.record.read` controls record/detail requests and rows only. When record read is denied or revoked but entity and fields are authorized, keep the navigation item and table shell with authorized headers, skip every record request, and render an explicit empty row set so cached values cannot remain visible.
 - Preserve every access state returned for a field. Current IAM responses may use arrays such as `["creatable", "readonly"]` or scalar strings; normalize a supported scalar string to a one-element array and authorize a permission dimension when any state is allowed for that dimension. Never coerce an array with `String(value)` or template interpolation.
 - Treat missing `createFields` as empty. Never fall back to `fields`, and do not consume `editableFields` for current edit behavior.
 - Gate the create entry and submit with `data.record.create` only; derive create fields from `meta.field.create` only. These permission dimensions are independent: neither one may synthesize, select, or imply the other. Gate update/delete/bulk-update independently with their own operation keys.

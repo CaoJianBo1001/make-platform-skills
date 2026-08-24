@@ -71,6 +71,12 @@ Preserve IAM permission rows and normalize them at the UI boundary. A representa
   "scope": "make://<tenantId>/meta/app/<appKey>",
   "permissions": [
     {
+      "permissionKey": "meta.entity.read",
+      "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
+      "effect": "allow",
+      "fieldAccess": {}
+    },
+    {
       "permissionKey": "data.record.create",
       "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
       "effect": "allow",
@@ -107,6 +113,8 @@ Preserve IAM permission rows and normalize them at the UI boundary. A representa
 
 Consume `fieldAccess` by permission dimension:
 
+- `meta.entity.read`: entity metadata permission only; use it to include a Schema-present entity in navigation and allow its object route. It does not grant field visibility or record values.
+- `data.record.read`: record-data permission only; use it for list/detail/pagination requests and record rows. It must not remove `meta.field.read` headers when an entity remains metadata-readable.
 - `data.record.create`: operation permission only; use it for create route, entry, handler, and submit checks, never to choose fields.
 - `meta.field.create`: use `creatable` or `*` to choose fields from Schema `createFields`.
 - `meta.field.read`: use readable states to choose visible fields from Schema `fields`; `creatable` is not readable.

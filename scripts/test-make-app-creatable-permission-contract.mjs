@@ -83,8 +83,13 @@ assert.match(
 );
 assert.match(
   permissionSkill,
-  /metadata:\s*\n\s*version:\s*0\.2\.3/,
-  'make-app-permission must use the planned 0.2.3 contract revision',
+  /metadata:\s*\n\s*version:\s*0\.2\.5/,
+  'make-app-permission must use the 0.2.5 entity-route and record-row-revocation contract revision',
+);
+assert.match(
+  permissionBundle,
+  /meta\.entity\.read[\s\S]{0,1000}(导航|navigation)[\s\S]{0,1000}meta\.field\.read[\s\S]{0,1000}(表头|headers|columns|列)[\s\S]{0,1000}data\.record\.read/i,
+  'entity navigation, table headers, and record data must use independent meta.entity/meta.field/data.record read gates',
 );
 assert.match(
   permissionBundle,
@@ -130,6 +135,11 @@ assert.match(
   'permission audit must reject obvious fieldAccess state-array stringification',
 );
 assert.match(
+  permissionAudit,
+  /entity_route_not_gated_by_meta_entity_read[\s\S]{0,800}entity_navigation_not_gated_by_meta_entity_read[\s\S]{0,800}table_headers_tied_to_record_read[\s\S]{0,800}record_rows_not_cleared_on_read_revoke/i,
+  'permission audit must reject missing entity route guards, record-read header gates, and stale record rows',
+);
+assert.match(
   permissionTesting,
   /(default test|默认测试|CI|publish gate|发布校验)[\s\S]{0,500}(audit|审计)[\s\S]{0,500}(conformance|一致性)/i,
   'host automation must continuously invoke both permission gates',
@@ -153,6 +163,7 @@ for (const findingKind of ['source_only', 'installed_only', 'content_mismatch'])
 }
 for (const conformanceCase of [
   'operation_create_absent_must_deny',
+  'entity_metadata_read_is_independent_from_record_read',
   'named_entity_permission_does_not_leak',
   'invalid_requested_identifiers_fail_closed',
   'operation_global_permission_wildcard_allows',

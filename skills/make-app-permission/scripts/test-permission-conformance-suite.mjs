@@ -135,6 +135,20 @@ try {
   assert.equal(correctResult.status, 0, correctResult.output);
   assert.match(correctResult.output, /permission conformance: PASS/);
 
+  const entityMetadataUsesRecordReadAdapter = writeAdapter(
+    'entity-metadata-uses-record-read.mjs',
+    correctAdapterSource.replace(
+      "export const canUseEntityOperation = (access, entityKey, permissionKey) => {\n      const matched = matches(access, entityKey, permissionKey);",
+      "export const canUseEntityOperation = (access, entityKey, permissionKey) => {\n      const matched = matches(access, entityKey, permissionKey === 'meta.entity.read' ? 'data.record.read' : permissionKey);",
+    ),
+  );
+  const entityMetadataUsesRecordReadResult = runSuite(entityMetadataUsesRecordReadAdapter);
+  assert.notEqual(entityMetadataUsesRecordReadResult.status, 0);
+  assert.match(
+    entityMetadataUsesRecordReadResult.output,
+    /entity_metadata_read_is_independent_from_record_read/,
+  );
+
   const noGlobalWildcardAdapter = writeAdapter(
     'no-global-wildcard.mjs',
     correctAdapterSource.replace(

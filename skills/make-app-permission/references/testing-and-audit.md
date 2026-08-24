@@ -16,6 +16,8 @@ Use this reference before implementation and before reporting permission work co
 
 Cover exact/wildcard/parent/App/entity resources, IAM namespace wildcard, canonical/namespace-alias equal specificity, most-specific allow, same-specificity allow union, cross-row named-over-wildcard fields, and deny wins. Prove that a named entity grant does not leak to another entity. Add adversarial rows for invalid effects, non-three-part permission keys, missing/non-App scope, an independently supplied App resource that conflicts with scope, arbitrary namespace, wildcard tenant/App resources, explicit `null` fieldAccess, invalid containers, blank field keys, empty state lists, unknown states, and mixed non-string state lists. A malformed row poisons the whole access snapshot; do not discard it while preserving sibling allows. Null/primitive payloads or rows and non-array `permissions` must return a denied snapshot without throwing.
 
+Also prove that `meta.entity.read` is independent from `data.record.read`: an entity can be navigation/route-authorized while its record operation is denied, and a record permission alone cannot add an entity to navigation.
+
 Required field cases:
 
 | Case | Expected |
@@ -40,6 +42,9 @@ Required field cases:
 
 ## Page and payload tests
 
+- An entity with `meta.entity.read` and readable `meta.field.read` fields but without `data.record.read` appears in left navigation and renders its authorized table headers, with no rows and no records/detail/pagination request.
+- A missing `meta.entity.read` hides the navigation item and blocks the dynamic object route even if `data.record.read` or `meta.field.read` is present.
+- A `data.record.read` revoke removes cached rows by supplying an empty table row source, and stops record-backed controls, but retains an entity-authorized table shell and `meta.field.read` headers. Prove that disabling only the records query cannot leave previously loaded rows visible.
 - A create-only invisible field renders and submits in create mode only.
 - A visible/editable but non-creatable field is absent from create.
 - Create operation with zero fields keeps the entry, shows “暂无可新建字段”, and prevents unsupported empty submission.
@@ -57,7 +62,7 @@ Required field cases:
 - Refresh order is permission, Schema invalidation/reload, surface recomputation, then data if read remains allowed.
 - New permission is not published before its Schema succeeds; refresh failure does not restore the old authorization generation.
 - New create/read fields appear after page refresh without browser reload.
-- Revoked create/update/read closes only affected surfaces; read revoke does not close a still-create-authorized create surface.
+- Revoked create/update/read closes only affected surfaces; a record-read revoke does not close a still-create-authorized create surface or hide entity-authorized headers, while an entity-metadata revoke closes navigation and its object route.
 - Old permission/Schema/record/candidate/form responses cannot overwrite the current generation.
 - Submits are blocked while the access generation changes.
 
@@ -69,7 +74,7 @@ Run:
 node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 ```
 
-The audit should fail on missing create permission helpers, create-field helpers tied to `data.record.create` instead of `meta.field.create`, missing/overwritten `createFields`, `createFields ?? fields`, runtime `editableFields` use, create fields built from visible/editable sets, unfiltered create payloads, operation entries tied to field count, permission-only refresh without Schema refresh/invalidation, and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`.
+The audit should fail on missing `meta.entity.read` dynamic-route or navigation gates, table headers tied to `data.record.read` through direct props, early returns, ternaries, or derived column variables, missing empty/cleared rows after a record-read revoke, missing create permission helpers, create-field helpers tied to `data.record.create` instead of `meta.field.create`, missing/overwritten `createFields`, `createFields ?? fields`, runtime `editableFields` use, create fields built from visible/editable sets, unfiltered create payloads, operation entries tied to field count, permission-only refresh without Schema refresh/invalidation, and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`. A positive navigation, route, or row-clear signal must be consumed by that same surface: a `ProtectedRoute` must be returned by the dynamic object route and use its resolved entity key, and an explicit empty row branch must occur on a Table/Grid/Canvas row prop or flow into it. Unrelated guards, entity filters, row props, store clears, or page components do not satisfy the gate.
 
 The audit is heuristic. Its stringification rule is a targeted defense against known bad shapes, not complete data-flow proof. It must reject coercion that affects a normalization result or permission branch, including direct `if`/`switch`/loop conditions. It must lexically ignore comments and string literals and must not fail on diagnostic-only logging inside a named normalization helper, including structured log arguments, `fieldAccess`-specific parameter names, and semicolonless code where an earlier return ends through automatic semicolon insertion. Parenthesized, bracketed, or operator-continued returns remain result-affecting and must still fail. Host tests must prove permission matching, actual form field sets, payloads, Lookup target visibility, generation safety, and server-side enforcement.
 

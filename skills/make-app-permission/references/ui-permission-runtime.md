@@ -65,9 +65,9 @@ An omitted `fieldAccess` property or an empty object is the intentional unrestri
 
 ## Route and operation gates
 
-- Validate App entry and dynamic entity membership against permission-aware Schema.
+- Validate App entry and dynamic entity membership against permission-aware Schema, and require `meta.entity.read` before exposing an entity in left navigation or entering its dynamic object route. The route itself must return the host forbidden result before it mounts the object page; hiding the sidebar is not a route guard. When a host `ProtectedRoute`/`RouteGuard` is used instead of an explicit forbidden branch, return that guard from the dynamic route and bind it to the resolved current `entityKey`; merely declaring an unrelated guard does not protect the object page.
 - Bind fixed routes to an entity and permissionKey.
-- Require `data.record.read` before list/detail loading.
+- Require `data.record.read` before list/detail loading. It only gates record requests and values; it must not gate an entity-authorized navigation entry, table shell, or column headers.
 - Require `data.record.create` for create routes, create entry, open handler, and submit.
 - Resolve create fields with `meta.field.create`; never read create-field access from `data.record.create`. Operation authorization and field authorization are independent and neither may alter the other.
 - Require `data.record.update` for edit routes/entry/submit/cell commit.
@@ -76,6 +76,22 @@ An omitted `fieldAccess` property or an empty object is the intentional unrestri
 - Recheck each handler before its protected read or mutation.
 
 If create is allowed but no creatable fields remain, keep the create entry and render a “暂无可新建字段” empty state. Disable save unless the documented business API explicitly supports empty-record creation.
+
+## Entity navigation and table surface
+
+Derive the object surface in three independent steps:
+
+```text
+canViewEntity = canUseEntityOperation(access, entityKey, 'meta.entity.read')
+visibleFields = visibleFieldsForEntity(access, entityKey, entity.properties.fields ?? [])
+canReadRecords = canUseEntityOperation(access, entityKey, 'data.record.read')
+sourceRows = recordState.items
+tableRows = canReadRecords ? sourceRows : []
+```
+
+Render the navigation item and object route only when `canViewEntity` is true and the entity exists in permission-aware Schema. In the dynamic route, evaluate `canViewEntity` after resolving the Schema entity and return the host forbidden result when it is false. Render the table shell and its headers from `visibleFields`, not from `canReadRecords`. Gate the records query, row values, detail open action, pagination, and record-backed table controls with `canReadRecords`.
+
+When `canViewEntity` and `visibleFields` are authorized but `canReadRecords` is false, keep the table mounted with `columns={visibleFields}` and `rows={tableRows}` (or the equivalent CanvasTable API, where `tableRows` is explicitly `[]`). Do not execute `onDataLoad`, do not render cached/stale rows, and show a no-record-access/empty state without removing the headers. On a permission refresh that revokes record read, clear/invalidate the record store that supplies `sourceRows` before the next render or continue deriving `tableRows` from current access; changing only a request's `enabled` flag is insufficient. A record read grant never expands field visibility; a field read grant never authorizes a record request.
 
 ## Create flow
 
@@ -117,7 +133,7 @@ editable = editableFieldKeysForEntity(access, entityKey, visible)
 - Do not attach cell editors or required validation to non-editable fields.
 - Build update payloads from latest visible/editable allowlists.
 - Ignore backend `editableFields`; editing remains “visible first, then `meta.field.update`”.
-- A create revoke closes create only. An update revoke closes edit only. A read revoke closes detail/edit and stops reads; it must not close a still-create-authorized create surface.
+- A create revoke closes create only. An update revoke closes edit only. A `data.record.read` revoke closes detail/edit and stops reads while retaining entity-authorized navigation and headers; it must not close a still-create-authorized create surface. A `meta.entity.read` revoke closes the object route and removes the navigation entry.
 
 ## Special fields and Lookup
 

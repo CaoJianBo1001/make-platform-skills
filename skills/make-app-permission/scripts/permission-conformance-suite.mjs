@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.3
+// make-app-permission contract version: 0.2.5
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -61,6 +61,15 @@ const cases = [
     const current = access(permission('data.record.read'));
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.read'), true);
     assert.equal(adapter.canUseEntityOperation(current, 'invoice', 'data.record.read'), false);
+  }],
+  ['entity_metadata_read_is_independent_from_record_read', () => {
+    const metadataOnly = access(permission('meta.entity.read'));
+    assert.equal(adapter.canUseEntityOperation(metadataOnly, 'order', 'meta.entity.read'), true);
+    assert.equal(adapter.canUseEntityOperation(metadataOnly, 'order', 'data.record.read'), false);
+
+    const recordsOnly = access(permission('data.record.read'));
+    assert.equal(adapter.canUseEntityOperation(recordsOnly, 'order', 'meta.entity.read'), false);
+    assert.equal(adapter.canUseEntityOperation(recordsOnly, 'order', 'data.record.read'), true);
   }],
   ['invalid_requested_identifiers_fail_closed', () => {
     const current = access(

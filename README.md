@@ -32,7 +32,7 @@ Codex 判断优先级：
 | 分组、高级分组、多级分组、分组条件、拖拽分组、表头分组、`capabilities.groupable`、Entity Preset group、record-groups、groupFilter、分组叶子明细分页、`@qfei-design/make-app-group` | `make-app-group` | 负责完整分组能力：三级分组模型、拖拽草稿、Preset 保存/回显、Service record-groups/groupFilter、CanvasTable 分组渲染和叶子分页；不负责页面 Shell、CanvasTable 内部或筛选/排序模型 |
 | 助手、AI助手、MakeAI AI 助手、Make AI 助手、AI 对话框、Artifact、SSE、Agent Gateway、`@qfei-design/make-ai-assistant`、make-ai-assistant 包 | `make-ai-assistant` | 负责 Make AI 助手平台接入：npm 包公开能力读取、助手入口和面板包接入、Artifact V1、能力协商、Make App/Console adapter、Agent Gateway SSE、history restore、action intent 和接口域名配置；不负责普通 Dialog、表单/详情抽屉、业务 Agent 提示词、权限算法、认证实现、发布或 DSL |
 | Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema `fields/createFields`、records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排、Schema 集合无损传输和按主体隔离缓存，不负责 UI、认证、权限算法、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
-| 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、路由权限、按钮权限、字段可新建、可见、可编辑、`creatable`、`createFields`、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、`createFields` 与字段 `creatable/readable/editable` 独立权限、创建提交白名单、路由和按钮权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
+| 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、对象导航、路由权限、按钮权限、字段可新建、可见、可编辑、`creatable`、`createFields`、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、`meta.entity.read` 对象导航、`meta.field.read` 表头和 `data.record.read` 数据行的独立权限，以及 `createFields` 与字段 `creatable/readable/editable` 独立权限、创建提交白名单、路由和按钮权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
 | 登录、认证、Token、统一登录、OAuth、Cookie、Session、logout、401/403、`/api/make/**` 鉴权请求 | `make-app-auth` | 只负责认证和鉴权请求，不负责 UI 布局和打包发布 |
 | 打包、发布、镜像入口、K8s、Service 启动失败、`apps/ui/dist`、`apps/service/dist/server.js`、Service 端口 `3000`、workspace/package.json、`X-Forwarded-Host` | `make-app-runtime` | 只负责运行态和打包发布契约，不负责 Service API、认证实现或 Make adapter 配置语义 |
 | App/Entity/Relation/Field 建模、DSL YAML、对象、字段、关系、选项 | `makedsl` | 只负责 DSL 设计和生成，不负责远端 apply |
@@ -281,7 +281,7 @@ npx skills update make-app-permission
 **使用场景**
 - 增加或审查 `/api/make/app/principal/permission` Service 接口
 - Service 调 Make IAM `/api/make/iam/v1/principal/permission`，使用 App scope，不混用平台权限
-- 前台登录后加载权限，结合 Schema 的 `fields` / `createFields` 和独立的 `creatable` / readable / editable 字段权限，控制菜单、路由、列表、详情、新建、编辑、删除、单元格编辑和提交白名单
+- 前台登录后加载权限，使用 `meta.entity.read` 控制对象导航和路由、`meta.field.read` 控制表头、`data.record.read` 控制数据加载；即使没有数据读取权限，只要对象和字段已授权仍展示左侧对象与表头，并在撤销数据读取权限后清空缓存行数据，结合 Schema 的 `fields` / `createFields` 和独立的 `creatable` / readable / editable 字段权限，控制列表、详情、新建、编辑、删除、单元格编辑和提交白名单
 - 防止通过手动修改 URL 进入未授权 App、对象页或固定业务页面
 - 刷新时重新获取权限，再决定是否刷新数据或关闭已打开工作区
 - 使用 `scripts/audit-make-app-permission.mjs` 做权限合同检查
