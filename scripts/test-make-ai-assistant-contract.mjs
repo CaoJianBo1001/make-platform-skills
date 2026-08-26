@@ -57,8 +57,13 @@ assert.match(
   /助手[\s\S]*AI助手[\s\S]*MakeAI AI 助手[\s\S]*AI 对话框[\s\S]*Artifact[\s\S]*SSE[\s\S]*Agent Gateway[\s\S]*make-ai-assistant/i,
   'frontmatter trigger scope must focus on assistant, Artifact, SSE, Agent Gateway, and make-ai-assistant package semantics',
 );
-assert.doesNotMatch(
+assert.match(
   skillFrontmatter,
+  /\bmaxDrawerWidth\b/,
+  'frontmatter trigger scope must retain the public maxDrawerWidth integration prop',
+);
+assert.doesNotMatch(
+  skillFrontmatter.replaceAll('maxDrawerWidth', ''),
   /(right drawer|Drawer|右侧抽屉|侧边抽屉|右侧面板)/i,
   'frontmatter trigger scope must not include drawer/panel terms that overlap form/detail surfaces',
 );

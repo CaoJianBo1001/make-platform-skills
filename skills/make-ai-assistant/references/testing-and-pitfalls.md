@@ -49,9 +49,25 @@ UI:
 
 - launcher is reachable, keyboard focusable, and placed by the host layout rules
 - assistant panel open/close does not lose active conversation state unexpectedly
-- current user name/avatar and `privacyNotice` render when provided
+- `theme` is scoped to each supported React surface, does not mutate host global
+  variables, and reaches custom Artifact roots through `themeStyle`
+- `privacyNotice` renders the package focusable Tooltip rather than a duplicate
+  host banner; header height, long-title/context overflow, and keyboard focus
+  remain usable
+- `MakeAiAssistant` width respects `maxDrawerWidth`, the configured minimum, and
+  viewport changes; pointer and keyboard resize remain accessible, while
+  560px-or-less viewports use full width without a resize handle and the 561px
+  boundary restores desktop resize behavior
+- embedded panels and wide drawers retain package container-query behavior for
+  content, Artifacts, code blocks, and Markdown table overflow
+- current user name/avatar render when provided
 - suggestions can be customized or hidden
 - action intents call host handlers and permission failures are visible
+- closing the drawer preserves an active run and scroll intent; only explicit
+  cancellation/new conversation/reinitialization/unmount stops it
+- progress appears only while the assistant turn is generating; completed,
+  failed, and restored turns omit internal process steps, and load failures show
+  safe retryable UI without upstream diagnostics
 - when an existing host page or route changes, run lint/typecheck or a build that
   catches missing imports and undefined Hook references; also run a page-level
   render/smoke test when the host test setup supports it. Cover the assistant

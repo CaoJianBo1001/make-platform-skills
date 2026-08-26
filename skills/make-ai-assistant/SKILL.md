@@ -1,8 +1,8 @@
 ---
 name: make-ai-assistant
-description: "Use when integrating, generating, refactoring, reviewing, or debugging 助手 / AI助手 / MakeAI AI 助手 / Make AI 助手 / AI 对话框 with @qfei-design/make-ai-assistant, Artifact, SSE, Agent Gateway, make-ai-assistant 包, including floating assistant launcher, AssistantPanel/ArtifactRenderer, Artifact V1 templates, capabilities negotiation, Make App adapter, Make Console adapter, history restore, mock/demo transport, user identity/avatar, privacyNotice, action intents, interface domain configuration, and tests. Does not own generic dialogs, business Agent prompts, model reasoning, Make data APIs, auth policy, runtime packaging, DSL modeling, Make CLI execution, or project-specific analytics."
+description: "Use when integrating, generating, refactoring, reviewing, or debugging 助手 / AI助手 / MakeAI AI 助手 / Make AI 助手 / AI 对话框 with @qfei-design/make-ai-assistant, Artifact, SSE, Agent Gateway, make-ai-assistant 包, including floating launcher, AssistantPanel/ArtifactRenderer, MakeAiTheme/theme variables, responsive assistant sizing and resize, maxDrawerWidth, headerHeight, privacyNotice Tooltip, user identity/avatar, Artifact V1 templates, capabilities negotiation, Make App adapter, Make Console adapter, history restore, mock/demo transport, action intents, interface domain configuration, and tests. Does not own generic dialogs, business Agent prompts, model reasoning, Make data APIs, auth policy, runtime packaging, DSL modeling, Make CLI execution, or project-specific analytics."
 metadata:
-  version: 0.1.1
+  version: 0.1.3
 ---
 
 # make-ai-assistant
@@ -41,32 +41,45 @@ their implementation surfaces.
    - `MakeAiAssistant` for the package default floating launcher and assistant panel.
    - `AssistantPanel` for an embedded panel inside an existing surface.
    - `ArtifactRenderer` only when rendering one Artifact outside the full chat UI.
-5. Pass a complete host context: App identity, location, optional resource,
+5. Configure the package-owned visual contract through public props and scoped
+   `--make-ai-*` variables only. Read `references/ui-and-templates.md` before
+   changing theme, header, privacy prompt, launcher, panel, or drawer behavior:
+   - pass `theme?: MakeAiTheme` to the surface being rendered; it never changes
+     the host's global theme;
+   - use `headerHeight` and `privacyNotice` only with `MakeAiAssistant` or
+     `AssistantPanel` for the package header, rather than rebuilding a host
+     banner or header around the panel;
+   - use `maxDrawerWidth` only with `MakeAiAssistant`; preserve its desktop
+     resize, keyboard access, mobile full-width, and container-query behavior;
+   - use namespace variables for supported overrides and do not copy, override,
+     or depend on package-internal CSS selectors.
+6. Pass a complete host context: App identity, location, optional resource,
    optional selection, locale, timezone, and safe extension metadata. Context is
    for understanding the workspace, not for authorization.
-6. Use the host's authenticated request boundary to build a transport. UI must
+7. Use the host's authenticated request boundary to build a transport. UI must
    not call Make data/model APIs directly, store tokens, or construct raw gateway
    credentials.
-7. Configure assistant API domains through the host Service/runtime contract:
+8. Configure assistant API domains through the host Service/runtime contract:
    browser calls remain same-origin, while Service reads the unified Make Gateway
    origin and owns the upstream service path.
-8. Negotiate Artifact support. The request or run context must tell the backend
+9. Negotiate Artifact support. The request or run context must tell the backend
    the frontend-supported `schemaVersion`, `artifactKinds`, and template ids.
-9. Require the backend or adapter to return structured Artifact results. Do not
+10. Require the backend or adapter to return structured Artifact results. Do not
    infer components from Markdown, headings, tables, or natural-language text.
-10. Render with the package registry. Backend returns semantic `kind` plus data;
+11. Render with the package registry. Backend returns semantic `kind` plus data;
    frontend chooses a whitelisted renderer by `kind`, optional
    `presentation.template`, `canRender`, and priority.
-11. Wire Artifact actions as intents such as `open-record`, `open-list`,
+12. Wire Artifact actions as intents such as `open-record`, `open-list`,
    `navigate`, or `invoke`. The host validates permission and maps each intent to
    routes or service actions.
-12. Preserve history. If a live answer contains Artifacts, refreshed history must
-    restore the same Artifact snapshots, not only assistant text.
-13. Add tests before implementation for adapter selection, package imports,
-    context, transport, SSE event order, Artifact validation, history restore,
-    action handling, demo isolation, and permission/auth failure states. For an
-    existing host page or route, also run lint/typecheck or a build and a
-    page-level render/smoke check when the host test setup supports one.
+13. Preserve history. If a live answer contains Artifacts, refreshed history must
+   restore the same Artifact snapshots, not only assistant text.
+14. Add tests before implementation for adapter selection, package imports,
+   context, transport, SSE event order, Artifact validation, history restore,
+   action handling, demo isolation, permission/auth failure states, and the
+   public visual contract. For an existing host page or route, also run
+   lint/typecheck or a build and a page-level render/smoke check when the host
+   test setup supports one.
 
 ## Topic reference map
 
@@ -76,9 +89,9 @@ their implementation surfaces.
 | Artifact V1 kinds, capability negotiation, template hints, actions | `references/artifact-contract.md` |
 | Adapter selection, Make App AI Chat transport, history restore | `references/transport-and-service-contract.md` |
 | Make Console Agent/Session/events/message/Run SSE BFF | `references/make-console-service-contract.md` |
-| Launcher/panel UI, host context, display templates, custom registry | `references/ui-and-templates.md` |
+| Launcher/panel UI, host context, theme, privacy Tooltip, header, package-owned drawer responsiveness, display templates, custom registry | `references/ui-and-templates.md` |
 | TDD, smoke checks, common regressions and readiness blockers | `references/testing-and-pitfalls.md` |
-| Page shell, launcher placement, surrounding layout, responsive behavior | Use `makeui` |
+| Page shell, launcher placement, external container constraints, surrounding layout | Use `makeui` |
 | Service route implementation, gateway proxy, request validation and logs | Use `make-app-service` |
 | Unified login, cookies, 401/403 handling and authenticated request wrapper | Use `make-app-auth` |
 | App/object/record/field permission policy and route/action gates | Use `make-app-permission` |
@@ -100,8 +113,9 @@ their implementation surfaces.
   `/app/ai`, `/console`, or another service path inside `MAKE_API_BASE_URL`,
   `MAKE_SERVER_URL`, or equivalent host config.
 - The default app surface is a right-side assistant with a right vertically
-  centered launcher. Host layout details belong to `makeui`; assistant behavior
-  and transport belong to this Skill.
+  centered launcher. This Skill owns the package's public theme, header,
+  privacy-prompt, drawer sizing/resize, and container-query behavior; `makeui`
+  owns only the surrounding shell, placement, and external container constraints.
 - Backend and Agent logic returns Artifact semantics, not React component names.
   `presentation.template` is only a whitelisted hint; it must never load code or
   execute server-provided HTML, CSS, JSX, or JavaScript.
@@ -118,8 +132,9 @@ their implementation surfaces.
   by the current frontend.
 - Message ids are idempotency keys. Use stable UUIDs or a documented deterministic
   conversion; do not let retries create duplicate user messages.
-- The host must provide user display name/avatar and broadcast copy through React
-  props only. These visual props do not become authorization data.
+- The host provides user display name/avatar, brand/title/subtitle, and privacy
+  prompt copy through React props only. These presentation props and theme values
+  do not become authorization data.
 - The host handles `onAction` permission checks and navigation. Package templates
   only emit action intents.
 - Demo/mock transports are for development, tests, and controlled previews only.
@@ -137,9 +152,12 @@ their implementation surfaces.
 
 ## Handoffs
 
-- With `makeui`: use `makeui` for shell layout, launcher placement override,
-  assistant panel/container sizing, responsive behavior, and surrounding visual polish.
-  This Skill owns assistant package integration and Artifact rendering semantics.
+- With `makeui`: use `makeui` for shell layout, launcher placement, external
+  container constraints, and surrounding visual polish. This Skill owns package
+  props and behavior, including `theme`, header/privacy presentation,
+  `maxDrawerWidth`, package resize/accessibility behavior, container queries,
+  and Artifact rendering semantics. Do not reimplement those package behaviors
+  in host CSS or a generic Drawer.
 - With `make-app-service`: this Skill defines assistant route and payload
   contracts after adapter selection. Service owns route handlers, adapter-specific
   proxying, request validation, upstream error mapping, AbortSignal propagation,
