@@ -161,7 +161,7 @@ Prefer `value + label`; do not use `label` as the stable group path.
 
 Writable grouped record lists enable supported selection actions through
 `make-app-actions` by default. Clear selection on entity/group changes. Under the
-CanvasTable 1.3.0 public contract, `GroupTableComponent` does not support Shift
+CanvasTable 1.3.1 public contract, `GroupTableComponent` does not support Shift
 range selection; preserve individual/header selection and do not emulate Shift in
 the host. Re-check installed package docs before changing this capability rule.
 

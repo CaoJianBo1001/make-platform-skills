@@ -29,6 +29,9 @@ Action permissions:
 - explicit Service denial with HTTP 200, business code `20000032`, and
   `noPermissionRecordIds` drives the same canonical toast plus exact whole-row
   error-red feedback
+- on a real CanvasTable path, a selected or hovered denied row keeps the
+  error-red color visible; deselect/close calls `clearRowColors` and restores the
+  applicable `rowStyleOptions`, selected, hover, or default background
 
 Selection and limits:
 
@@ -42,7 +45,7 @@ Selection and limits:
 - over-limit toast keeps selection
 - virtual loaded records may be partial while explicit IDs remain complete
 - grouped child selection reaches the host once, without duplicate parent/group subscriptions
-- CanvasTable 1.3.0 grouped mode does not emulate unsupported Shift selection
+- CanvasTable 1.3.1 grouped mode does not emulate unsupported Shift selection
 - filter, search, sort, group, group path, object, and access changes clear state
 - header select-all under search/status/quick filters reuses one canonical
   effective filter for list, precheck, and mutation
@@ -106,6 +109,10 @@ UI:
 - explicit `20000032` denial marks only the returned whole rows with the host
   error-red style, preserves the selection, removes one row alert on deselect,
   and clears all alerts when the action bar closes
+- the row-alert integration test uses a real CanvasTable instance or package
+  component path rather than only a method mock: selected/hovered denial remains
+  visibly error red, then `clearRowColors` restores the underlying row state; run
+  the same assertion for grouped tables when grouped actions are in scope
 - opaque precheck denial shows toast without marking the whole explicit selection
 - selected-count fallback uses frozen count when select-all updatedCount is null
 
@@ -133,6 +140,12 @@ Do not report completion when any of these remain:
 - an opaque denied precheck marks rows without exact unauthorized IDs
 - an explicit `20000032` denial drops `noPermissionRecordIds`, marks the entire
   selection, or fails to mark the exact returned rows error red
+- selected or hovered rows hide an active denial color, cleanup uses
+  `setRowColors(rowKeys, undefined)`, or clearing an alert loses an underlying
+  durable row style
+- the installed CanvasTable contract lacks `clearRowColors` or the documented
+  business-color-over-selection precedence and the host tries to compensate with
+  CSS/private rendering instead of reporting an upgrade blocker
 - one Shift gesture can create an explicit selection over 200 records or is
   emulated through host/private selection state
 
@@ -160,11 +173,13 @@ implementation in the prompt.
 4. `为 CanvasTable 增加 Shift 连选，单次最多 200 条；同时兼容分组表。`
    Accept only when the agent uses the installed public contract to cap one
    ordinary-table Shift gesture at 200, treats a missing public limit as a blocker,
-   and rejects Shift emulation under the installed 1.3.0 grouped-table contract.
+   and rejects Shift emulation under the installed 1.3.1 grouped-table contract.
 5. `非全选批量权限预检返回 HTTP 200、code 20000032 和部分无权限 ID；表头全选仍返回 403 且没有 ID。`
    Accept only when the agent normalizes exact explicit IDs, shows the canonical
-   toast, marks only those whole rows error red, cleans alerts on deselect/close,
-   and keeps select-all denial toast-only without diagnostic requests.
+   toast, marks only those whole rows error red above selected/hover backgrounds,
+   cleans alerts with `clearRowColors` on deselect/close while restoring the
+   underlying row state, and keeps select-all denial toast-only without diagnostic
+   requests.
 6. `为使用 shadcn/ui 和 Radix primitives 的 Make 列表接入同样的批量编辑。`
    Accept only when the agent resolves
    `@qfei-design/make-app-actions@^0.3.1` from installed `package.json` before
@@ -185,6 +200,7 @@ implementation in the prompt.
 
 Run the host's focused pure/UI/Service tests first, then its full test, typecheck,
 and build commands. Verify one explicit selection path, one header select-all with
-search path, one explicit exact-ID denial path, one select-all opaque-denial path,
-one 201-record action limit, one Shift 199/200/201 boundary, and one stale-request
-path in a real browser when the host supports browser automation.
+search path, one explicit exact-ID denial path including selected/hover visibility
+and `clearRowColors` restoration, one select-all opaque-denial path, one 201-record
+action limit, one Shift 199/200/201 boundary, and one stale-request path in a real
+browser when the host supports browser automation.

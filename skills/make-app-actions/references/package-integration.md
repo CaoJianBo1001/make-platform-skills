@@ -8,7 +8,7 @@ a Make CanvasTable record list, ensure both packages are installed:
 
 ```text
 @qfei-design/make-app-actions@^0.3.1
-@qfei-design/canvas-table@^1.3.0
+@qfei-design/canvas-table@^1.3.1
 ```
 
 Use the host package manager. Do not change package managers or create a second
@@ -27,12 +27,15 @@ adapters:
 
 Read the resolved package and its documentation dynamically:
 
-1. Read the installed `node_modules/@qfei-design/make-app-actions/package.json`
-   and verify the resolved version satisfies this Skill's compatible `^0.3.1`
-   range.
-2. Read `package.ai.json`, parse `package.ai.json.readOrder`, and verify every
+1. Read each `package.json` from the installed packages and verify
+   `@qfei-design/make-app-actions` satisfies `^0.3.1` before interpreting its
+   `package.ai.json` as potentially stale guidance.
+2. Verify `@qfei-design/canvas-table` satisfies `^1.3.1`. CanvasTable 1.3.1 is
+   the first published contract where business row colors remain above
+   selection/hover and `clearRowColors` restores the underlying row background.
+3. Read `package.ai.json`, parse `package.ai.json.readOrder`, and verify every
    declared file exists relative to the installed package.
-3. Read the remaining entries in order and use public exports only.
+4. Read the remaining entries in order and use public exports only.
 
 The currently published `0.3.1` package contains a stale `package.ai.json`
 minimum or install example for `^0.2.0`, `^0.2.1`, or `^0.3.0`. When the actual

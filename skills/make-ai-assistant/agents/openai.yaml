@@ -1,4 +1,4 @@
 interface:
   display_name: "Make AI Assistant"
-  short_description: "Make AI assistant with Artifact and SSE transport"
-  default_prompt: "Use $make-ai-assistant to select the Make App or Make Console adapter, then integrate Make AI 助手 with @qfei-design/make-ai-assistant, Artifact V1 templates, host context, Service/Agent Gateway SSE transport, history restore, and action intents."
+  short_description: "Make AI assistant with UI, Artifact, and SSE transport"
+  default_prompt: "Use $make-ai-assistant to select the Make App or Make Console adapter, then integrate Make AI 助手 with @qfei-design/make-ai-assistant, host theme, responsive drawer, Artifact V1 templates, context, Service/Agent Gateway SSE transport, history restore, and action intents."

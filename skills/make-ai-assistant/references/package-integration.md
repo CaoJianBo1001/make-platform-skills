@@ -46,22 +46,62 @@ particular, a Console selection must not instantiate the Make App adapter or cal
 - `MakeAiAssistant`: default surface with floating launcher and assistant panel.
 - `AssistantPanel`: embedded panel when the host owns the conversation surface or page region.
 - `ArtifactRenderer`: render one Artifact inside a custom host surface.
+- `MakeAiTheme`: local visual contract shared by all three React surfaces.
 
-Host props normally include:
+Public props vary by surface:
 
-- `transport`
-- `context`
-- `registry` for custom template registration
-- `brandName`, `title`, `subtitle`
-- `assistantName`
-- `userName`, `userAvatarUrl`
-- `privacyNotice`
-- `suggestions`
-- `launcher`, `hideLauncher`
-- `onAction`, `onActionError`
+- All three surfaces support `theme?: MakeAiTheme`, `context`, `onAction`, and
+  `onActionError`; `ArtifactRenderer` also requires `artifact` and `registry`,
+  and may accept `fallback`.
+- `MakeAiAssistant` and `AssistantPanel` require `transport` and support an
+  optional `registry`, `brandName`, `title`, `subtitle`, `assistantName`,
+  `userName`, `userAvatarUrl`, `privacyNotice`, `headerHeight`, and
+  `suggestions`, and `onNewConversation`; `AssistantPanel` additionally
+  supports `onClose`.
+- Only `MakeAiAssistant` supports `open`, `defaultOpen`, `onOpenChange`,
+  `launcher`, `hideLauncher`, and `maxDrawerWidth`.
 
-User display name/avatar and broadcast copy are presentation props only. They do
-not change authorization and must not be forwarded as credentials.
+User display name/avatar, brand copy, privacy prompt, and theme are presentation
+props only. They do not change authorization and must not be forwarded as
+credentials.
+
+## Visual and responsive contract
+
+Use public props and package namespace variables; do not copy package CSS or
+replace the assistant with a host-owned generic Drawer.
+
+- `theme` requires `primary`; optional `MakeAiTheme` values refine hover,
+  foreground, surface, text, border, and overlay colors. The prop applies local
+  `--make-ai-theme-*` variables to the rendered package root, so it must not
+  mutate host global CSS. A light primary needs a readable `onPrimary` value.
+- Theme precedence is `theme` prop, then `--make-ai-theme-*`, then other
+  `--make-ai-*` overrides, host `--make-color-*`, and finally package defaults.
+  Semantic success, warning, and error colors remain semantic rather than being
+  recolored as brand status.
+- Package templates receive the same theme automatically. A custom Artifact
+  template that returns its own root element or a Fragment must apply
+  `renderContext.themeStyle` to its own root when it needs the package theme;
+  never add a wrapper solely to theme an Artifact.
+- `privacyNotice` and `headerHeight` are `MakeAiAssistant` / `AssistantPanel`
+  header props. `privacyNotice` creates the package header's focusable help
+  Tooltip beside the current context. Pass text only; do not build a duplicate
+  broadcast row. Empty or blank text hides the control. `headerHeight` accepts a
+  number or CSS length; `--make-ai-header-height` is the namespace-variable
+  alternative. Do not pass either prop to `ArtifactRenderer`.
+- `MakeAiAssistant` defaults to a 432px desktop drawer. It is resizable from the
+  left edge, exposes a keyboard-focusable separator, and keeps the initial width
+  as its minimum. `maxDrawerWidth` is a pixel cap with a default of
+  `min(1024px, 72vw)` and is clamped to the minimum/current viewport. Do not pass
+  this prop to `AssistantPanel` or emulate it with page-level media queries.
+- At viewport widths of 560px or less, the package uses a full-width drawer and
+  hides the resize handle. Use `--make-ai-drawer-width`, `--make-ai-drawer-resize-line`,
+  `--make-ai-panel-gutter-wide`, and launcher position variables only when a
+  documented override is necessary. The panel and Artifacts use container
+  queries, so embedded and widened surfaces adapt to available container width.
+- Closing an opened `MakeAiAssistant` hides the drawer without unmounting the
+  panel or cancelling an active run. Let the package preserve scroll and focus;
+  cancel only through stop, new conversation, context reinitialization, or host
+  unmount according to the transport contract.
 
 ## Host context
 

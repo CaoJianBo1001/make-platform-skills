@@ -2,7 +2,7 @@
 name: make-app-actions
 description: "Use when generating, integrating, refactoring, reviewing, or debugging Make CanvasTable record-list 操作按钮 and selection actions; this is the 默认 behavior for writable Make record lists unless explicitly opted out. Triggered by 复选框, 行操作, 选择操作栏, 编辑, 删除, 批量编辑, 暂无可用的操作, selectAll, Shift selection, Shift 200 条上限, selectionIntent, CanvasTable 重建, totalCount 变化, 行级写权限预检, noPermissionRecordIds, 无权限行爆红, record-write-permission, records/bulk, @qfei-design/make-app-actions, or action tests. Covers package integration, independent update/delete/bulkUpdate permissions, Canvas selection intent, immutable snapshots, effective write filters, Service precheck/bulk contracts, UI-adapter compatibility, exact denial-row feedback, stale safety, and tests. Does not own CanvasTable internals, principal IAM policy, general Service layering, page shell, field editor internals, auth, runtime packaging, DSL, Make CLI, or filter/sort/group semantics."
 metadata:
-  version: 0.1.8
+  version: 0.1.10
 ---
 
 # make-app-actions
@@ -23,15 +23,19 @@ requests, query context, field controls, business feedback, and list refresh.
    installed CanvasTable version and docs, normalized runtime schema, principal
    permission model, records query state, Service routes, edit/detail surfaces,
    and related tests.
-2. Install `@qfei-design/make-app-actions@^0.3.1`. Read the installed
-   `package.json` first and verify its resolved version satisfies `^0.3.1`; then
+2. Install `@qfei-design/make-app-actions@^0.3.1` and
+   `@qfei-design/canvas-table@^1.3.1`. Read each installed `package.json` first
+   and verify its resolved version satisfies the required range; then
    read `package.ai.json`, parse `package.ai.json.readOrder`, read every declared
    file in order, and use public exports only. Read
    `references/package-integration.md` before changing package integration.
-3. Ensure the installed CanvasTable exposes the public selection snapshot and
-   clear/highlight APIs required by the package adapter. Use
+3. Use the published CanvasTable 1.3.1 contract for the public selection snapshot,
+   `clearSelection`, `setRowColors`, and `clearRowColors` APIs required by the
+   package adapter. Its public docs must also guarantee that business row colors
+   remain visible above selection and hover backgrounds. If the cleanup API or
+   precedence guarantee is missing, report a CanvasTable upgrade blocker. Use
    `canvas-table-integration` for CanvasTable mechanics; do not deep-import table
-   internals.
+   internals or patch the rendering order with host CSS.
 4. Enable multiple selection and normalize every public Canvas selection event
    with `resolveCanvasSelectedRecordSnapshot`. Preserve `selectionIntent`; never
    infer select-all from selected and total counts. Treat CanvasTable instance
@@ -40,7 +44,7 @@ requests, query context, field controls, business feedback, and list refresh.
    selection into a replacement instance. Limit one supported Shift range gesture
    to at most 200 records through the installed CanvasTable public contract; if
    that contract cannot enforce the limit, report a capability blocker instead of
-   emulating private selection state in the host. CanvasTable 1.3.0
+   emulating private selection state in the host. CanvasTable 1.3.1
    `GroupTableComponent` does not support Shift range selection; do not emulate
    Shift ranges in the host unless the installed grouped-table public contract
    explicitly adds that capability.
@@ -101,6 +105,9 @@ requests, query context, field controls, business feedback, and list refresh.
   this Skill, resolve `@qfei-design/make-app-actions@^0.3.1` before reading
   `package.ai.json`; its published `0.3.1` manifest has stale `0.3.0` version and
   install fields that must not downgrade the integration.
+- Resolve `@qfei-design/canvas-table@^1.3.1` for the published row-color
+  precedence and `clearRowColors` contract. Do not accept `1.3.0` for a writable
+  record-action list and do not emulate the missing behavior in host code.
 - Make CanvasTable record lists get selectable rows and the standard action bar
   by default. A strictly read-only list may opt out explicitly only when
   read-only is an object/product capability, not merely the current user's lack
@@ -130,8 +137,11 @@ requests, query context, field controls, business feedback, and list refresh.
   keyboard/range-selection internals when that capability is unavailable.
 - An explicit precheck HTTP 200 business denial with authoritative
   `noPermissionRecordIds` blocks the action, shows the canonical denial toast, and
-  marks only those exact rows with the host error-red row style. A select-all 403
-  returns no row IDs, shows the same toast, and never invents rows to highlight.
+  marks only those exact rows with the host error-red row style. That semantic
+  color must remain visible while a denied row is selected or hovered. Clear the
+  action-owned command color through `clearRowColors`; do not use
+  `setRowColors(rowKeys, undefined)` as cleanup. A select-all 403 returns no row
+  IDs, shows the same toast, and never invents rows to highlight.
 - One action produces at most one Make permission-precheck request and one final
   Make mutation request. Never use per-ID diagnostics or per-record update loops.
 - Selection/query races must not open stale UI, apply stale feedback, clear a

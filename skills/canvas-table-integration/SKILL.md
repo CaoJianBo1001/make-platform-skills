@@ -2,7 +2,7 @@
 name: canvas-table-integration
 description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, Shift 200 条上限, row colors, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Make record lists use make-app-actions for the default selectable record-action workflow. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
 metadata:
-  version: 0.1.12
+  version: 0.1.14
 ---
 
 # canvas-table-integration
@@ -22,22 +22,23 @@ Hard Track B rule: every CanvasTable cell edit / 单元格编辑 implementation 
 ## Quick start
 
 1. Confirm this is a consumer-side table integration, not table-library maintenance.
-2. Check package installation and read the package AI docs in the required order below.
+2. Check package installation and read the package AI docs in the required order below. Integrations that combine business row colors with selection or hover require the published `@qfei-design/canvas-table@^1.3.1` contract.
 3. Choose base Track A or Track C. Add Track B as an editing enhancement when required; for editable Make schema tables use Track C plus Track B.
 4. For Make schema tables, load and normalize schema fields before initializing the table; build `IColumn[]` plus renderers from the normalized field types, schema `field.properties`, and the shared field type registry.
 5. Read only the base-track references and, when editing is in scope, the Track B references from the topic map.
 6. Start from the package recipe/example when available, then adapt with the smallest project-local diff.
 7. Enable table row defaults unless the user explicitly opts out: `showSN` sequence numbers plus a hover-revealed open-detail action through `bodyRowHeadSuffixOptions`.
 8. For every writable Make record list, enable multiple selection and route the default edit/delete/batch-edit action workflow to `make-app-actions`. Only an explicitly read-only list opts out.
-9. For Make schema tables, apply the platform field-renderer defaults. Text-bearing overflow must show ellipsis, and tooltip is enabled by default only for ellipsized overflow or hidden `+N` content; do not require the user to ask for it.
-10. When the object/entity/schema key changes, reset table interaction state and scroll position. Do not carry the previous object's horizontal or vertical scroll into the next object.
-11. Keep table initialization independent of row count: create the table after container size plus schema/columns are ready, then apply the latest rows with `setData(latestRows)` in local mode. In virtual mode, select the page-only or identity-aware callback from the installed public docs and preserve its page/request contract. Empty rows remain valid and must still render headers and the empty state.
-12. For large-data, fast-scroll, or scrollbar-drag virtual loading, follow `references/virtual-table-patterns.md`; installed-contract selection, request identity, bounded scheduling, stale-request cancellation, pending-page release, atomic total/page writes, and cache limits are delivery requirements for that path.
-13. If Track B is in scope, verify the mandatory cell-edit standard before finishing; a non-standard cell editor is not a shippable partial result.
-14. Add only the capabilities the user explicitly needs now. Pagination, sorting, grouping, and cell editing remain opt-in; Make record-list selection actions are the default through `make-app-actions`.
-15. When table-header sorting is requested, use this Skill only for the documented header menu/suffix mechanics and route sorting behavior, `openWithField`, Preset, and records timing to `make-app-sort`.
-16. When Make record-list grouping is requested, use this Skill only for `GroupTableComponent` public API mechanics and route grouping behavior, Preset, `record-groups`, `groupFilter`, and leaf-page timing to `make-app-group`.
-17. Before finishing, read the relevant pitfalls reference and verify one concrete table path.
+9. CanvasTable 1.3.1 publishes the business-row-color contract: explicit `setRowColors` / `rowStyleOptions` colors remain visible above selection and hover, and `clearRowColors` restores the underlying row style or built-in background. Resolve `^1.3.1` before using that path; do not repair an older package's rendering order with host CSS or private imports.
+10. For Make schema tables, apply the platform field-renderer defaults. Text-bearing overflow must show ellipsis, and tooltip is enabled by default only for ellipsized overflow or hidden `+N` content; do not require the user to ask for it.
+11. When the object/entity/schema key changes, reset table interaction state and scroll position. Do not carry the previous object's horizontal or vertical scroll into the next object.
+12. Keep table initialization independent of row count: create the table after container size plus schema/columns are ready, then apply the latest rows with `setData(latestRows)` in local mode. In virtual mode, select the page-only or identity-aware callback from the installed public docs and preserve its page/request contract. Empty rows remain valid and must still render headers and the empty state.
+13. For large-data, fast-scroll, or scrollbar-drag virtual loading, follow `references/virtual-table-patterns.md`; installed-contract selection, request identity, bounded scheduling, stale-request cancellation, pending-page release, atomic total/page writes, and cache limits are delivery requirements for that path.
+14. If Track B is in scope, verify the mandatory cell-edit standard before finishing; a non-standard cell editor is not a shippable partial result.
+15. Add only the capabilities the user explicitly needs now. Pagination, sorting, grouping, and cell editing remain opt-in; Make record-list selection actions are the default through `make-app-actions`.
+16. When table-header sorting is requested, use this Skill only for the documented header menu/suffix mechanics and route sorting behavior, `openWithField`, Preset, and records timing to `make-app-sort`.
+17. When Make record-list grouping is requested, use this Skill only for `GroupTableComponent` public API mechanics and route grouping behavior, Preset, `record-groups`, `groupFilter`, and leaf-page timing to `make-app-group`.
+18. Before finishing, read the relevant pitfalls reference and verify one concrete table path.
 
 ## Do not use this skill for
 
@@ -176,7 +177,8 @@ Treat these as safety rules:
 - virtual loading failures and cancellations must release the package pending-page marker through the installed package's documented public API; large-data or fast-scroll paths must also use a bounded host scheduler instead of firing every transient viewport page immediately
 - sorting is opt-in: when requested, expose header asc/desc only through the host's documented CanvasTable header menu/suffix API, then call the shared `make-app-sort` controller. Do not sort records locally, keep separate header sort state, or call records directly from a header action
 - grouping is opt-in: for Make record lists, use `make-app-group` for the package panel, Preset, Service, `groupFilter`, and records timing. This Skill may instantiate `GroupTableComponent` and wire `group:load` / `group:data:load`, but must not define grouping semantics itself
-- Make record actions are default: this Skill wires public selection snapshots, `clearSelection`, supported Shift/select-all behavior, and row colors; `make-app-actions` owns action state, permissions, precheck, batch modal, and mutation timing. Under the CanvasTable 1.3.0 contract, `GroupTableComponent` does not support Shift range selection; do not emulate it in the host
+- Make record actions are default: this Skill wires public selection snapshots, `clearSelection`, supported Shift/select-all behavior, and row colors; `make-app-actions` owns action state, permissions, precheck, batch modal, and mutation timing. Under the CanvasTable 1.3.1 contract, `GroupTableComponent` does not support Shift range selection; do not emulate it in the host
+- Treat CanvasTable 1.3.1 semantic row-color precedence and cleanup as the minimum record-action contract: business row colors must remain visible above selection and hover, and command colors must be removed with documented `clearRowColors(rowKeys)`. `setRowColors(rowKeys, undefined)` is not a cleanup fallback. Require `@qfei-design/canvas-table@^1.3.1` instead of overriding canvas internals in the host
 - For ordinary Make `CanvasTableComponent` record lists, one Shift
   range-selection gesture may select at most 200 records. Enforce the limit only
   through the installed public selection contract; if that capability is absent,

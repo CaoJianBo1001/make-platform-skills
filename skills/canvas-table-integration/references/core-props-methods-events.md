@@ -90,7 +90,7 @@ does not make the list strictly read-only; retain selection so scheme two can sh
 For ordinary Make `CanvasTableComponent` lists, cap one Shift range-selection
 gesture at 200 records through the installed public selection contract. If the
 installed contract exposes no such capability, report a blocker and do not
-emulate Shift anchors or ranges in host code. Under CanvasTable 1.3.0,
+emulate Shift anchors or ranges in host code. Under CanvasTable 1.3.1,
 `GroupTableComponent` does not support Shift range selection at all.
 
 #### `rowSortable`
@@ -139,7 +139,8 @@ Use these methods first:
 - `getTableData()`
 - `setRowData(rowKey, data)`
 - `setCellData(rowKey, columnKey, data)`
-- `setRowColors(rowKeys, color)` when exposed by the installed public contract
+- `setRowColors(rowKeys, color?)` when exposed by the installed public contract
+- `clearRowColors(rowKeys)` when exposed by the installed public contract
 - `getSelectionInfo()`
 - `clearSelection()`
 - `updateSummaryData(newSummaryData)`
@@ -172,6 +173,26 @@ Do not call `scrollTo(0, 0)` after a same-object cell edit, row refresh, or Serv
 #### `setRowData(...)` and `setCellData(...)`
 
 Use targeted row/cell updates after accepted single-row or single-cell saves. Prefer these methods over remounting the table or replacing all data when the object/entity/schema identity has not changed.
+
+#### `setRowColors(...)` and `clearRowColors(...)`
+
+The published CanvasTable 1.3.1 contract provides these semantics. Use
+`rowStyleOptions` for business color derived from durable host state and
+`setRowColors(rowKeys, color)` for an explicit command-style row color. Under a
+compatible installed contract, business row colors have higher priority than
+selected and hover backgrounds, so semantic feedback remains visible while the
+checkbox continues to communicate selection.
+
+Remove only command-style colors with `clearRowColors(rowKeys)`. Cleanup restores
+the matching `rowStyleOptions` color, or the current selected, hover, or default
+background when no business row style applies. `setRowColors(rowKeys, undefined)`
+keeps the package's default error-color behavior and does not mean clear.
+
+Before depending on these semantics, verify both methods and the precedence rule
+in the installed package's `package.ai.json.readOrder` docs. If
+`clearRowColors(rowKeys)` or the business-color-over-selection guarantee is
+missing, report a package-upgrade blocker; do not emulate the behavior with CSS,
+canvas internals, or deep imports.
 
 #### `getTableData()`
 

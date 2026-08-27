@@ -59,6 +59,12 @@ const makeuiStyling = read(
 const canvasCoreContract = read(
   'skills/canvas-table-integration/references/core-props-methods-events.md',
 );
+const canvasCommonPitfalls = read(
+  'skills/canvas-table-integration/references/common-pitfalls.md',
+);
+const canvasTrackWorkflows = read(
+  'skills/canvas-table-integration/references/track-workflows.md',
+);
 const canvasRowHeadContract = read(
   'skills/canvas-table-integration/references/row-head-action-patterns.md',
 );
@@ -68,6 +74,9 @@ const canvasEditLifecycle = read(
 const filterSkill = read('skills/make-app-filter/SKILL.md');
 const sortSkill = read('skills/make-app-sort/SKILL.md');
 const groupSkill = read('skills/make-app-group/SKILL.md');
+const groupCanvasFlow = read(
+  'skills/make-app-group/references/canvas-table-flow.md',
+);
 const skillBundle = [
   skill,
   packageIntegration,
@@ -115,6 +124,21 @@ assert.match(
   packageIntegration,
   /@qfei-design\/make-app-actions@\^0\.3\.1/,
   'package integration must require the generic batch-modal release',
+);
+assert.match(
+  `${skill}\n${packageIntegration}`,
+  /@qfei-design\/canvas-table@\^1\.3\.1/,
+  'action integration must require the published row-color cleanup release',
+);
+assert.match(
+  canvasSkill,
+  /CanvasTable 1\.3\.1[\s\S]{0,420}(?:business|业务)[^\n]*(?:row|行)[^\n]*(?:color|颜色)[\s\S]{0,320}clearRowColors/i,
+  'canvas integration must document the published 1.3.1 row-color contract',
+);
+assert.doesNotMatch(
+  `${skill}\n${packageIntegration}\n${selectionFlow}\n${testing}\n${canvasSkill}\n${canvasCoreContract}\n${groupSkill}\n${groupCanvasFlow}`,
+  /CanvasTable 1\.3\.0|canvas-table@\^1\.3\.0|installed 1\.3\.0 grouped-table contract/i,
+  'action-related grouping guidance must not retain the pre-row-color 1.3.0 baseline',
 );
 assert.match(
   packageIntegration,
@@ -231,7 +255,7 @@ assert.match(
 assert.match(
   selectionFlow,
   /(?:(GroupTableComponent|分组表格)[\s\S]{0,120}(不支持|unsupported|does not support)[\s\S]{0,80}Shift|(GroupTableComponent|分组表格)[\s\S]{0,120}Shift[\s\S]{0,80}(不支持|unsupported|不得|do not))/i,
-  'grouped tables must explicitly record that CanvasTable 1.3.0 does not support Shift ranges',
+  'grouped tables must explicitly record that CanvasTable 1.3.1 does not support Shift ranges',
 );
 assert.match(
   `${skill}\n${selectionFlow}\n${canvasSkill}\n${canvasCoreContract}`,
@@ -245,7 +269,7 @@ assert.match(
 );
 assert.match(
   skill,
-  /(CanvasTable 1\.3\.0|GroupTableComponent)[^\n]*(不支持|does not support|unsupported)[^\n]*Shift[^\n]*(不得|do not|禁止)[^\n]*(模拟|emulate)/i,
+  /(CanvasTable 1\.3\.1|GroupTableComponent)[^\n]*(不支持|does not support|unsupported)[^\n]*Shift[^\n]*(不得|do not|禁止)[^\n]*(模拟|emulate)/i,
   'the main workflow must make the grouped Shift non-capability impossible to miss',
 );
 assert.match(
@@ -282,6 +306,31 @@ assert.match(
   canvasCoreContract,
   /setRowColors\s*\([^)]*rowKeys[^)]*color[^)]*\)/i,
   'CanvasTable public-method guidance must expose whole-row color feedback',
+);
+assert.match(
+  canvasCoreContract,
+  /clearRowColors\s*\([^)]*rowKeys[^)]*\)/i,
+  'CanvasTable public-method guidance must expose explicit row-color cleanup',
+);
+assert.match(
+  `${canvasCoreContract}\n${canvasCommonPitfalls}`,
+  /(?:业务|business)[^\n]*(?:行|row)[^\n]*(?:颜色|colou?r)[\s\S]{0,260}(?:优先|above|higher)[^\n]*(?:选中|selection|selected)[^\n]*(?:悬浮|hover)/i,
+  'business row colors must remain visible above selection and hover backgrounds',
+);
+assert.match(
+  `${canvasCoreContract}\n${canvasCommonPitfalls}`,
+  /setRowColors\s*\([^)]*undefined[^)]*\)[\s\S]{0,220}(?:不是|不表示|does not)[^\n]*(?:清除|clear)/i,
+  'undefined row color must not be documented as a cleanup command',
+);
+assert.match(
+  `${canvasSkill}\n${canvasCommonPitfalls}`,
+  /(?:clearRowColors|业务行颜色)[\s\S]{0,420}(?:已安装|installed)[^\n]*(?:公开|public)[^\n]*(?:契约|contract|API)[\s\S]{0,260}(?:升级|upgrade|阻断|blocker)/i,
+  'missing row-color precedence or cleanup capabilities must require a package upgrade/blocker',
+);
+assert.match(
+  canvasTrackWorkflows,
+  /(?:selected|选中)[^\n]*(?:hover|悬浮)[\s\S]{0,260}clearRowColors[\s\S]{0,260}(?:rowStyleOptions|默认|default)/i,
+  'row-color workflow tests must cover selected, hover, and cleanup restoration states',
 );
 
 assert.match(
@@ -369,6 +418,16 @@ assert.match(
   /(?:clear|清除)[^\n]*(?:all|全部)[^\n]*(?:highlight|alert|标红|提示)[^\n]*(?:action bar|操作栏)[^\n]*(?:closed|关闭)|(?:action bar|操作栏)[^\n]*(?:closed|关闭)[^\n]*(?:clear|清除)/i,
   'denial feedback must clear all row errors when the action bar closes',
 );
+assert.match(
+  permissionModel,
+  /(?:无权限|denied|error-red)[\s\S]{0,180}(?:选中|selected)[\s\S]{0,100}(?:悬浮|hover)[\s\S]{0,100}(?:仍|remain|保持|must)[^\n]*(?:可见|visible)/i,
+  'permission-denial row color must stay visible while the row is selected or hovered',
+);
+assert.match(
+  permissionModel,
+  /clearRowColors\s*\([^)]*\)[\s\S]{0,260}(?:恢复|restore)[^\n]*(?:rowStyleOptions|选中|selection|默认|default)/i,
+  'permission-denial cleanup must use clearRowColors and restore the underlying row state',
+);
 
 assert.match(
   batchEdit,
@@ -435,6 +494,11 @@ assert.match(
   testing,
   /20000032[\s\S]{0,260}noPermissionRecordIds[\s\S]{0,360}(?:整行|whole[- ]row|full[- ]row)[\s\S]{0,100}(?:爆红|错误红|error[- ]red|red)/i,
   'test matrix must cover new explicit denial IDs and exact whole-row feedback',
+);
+assert.match(
+  testing,
+  /(?:真实|real)[^\n]*(?:CanvasTable|canvas table)[\s\S]{0,320}(?:选中|selected)[\s\S]{0,160}(?:错误红|error-red|red)[\s\S]{0,100}(?:可见|visible)[\s\S]{0,320}clearRowColors[\s\S]{0,260}(?:恢复|restore)/i,
+  'test matrix must verify visible denial colors and cleanup restoration on a real CanvasTable path',
 );
 assert.match(
   testing,

@@ -6,12 +6,51 @@ For Make App pages, default to:
 
 - a small floating launcher on the right side, vertically centered
 - an assistant conversation panel anchored to the right side
-- a visible broadcast/privacy notice when the host provides one
+- a focusable `privacyNotice` help Tooltip beside the current context when the
+  host provides non-blank text
+- a title-side read-only status and a context subtitle that fall back to the
+  current App when the host omits one
 - compact prompt suggestions scoped to the current App/page
 - current user name/avatar in user messages when the host provides them
 
-`makeui` owns surrounding shell layout and responsive sizing. This Skill owns
-assistant package props, transport, Artifact templates, and action behavior.
+`makeui` owns surrounding shell layout, placement, and external container
+constraints. This Skill owns assistant package props, package visual behavior,
+transport, Artifact templates, and action behavior.
+
+## Package visual ownership and responsive behavior
+
+Use the package's public visual contract before adding host CSS.
+
+- Apply `theme?: MakeAiTheme` to `MakeAiAssistant`, `AssistantPanel`, or
+  `ArtifactRenderer` when the assistant must follow the host brand. `primary` is
+  required; use `onPrimary` when the primary color is light. The package writes
+  local `--make-ai-theme-*` variables only and does not change host global theme
+  values. Preserve semantic success, warning, and error colors.
+- `headerHeight` and `privacyNotice` belong only to `MakeAiAssistant` and
+  `AssistantPanel`; `ArtifactRenderer` has no package header. Use
+  `headerHeight` or `--make-ai-header-height` for header height. Pass
+  `privacyNotice` as text; the package supplies hover/focus Tooltip placement,
+  keyboard reachability, and overflow protection. Do not render a duplicate
+  privacy banner or manage its overlay outside the package.
+- For the default `MakeAiAssistant` surface, use `maxDrawerWidth` to cap desktop
+  width. The package starts at 432px, allows left-edge pointer/keyboard resize,
+  clamps the maximum to the viewport and minimum, and uses full width without a
+  resize handle at viewport widths of 560px or less. `maxDrawerWidth` is not an
+  `AssistantPanel` prop.
+- Prefer documented namespace variables such as `--make-ai-drawer-width`,
+  `--make-ai-drawer-resize-line`, `--make-ai-panel-gutter-wide`,
+  `--make-ai-launcher-top`, `--make-ai-launcher-right`, and
+  `--make-ai-launcher-mobile-right` for required overrides. Do not target
+  internal class names, copy styles, or replace package container queries with
+  page-viewport breakpoints.
+- Panel content and platform Artifacts react to their own container width. Wide
+  surfaces expand content and tables while prose retains a readable line length;
+  narrow Markdown tables retain horizontal scrolling. Preserve this behavior in
+  an embedded container by giving the panel a real available width rather than a
+  fixed page-width assumption.
+- `MakeAiAssistant` keeps an opened `AssistantPanel` mounted while closed so an
+  active answer continues. Reopening restores the user's previous scroll intent;
+  do not unmount it or cancel the run merely because the drawer closed.
 
 ## Context-aware display mapping
 
@@ -45,6 +84,9 @@ Use the package registry for custom templates:
 - `priority` resolves ties
 - `presentation.template` may request a template id, but the registry remains
   the whitelist
+- custom roots or Fragments that need host theming apply
+  `renderContext.themeStyle`; package templates receive the same theme without a
+  wrapper element
 
 Custom template selection must remain deterministic and safe. Server data cannot
 load a new template or override CSS/JS.
@@ -87,3 +129,7 @@ The package must not execute raw URLs or hidden backend commands.
   same kind or to a safe notice.
 - If the user scrolls away during streaming, do not force-scroll unless the
   package already defines that behavior.
+- Show process steps only while the corresponding assistant turn is generating;
+  do not preserve internal processing text after completion, failure, or history
+  restore. Keep safe retryable connection/service/unknown failures distinct and
+  never surface raw upstream diagnostics.

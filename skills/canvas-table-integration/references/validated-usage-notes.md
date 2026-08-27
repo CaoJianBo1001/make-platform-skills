@@ -143,7 +143,7 @@ Observed patterns:
 - focus restoration must be skipped while host modal, drawer, dialog, popover, or form UI owns focus
 - usable canvas height is resolved from explicit height, measured container height, or a conservative fallback
 - page-level draft state owns dirty row keys, save/discard, and unsaved-change guards
-- dirty row colors use `setRowColors(...)`
+- durable dirty row colors use `rowStyleOptions`, while temporary permission/error feedback uses `setRowColors(...)` and cleans up with CanvasTable 1.3.1 `clearRowColors(...)`
 - number-like fields keep row and submit values numeric while display formatting lives in render/editor formatting
 - numeric parser failures must not be committed, backfilled, or displayed as `NaN`
 - date-time editors resolve direct typed input before OK commits
