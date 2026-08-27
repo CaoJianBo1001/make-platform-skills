@@ -68,7 +68,7 @@ Use these defaults for first-pass editable-list work. Adapt them to the host pro
 2. Start with the smallest working editor bridge before abstracting the editor container.
 3. Prefer page-level draft state over table-internal edit state. The page owns draft values, dirty rows, save/discard actions, and unsaved-change guards.
 4. Use `edit:end` as the stable post-commit boundary. Do not hide all data mutation inside the table wrapper.
-5. Prefer canvas-table native row coloring such as `setRowColors(rowKeys, color)` for dirty-row highlighting.
+5. Prefer `rowStyleOptions` for durable dirty-row state and reserve `setRowColors(rowKeys, color)` for temporary command-style feedback. Remove the latter with `clearRowColors(rowKeys)` so the durable style can reappear.
 6. Define unsaved-change behavior for context changes such as tab switch, query reset, open detail, or create new.
 7. Keep text, number, select, date, and attachment metadata as reusable editor patterns, not fixed component choices.
 8. Use `editApplyMode: "controlled"` when a business save or draft layer owns writes; after save accepts a commit, backfill with `setCellData(...)` or `setRowData(...)`.
@@ -138,6 +138,7 @@ Track A common capabilities:
 - base columns: `key`, `title`, `width`, `align`, `headerAlign`, `fixed`, `showEllipsis`
 - local data updates via `setData(rows)`
 - local empty rows via `setData([])`: table header stays visible and `emptyStateOptions` / 暂无数据 renders
+- semantic row colors: selected and hover states do not hide explicit business colors; after `clearRowColors`, verify restoration to `rowStyleOptions` or the current selected, hover, or default background
 - rows arrive before the table instance is ready: after ready, apply latest rows with `setData(latestRows)`
 - virtual paged updates: identity-aware contracts use `setData(rows, page, request)` with the claimed request; legacy page-only contracts use `setData(rows, page)` only when the installed docs expose no request context
 - `updateProps(...)` for column / size / config updates

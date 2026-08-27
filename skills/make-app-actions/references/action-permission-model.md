@@ -75,13 +75,30 @@ precheck returns exact unauthorized row keys:
 2. Show the canonical toast above.
 3. Keep an alert set keyed by the normalized exact row IDs and mark only those
    whole rows with the host's error-red row style through the installed
-   CanvasTable public row-color API, such as `setRowColors` when documented.
-4. Remove a row highlight when that row is deselected.
+   CanvasTable public `setRowColors` API. A denied/error-red row that is selected
+   or hovered must remain visible; the checkbox continues to show selection.
+4. Remove a row highlight when that row is deselected by calling
+   `clearRowColors([rowKey])` for that action-owned alert key.
 5. Clear all action highlights when the action bar is closed or query context is
-   reset.
+   reset by calling `clearRowColors(alertRowKeys)` before dropping the alert set.
+   This restores `rowStyleOptions`, the current selection background, or the
+   default background according to the installed CanvasTable contract.
 6. Reconcile the alert set when rows are loaded or rendered again in the same
    selection generation, and ignore a stale precheck result after the generation
    changes.
+
+Treat the published CanvasTable 1.3.1 row-color precedence and cleanup as required
+installed capabilities.
+`setRowColors(rowKeys, undefined)` keeps the package default error color and is
+not a clear operation. If the installed public docs do not expose
+`clearRowColors` or do not guarantee that business colors remain above selected
+and hover backgrounds, report a CanvasTable package-upgrade blocker. Do not add
+host CSS, deep imports, or private canvas painting to compensate.
+
+Keep durable row state such as dirty-data color in `rowStyleOptions`, and keep
+the action denial color as the temporary `setRowColors` layer. If the host already
+has another temporary command-color owner, coordinate both through one host
+row-color controller so clearing an action alert cannot erase unrelated feedback.
 
 For explicit mode, the Service maps backend `noPermissionRecordIds` to normalized
 `unauthorizedRecordIDList`; this is the authoritative backend source for exact

@@ -2,7 +2,7 @@
 name: make-app-group
 description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. When make-app-actions is present, a successfully applied group must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
 metadata:
-  version: 0.1.4
+  version: 0.1.5
 ---
 
 # make-app-group
@@ -131,7 +131,7 @@ their implementation surfaces.
 - Grouped V1 should treat cell editing as disabled unless the product explicitly
   defines and tests a grouped edit lifecycle.
 - Writable grouped record lists may use the default `make-app-actions` selection
-  workflow. Under CanvasTable 1.3.0, `GroupTableComponent` does not support Shift
+  workflow. Under CanvasTable 1.3.1, `GroupTableComponent` does not support Shift
   range selection; do not emulate it in the host.
 - When that action workflow is present, only a successfully applied group
   generation clears selection and invalidates pending action work. Group drafts,

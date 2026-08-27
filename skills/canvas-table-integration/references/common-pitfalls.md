@@ -226,3 +226,26 @@ Fix:
 - keep callback refs for latest row actions, detail open handlers, and data loaders; callback identity changes must not recreate the table instance or `GroupTableComponent`
 - for grouped tables, guard root group synchronization with `rootGroups` plus `dataVersion` or another semantic token before calling `setGroup(rootGroups, undefined, 0)`
 - add a regression test that opens/closes detail UI and clicks non-mutating Drawer actions, then verifies no list, `record-groups`, or leaf-page request was issued
+
+## 16. Hiding or incorrectly clearing semantic row colors
+
+Symptom:
+
+- a denied/error row is red until the user selects or hovers it, then the built-in selection background hides the business feedback
+- clearing a temporary row alert leaves the package default error color behind
+- clearing a temporary alert also removes a dirty-row or other durable business color
+
+Cause:
+
+- the installed CanvasTable contract does not guarantee business row-color precedence over selected and hover backgrounds
+- the host treats `setRowColors(rowKeys, undefined)` as a clear operation even though it means the package default error color
+- multiple host features independently overwrite the same command-style row-color slot
+
+Fix:
+
+- verify from the installed public contract that business row colors have higher priority than selected and hover backgrounds
+- require the installed public `clearRowColors(rowKeys)` API and use it to remove command-style colors; never use `setRowColors(rowKeys, undefined)` to clear
+- keep durable, derived state such as dirty-row color in `rowStyleOptions`; use `setRowColors` for temporary imperative feedback so `clearRowColors` can restore the underlying row style
+- if two temporary features must own one row, coordinate them in one host row-color controller instead of allowing independent last-writer cleanup
+- if the resolved package is older than CanvasTable 1.3.1 or its installed public docs lack `clearRowColors` / the precedence guarantee, upgrade to `@qfei-design/canvas-table@^1.3.1` instead of adding CSS overrides, private imports, or host canvas painting
+- test selected and hover states while the business color is active, then call `clearRowColors` and verify restoration to `rowStyleOptions`, selected, hover, or default background as applicable

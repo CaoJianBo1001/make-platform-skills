@@ -25,7 +25,7 @@ If the installed public contract cannot prevent a single Shift gesture from
 selecting more than 200 records, report a capability blocker; do not emulate
 keyboard anchors, range expansion, or private selection state in the host.
 
-For the CanvasTable 1.3.0 public contract, `GroupTableComponent` does not support
+For the CanvasTable 1.3.1 public contract, `GroupTableComponent` does not support
 Shift range selection; Shift is supported only by `CanvasTableComponent`. Re-read
 the installed package docs for newer versions. Unless the installed grouped-table
 contract explicitly adds Shift, do not emulate it in the host. Grouped records may
