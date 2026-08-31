@@ -2,3 +2,4 @@
 .DS_Store
 /docs/*
 !/docs/
+!/docs/ai-changes-make-app-permission-review-fixes.md

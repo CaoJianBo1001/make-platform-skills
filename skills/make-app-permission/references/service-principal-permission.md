@@ -63,7 +63,7 @@ Never log Cookie, Authorization, token, API key, or full signed URL values.
 
 ## Response and field access
 
-Preserve IAM permission rows and normalize them at the UI boundary. A representative response is:
+Preserve the stable IAM response envelope and select/normalize App permission rows at the UI boundary. A representative response is:
 
 ```json
 {
@@ -115,7 +115,9 @@ Consume `fieldAccess` by permission dimension:
 
 An allow row with empty `fieldAccess` is unrestricted for that permissionKey at its resolved resource specificity. A matching deny wins. Named field entries override a wildcard field baseline.
 
-Keep an omitted/empty `fieldAccess` distinct from malformed IAM data. An omitted property or empty object is unrestricted; explicit `null`, a non-object, an array, a blank field key, an empty state list, an unknown state, or a state list containing non-strings is invalid and must fail the whole access snapshot closed at the Service validation or UI normalization boundary. Do not silently discard a malformed row while keeping sibling allows. Also reject an invalid effect, non-three-part permissionKey, missing/non-App scope, arbitrary namespace, or wildcard tenant/App resource instead of guessing intent. Null/primitive payloads or rows and non-array `permissions` must produce a denied snapshot without throwing.
+Do not make the UI readiness transition depend on every row returned by IAM. Apply the deterministic selection table in `permission-boundaries.md` before strict row validation: only clearly unrelated rows may be ignored, while selected and unclassifiable rows fail closed. Ignored rows must never grant or deny App access or block the subsequent Schema request. Keep the Service request App-scoped; local response selection is not a reason to add a tenant-root scope or upstream platform permission filter.
+
+For selected current-App business rows, keep an omitted/empty `fieldAccess` distinct from malformed IAM data. An omitted property or empty object is unrestricted; explicit `null`, a non-object, an array, a blank field key, an empty state list, an unknown state, or a state list containing non-strings is invalid and must fail the whole access snapshot closed at the Service validation or UI normalization boundary. Do not silently discard a malformed selected row while keeping sibling allows. Also reject a selected row with an invalid effect, non-three-part permissionKey, arbitrary namespace, or wildcard tenant/App resource instead of guessing intent. Null/primitive payloads or rows and non-array `permissions` must produce a denied snapshot without throwing.
 
 The Service preserves resources such as `make://<tenantId>/*/app/<appKey>`; UI segment matching treats that namespace wildcard as the same current App family represented by response scope.
 

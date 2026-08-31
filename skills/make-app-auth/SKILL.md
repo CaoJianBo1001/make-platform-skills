@@ -1,8 +1,8 @@
 ---
 name: make-app-auth
-description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user menu logout wiring, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. For generated Make Apps, preserve authenticated context for the required make-app-permission /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for the current-user header menu surface and make-app-permission for single-app permission enforcement.
+description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user menu logout wiring, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. When a Make App enables make-app-permission, preserve authenticated context for its /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for the current-user header menu surface and make-app-permission for single-app permission enforcement.
 metadata:
-  version: 0.1.3
+  version: 0.1.4
 ---
 
 # make-app-auth
@@ -46,7 +46,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - All frontend requests to Make backend must go through `auth.api`, including schema/meta, list, get, create, update, delete, attachment/file, lookup, user, and department candidate requests.
 - Generated Apps must centralize Make backend access in a shared API adapter or data-source layer that wraps `auth.api`.
 - Service-fronted Apps must preserve the `UI -> Service -> make-gateway` contract; do not let UI bypass Service for meta/data calls.
-- Service-fronted Apps must also preserve this contract for permission calls. UI uses `auth.api("/app/principal/permission")`, and the single-app permission behavior belongs to `make-app-permission`.
+- Service-fronted Apps that enable `make-app-permission` must also preserve this contract for permission calls. UI uses `auth.api("/app/principal/permission")`, and the single-app permission behavior belongs to `make-app-permission`.
 - Service-fronted published Apps use `gatewayBaseUrl: "/api/make"` in UI. UI calls `auth.api("/app/**")`, which becomes browser requests to `/api/make/app/**`. Auth bootstrap and OAuth callbacks must stay under `/api/make/auth/**` and `/api/make/oauth/**`; do not generate `/api/auth/**`, `/api/oauth/**`, or `gatewayBaseUrl: "/api"` for this mode.
 - Do not generate raw `window.fetch('/api/make/...')` for Make backend calls.
 - Do not hand-write `Authorization`.
@@ -63,7 +63,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - Do not silently downgrade generated Apps from unified login because local OAuth prerequisites are missing; report the blocker.
 - Before reporting publish/login readiness, verify the auth path with the agent or platform checks. Do not leave domain access, DevTools, k8s logs, or cookie inspection as user-only validation steps.
 - For Service-fronted Apps, `/api/make/auth/**` and `/api/make/oauth/**` are required namespace-level Service proxy contracts under the published App Service prefix, not optional convenience routes or endpoint-by-endpoint allowlists.
-- For generated Service-fronted Make Apps, the permission route `/api/make/app/principal/permission` is required by `make-app-permission`; auth must ensure it receives the established browser session context.
+- When a Service-fronted Make App enables `make-app-permission`, auth must ensure `/api/make/app/principal/permission` receives the established browser session context. Do not add that route solely because unrelated auth work is changing.
 - Do not implement auth readiness by adding a broad `/api/make/**` passthrough. Only auth/oauth are default transparent namespaces; Service-owned business requests stay under explicit `/api/make/app/**` routes, and unknown `/api/make/**` paths fail closed.
 - For Service-fronted Apps, Service must preserve the App host context for every make-gateway call: derive `X-Forwarded-Host` from inbound `Host`, do not trust client-supplied `X-Forwarded-Host`, add `X-Forwarded-Proto`, and share the same helper for auth and business proxy requests.
 - Generated authenticated App shells must expose a visible logout action in the current-user menu or the host's established account area, and that action must call `auth.logout()`. The visual menu surface belongs to `makeui`; this skill owns the auth handler and logout behavior. Do not implement logout by clearing cookies, rewriting Org URLs, or hiding logout in page-specific controls.

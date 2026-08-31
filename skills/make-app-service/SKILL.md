@@ -1,8 +1,8 @@
 ---
 name: make-app-service
-description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Generated Apps coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
+description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. When single-app permissions are in scope, coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.1.7
+  version: 0.1.8
 ---
 
 # make-app-service
@@ -22,7 +22,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 5. For a new Make POC Service, use the platform layered source tree by default: `app.ts`, `server.ts`, `config.ts`, `logger.ts`, `make-client/`, `services/`, `utils/`, with tests beside the route/adapter/helper they cover.
 6. Do not read local DSL/YAML as a published runtime data source. Runtime schema and data come from Make/backend APIs or the host Service adapter.
 7. Use shared adapters for Make Meta/Data/Preset calls, candidate APIs, lookup, files, and schema normalization. Build Make adapter URLs and `appKey` from normalized runtime config, not from route-local domains or UI input.
-8. For generated Make Apps, include the required single-app permission Service proxy by using `make-app-permission`; do not leave `/api/make/app/principal/permission` as a later task unless the user explicitly opts out of permissions.
+8. When single-app permission enforcement is requested or required by a repository-local delivery baseline, implement its Service proxy through `make-app-permission`. Otherwise preserve the existing permission flow and do not add `/api/make/app/principal/permission` solely because unrelated Service work is changing.
 9. Preserve permission-trimmed Schema collections independently: normalize `fields` and `createFields` separately; missing `createFields` means an empty create collection with no fallback to `fields`. Preserve unknown response properties, including `editableFields`, but leave their permission semantics to `make-app-permission`.
 10. If Schema is cached, isolate permission-trimmed results by tenant, principal/session, App, and access generation, and expose explicit invalidation for permission refresh.
 11. For Make record actions, implement the documented `record-write-permission` route before edit UI and the `records/bulk` route for batch edit; use `make-app-actions` for target, permission, and one-request semantics.
@@ -70,7 +70,7 @@ Generated or refactored Make App Service code should provide these capabilities 
 
 - public health/config: `/api/health`, `/api/config` for published UI access; `/health` may exist as local or k8s-probe compatibility
 - runtime schema: `/api/schema`, `/api/entities/:entityKey/fields`
-- single-app permissions: `/api/make/app/principal/permission` through `make-app-permission` for generated Make Apps
+- single-app permissions, when requested or required by a repository-local delivery baseline: `/api/make/app/principal/permission` through `make-app-permission`
 - Make AI assistant routes only when requested by the host and specified by `make-ai-assistant`: a selected `make-app` adapter may expose `/api/make/app/ai/chats/locate`, `/api/make/app/ai/chats/:chatId/messages`, and `/api/make/app/ai/chats/:chatId/events`; a selected `make-console` adapter instead follows its public recipe and the five-operation allowlist in `make-ai-assistant/references/make-console-service-contract.md`, never a generic proxy
 - records: list, get, create, update, delete, cell update
 - record actions when the list is writable: row-write permission precheck and one-request batch field update through `make-app-actions`
@@ -120,7 +120,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - Add boundary logs at route/adapter entry, success, and failure. Redact tokens, cookies, Authorization, API keys, signed download query strings, and unnecessary personal data.
 - For cancellable or supersedable work, a client disconnect must abort downstream work through a request-scoped `AbortSignal`. Do not stop at ignoring a stale response, and do not treat an expected `AbortError` as a user-visible 5xx failure.
 - Tests are required for route contracts, invalid input, adapter payloads, Make error mapping, and any schema/value normalization added by this skill.
-- Generated Make App Services must not be reported complete without the required principal permission proxy from `make-app-permission`, unless the user explicitly opts out of permissions.
+- When single-app permission enforcement is in scope, do not report the Service complete without the principal permission proxy from `make-app-permission` and its required tests. Otherwise do not add that proxy solely to satisfy this Skill.
 - For `record-write-permission` and `records/bulk`, follow `make-app-actions`:
   precheck the complete target with one Make `/data/v1/permission` call, parse the
   explicit-selection HTTP 200 / business-code `20000032` denial and its

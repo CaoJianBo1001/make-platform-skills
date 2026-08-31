@@ -87,7 +87,40 @@ try {
       const inputPermissions = source?.permissions;
       const appResourceMatches = !Object.hasOwn(source ?? {}, 'appResource') || String(source.appResource ?? '') === scope;
       const validScope = /^make:\\/\\/[^/*]+\\/meta\\/app\\/[^/*]+$/.test(scope);
+      const supportedBusinessPermissionKeys = [
+          'data.record.read',
+          'data.record.create',
+          'data.record.update',
+          'data.record.bulkUpdate',
+          'data.record.delete',
+          'meta.entity.read',
+          'meta.field.read',
+          'meta.field.update',
+      ];
+      const classifyResource = (value) => {
+        if (value === '*') return 'current-app';
+        if (typeof value !== 'string') return 'unclassifiable';
+        if (/^make:\\/\\/[^/*]+$/.test(value)) return 'unrelated';
+        const scopeParts = /^make:\\/\\/([^/*]+)\\/meta\\/app\\/([^/*]+)$/.exec(scope);
+        const resourceParts = /^make:\\/\\/([^/*]+)\\/(?:meta|\\*)\\/app\\/([^/*]+)(?:\\/entity\\/(?:[^/*]+|\\*))?$/.exec(value);
+        if (!scopeParts || !resourceParts) return 'unclassifiable';
+        return scopeParts[1] === resourceParts[1] && scopeParts[2] === resourceParts[2]
+          ? 'current-app'
+          : 'unrelated';
+      };
       const validPermissionKey = (value) => /^(?:[A-Za-z][\\w-]*|\\*)(?:\\.(?:[A-Za-z][\\w-]*|\\*)){2}$/.test(String(value ?? ''));
+      const isPotentialBusinessPermissionKey = (value) => {
+        if (typeof value !== 'string') return true;
+        return supportedBusinessPermissionKeys.some((expected) => wildcardKeyMatches(value, expected))
+          || (/^(?:data\\.record|meta\\.(?:entity|field))(?:\\.|$)/.test(value) && !validPermissionKey(value));
+      };
+      const shouldSelectRow = (item) => {
+        if (!item || typeof item !== 'object' || Array.isArray(item)) return true;
+        const resourceClassification = classifyResource(item.resource);
+        if (resourceClassification === 'unrelated') return false;
+        if (resourceClassification === 'unclassifiable') return true;
+        return isPotentialBusinessPermissionKey(item.permissionKey);
+      };
       const validResource = (value) => value === '*' || /^make:\\/\\/[^/*]+\\/(?:meta|\\*)\\/app\\/[^/*]+(?:\\/entity\\/(?:[^/*]+|\\*))?$/.test(String(value ?? ''));
       const normalizeItem = (item) => {
         if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
@@ -106,7 +139,10 @@ try {
           resource: String(item.resource),
         };
       };
-      const normalized = Array.isArray(inputPermissions) ? inputPermissions.map(normalizeItem) : [];
+      const selectedPermissions = Array.isArray(inputPermissions)
+        ? inputPermissions.filter(shouldSelectRow)
+        : [];
+      const normalized = selectedPermissions.map(normalizeItem);
       const permissions = validScope && appResourceMatches && Array.isArray(inputPermissions) && normalized.every(Boolean)
         ? normalized
         : [];
@@ -134,6 +170,34 @@ try {
   const correctResult = runSuite(correctAdapter);
   assert.equal(correctResult.status, 0, correctResult.output);
   assert.match(correctResult.output, /permission conformance: PASS/);
+
+  const unknownKeySelectedAdapter = writeAdapter(
+    'unknown-key-selected.mjs',
+    correctAdapterSource.replace(
+      "return supportedBusinessPermissionKeys.some((expected) => wildcardKeyMatches(value, expected))",
+      "return value.startsWith('data.record.') || supportedBusinessPermissionKeys.some((expected) => wildcardKeyMatches(value, expected))",
+    ),
+  );
+  const unknownKeySelectedResult = runSuite(unknownKeySelectedAdapter);
+  assert.notEqual(unknownKeySelectedResult.status, 0);
+  assert.match(
+    unknownKeySelectedResult.output,
+    /unknown_current_app_permission_key_is_ignored_before_validation/,
+  );
+
+  const unclassifiableResourceIgnoredAdapter = writeAdapter(
+    'unclassifiable-resource-ignored.mjs',
+    correctAdapterSource.replace(
+      "if (resourceClassification === 'unclassifiable') return true;",
+      "if (resourceClassification === 'unclassifiable') return false;",
+    ),
+  );
+  const unclassifiableResourceIgnoredResult = runSuite(unclassifiableResourceIgnoredAdapter);
+  assert.notEqual(unclassifiableResourceIgnoredResult.status, 0);
+  assert.match(
+    unclassifiableResourceIgnoredResult.output,
+    /unclassifiable_resource_fails_closed_before_key_is_ignored/,
+  );
 
   const entityMetadataUsesRecordReadAdapter = writeAdapter(
     'entity-metadata-uses-record-read.mjs',
@@ -219,7 +283,10 @@ try {
   );
   const droppedMalformedRowsResult = runSuite(droppedMalformedRowsAdapter);
   assert.notEqual(droppedMalformedRowsResult.status, 0);
-  assert.match(droppedMalformedRowsResult.output, /invalid_field_access_fails_closed|blank_field_key_poison_entire_access|malformed_row_poison_entire_access/);
+  assert.match(
+    droppedMalformedRowsResult.output,
+    /invalid_field_access_fails_closed|blank_field_key_poison_entire_access|malformed_row_poison_entire_access|unclassifiable_resource_fails_closed_before_key_is_ignored/,
+  );
 
   const appResourceOverrideAdapter = writeAdapter(
     'app-resource-override.mjs',
@@ -235,7 +302,7 @@ try {
   );
   const appResourceOverrideResult = runSuite(appResourceOverrideAdapter);
   assert.notEqual(appResourceOverrideResult.status, 0);
-  assert.match(appResourceOverrideResult.output, /app_resource_cannot_override_scope/);
+  assert.match(appResourceOverrideResult.output, /app_resource_cannot_override_scope|invalid_explicit_app_resource_fails_closed/);
 
   const firstAllowOnlyAdapter = writeAdapter(
     'first-allow-only.mjs',

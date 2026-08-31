@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.6
+// make-app-permission contract version: 0.2.9
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -79,8 +79,8 @@ function checkServiceContract() {
   if (!/meta\/app/.test(serviceText) || !/appKey/.test(serviceText)) {
     failures.push('app_scope_missing: Service must build scope make://<tenantId>/meta/app/<appKey>');
   }
-  if (/make\.platform\./.test(serviceText)) {
-    failures.push('platform_permission_filter_in_app_service: App permission Service code must not use platform make.platform.* keys');
+  if (hasUpstreamPlatformPermissionFilter(serviceText)) {
+    failures.push('upstream_platform_permission_filter: App-scoped IAM requests must not filter on make.platform.* permission keys');
   }
   if (/permissionKey\s+in\s+\[/.test(serviceText) && !/permissionKeys/.test(serviceText)) {
     warnings.push('permission_filter_maybe_defaulted: permissionKey filter found but no explicit permissionKeys option was detected');
@@ -97,6 +97,37 @@ function checkServiceContract() {
   if (/createFields\s*:\s*[^,;\n]*(?:\?\?|\|\|)\s*(?:[^,;\n]*\.)?fields\b/.test(serviceText)) {
     failures.push('create_fields_fallback_to_visible_fields: missing createFields must be empty, not fall back to fields');
   }
+}
+
+function hasUpstreamPlatformPermissionFilter(source) {
+  const platformPermissionKey = String.raw`['\"\x60]make\.platform(?:\.[^'\"\x60]+)?['\"\x60]`;
+  const hasInlineFilter = new RegExp(
+    String.raw`\bpermissionKeys?\s*:\s*\[[^\]]*${platformPermissionKey}`,
+    's',
+  ).test(source)
+    || new RegExp(
+      String.raw`\b(?:body|payload|request)\s*\.\s*permissionKeys?\s*=\s*\[[^\]]*${platformPermissionKey}`,
+      's',
+    ).test(source)
+    || new RegExp(
+      String.raw`\bpermissionKey\s+in\s+\[[^\]]*${platformPermissionKey}`,
+      's',
+    ).test(source);
+  if (hasInlineFilter) return true;
+
+  const platformPermissionAliases = [...source.matchAll(new RegExp(
+    String.raw`\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*\[[^\]]*${platformPermissionKey}`,
+    'gs',
+  ))].map((match) => match[1]);
+  return platformPermissionAliases.some((alias) =>
+    new RegExp(
+      String.raw`\b(?:body|payload|request)\s*=\s*\{[^{}]{0,500}?\bpermissionKeys?\s*:\s*${alias}\b`,
+      's',
+    ).test(source)
+    || new RegExp(
+      String.raw`\b(?:body|payload|request)\s*\.\s*permissionKeys?\s*=\s*${alias}\b`,
+      's',
+    ).test(source));
 }
 
 function checkUiContract() {

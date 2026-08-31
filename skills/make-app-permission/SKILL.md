@@ -1,13 +1,13 @@
 ---
 name: make-app-permission
-description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permissions. Triggered by 权限, 对象导航, 字段权限范围, 字段可新建, 可见, 可编辑, creatable, createFields, editableFields, /principal/permission, buttons, menus, routes, read/create/update/delete/bulkUpdate, data.record.*, meta.entity.*, meta.field.*, route guards, refresh permission, or URL bypass. Covers the required Service-to-IAM proxy, app-scope matching, permission-trimmed schema, separate entity/navigation, create, read, and update gates, table-header/data separation, create payload filtering, route/action enforcement, refresh invalidation, tests, and audit. Use make-app-actions for selection and batch-action behavior. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
+description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, creatable, createFields, data.record.*, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.2.6
+  version: 0.2.9
 ---
 
 # make-app-permission
 
-Use this skill for Make App single-app permission enforcement. Treat it as required for generated or refactored Make Apps unless the user explicitly opts out.
+Use this skill when a request creates, changes, reviews, or debugs Make App single-app permission enforcement. For a new App, add the full permission chain only when the user requests it or the repository has an explicit delivery baseline requiring it. Otherwise preserve the existing permission flow; do not add an IAM proxy, route guards, or permission audits solely because unrelated UI, Service, Schema, or runtime code is changing.
 
 This skill owns permission semantics. Use `make-app-auth` for login/session, `make-app-service` for Service and Schema transport, `makeui` for rendering, `canvas-table-integration` for cell-editor mechanics, and `make-app-runtime` for packaging/runtime.
 
@@ -25,7 +25,7 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 
 ## Required contract
 
-- Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. Do not use tenant-root/platform permission filters.
+- Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. Do not request tenant-root scope or upstream platform permission filters. Before strict normalization, classify rows with `references/permission-boundaries.md`: ignore only clearly unrelated rows, and fail closed for every selected or unclassifiable row.
 - Match exact, wildcard, parent, App, entity, IAM namespace-wildcard App resources, and deny correctly. Use the most-specific allow field range; deny wins.
 - Keep create, visibility, and editability as separate field-set decisions:
   - create form: `createFields ∩ meta.field.read fieldAccess(creatable|readonly|editable|partialMask|fullMask|*)`;

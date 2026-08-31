@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.6
+// make-app-permission contract version: 0.2.9
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -149,6 +149,65 @@ const cases = [
     const globalAccess = access(permission('data.record.update', { resource: '*' }));
     assert.equal(adapter.canUseEntityOperation(parentAccess, 'order', 'data.record.read'), true);
     assert.equal(adapter.canUseEntityOperation(globalAccess, 'order', 'data.record.update'), true);
+  }],
+  ['surplus_permission_rows_do_not_block_app_access', () => {
+    const current = adapter.normalizeAccess(basePayload([
+      permission('data.record.create'),
+      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
+      {
+        effect: 'unexpected',
+        fieldAccess: null,
+        permissionKey: 'make.platform.admin',
+        resource: 'make://tenant-1',
+      },
+      {
+        effect: 'unexpected',
+        fieldAccess: null,
+        permissionKey: 'data.record.delete',
+        resource: 'make://tenant-2/meta/app/OtherApp',
+      },
+      {
+        effect: 'unexpected',
+        fieldAccess: null,
+        permissionKey: 'iam.permission.read',
+        resource: ENTITY_RESOURCE,
+      },
+      {
+        effect: 'unexpected',
+        fieldAccess: null,
+        permissionKey: 'unrelated.permission.read',
+        resource: ENTITY_RESOURCE,
+      },
+    ]));
+    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
+  }],
+  ['unknown_current_app_permission_key_is_ignored_before_validation', () => {
+    const current = adapter.normalizeAccess(basePayload([
+      permission('data.record.create'),
+      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
+      {
+        effect: 'unexpected',
+        fieldAccess: null,
+        permissionKey: 'data.record.export',
+        resource: ENTITY_RESOURCE,
+      },
+    ]));
+    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
+  }],
+  ['unclassifiable_resource_fails_closed_before_key_is_ignored', () => {
+    const current = adapter.normalizeAccess(basePayload([
+      permission('data.record.create'),
+      {
+        effect: 'unexpected',
+        fieldAccess: null,
+        permissionKey: 'iam.permission.read',
+        resource: 'make://tenant-1/meta/app/TestApp/not-a-supported-resource',
+      },
+    ]));
+    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
   }],
   ['create_field_uses_meta_field_read_dimension', () => {
     const current = access(

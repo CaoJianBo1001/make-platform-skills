@@ -134,6 +134,72 @@ try {
 
   assert.match(runAudit(goodRoot), /status: PASS/);
 
+  const platformResponseFilterRoot = createFixture('platform-response-filter', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: `${goodFiles.service}
+      function isUnrelatedPermissionRow(permission) {
+        return permission.resource === 'make://tenant-1' && permission.permissionKey === 'make.platform.admin';
+      }
+    `,
+  });
+  assert.match(
+    runAudit(platformResponseFilterRoot),
+    /status: PASS/,
+    'local filtering of an extra platform response row must not be treated as an upstream platform permission filter',
+  );
+
+  const upstreamPlatformPermissionFilterRoot = createFixture('upstream-platform-permission-filter', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service.replace(
+      'const body = { scope };',
+      "const body = { scope, permissionKeys: ['make.platform.admin'] };",
+    ),
+  });
+  assert.match(
+    runAudit(upstreamPlatformPermissionFilterRoot, { expectFailure: true }),
+    /upstream_platform_permission_filter/,
+  );
+
+  const upstreamPlatformPermissionAliasFilterRoot = createFixture('upstream-platform-permission-alias-filter', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service.replace(
+      'const body = { scope };',
+      "const platformPermissionKeys = ['make.platform.admin'];\n        const body = { scope, permissionKeys: platformPermissionKeys };",
+    ),
+  });
+  assert.match(
+    runAudit(upstreamPlatformPermissionAliasFilterRoot, { expectFailure: true }),
+    /upstream_platform_permission_filter/,
+  );
+
+  const upstreamPlatformPermissionPropertyAliasFilterRoot = createFixture('upstream-platform-permission-property-alias-filter', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: goodFiles.page,
+    api: goodFiles.api,
+    service: goodFiles.service.replace(
+      'const body = { scope };',
+      "const platformPermissionKeys = ['make.platform.admin'];\n        const body = { scope };\n        body.permissionKeys = platformPermissionKeys;",
+    ),
+  });
+  assert.match(
+    runAudit(upstreamPlatformPermissionPropertyAliasFilterRoot, { expectFailure: true }),
+    /upstream_platform_permission_filter/,
+  );
+
   const missingEntityMetadataPermissionRoot = createFixture('missing-entity-metadata-permission', {
     app: goodFiles.app,
     permissionModel: goodFiles.permissionModel.replace("      export const META_ENTITY_READ = 'meta.entity.read';\n", ''),

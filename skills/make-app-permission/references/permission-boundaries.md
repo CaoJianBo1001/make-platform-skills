@@ -14,7 +14,24 @@ Use this reference before choosing scope, resource, permissionKey, Schema collec
 
 ## Front-end App scope
 
-This skill only consumes the front-end App permission response. Use the exact App scope `make://<tenantId>/meta/app/<appKey>` with `data.record.*`, `meta.field.*`, and `*.*.*`; do not use tenant-root or unrelated permission results for App routes, fields, buttons, or records.
+This skill only consumes the front-end App permission response. Request the exact App scope `make://<tenantId>/meta/app/<appKey>` and use only the rows needed for this App's `data.record.*`, `meta.entity.*`, `meta.field.*`, and supported wildcard decisions. Do not use tenant-root or unrelated permission results to authorize App routes, fields, buttons, or records.
+
+## Permission-row selection
+
+Validate the response envelope and derive the current App from `scope` first. Then classify each permission row before strict row validation; do not use a broad namespace-prefix heuristic.
+
+| Resource classification | Key classification | Result |
+| --- | --- | --- |
+| `*`, or a documented canonical/namespace-alias resource for the current tenant and App | Exact supported key, or a valid three-part wildcard matching at least one supported key | Select and validate strictly. |
+| `*`, or a documented canonical/namespace-alias resource for the current tenant and App | Structurally valid three-part key that matches no supported decision, such as `data.record.export`, `meta.field.custom`, `iam.permission.read`, `make.platform.admin`, or `meta.app.read` | Clearly unrelated: ignore without validating `effect` or `fieldAccess`; it must never grant or deny an App capability. |
+| `*`, or a documented canonical/namespace-alias resource for the current tenant and App | Non-string key, or malformed/truncated key in a supported namespace such as `data.record` or `meta.field` | Select and fail closed during strict validation. |
+| Tenant-root `make://<tenantId>`, or a structurally valid documented App resource for another tenant/App | Any key | Clearly unrelated: ignore without validating row fields. |
+| Missing, malformed, arbitrary-namespace, or wildcard-tenant/App resource | Any key | Unclassifiable: select and fail closed. |
+| Null, primitive, or array row | N/A | Unclassifiable: select and fail closed. |
+
+Supported decisions are `data.record.read`, `data.record.create`, `data.record.update`, `data.record.bulkUpdate`, `data.record.delete`, `meta.entity.read`, `meta.field.read`, and `meta.field.update`. A valid wildcard is supported only when it matches at least one item in that list; `*.*.*` is therefore supported. Unknown decisions are not future-proof grants: when a new business decision is introduced, update this list, its matching helper, and the conformance cases together.
+
+This local response tolerance does not alter the upstream query: Service still requests only the exact App scope and no platform permission filter. IAM should correct surplus response rows separately.
 
 ## Single-App operations and resources
 
@@ -114,9 +131,9 @@ Schema membership never replaces principal permission checks, and principal perm
 ## Matching semantics
 
 - Match exact permission keys, `data.record.*`, `meta.field.*`, `*.*.*`, and valid three-part wildcards.
-- Reject malformed permission rows: `permissionKey` must have exactly three non-empty segments, `effect` must be `allow` or `deny`, and the current scope must be an exact `make://<tenantId>/meta/app/<appKey>` App scope. Derive the current App resource from that scope; an extra `appResource` value must exactly equal the scope, while explicit `null`, blank, non-string-equivalent, or conflicting values fail closed. One malformed row poisons the whole access snapshot; never drop it and retain sibling allows.
+- Validate the envelope before selecting rows: the current scope must be an exact `make://<tenantId>/meta/app/<appKey>` App scope, and an extra `appResource` value must exactly equal that scope; explicit `null`, blank, non-string-equivalent, or conflicting values fail closed. Apply the permission-row selection table before strict row validation. Every selected or unclassifiable row must have exactly three non-empty `permissionKey` segments and an `allow` or `deny` effect; one malformed row poisons the whole access snapshot. Never drop a malformed selected row while retaining sibling allows.
 - Treat requested entity and field keys as concrete string identifiers, not policy patterns. Non-strings (including `null`, numbers, arrays, and objects), blank/whitespace strings, and the literal `*` must fail closed before resource or field wildcard matching; `*` is valid only inside permission statements.
-- Accept only the documented permission resource families: global `*`, or the current tenant/App with namespace `meta` or IAM alias `*`, optionally followed by an exact or wildcard entity. Do not treat arbitrary namespaces or wildcard tenant/App segments as App permission.
+- A selected row may use only the documented permission resource families: global `*`, or the current tenant/App with namespace `meta` or IAM alias `*`, optionally followed by an exact or wildcard entity. Do not treat arbitrary namespaces or wildcard tenant/App segments as App permission. A resource that cannot be classified as clearly unrelated must remain selected and fail closed rather than being guessed away.
 - Resource specificity is a fixed semantic order: global `*` < current App (canonical or namespace alias) < current App `entity/*` < current App `entity/<exactEntityKey>`. Prefer the highest matching level for allow field ranges and merge allows only at that same level. Canonical `.../meta/app/<appKey>` and IAM namespace-alias `.../*/app/<appKey>` resources at the same App/entity level have equal semantic specificity; string length or wildcard character counts must not change this order.
 - Apply a matching `effect: deny` before allows; it denies the matching permission dimension. A `data.record.*` deny therefore denies its operation, while a `meta.field.*` deny denies only that field-access dimension. Do not encode a field-only hidden exception as a deny statement.
 - Let a named field entry override both `*` and empty/unrestricted baselines across all same-specificity allow ranges so broad policies can retain named exceptions. If any same-specificity allow names the field, evaluate only the named values and do not fall back to another row's `*` or empty `fieldAccess`. Within that named set, `hidden` is deny-like and wins over `creatable`, `readonly`, `editable`, masks, or `*`; conflicting same-level named allows must never widen a hidden field. This field decision does not convert the allow statement into an operation-level deny.

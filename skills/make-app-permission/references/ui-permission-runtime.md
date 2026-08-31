@@ -37,7 +37,7 @@ Normalize each entity's permission-trimmed Schema collections independently:
 
 ## Permission model
 
-Normalize to `{ principal, scope, appResource, permissions }`, deriving `appResource` only from the validated response `scope` rather than trusting an independently supplied value. Each row contains `permissionKey`, `resource`, `effect`, and normalized `fieldAccess`.
+Normalize to `{ principal, scope, appResource, permissions }`, deriving `appResource` only from the validated response `scope` rather than trusting an independently supplied value. Before normalizing `permissionKey`, `resource`, `effect`, and `fieldAccess`, apply the deterministic selection table in `permission-boundaries.md`. Ignore only clearly unrelated rows; selected and unclassifiable rows are strict-validation inputs and therefore fail closed when malformed. Ignored rows must never grant or deny App access or block the permission-to-Schema loading flow.
 
 Provide pure helpers:
 
@@ -61,7 +61,7 @@ update:  *, editable
 
 An empty most-specific allow `fieldAccess` means no field restriction in that permission dimension. Never include `creatable` in readable or editable states.
 
-An omitted `fieldAccess` property or an empty object is the intentional unrestricted representation. Explicit `null`, a non-object, an array, a blank field key, an empty state list, an unknown state, or a state list containing non-strings is malformed IAM data and must fail the whole access snapshot closed. Reject invalid effects, non-three-part permission keys, missing/non-App scopes, arbitrary namespaces, and wildcard tenant/App resources as well; never discard malformed rows while keeping sibling allows or normalize malformed input into an effective allow. Null/primitive envelopes or rows and non-array `permissions` must deny without throwing.
+An omitted `fieldAccess` property or an empty object is the intentional unrestricted representation. For selected rows, explicit `null`, a non-object, an array, a blank field key, an empty state list, an unknown state, or a state list containing non-strings is malformed IAM data and must fail the whole access snapshot closed. Reject invalid effects, non-three-part permission keys, missing/non-App scopes, arbitrary namespaces, and wildcard tenant/App resources as well; never discard a malformed selected row while keeping sibling allows or normalize malformed selected input into an effective allow. Classify and ignore clearly unrelated rows before this validation; null/primitive envelopes or rows and non-array `permissions` must deny without throwing.
 
 ## Route and operation gates
 

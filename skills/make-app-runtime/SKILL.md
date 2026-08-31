@@ -1,8 +1,8 @@
 ---
 name: make-app-runtime
-description: Use when generating, refactoring, reviewing, or debugging Make App project runtime structure, workspace manifests, Service runtime, local/dev scripts, build outputs, Docker/K8s image entrypoints, publish readiness, or packaging errors such as missing `apps/service/dist/server.js`. Covers `apps/` workspace contracts, `apps/ui/dist`, `apps/service` port/build/start contracts, runtime config file location, runtime artifact tests, forwarded host/proto header preservation, and publish gates that include auth and required permission audits. Does not cover UI layout, authentication implementation, permission logic, Make adapter env semantics, DSL modeling, Make CLI resource deployment, or canvas-table internals.
+description: Use when generating, refactoring, reviewing, or debugging Make App project runtime structure, workspace manifests, Service runtime, local/dev scripts, build outputs, Docker/K8s image entrypoints, publish readiness, or packaging errors such as missing `apps/service/dist/server.js`. Covers `apps/` workspace contracts, `apps/ui/dist`, `apps/service` port/build/start contracts, runtime config file location, runtime artifact tests, forwarded host/proto header preservation, and publish gates that include auth plus applicable permission audits. Does not cover UI layout, authentication implementation, permission logic, Make adapter env semantics, DSL modeling, Make CLI resource deployment, or canvas-table internals.
 metadata:
-  version: 0.1.0
+  version: 0.1.1
 ---
 
 # make-app-runtime
@@ -58,12 +58,12 @@ When preparing a generated App for publish, provide enough project-local scripts
 - install dependencies for `apps`
 - run the workspace build
 - run the `make-app-auth` published contract audit for Service-fronted Apps
-- run the `make-app-permission` contract audit for generated Make Apps
+- run the `make-app-permission` contract audit when single-app permission enforcement is enabled or required by a repository-local delivery baseline
 - run Service gateway-mode contract tests proving local preview and published upstream scopes are separated
 - verify `apps/ui/dist` and `apps/service/dist/server.js`
 - run Service contract tests, including auth callback proxy behavior, when tests exist
 
-For publish-ready Service-fronted Apps, prefer a project-local `verify:publish` script that runs the publish gate in one command. Keep `check:publish` for build/artifact checks, but do not make it the only release gate.
+For publish-ready Service-fronted Apps, prefer a project-local `verify:publish` script that runs the publish gate in one command. Keep `check:publish` for build/artifact checks, but do not make it the only release gate. When single-app permission enforcement is enabled or locally required, add `permission:audit` to that command; do not make unrelated Apps depend on a missing permission runtime.
 
 Recommended workspace scripts. Before adding these to `package.json`, copy or wrap the audit utilities into project-local `scripts/`; do not write user-specific skill install paths into generated projects.
 
@@ -71,13 +71,14 @@ Recommended workspace scripts. Before adding these to `package.json`, copy or wr
 {
   "scripts": {
     "auth:audit": "node scripts/audit-auth-contract.mjs . --mode service-fronted --published",
-    "permission:audit": "node scripts/audit-make-app-permission.mjs .",
     "schema:diff": "cd .. && makecli diff -f apps/dsl --output=json",
     "check:publish": "pnpm run build && test -f service/dist/server.js && test -d ui/dist",
-    "verify:publish": "pnpm run test && pnpm run auth:audit && pnpm run permission:audit && pnpm run check:publish && pnpm run schema:diff"
+    "verify:publish": "pnpm run test && pnpm run auth:audit && pnpm run check:publish && pnpm run schema:diff"
   }
 }
 ```
+
+For an App with single-app permission enforcement, add `"permission:audit": "node scripts/audit-make-app-permission.mjs ."` and append `&& pnpm run permission:audit` to `verify:publish`.
 
 Do not describe `verify:publish` as a universal makecli hook unless the target makecli version supports it. It is a project-local quality gate to run before `makecli app deploy`.
 
