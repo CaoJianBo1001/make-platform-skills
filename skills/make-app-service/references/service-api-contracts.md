@@ -15,6 +15,61 @@ Before changing code:
 
 Do not leave undocumented routes as the only integration path for generated UI.
 
+## Make response classification and passthrough
+
+Classify every browser-facing Service route in `apps/docs/api.md` before writing
+code:
+
+- A **direct Make proxy** forwards one completed Make response. It must preserve
+  the upstream status, Content-Type, and body unchanged for every status,
+  including 2xx, 4xx, and 5xx. Do not parse and reserialize a JSON body before
+  forwarding it, and do not replace it with a generic Service envelope,
+  synthesized `FORBIDDEN` code, or different status.
+- A response whose body stream ends abnormally is not complete. If Service has
+  not written response headers or body bytes, it may return the documented
+  transport failure. After any upstream response data is written, preserve the
+  started status/body and terminate the connection; never append or substitute a
+  Service error envelope. Client cancellation aborts the upstream request and is
+  not reported as a user-visible 5xx.
+- A **non-proxy aggregation/normalization route** combines or intentionally
+  transforms successful data. It must declare that distinct contract and its
+  successful response shape in `apps/docs/api.md`; it is not permitted to claim
+  direct passthrough. If any completed Make call fails, do not wrap, replace, or
+  remap that Make error. Service-owned validation that rejects a request before a
+  Make call, and a transport failure with no upstream response, may use a
+  documented Service-generated error.
+
+## Default route response modes
+
+New Make App Services must copy the applicable rows below into `apps/docs/api.md`.
+An existing documented host route may use a different success contract only when
+its response mode and migration plan are explicit. For every **non-proxy** row,
+the listed success contract is the only value Service may normalize; a completed
+Make error still preserves its original status, Content-Type, and body.
+
+| Browser-facing route | Response mode | Successful response | Completed Make error |
+| --- | --- | --- | --- |
+| `GET /api/make/app/principal/permission` | direct Make proxy | original Make response | original Make response |
+| Make file download proxy | direct Make proxy | original bytes, Content-Type, and Content-Disposition | original status, bytes, Content-Type, and Content-Disposition |
+| `GET /api/schema`, `GET /api/entities/:entityKey/fields` | non-proxy normalization | normalized Schema contract | original Make response |
+| `GET /api/entities/:entityKey/records`, `GET /api/entities/:entityKey/record-groups`, `GET /api/entities/:entityKey/records/:recordID` | non-proxy normalization | documented record/group contract | original Make response |
+| `POST/PATCH/DELETE /api/entities/:entityKey/records/**` | non-proxy normalization | documented `recordID`, `ok`, or host success contract | original Make response |
+| `GET/PATCH /api/entities/:entityKey/preset` | non-proxy normalization | documented Preset contract | original Make response |
+| `GET /api/users`, `GET /api/departments`, `GET /api/lookup-options` | non-proxy normalization | documented candidates/options contract | original Make response |
+| `/api/health`, `/health`, `/api/config` | Service-owned | documented Service result | not applicable |
+
+For a Node Service reference that exercises this rule against real HTTP response
+streams, including download Content-Disposition, see
+`references/direct-make-proxy-contract.mjs`. Host projects must add an equivalent
+route-level test; this reference does not replace their own adapter and
+integration coverage.
+
+`record-write-permission` and `records/bulk` use the existing stable action
+contracts defined by `make-app-actions`. They are explicit exceptions to the
+direct-proxy/non-proxy response classification above: do not use this rule to
+change either route's established successful or failed response shape, including
+the documented action-specific error envelope.
+
 For Make Deploy Service-fronted Apps, published browser-facing Service routes live under `/api/**` because the default HTTPRoute sends `/api` to App Service and `/` to UI. In Make App projects that use `gatewayBaseUrl: "/api/make"`, document the browser-facing paths under `/api/make/**`. Prefix-free routes such as `/app/**` or `/auth/**` may exist for local Service tests or compatibility, but they must not be the only documented or tested published path.
 
 ## Public routes
@@ -261,7 +316,7 @@ Rules:
 - Do not expose raw signed backend download URLs when a Service download proxy exists.
 - Strip or redact signed query strings in logs.
 - Attachment previews must use a browser-compatible Service proxy URL, for example the host's `/api/make/app/files/download/*`, `/api/files/download/*`, or legacy `/api/app/files/download/*`, not raw Make Data paths such as `/data/v1/download/*`, `/make/data/v1/download/*`, or `/api/make/data/v1/download/*`.
-- When the upstream Make download endpoint needs a bearer token, document that the Service validates the current App session before proxying the binary download with a Service-side token; unauthenticated requests should return 401 and failed auth checks should return a stable 5xx/contracted error.
+- When the upstream Make download endpoint needs a bearer token, document that the Service validates the current App session before proxying the binary download with a Service-side token. If Make gateway returns a session-verification response, preserve its status, Content-Type, and body unchanged; only a verification transport failure with no response may use a documented Service-generated 5xx.
 - `/api/config` and any UI-facing file metadata response must not expose Make download tokens.
 
 ## Custom orchestration routes

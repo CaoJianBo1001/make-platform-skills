@@ -39,4 +39,26 @@ assert.ok(
   'make-app-auth must not keep a non-standard top-level examples directory',
 );
 
+const serviceApiContract = read(
+  'skills/make-app-service/references/service-api-contracts.md',
+);
+assert.match(
+  serviceApiContract,
+  /references\/direct-make-proxy-contract\.mjs/,
+  'make-app-service must link its direct proxy implementation as a reference resource',
+);
+assert.ok(
+  fs.existsSync(
+    path.join(
+      repoRoot,
+      'skills/make-app-service/references/direct-make-proxy-contract.mjs',
+    ),
+  ),
+  'make-app-service must keep its direct proxy implementation under references',
+);
+assert.ok(
+  !fs.existsSync(path.join(repoRoot, 'skills/make-app-service/examples')),
+  'make-app-service must not keep a non-standard top-level examples directory',
+);
+
 console.log('skill review remediation contract passed');

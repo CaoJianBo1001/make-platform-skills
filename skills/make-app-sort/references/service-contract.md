@@ -170,9 +170,12 @@ not be written into the user's Preset implicitly.
 
 ## Errors and logs
 
-Return 400 for invalid client shape/capability before Make calls. Map upstream
-non-2xx or Make response-code failures to the host's stable error contract; do not
-return `{ ok: true }` after a failed update.
+Return 400 for invalid client shape/capability before Make calls. These Preset and
+records routes are non-proxy normalization routes: preserve their established
+successful UI-Service response shapes. If a completed Make call returns an error,
+forward its original HTTP status, body, and Content-Type unchanged instead of
+mapping it to a host error contract. Do not return `{ ok: true }` after a failed
+update.
 
 New boundary functions add safe logs at:
 

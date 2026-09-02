@@ -30,10 +30,26 @@ Route tests should cover:
 - cancellable list/page routes abort their request-scoped signal when the client disconnects, propagate that signal to the downstream adapter, avoid writing a response or reporting a user-visible 5xx for `AbortError`, and remove lifecycle listeners after success, failure, or cancellation
 - normal completion does not abort downstream work; test the framework's completion guard such as `res.writableEnded`, a completed flag, or response finished state separately from premature close
 - invalid query/body returns 400 and does not call Make adapter
+- a direct Make proxy preserves byte-for-byte status, Content-Type, and body for
+  HTTP 200 JSON success, HTTP 403 JSON permission denial, HTTP 500 text error,
+  and binary response bodies; it does not return a generic Service error envelope
+  or substitute status
+- a file download proxy preserves Content-Disposition and sends its first body
+  chunk before the upstream download completes; do not accept a buffer-then-send
+  implementation as transparent download forwarding
+- client cancellation aborts the upstream download and closes the downstream
+  response without generating a Service 5xx; listeners are removed afterward
+- an upstream body failure before the first downstream write clears staged
+  upstream headers and returns the documented transport failure; after the first
+  write it preserves the started Make status/body, terminates the connection, and
+  never appends or substitutes a Service error envelope
 - record-write permission explicit denial maps HTTP 200, business code
   `20000032`, and ordered numeric `noPermissionRecordIds` to the documented stable
   result; malformed or out-of-target IDs fail as a contract error, while
   select-all 403 stays denied with no row IDs
+- record-write permission and bulk routes retain their documented successful and
+  failed UI-Service response shapes; generic direct-proxy/non-proxy rules must not
+  rewrite either action contract
 - the permission adapter decodes raw JSON losslessly before JavaScript `Number`
   coercion, maps `9007199254740993` to the exact request string row key, and rejects
   fractional, zero, negative, duplicate numeric identities, and rounded values
@@ -70,13 +86,16 @@ Adapter tests should cover:
 - record reads use `/api/make/data/v1/record` in local preview and `/make/data/v1/record` in published mode
 - request wrappers preserve required inbound login context for gateway, such as `Cookie` for cookie/unified-login apps and host-approved auth headers when applicable
 - no record/candidate/lookup/file/custom route shells out to `makecli` or reads makecli command output as runtime data
-- Make response envelope `code !== 200`
+- direct Make proxy responses preserve all 2xx/4xx/5xx status, Content-Type, and
+  body values; include JSON, text, and binary upstream fixtures, and prove that
+  Axios-like `validateStatus: () => true` plus a legacy `error.response` path do
+  not produce a Service error envelope
 - permission precheck handles `20000032` as the documented expected explicit
   denial before the generic non-200-code branch and preserves
   `noPermissionRecordIds` through a lossless raw-response decoder, including IDs
   above `Number.MAX_SAFE_INTEGER`; select-all 403 remains an opaque denial
 - invalid JSON response
-- non-2xx HTTP response
+- completed 2xx, non-2xx HTTP, text, and binary response passthrough
 - headers and target names
 - pagination defaults
 - filter/sort translation, including `{ expression }` pass-through and empty-filter omission
@@ -94,13 +113,15 @@ Before reporting Service work as ready:
 - `apps/docs/api.md` matches changed routes and response shapes
 - `apps/docs/api.md` documents the published browser-facing `/api/**` Service paths for Make Deploy Service-fronted Apps, not only local prefix-free paths
 - generated Make POC Service code is not left as a flat `apps/service/src` tree; it uses route/app registration, `make-client/`, `services/`, `utils/`, config/logger, and colocated tests or host-equivalent layered folders
-- route handlers remain thin: validation, delegation, error mapping, safe logs, and response sending only
+- route handlers remain thin: validation, delegation, Service-owned error handling, safe logs, and response sending only
 - Make request construction, schema normalization, lookup/file orchestration, and custom workflows live in adapters/services/helpers instead of route-local files
 - no runtime code reads local DSL/YAML as required schema/data source
 - no permission-trimmed Schema cache is keyed only by `appKey` or shared across principals; refresh has an explicit invalidation/reload path
 - no published runtime route uses `makecli`, `npx makecli`, local makecli config, or makecli stdout as a data source
 - Make-backed record reads go through the runtime-mode gateway scope and preserve the established login/session context: makecli token only in local preview, browser Cookie only in published runtime
-- no route leaks raw Make response envelopes unless documented
+- every completed direct Make response preserves its original 2xx/4xx/5xx status, Content-Type, and body; no route wraps or substitutes its code/message
+- every changed response contract has a documented versioned migration or an atomic UI-Service release; no old UI may be deployed against a changed Service envelope
+- browser-facing transparent routes have an approved Make upstream error-body safety contract; unsafe backend error bodies block release rather than being rewritten by Service
 - invalid client input is rejected before Make calls
 - Entity Preset updates cannot overwrite sibling filter/sort/group dimensions
 - no tokens, cookies, service keys, or signed URLs appear in logs or public config

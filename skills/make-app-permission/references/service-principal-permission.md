@@ -20,7 +20,7 @@ GET /api/make/app/principal/permission
 
 Call it through the host auth/API adapter, usually `auth.api.get("/app/principal/permission")`. Do not call IAM directly from UI. Keep a legacy `/api/principal/permission` route only when the deployed host contract requires it.
 
-Keep the Service route thin: log safe entry context, derive request context, call the IAM adapter, return the stable host envelope, and map upstream failures without secrets.
+Keep the Service route thin: log safe entry context, derive request context, and call the IAM adapter. This is a direct Make proxy: when the IAM request completes, preserve the upstream HTTP status, response body, and Content-Type unchanged for every status, including 2xx, 4xx, and 5xx. Do not map an IAM failure to a Service error envelope, replacement status, or generic message such as `Make request failed (403)`.
 
 ## IAM request
 
@@ -123,4 +123,4 @@ The Service preserves resources such as `make://<tenantId>/*/app/<appKey>`; UI s
 
 ## Failure behavior
 
-Return a clear non-secret Service error. UI must fail closed: clear protected access, avoid protected reads/mutations, invalidate permission-dependent Schema, and render a visible retry/error/forbidden state.
+When IAM returns a response, return its status, Content-Type, and body unchanged so the UI receives the real backend result, including its error code and message. UI must still fail closed: clear protected access, avoid protected reads/mutations, invalidate permission-dependent Schema, and render a visible retry/error/forbidden state from that real response. Only a transport failure with no IAM response may use a documented Service-generated error.

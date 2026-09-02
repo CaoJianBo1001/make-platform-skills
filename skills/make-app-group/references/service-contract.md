@@ -187,8 +187,12 @@ Strictly parse raw query/body input before calling Make Data:
 - malformed JSON returns 400
 - invalid group transport shape returns 400
 - unknown group field or non-groupable field returns 400 or permission error
-- field access denial returns a stable permission error
-- upstream non-200 logical response must not be returned as a fake success
+- field access denial before a Make call returns the documented Service-owned
+  permission error
+- these Preset, records, and record-groups routes are non-proxy normalization
+  routes: preserve their established successful UI-Service response shapes; if a
+  completed Make call returns an error, forward its original HTTP status, body,
+  and Content-Type unchanged, never as a fake success or a Service error envelope
 
 The Service should validate group fields against current runtime schema for both
 Preset PATCH and record-groups. Records `groupFilter` is an expression boundary;

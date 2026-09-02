@@ -11,10 +11,10 @@ The adapter layer owns Make/backend-specific details:
 - `X-Make-Target`
 - consuming already-prepared auth or forwarded request context from the host auth/runtime layer without inventing auth policy
 - forwarding the incoming request login context required by Make gateway
-- Make response envelope parsing
-- Make API error detection
+- Make response envelope parsing for explicitly non-proxy success contracts
+- Make API error classification without replacing completed responses
 - pagination translation
-- request/response shape normalization
+- response shape normalization only for explicitly documented non-proxy success routes
 - file upload/download body mapping
 
 Route handlers and UI code should not know these details.
@@ -30,14 +30,41 @@ The wrapper should:
 - attach required Make headers
 - attach forwarded login/session context required by Make gateway, including `Cookie` for cookie/unified-login apps and host-approved auth headers from the incoming request
 - send JSON or multipart bodies
-- parse JSON envelopes safely
-- treat non-2xx HTTP as errors
-- treat Make `code !== 200` as errors except when an endpoint-specific Skill
-  documents an expected business result that must be normalized first
-- throw a typed adapter error with path, target, status, and Make code
+- return a completed direct Make response as raw status, headers, and body bytes;
+  do not parse and stringify JSON before forwarding it
+- preserve every direct Make response unchanged, including 2xx, 4xx, and 5xx
+  status, Content-Type, and body
+- for a file download, also preserve Content-Disposition and stream the body;
+  do not buffer a completed download before writing it to the browser
+- never turn a completed HTTP response or Make `code !== 200` response into a
+  typed Service error; endpoint-specific Skills may inspect a copy for UI
+  behavior, but the direct route must return the original response unchanged
+- throw a typed adapter error only for a transport failure with no upstream
+  response
 - log start/success/failure with redacted context
 
 Do not duplicate Make fetch logic in each route.
+
+### HTTP-client implementation requirement
+
+`fetch` resolves completed 4xx/5xx responses, so retain its status, selected
+response headers, and raw stream/bytes for the route sender. Do not call
+`response.json()` on a direct proxy route before forwarding the body.
+
+Axios-like clients must opt out of their default non-2xx rejection:
+
+```ts
+const upstream = await axios.request({
+  ...request,
+  responseType: "arraybuffer",
+  validateStatus: () => true,
+});
+```
+
+If an existing client still throws and `error.response` exists, it is a completed
+upstream response, not a Service failure: forward `error.response.status`, its
+`Content-Type`, and its body unchanged. Throw a typed adapter error only when
+there is no `error.response` and no upstream response was received.
 
 For the `make-app-actions` row-write permission precheck, parse the documented
 permission-specific business result before generic `code !== 200` error handling.
