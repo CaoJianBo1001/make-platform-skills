@@ -15,22 +15,6 @@ Get this machine ready to build a Make App: install the toolchain, verify Make l
 - Do not manually create PRD, DSL, Service, or UI files; only run `makecli app init` in the selected directory.
 - Interactive secret entry must be completed by the user. Do not ask the user to paste secrets into chat.
 
-## System Gate
-
-Run:
-
-```bash
-uname -s
-```
-
-Continue on:
-
-- `Darwin` — macOS.
-- `Linux` — any Linux distribution.
-- `MINGW*`, `MSYS*`, or `CYGWIN*` — native Windows through Git Bash. Commands below are POSIX shell; if the user's terminal is PowerShell, run the same commands there without the `if` wrappers, or ask the user to open Git Bash.
-
-Stop on any other OS and explain that this skill automates macOS, Linux, and Windows only.
-
 ## Install Or Update Toolchain
 
 The only prerequisite is Node.js (LTS, 20 or newer); it ships `npm`, and everything else installs through `npm`. Never touch a tool that exists but is managed elsewhere (for example node via nvm, pnpm via corepack) — note it in the summary instead.
@@ -146,7 +130,6 @@ The user must complete interactive secret entry in their own terminal. After the
 
 End only after the toolchain is installed and verified, the token is valid (initial verification passed or the login flow succeeded), and `makecli app init` succeeded. Use a concise readiness report:
 
-- OS path used: macOS, Linux, or Windows.
 - Tool versions: Node, npm, pnpm, git, makecli.
 - Make skills result.
 - Login status: already valid or refreshed with `makecli login`.
