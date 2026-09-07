@@ -31,15 +31,7 @@ The only prerequisite is Node.js (LTS, 20 or newer); it ships `npm`, and everyth
 
    Open a new terminal after installing Node so `npm` and its global bin directory are on `PATH`. If `pnpm` is missing, `npm install -g pnpm`.
 
-2. Install or update `makecli`. `makecli update` knows how it was installed: an npm or pnpm install is upgraded through that package manager, any other install replaces the binary in place.
-
-   ```bash
-   if command -v makecli >/dev/null 2>&1; then
-     makecli update --skip-skills
-   else
-     npm install -g @qfeius/makecli
-   fi
-   ```
+2. Install or update `makecli`. If `makecli` exists, run `makecli update --skip-skills`; otherwise `npm install -g @qfeius/makecli`. `makecli update` knows how it was installed: an npm or pnpm install is upgraded through that package manager, any other install replaces the binary in place.
 
    If `npm install -g` fails with `EACCES`, do not use `sudo`. Point npm's global prefix at a user-owned directory, add it to `PATH`, then retry:
 
