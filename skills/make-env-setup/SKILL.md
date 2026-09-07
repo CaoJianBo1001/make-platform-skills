@@ -2,12 +2,12 @@
 name: make-env-setup
 description: Use when preparing or updating the local Make development environment before development. Triggered by Make 环境安装, Make 环境初始化, 更新 Make 环境. Does not manage Make resources, deploy Apps, or write PRD, DSL, Service, or UI code; use makecli for resource/deploy operations and the owning skills for implementation.
 metadata:
-  version: 0.3.1
+  version: 0.4.0
   homepage: https://github.com/qfeius/make-platform-skills
 ---
 
 # make-env-setup
-Prepare the local environment and initialize the project folder for a Make App before any PRD, DSL, Service, UI, apply, deploy, or git work.
+Get this machine ready to build a Make App: install the toolchain, verify Make login, and initialize the project folder. Run it on a new machine, and again whenever the tools need updating.
 
 
 ## Safety Rules
@@ -15,48 +15,32 @@ Prepare the local environment and initialize the project folder for a Make App b
 - Do not manually create PRD, DSL, Service, or UI files; only run `makecli app init` in the selected directory.
 - Interactive secret entry must be completed by the user. Do not ask the user to paste secrets into chat.
 
-## System Gate
-
-Run:
-
-```bash
-uname -s
-```
-
-Continue only on:
-
-- `Darwin` for macOS.
-- Linux running inside WSL. Confirm with:
-  ```bash
-  grep -qi microsoft /proc/version || grep -qi wsl /proc/version
-  ```
-
-If the user is on native Windows, stop and say to open WSL, then rerun the request there. Do not attempt native Windows installation.
-
-If the user is on non-WSL Linux or another OS, stop and explain that this skill only automates macOS and Windows-through-WSL setup.
-
 ## Install Or Update Toolchain
 
-1. Ensure `brew` exists. If `brew` is missing, install it following [brew.sh](https://brew.sh/) — but only after the user confirms they accept a system package-manager install.
+The only prerequisite is Node.js (LTS, 20 or newer); it ships `npm`, and everything else installs through `npm`. Never touch a tool that exists but is managed elsewhere (for example node via nvm, pnpm via corepack) — note it in the summary instead.
 
-2. Ensure `node`, `pnpm`, and `git` are available; install missing ones via brew. Never touch a tool that exists but is not brew-managed (for example node via nvm, pnpm via corepack) — note it in the summary instead.
+1. Ensure `node`, `git`, and `pnpm` exist.
 
-3. Install or update `makecli`.
+   `node` and `git` are system-level installs; if either is missing, install it with the platform's own method — but only after the user confirms:
+
+   | Platform | Node.js | git |
+   |---|---|---|
+   | macOS | [nodejs.org](https://nodejs.org/) installer, or `brew install node` if Homebrew is already present | `xcode-select --install` |
+   | Linux | distro package (`apt install nodejs npm`, `dnf install nodejs`) or [nvm](https://github.com/nvm-sh/nvm) | distro package (`apt install git`) |
+   | Windows | `winget install OpenJS.NodeJS.LTS` or [nodejs.org](https://nodejs.org/) installer | `winget install Git.Git` |
+
+   Open a new terminal after installing Node so `npm` and its global bin directory are on `PATH`. If `pnpm` is missing, `npm install -g pnpm`.
+
+2. Install or update `makecli`. If `makecli` exists, run `makecli update --skip-skills`; otherwise `npm install -g @qfeius/makecli`. `makecli update` knows how it was installed: an npm or pnpm install is upgraded through that package manager, any other install replaces the binary in place.
+
+   If `npm install -g` fails with `EACCES`, do not use `sudo`. Point npm's global prefix at a user-owned directory, add it to `PATH`, then retry:
 
    ```bash
-   brew tap qfeius/makecli
-   brew trust qfeius/makecli
-   export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
-   if ! command -v makecli >/dev/null 2>&1; then
-     brew install qfeius/makecli/makecli
-   elif brew list makecli >/dev/null 2>&1; then
-     brew upgrade makecli
-   else
-     makecli update
-   fi
+   npm config set prefix "$HOME/.npm-global"
+   export PATH="$HOME/.npm-global/bin:$PATH"   # also add this line to the shell profile
    ```
 
-4. Install or update Make platform skills every run.
+3. Install or update Make platform skills every run.
 
    ```bash
    npx skills add qfeius/make-platform-skills --all -y
@@ -70,6 +54,7 @@ After install or update, run all checks and show a compact summary:
 
 ```bash
 node --version
+npm --version
 pnpm --version
 git --version
 makecli version
@@ -133,8 +118,7 @@ The user must complete interactive secret entry in their own terminal. After the
 
 End only after the toolchain is installed and verified, the token is valid (initial verification passed or the login flow succeeded), and `makecli app init` succeeded. Use a concise readiness report:
 
-- OS path used: macOS or WSL.
-- Tool versions: Node, pnpm, git, makecli.
+- Tool versions: Node, npm, pnpm, git, makecli.
 - Make skills result.
 - Login status: already valid or refreshed with `makecli login`.
 - App folder: the initialized directory.
