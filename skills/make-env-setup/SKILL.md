@@ -19,7 +19,9 @@ Get this machine ready to build a Make App: install the toolchain, verify Make l
 
 The only prerequisite is Node.js (LTS, 20 or newer); it ships `npm`, and everything else installs through `npm`. Never touch a tool that exists but is managed elsewhere (for example node via nvm, pnpm via corepack) — note it in the summary instead.
 
-1. Ensure `node` and `git` exist. If either is missing, install it with the platform's own method — but only after the user confirms they accept a system-level install:
+1. Ensure `node`, `git`, and `pnpm` exist.
+
+   `node` and `git` are system-level installs; if either is missing, install it with the platform's own method — but only after the user confirms:
 
    | Platform | Node.js | git |
    |---|---|---|
@@ -27,15 +29,13 @@ The only prerequisite is Node.js (LTS, 20 or newer); it ships `npm`, and everyth
    | Linux | distro package (`apt install nodejs npm`, `dnf install nodejs`) or [nvm](https://github.com/nvm-sh/nvm) | distro package (`apt install git`) |
    | Windows | `winget install OpenJS.NodeJS.LTS` or [nodejs.org](https://nodejs.org/) installer | `winget install Git.Git` |
 
-   Open a new terminal after installing Node so `npm` and its global bin directory are on `PATH`.
-
-2. Ensure `pnpm` exists.
+   Open a new terminal after installing Node so `npm` and its global bin directory are on `PATH`. Then `pnpm` comes from npm:
 
    ```bash
    command -v pnpm >/dev/null 2>&1 || npm install -g pnpm
    ```
 
-3. Install or update `makecli`. `makecli update` knows how it was installed: an npm or pnpm install is upgraded through that package manager, any other install replaces the binary in place.
+2. Install or update `makecli`. `makecli update` knows how it was installed: an npm or pnpm install is upgraded through that package manager, any other install replaces the binary in place.
 
    ```bash
    if command -v makecli >/dev/null 2>&1; then
@@ -52,7 +52,7 @@ The only prerequisite is Node.js (LTS, 20 or newer); it ships `npm`, and everyth
    export PATH="$HOME/.npm-global/bin:$PATH"   # also add this line to the shell profile
    ```
 
-4. Install or update Make platform skills every run.
+3. Install or update Make platform skills every run.
 
    ```bash
    npx skills add qfeius/make-platform-skills --all -y
