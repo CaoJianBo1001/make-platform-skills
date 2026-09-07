@@ -2,7 +2,7 @@
 name: make-env-setup
 description: Use when preparing or updating the local Make development environment before development. Triggered by Make 环境安装, Make 环境初始化, 更新 Make 环境. Does not manage Make resources, deploy Apps, or write PRD, DSL, Service, or UI code; use makecli for resource/deploy operations and the owning skills for implementation.
 metadata:
-  version: 0.3.0
+  version: 0.3.1
   homepage: https://github.com/qfeius/make-platform-skills
 ---
 
@@ -37,39 +37,11 @@ If the user is on non-WSL Linux or another OS, stop and explain that this skill 
 
 ## Install Or Update Toolchain
 
-Use the stable package channel. On macOS use Homebrew. On WSL use Linuxbrew if available; if `brew` is missing in WSL, stop and ask the user to install Homebrew/Linuxbrew in WSL before continuing.
+1. Ensure `brew` exists. If `brew` is missing, install it following [brew.sh](https://brew.sh/) — but only after the user confirms they accept a system package-manager install.
 
-1. Ensure `brew` exists.
+2. Ensure `node`, `pnpm`, and `git` are available; install missing ones via brew. Never touch a tool that exists but is not brew-managed (for example node via nvm, pnpm via corepack) — note it in the summary instead.
 
-   ```bash
-   command -v brew
-   ```
-
-   If missing on macOS, install Homebrew only after confirming the user accepts a system package-manager install:
-
-   ```bash
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   ```
-
-2. Refresh package metadata.
-
-   ```bash
-   brew update
-   ```
-
-3. Install missing tools and upgrade brew-managed tools. `brew upgrade` is a no-op when the package is already current. A tool that exists but is not brew-managed (for example node via nvm, pnpm via corepack) must be left untouched; note it in the summary.
-
-   ```bash
-   for pkg in node pnpm git; do
-     if ! command -v "$pkg" >/dev/null 2>&1; then
-       brew install "$pkg"
-     elif brew list "$pkg" >/dev/null 2>&1; then
-       brew upgrade "$pkg"
-     fi
-   done
-   ```
-
-4. Install or update `makecli`. The two env vars keep this step scoped to makecli only: no implicit metadata refresh (step 2 already ran `brew update`) and no cascading upgrade of other installed packages.
+3. Install or update `makecli`.
 
    ```bash
    brew tap qfeius/makecli
@@ -84,7 +56,7 @@ Use the stable package channel. On macOS use Homebrew. On WSL use Linuxbrew if a
    fi
    ```
 
-5. Install or update Make platform skills every run.
+4. Install or update Make platform skills every run.
 
    ```bash
    npx skills add qfeius/make-platform-skills --all -y
