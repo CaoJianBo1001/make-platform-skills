@@ -26,10 +26,7 @@ uname -s
 Continue on:
 
 - `Darwin` — macOS.
-- `Linux` — any Linux, including WSL. Detect WSL for the summary only:
-  ```bash
-  grep -qiE 'microsoft|wsl' /proc/version 2>/dev/null && echo WSL
-  ```
+- `Linux` — any Linux distribution.
 - `MINGW*`, `MSYS*`, or `CYGWIN*` — native Windows through Git Bash. Commands below are POSIX shell; if the user's terminal is PowerShell, run the same commands there without the `if` wrappers, or ask the user to open Git Bash.
 
 Stop on any other OS and explain that this skill automates macOS, Linux, and Windows only.
@@ -43,7 +40,7 @@ The only prerequisite is Node.js (LTS, 20 or newer); it ships `npm`, and everyth
    | Platform | Node.js | git |
    |---|---|---|
    | macOS | [nodejs.org](https://nodejs.org/) installer, or `brew install node` if Homebrew is already present | `xcode-select --install` |
-   | Linux / WSL | distro package (`apt install nodejs npm`, `dnf install nodejs`) or [nvm](https://github.com/nvm-sh/nvm) | distro package (`apt install git`) |
+   | Linux | distro package (`apt install nodejs npm`, `dnf install nodejs`) or [nvm](https://github.com/nvm-sh/nvm) | distro package (`apt install git`) |
    | Windows | `winget install OpenJS.NodeJS.LTS` or [nodejs.org](https://nodejs.org/) installer | `winget install Git.Git` |
 
    Open a new terminal after installing Node so `npm` and its global bin directory are on `PATH`.
@@ -149,7 +146,7 @@ The user must complete interactive secret entry in their own terminal. After the
 
 End only after the toolchain is installed and verified, the token is valid (initial verification passed or the login flow succeeded), and `makecli app init` succeeded. Use a concise readiness report:
 
-- OS path used: macOS, Linux, WSL, or Windows.
+- OS path used: macOS, Linux, or Windows.
 - Tool versions: Node, npm, pnpm, git, makecli.
 - Make skills result.
 - Login status: already valid or refreshed with `makecli login`.
