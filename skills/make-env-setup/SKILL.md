@@ -7,7 +7,7 @@ metadata:
 ---
 
 # make-env-setup
-Prepare the local environment and initialize the project folder for a Make App before any PRD, DSL, Service, UI, apply, deploy, or git work.
+Get this machine ready to build a Make App: install the toolchain, verify Make login, and initialize the project folder. Run it on a new machine, and again whenever the tools need updating.
 
 
 ## Safety Rules
