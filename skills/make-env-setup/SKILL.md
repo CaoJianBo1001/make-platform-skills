@@ -29,11 +29,7 @@ The only prerequisite is Node.js (LTS, 20 or newer); it ships `npm`, and everyth
    | Linux | distro package (`apt install nodejs npm`, `dnf install nodejs`) or [nvm](https://github.com/nvm-sh/nvm) | distro package (`apt install git`) |
    | Windows | `winget install OpenJS.NodeJS.LTS` or [nodejs.org](https://nodejs.org/) installer | `winget install Git.Git` |
 
-   Open a new terminal after installing Node so `npm` and its global bin directory are on `PATH`. Then `pnpm` comes from npm:
-
-   ```bash
-   command -v pnpm >/dev/null 2>&1 || npm install -g pnpm
-   ```
+   Open a new terminal after installing Node so `npm` and its global bin directory are on `PATH`. If `pnpm` is missing, `npm install -g pnpm`.
 
 2. Install or update `makecli`. `makecli update` knows how it was installed: an npm or pnpm install is upgraded through that package manager, any other install replaces the binary in place.
 
