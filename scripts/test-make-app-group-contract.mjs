@@ -130,6 +130,16 @@ assert.match(
   /Use `make-app-sort`[\s\S]*(leaf|叶子|ordinary records|普通记录)/i,
   'make-app-group must define how sorting relates to grouped leaf records',
 );
+assert.match(
+  serviceContract,
+  /non-proxy normalization[\s\S]{0,40}routes[\s\S]{0,300}preserve their established successful UI-Service response shapes[\s\S]{0,300}completed Make call returns an error[\s\S]{0,300}original HTTP status, body,[\s\S]{0,40}and Content-Type unchanged/i,
+  'group routes must preserve established successful normalization while forwarding completed Make errors unchanged',
+);
+assert.doesNotMatch(
+  serviceContract,
+  /direct Make proxy/i,
+  'group normalization routes must not be described as direct Make proxies',
+);
 
 assert.match(
   groupModel,

@@ -65,15 +65,16 @@ Route handlers should not:
 - contain large multi-step business workflows
 - swallow adapter errors and return empty success
 
-## Error mapping
+## Error handling
 
-Use consistent errors:
+Use consistent errors only when Service owns the failure before it invokes Make,
+or when no upstream response exists:
 
 - invalid client input -> `400 BAD_REQUEST`
 - missing/expired auth/session -> owned by `make-app-auth`
 - forbidden app/business access -> `403` when Service owns the check
 - not found -> `404` when the record/entity is known missing
-- Make/backend failure -> `502` or a documented Service error status
+- upstream transport failure with no response -> `502` or a documented Service error status
 - unexpected Service error -> `500`
 
 Default error body:
@@ -89,7 +90,19 @@ Default error body:
 
 If the host project already uses `{ code, message }` or another shape, preserve it and document it in `apps/docs/api.md`.
 
-Do not expose backend stack traces, tokens, signed URLs, raw cookies, or internal config in error responses.
+Once a direct Service proxy has received a response from a real Make backend, it
+must preserve its upstream HTTP status, Content-Type, and body unchanged for
+every completed 2xx, 4xx, or 5xx response. Do not map it to `502`, a generic
+`{ error: ... }` envelope, a replacement code, or a replacement message. Do not
+log backend response bodies that may contain secrets, tokens, signed URLs,
+cookies, or internal config.
+
+Browser-facing transparent forwarding requires a platform safety precondition:
+the Make upstream error body must already be safe for browser exposure and must
+not contain sensitive credentials, internal-only addresses, stack traces, or
+unnecessary personal data. Do not solve an unsafe upstream contract by silently
+rewriting it in Service; block the route release and have the Make backend owner
+correct the upstream response contract.
 
 ## Logging
 

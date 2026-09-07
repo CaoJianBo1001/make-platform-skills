@@ -76,6 +76,16 @@ assert.doesNotMatch(
   'make-app-sort must not retain a host-owned implementation fallback after package publication',
 );
 assert.match(
+  serviceContract,
+  /non-proxy normalization routes[\s\S]{0,300}preserve their established[\s\S]{0,40}successful UI-Service response shapes[\s\S]{0,300}completed Make call returns an error[\s\S]{0,300}original HTTP status, body, and Content-Type unchanged/i,
+  'sort routes must preserve established successful normalization while forwarding completed Make errors unchanged',
+);
+assert.doesNotMatch(
+  serviceContract,
+  /direct Make proxy/i,
+  'sort normalization routes must not be described as direct Make proxies',
+);
+assert.match(
   skill,
   /Grouping is owned by `make-app-group`[\s\S]*capabilities\.groupable/i,
   'make-app-sort must hand grouping to the current make-app-group boundary',

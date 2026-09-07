@@ -5,6 +5,7 @@ Use this reference before implementation and before reporting permission work co
 ## Service and Schema tests
 
 - Principal permission route, App scope, IAM `/api/make/iam/**`, target header, login forwarding, tenant resolution, errors, and runtime-mode scopes.
+- Principal permission route preserves every completed IAM response's HTTP status, Content-Type, and body unchanged, including 2xx success plus 4xx/5xx errors; only a no-response transport failure may use a documented Service-generated error.
 - Preserve and normalize `fields` and `createFields` independently across Service, shared types, and UI adapters.
 - Missing/null/invalid `createFields` becomes empty and never falls back to `fields`.
 - Presence of `editableFields` does not change edit behavior.

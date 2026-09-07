@@ -1,13 +1,13 @@
 ---
 name: make-app-permission
-description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, creatable, createFields, data.record.*, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
+description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.2.9
+  version: 0.3.1
 ---
 
 # make-app-permission
 
-Use this skill when a request creates, changes, reviews, or debugs Make App single-app permission enforcement. For a new App, add the full permission chain only when the user requests it or the repository has an explicit delivery baseline requiring it. Otherwise preserve the existing permission flow; do not add an IAM proxy, route guards, or permission audits solely because unrelated UI, Service, Schema, or runtime code is changing.
+Use this skill when a request creates, changes, reviews, or debugs Make App single-app permission enforcement. It must be enabled by default for every generated or refactored Make App. Do not omit the IAM proxy, route guards, permission-aware Schema, or permission audits merely because the request focuses on UI, Service, Schema, or runtime work.
 
 This skill owns permission semantics. Use `make-app-auth` for login/session, `make-app-service` for Service and Schema transport, `makeui` for rendering, `canvas-table-integration` for cell-editor mechanics, and `make-app-runtime` for packaging/runtime.
 
@@ -21,11 +21,11 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 6. Read `references/testing-and-audit.md` before implementation and before reporting completion.
 7. Implement tests first, then the Service/schema boundary, permission pure model, route/action gates, field-set consumers, submit allowlists, and refresh invalidation.
 8. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. Wire both permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
-9. When publishing or installing this Skill, run `check-installed-skill-sync.mjs` with explicit source and installed directories. Keep this local release check out of portable host CI.
+9. When publishing or installing this Skill, run `check-installed-skill-sync.mjs` with explicit source and installed directories. When the release changes shared Make response/auth/permission guidance, publish the platform package, run `npx skills update qfeius/make-platform-skills`, then run the repository-wide `check-installed-make-platform-skills-sync.mjs` with explicit source and installed Skill roots. Keep these local release checks out of portable host CI.
 
 ## Required contract
 
-- Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. Do not request tenant-root scope or upstream platform permission filters. Before strict normalization, classify rows with `references/permission-boundaries.md`: ignore only clearly unrelated rows, and fail closed for every selected or unclassifiable row.
+- Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. This is a direct Make proxy: return every completed IAM response unchanged, including 2xx/4xx/5xx status, Content-Type, and body. Do not request tenant-root scope or upstream platform permission filters. Before strict normalization, classify rows with `references/permission-boundaries.md`: ignore only clearly unrelated rows, and fail closed for every selected or unclassifiable row.
 - Match exact, wildcard, parent, App, entity, IAM namespace-wildcard App resources, and deny correctly. Use the most-specific allow field range; deny wins.
 - Keep create, visibility, and editability as separate field-set decisions:
   - create form: `createFields ∩ meta.field.read fieldAccess(creatable|readonly|editable|partialMask|fullMask|*)`;
@@ -85,3 +85,15 @@ node skills/make-app-permission/scripts/check-installed-skill-sync.mjs \
 ```
 
 The checker reports source-only, installed-only, and content-mismatch files. Pass an explicit install directory; do not embed a developer home path in the Skill or in host CI.
+
+For a release that changes the shared Service/auth/permission contract, update the
+installed platform package first, then verify all affected Make App Skills:
+
+```bash
+npx skills update qfeius/make-platform-skills
+node scripts/check-installed-make-platform-skills-sync.mjs \
+  skills <installed-skills-dir>
+```
+
+Run this only after the source revision has been published through the platform
+Skill release flow. It is a local release verification, not portable host CI.

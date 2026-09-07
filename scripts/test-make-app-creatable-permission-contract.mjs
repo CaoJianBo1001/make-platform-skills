@@ -41,6 +41,9 @@ const installedSkillSync = read(
 const installedSkillSyncTest = read(
   'skills/make-app-permission/scripts/test-installed-skill-sync.mjs',
 );
+const installedPlatformSkillsSync = read(
+  'scripts/check-installed-make-platform-skills-sync.mjs',
+);
 const serviceSkill = read('skills/make-app-service/SKILL.md');
 const serviceAdapter = read(
   'skills/make-app-service/references/make-data-adapter.md',
@@ -48,8 +51,18 @@ const serviceAdapter = read(
 const serviceContracts = read(
   'skills/make-app-service/references/service-api-contracts.md',
 );
+const serviceLayering = read(
+  'skills/make-app-service/references/service-layering.md',
+);
 const serviceTesting = read(
   'skills/make-app-service/references/testing-and-safety.md',
+);
+const authSkill = read('skills/make-app-auth/SKILL.md');
+const authRequestAdapter = read(
+  'skills/make-app-auth/references/request-adapter.md',
+);
+const authLogoutAnd401 = read(
+  'skills/make-app-auth/references/logout-and-401.md',
 );
 const makeuiSkill = read('skills/makeui/SKILL.md');
 const componentUsage = read('skills/makeui/references/component-usage.md');
@@ -70,6 +83,7 @@ const serviceBundle = [
   serviceSkill,
   serviceAdapter,
   serviceContracts,
+  serviceLayering,
   serviceTesting,
 ].join('\n');
 const makeuiBundle = [makeuiSkill, componentUsage, drawerLayout, routeLayout].join(
@@ -83,8 +97,103 @@ assert.match(
 );
 assert.match(
   permissionSkill,
-  /metadata:\s*\n\s*version:\s*0\.2\.6/,
-  'make-app-permission must use the 0.2.6 read-derived create-field contract revision',
+  /metadata:\s*\n\s*version:\s*0\.3\.1/,
+  'make-app-permission must use the 0.3.1 default-enforcement and passthrough release revision',
+);
+assert.match(
+  permissionSkill,
+  /must be enabled by default for every generated or refactored Make App/i,
+  'make-app-permission must be enabled by default for every Make App',
+);
+assert.doesNotMatch(
+  permissionSkill,
+  /only when the user requests it or the repository has an explicit delivery baseline/i,
+  'make-app-permission must not make default enforcement opt-in',
+);
+assert.match(
+  principalPermission,
+  /preserve the upstream HTTP status, response body, and Content-Type unchanged/i,
+  'principal permission route must pass through real Make IAM responses unchanged',
+);
+assert.doesNotMatch(
+  principalPermission,
+  /map upstream failures/i,
+  'principal permission route must not map Make IAM failures into a Service envelope',
+);
+assert.match(
+  serviceBundle,
+  /direct.*Make.*proxy[\s\S]{0,700}(?:(?:status|状态)[\s\S]{0,240}(?:Content-Type|content type)[\s\S]{0,240}(?:body|响应体)[\s\S]{0,240}(?:unchanged|原样)[\s\S]{0,500}(?:2xx|200)[\s\S]{0,240}(?:4xx|403)[\s\S]{0,240}(?:5xx|500)|(?:2xx|200)[\s\S]{0,240}(?:4xx|403)[\s\S]{0,240}(?:5xx|500)[\s\S]{0,500}(?:status|状态)[\s\S]{0,240}(?:Content-Type|content type)[\s\S]{0,240}(?:body|响应体)[\s\S]{0,240}(?:unchanged|原样))/i,
+  'direct Make proxies must preserve the real status, Content-Type, and body for 2xx, 4xx, and 5xx responses',
+);
+assert.doesNotMatch(
+  serviceSkill,
+  /When single-app permission enforcement is in scope[\s\S]{0,300}Otherwise do not add that proxy solely to satisfy this Skill/i,
+  'make-app-service must not retain an opt-in exception for the mandatory permission proxy',
+);
+assert.match(
+  serviceAdapter,
+  /validateStatus\s*:\s*\(\)\s*=>\s*true/i,
+  'Axios-like Make clients must resolve completed 4xx/5xx responses for transparent forwarding',
+);
+assert.match(
+  serviceAdapter,
+  /error\.response[\s\S]{0,500}(?:status|状态)[\s\S]{0,500}(?:Content-Type|content type)[\s\S]{0,500}(?:body|响应体)/i,
+  'an existing client error response must be forwarded rather than replaced by a Service error',
+);
+assert.match(
+  serviceContracts,
+  /record-write-permission[\s\S]{0,240}records\/bulk[\s\S]{0,240}(?:existing|既有|established)[\s\S]{0,320}(?:do not|must not|不得|不能)[\s\S]{0,240}(?:successful (?:or|and) failed response|成功与失败响应|success and error|完整响应)/i,
+  'the established action response contracts must not be changed by the direct-proxy rule',
+);
+assert.match(
+  serviceSkill,
+  /metadata:\s*\n\s*version:\s*0\.2\.1/,
+  'make-app-service must use the 0.2.1 streamed-download passthrough revision',
+);
+assert.match(
+  serviceContracts,
+  /## Default route response modes[\s\S]{0,1800}\/api\/make\/app\/principal\/permission[\s\S]{0,240}(direct Make proxy|直接 Make 代理)[\s\S]{0,1800}\/api\/schema[\s\S]{0,240}(non-proxy|非代理)/i,
+  'default route baseline must classify permission as a direct proxy and schema as a non-proxy route',
+);
+assert.match(
+  serviceContracts,
+  /\/api\/entities\/:entityKey\/records[\s\S]{0,240}(non-proxy|非代理)/i,
+  'default route baseline must classify record normalization routes explicitly',
+);
+assert.match(
+  serviceContracts,
+  /Make file download proxy[\s\S]{0,240}Content-Type[\s\S]{0,240}Content-Disposition/i,
+  'file download passthrough must preserve Content-Disposition as well as Content-Type',
+);
+assert.match(
+  serviceTesting,
+  /(200|2xx)[\s\S]{0,700}(403|4xx)[\s\S]{0,700}(500|5xx)[\s\S]{0,700}(JSON|json)[\s\S]{0,700}(text|文本)[\s\S]{0,700}(binary|二进制)/i,
+  'Service tests must cover full passthrough for success, permission, server-error, JSON, text, and binary responses',
+);
+assert.match(
+  serviceLayering,
+  /(browser-facing|浏览器)[\s\S]{0,700}(safe|安全|sensitive|敏感)[\s\S]{0,700}(upstream|上游|Make)[\s\S]{0,700}(error|错误)/i,
+  'Service layering must require browser-safe upstream error bodies before transparent forwarding',
+);
+assert.match(
+  authSkill,
+  /metadata:\s*\n\s*version:\s*0\.1\.5/,
+  'make-app-auth must use the 0.1.5 default-permission revision',
+);
+assert.match(
+  authRequestAdapter,
+  /SDK owns the normal unified-login 401\/403 redirect/i,
+  'the SDK must retain the established unified-login redirect handling for 401 and 403',
+);
+assert.match(
+  authLogoutAnd401,
+  /(401\/403|401、403|401 and 403)[\s\S]{0,500}(redirect|登录)/i,
+  '401 and 403 must retain the established SDK redirect guidance',
+);
+assert.doesNotMatch(
+  serviceContracts,
+  /failed auth checks should return a stable 5xx\/contracted error/i,
+  'Service contracts must not replace a completed Make auth response with a stable 5xx error',
 );
 assert.match(
   permissionBundle,
@@ -166,6 +275,16 @@ for (const findingKind of ['source_only', 'installed_only', 'content_mismatch'])
     `installed Skill sync tests must cover ${findingKind}`,
   );
 }
+assert.match(
+  installedPlatformSkillsSync,
+  /make-app-permission[\s\S]{0,240}make-app-service[\s\S]{0,240}make-app-auth[\s\S]{0,240}make-app-actions[\s\S]{0,240}make-app-sort[\s\S]{0,240}make-app-group/i,
+  'platform release sync check must cover every Skill changed by the shared Make response contract',
+);
+assert.match(
+  permissionSkill,
+  /npx skills update\s+qfeius\/make-platform-skills[\s\S]{0,500}check-installed-make-platform-skills-sync\.mjs/i,
+  'permission release guidance must use the supported Skills CLI update command before the full sync check',
+);
 for (const conformanceCase of [
   'operation_create_absent_must_deny',
   'entity_metadata_read_is_independent_from_record_read',
