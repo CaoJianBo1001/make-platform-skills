@@ -98,6 +98,26 @@ assert.match(
   /nvm install 22\.20\.0/,
   'make-env-setup must provide an exact Node.js installation path when nvm is available',
 );
+assert.doesNotMatch(
+  environment,
+  /npm install -g pnpm/,
+  'make-env-setup must not install a floating pnpm release through npm',
+);
+assert.doesNotMatch(
+  environment,
+  /^\s*pnpm --version\s*$/m,
+  'make-env-setup must verify pnpm through Corepack rather than an ambient binary',
+);
+assert.match(
+  environment,
+  /npm install -g @qfeius\/makecli/,
+  'make-env-setup must preserve the cross-platform npm installation path for makecli',
+);
+assert.match(
+  environment,
+  /\| Windows \|/,
+  'make-env-setup must preserve the native Windows toolchain guidance',
+);
 assert.match(
   filter,
   /"node"\s*:\s*"22\.20\.0"[\s\S]*corepack pnpm add @qfei-design\/make-app-filter@\^1\.0\.0/,

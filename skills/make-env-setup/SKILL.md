@@ -2,112 +2,60 @@
 name: make-env-setup
 description: Use when preparing or updating the local Make development environment before development. Triggered by Make 环境安装, Make 环境初始化, 更新 Make 环境. Does not manage Make resources, deploy Apps, or write PRD, DSL, Service, or UI code; use makecli for resource/deploy operations and the owning skills for implementation.
 metadata:
-  version: 0.3.2
+  version: 0.4.1
   homepage: https://github.com/qfeius/make-platform-skills
 ---
 
 # make-env-setup
 
-Prepare the local environment and initialize the project folder for a Make App before any PRD, DSL, Service, UI, apply, deploy, or git work.
+Get this machine ready to build a Make App: install the toolchain, verify Make login, and initialize the project folder. Run it on a new machine, and again whenever the tools need updating.
 
 ## Safety Rules
 
 - Do not print or store tokens, cookies, Authorization headers, passwords, or secrets.
 - Do not manually create PRD, DSL, Service, or UI files; only run `makecli app init` in the selected directory.
 - Interactive secret entry must be completed by the user. Do not ask the user to paste secrets into chat.
-
-## System Gate
-
-Run:
-
-```bash
-uname -s
-```
-
-Continue only on:
-
-- `Darwin` for macOS.
-- Linux running inside WSL. Confirm with:
-  ```bash
-  grep -qi microsoft /proc/version || grep -qi wsl /proc/version
-  ```
-
-If the user is on native Windows, stop and say to open WSL, then rerun the request there. Do not attempt native Windows installation.
-
-If the user is on non-WSL Linux or another OS, stop and explain that this skill only automates macOS and Windows-through-WSL setup.
+- `npm` may install the standalone `makecli` binary only. Do not use `npm` to install pnpm or Make App dependencies.
 
 ## Install Or Update Toolchain
 
-Use the stable package channel. On macOS use Homebrew. On WSL use Linuxbrew if available; if `brew` is missing in WSL, stop and ask the user to install Homebrew/Linuxbrew in WSL before continuing.
+This skill supports macOS, Linux, and Windows. For Make App work, the runtime is fixed: Node.js `22.20.0`, its bundled Corepack `0.34.0`, and `pnpm@10.20.0`. Do not substitute a moving LTS release, a Homebrew or global pnpm binary, or a newer Corepack release.
 
-1. Ensure `brew` exists.
+1. Ensure exact Node.js `22.20.0` and `git` are available. If either is missing, install it with the platform's own method only after the user confirms.
 
-   ```bash
-   command -v brew
-   ```
+   | Platform | Node.js `22.20.0` | git |
+   |---|---|---|
+   | macOS | Install and select with `nvm install 22.20.0` then `nvm use 22.20.0`; if nvm is unavailable, use an exact-version manager selected by the user | `xcode-select --install`, or Homebrew if already present |
+   | Linux | Install and select with `nvm install 22.20.0` then `nvm use 22.20.0`; if nvm is unavailable, use an exact-version manager selected by the user | distro package, for example `apt install git` |
+   | Windows | Use an exact-version manager such as nvm-windows to install and select `22.20.0`, or the official Node.js `22.20.0` installer | `winget install Git.Git` |
 
-   If missing on macOS, install Homebrew only after confirming the user accepts a system package-manager install:
+   Do not use a moving package-manager formula such as `brew install node`, `apt install nodejs`, or `winget install OpenJS.NodeJS.LTS` for the Make App runtime. If no exact-version Node manager is available, stop and ask the user to select one.
 
-   ```bash
-   /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-   ```
-
-2. Refresh package metadata.
+2. Verify the fixed Node.js and Corepack baseline before installing pnpm. The checks below are cross-platform and must both pass:
 
    ```bash
-   brew update
+   node -e 'if (process.versions.node !== "22.20.0") { throw new Error(`Make Apps require Node.js 22.20.0; got ${process.versions.node}`) }'
+   node -e 'const { execFileSync } = require("node:child_process"); const actual = execFileSync("corepack", ["--version"], { encoding: "utf8" }).trim(); if (actual !== "0.34.0") { throw new Error(`Corepack must report 0.34.0; got ${actual}`) }'
    ```
 
-3. Install missing tools and upgrade brew-managed tools. `brew upgrade` is a no-op when the package is already current. Node.js is selected in step 4 through an exact-version manager; do not install or upgrade Node.js or pnpm through Homebrew.
-
-   ```bash
-   for pkg in git; do
-     if ! command -v "$pkg" >/dev/null 2>&1; then
-       brew install "$pkg"
-     elif brew list "$pkg" >/dev/null 2>&1; then
-       brew upgrade "$pkg"
-     fi
-   done
-   ```
-
-4. Select the fixed Make App runtime baseline. Make Apps require Node.js `22.20.0` and its bundled Corepack `0.34.0`. Do not use a different Node or Corepack binary installed by Homebrew. When `nvm` is available, install and select the exact release:
-
-   ```bash
-   nvm install 22.20.0
-   nvm use 22.20.0
-   ```
-
-   When the active Node manager is not `nvm`, use that manager's exact-version command. If no exact-version Node manager is available, stop and ask the user to select one; do not fall back to Homebrew's moving `node` formula.
-
-   ```bash
-   node -e 'if (process.versions.node !== "22.20.0") { console.error(`Make Apps require Node.js 22.20.0; got ${process.versions.node}`); process.exit(1) }'
-   test "$(corepack --version)" = "0.34.0" || { echo "Corepack must report 0.34.0; got $(corepack --version)"; exit 1; }
-   ```
-
-5. Enable Corepack and cache the fixed Make App pnpm baseline. Make Apps must use `pnpm@10.20.0`; do not substitute a global, Homebrew, or latest pnpm binary. Use `corepack install -g`, not the deprecated `corepack prepare`.
+3. Enable Corepack and cache the fixed Make App pnpm baseline. Make Apps must use `pnpm@10.20.0`; do not install pnpm through npm, Homebrew, or another global package manager. Use `corepack install -g`, not the deprecated `corepack prepare`.
 
    ```bash
    corepack enable
    corepack install -g pnpm@10.20.0
-   test "$(corepack pnpm --version)" = "10.20.0"
+   node -e 'const { execFileSync } = require("node:child_process"); const actual = execFileSync("corepack", ["pnpm", "--version"], { encoding: "utf8" }).trim(); if (actual !== "10.20.0") { throw new Error(`pnpm must report 10.20.0; got ${actual}`) }'
    ```
 
-6. Install or update `makecli`. The two env vars keep this step scoped to makecli only: no implicit metadata refresh (step 2 already ran `brew update`) and no cascading upgrade of other installed packages.
+4. Install or update `makecli`. If `makecli` exists, run `makecli update --skip-skills`; otherwise run `npm install -g @qfeius/makecli`. `makecli update` knows how it was installed: an npm or pnpm install is upgraded through that package manager, and any other installation replaces the binary in place.
+
+   If the npm global install fails with `EACCES` on macOS or Linux, do not use `sudo`. Point npm's global prefix at a user-owned directory, add it to `PATH`, then retry:
 
    ```bash
-   brew tap qfeius/makecli
-   brew trust qfeius/makecli
-   export HOMEBREW_NO_AUTO_UPDATE=1 HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK=1
-   if ! command -v makecli >/dev/null 2>&1; then
-     brew install qfeius/makecli/makecli
-   elif brew list makecli >/dev/null 2>&1; then
-     brew upgrade makecli
-   else
-     makecli update
-   fi
+   npm config set prefix "$HOME/.npm-global"
+   export PATH="$HOME/.npm-global/bin:$PATH"   # also add this line to the shell profile
    ```
 
-7. Install or update Make platform skills every run.
+5. Install or update Make platform skills every run.
 
    ```bash
    npx skills add qfeius/make-platform-skills --all -y
@@ -121,12 +69,14 @@ After install or update, run all checks and show a compact summary:
 
 ```bash
 node --version
+npm --version
+corepack --version
 corepack pnpm --version
 git --version
 makecli version
 ```
 
-The Node check must report exactly `22.20.0`, the Corepack check exactly `0.34.0`, and the pnpm check exactly `10.20.0`. If any check fails, stop and repair the active Node runtime or Corepack activation; do not continue with a different version.
+The Node check must report exactly `v22.20.0`, the Corepack check exactly `0.34.0`, and the pnpm check exactly `10.20.0`. If any check fails, stop and repair the active Node runtime or Corepack activation; do not continue with a different version.
 
 ## Verify Token With Guided Login
 
@@ -186,8 +136,7 @@ The user must complete interactive secret entry in their own terminal. After the
 
 End only after the toolchain is installed and verified, the token is valid (initial verification passed or the login flow succeeded), and `makecli app init` succeeded. Use a concise readiness report:
 
-- OS path used: macOS or WSL.
-- Tool versions: Node, pnpm, git, makecli.
+- Tool versions: Node, npm, Corepack, pnpm, git, makecli.
 - Make skills result.
 - Login status: already valid or refreshed with `makecli login`.
 - App folder: the initialized directory.
