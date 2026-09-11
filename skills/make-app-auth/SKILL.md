@@ -2,7 +2,7 @@
 name: make-app-auth
 description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user menu logout wiring, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. Preserve authenticated context for the default /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for the current-user header menu surface and make-app-permission for single-app permission enforcement.
 metadata:
-  version: 0.1.5
+  version: 0.1.8
 ---
 
 # make-app-auth
@@ -37,7 +37,7 @@ Default generated and published Make Apps use **unified login** with `unifiedLog
 
 This skill only supports unified login for generated and reviewed Make Apps. Missing unified-login prerequisites are blockers, not reasons to switch modes. Do not generate browser token mode, mock mode, or any no-login bypass from this skill.
 
-Local preview exception: a Service-fronted App may provide a Service-only local preview adapter guarded by `MAKE_APP_LOCAL_PREVIEW=true`. Enable that flag only as a temporary process environment variable from the local dev command, for example `MAKE_APP_LOCAL_PREVIEW=true pnpm run dev` or a project-owned `dev:preview` script. Do not persist the flag in `.env`, `.env.local`, `.env.example`, generated README setup steps, or deployment environment. The adapter should resolve the effective public Make origin with `makecli configure resolve --target local-preview --output=json`, consume `make_api_origin`, add the browser-facing `/api/make` scope, and attach the token only on Service-to-Make requests. It must not expose the token to UI, must not change the published unified-login contract, and must fail closed in production.
+Local preview exception: a Service-fronted App may provide a Service-only local preview adapter guarded by `MAKE_APP_LOCAL_PREVIEW=true`. Enable that flag only as a temporary process environment variable from the local dev command, for example `MAKE_APP_LOCAL_PREVIEW=true corepack pnpm run dev` or a project-owned `dev:preview` script. New Make Apps and explicit runtime migrations use the `make-app-runtime` baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0` through Corepack); existing Apps retain their declared runtime during auth work. Do not persist the flag in `.env`, `.env.local`, `.env.example`, generated README setup steps, or deployment environment. The adapter should resolve the effective public Make origin with `makecli configure resolve --target local-preview --output=json`, consume `make_api_origin`, add the browser-facing `/api/make` scope, and attach the token only on Service-to-Make requests. It must not expose the token to UI, must not change the published unified-login contract, and must fail closed in production.
 
 ## Hard Rules
 

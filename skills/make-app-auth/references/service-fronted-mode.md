@@ -28,10 +28,10 @@ When `MAKE_APP_LOCAL_PREVIEW=true`, the local Service should run `makecli config
 Enable local preview only from the local dev command, for example:
 
 ```bash
-MAKE_APP_LOCAL_PREVIEW=true pnpm run dev
+MAKE_APP_LOCAL_PREVIEW=true corepack pnpm run dev
 ```
 
-A generated project may wrap that command as `pnpm run dev:preview`, but it must not persist `MAKE_APP_LOCAL_PREVIEW=true` in `.env`, `.env.local`, `.env.example`, generated README setup steps, or any deployment environment. Env files are easy to copy between local and publish paths; treating the flag as a one-shot process variable keeps preview behavior out of committed and deployed runtime.
+A generated project may wrap that command as `corepack pnpm run dev:preview`, but it must not persist `MAKE_APP_LOCAL_PREVIEW=true` in `.env`, `.env.local`, `.env.example`, generated README setup steps, or any deployment environment. New Make Apps and explicit runtime migrations use the `make-app-runtime` baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0`); existing Apps retain their declared runtime during auth work. Env files are easy to copy between local and publish paths, so treating the flag as a one-shot process variable keeps preview behavior out of committed and deployed runtime.
 
 Local preview must use the same backend environment that makecli is using. Resolve it with:
 

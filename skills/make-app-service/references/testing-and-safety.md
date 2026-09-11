@@ -139,11 +139,11 @@ Before reporting Service work as ready:
 
 ## Suggested commands
 
-Use the host package manager and actual package names. Common examples:
+For new Make Apps and explicit runtime migrations, use the `make-app-runtime` baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0`) and actual package names. Existing Apps retain their declared runtime during Service work. Common examples:
 
 ```bash
-pnpm --filter <service-package> test
-pnpm --filter <service-package> build
+corepack pnpm --filter <service-package> test
+corepack pnpm --filter <service-package> build
 ```
 
 When route docs changed, also run any UI/service integration tests that consume `apps/docs/api.md` or generated API clients.

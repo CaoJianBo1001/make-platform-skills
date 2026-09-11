@@ -2,7 +2,7 @@
 name: canvas-table-integration
 description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, Shift 200 条上限, row colors, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Make record lists use make-app-actions for the default selectable record-action workflow. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
 metadata:
-  version: 0.1.14
+  version: 0.1.16
 ---
 
 # canvas-table-integration
@@ -59,10 +59,14 @@ Before editing code:
 1. Confirm `@qfei-design/canvas-table` is installed in the current project.
 2. If there is no `package.json`, stop and tell the user the current directory is not an npm package.
 3. If the package is missing, detect the package manager from the lockfile and install it before continuing:
-   - `pnpm-lock.yaml` -> `pnpm add @qfei-design/canvas-table`
+   - `pnpm-lock.yaml`:
+     - Make App: for a new App or explicit runtime migration, verify the `make-app-runtime` baseline `"packageManager": "pnpm@10.20.0"`, Node.js `22.20.0`, and Corepack `0.34.0`, then run `corepack pnpm add @qfei-design/canvas-table`. For an existing Make App, preserve its declared runtime and use Corepack to resolve that declared pnpm version; do not migrate the runtime merely to add CanvasTable.
+     - non-Make pnpm project: run `pnpm add @qfei-design/canvas-table` and preserve the project's existing package-manager workflow; do not introduce Corepack solely for this integration.
    - `yarn.lock` -> `yarn add @qfei-design/canvas-table`
    - `package-lock.json` -> `npm install @qfei-design/canvas-table`
-4. If no lockfile exists, default to `npm install @qfei-design/canvas-table`.
+4. If no lockfile exists:
+   - Make App: read the workspace `packageManager`. A new App or explicit runtime migration must first establish the `make-app-runtime` baseline, then run `corepack pnpm add @qfei-design/canvas-table`. An existing Make App uses Corepack to resolve its declared pnpm version; do not create `package-lock.json` or migrate the runtime merely to add CanvasTable.
+   - non-Make project: default to `npm install @qfei-design/canvas-table`.
 5. If install fails, stop and report the command and error.
 
 Use `@qfei-design/canvas-table` consistently. If an existing codebase uses a different package name, stop and ask before changing the consumer app dependency.

@@ -2,7 +2,7 @@
 name: makecli
 description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, check build/deploy progress or app URLs, entities, relations, records, inspect resources, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"部署进度\", \"构建状态\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.5.6
+  version: 0.5.8
 ---
 
 # makecli — Make Platform CLI
@@ -139,7 +139,7 @@ makecli configure resolve --target local-preview --output=json
 
 `environment` is global and accepts `dev`, `test`, or `production`. The `--env` flag overrides it for one command. For local preview, use `configure resolve --target local-preview --output=json` as the primary source of the effective public Make origin. Consume `make_api_origin` as a bare origin and let the local-preview Service add the browser-facing `/api/make` scope. Profile-specific host overrides such as `meta-server-url` and `repo-server-url` should be origins; path-scoped legacy values must be normalized before adapter URL construction.
 
-`--env` belongs on the specific `makecli` command being executed; do not route it through project-local package scripts such as `pnpm run verify:publish -- --env production`. For code publishing, run the project gate first, then run `makecli app deploy --env preview` or `makecli app deploy --env production`.
+`--env` belongs on the specific `makecli` command being executed; do not route it through project-local package scripts such as `corepack pnpm run verify:publish -- --env production`. New Make Apps and explicit runtime migrations use the `make-app-runtime` runtime baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0` through Corepack); ordinary deployment work must not rewrite an existing App's runtime declaration. For code publishing, run the project gate first, then run `makecli app deploy --env preview` or `makecli app deploy --env production`.
 
 **Profiles:** All commands accept `--profile <name>` (default: "default").
 **Config files:** `~/.make/credentials` and `~/.make/config` (INI format).

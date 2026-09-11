@@ -147,8 +147,8 @@ assert.match(
 );
 assert.match(
   serviceSkill,
-  /metadata:\s*\n\s*version:\s*0\.2\.1/,
-  'make-app-service must use the 0.2.1 streamed-download passthrough revision',
+  /metadata:\s*\n\s*version:\s*0\.2\.2/,
+  'make-app-service must retain the streamed-download passthrough revision after its reference runtime-baseline update',
 );
 assert.match(
   serviceContracts,
@@ -177,8 +177,8 @@ assert.match(
 );
 assert.match(
   authSkill,
-  /metadata:\s*\n\s*version:\s*0\.1\.5/,
-  'make-app-auth must use the 0.1.5 default-permission revision',
+  /metadata:\s*\n\s*version:\s*0\.1\.8/,
+  'make-app-auth must retain the default-permission revision after its reference runtime-baseline update',
 );
 assert.match(
   authRequestAdapter,

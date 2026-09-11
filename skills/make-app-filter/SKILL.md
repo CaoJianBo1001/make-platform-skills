@@ -2,7 +2,7 @@
 name: make-app-filter
 description: "Use when integrating, generating, refactoring, or reviewing Make App record-list filtering with @qfei-design/make-app-filter, CanvasTable header linkage, permission-aware Entity Preset save/load/echo, and Service filter.expression payloads. Triggered by 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, 筛选保存/回显, CEL/DNF expressions, system variables, empty filters, field-type operators, DateRange/File/Lookup support, candidate values, URL echo, and tests. Uses make-app-permission for list-access policy. When make-app-actions is present, a successfully applied filter must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, sorting, grouping, auth, runtime packaging, DSL modeling, Make CLI execution, or table cell editing."
 metadata:
-  version: 0.1.6
+  version: 0.1.8
 ---
 
 # make-app-filter
@@ -38,12 +38,12 @@ This skill owns the consumer-side package integration contract, advanced-filter 
 
 ## Package pre-flight
 
+New Make Apps and Apps undergoing an explicit runtime migration use the `make-app-runtime` runtime contract: the workspace root declares `"packageManager": "pnpm@10.20.0"` plus `"engines": { "node": "22.20.0", "pnpm": "10.20.0" }`, and package operations run through `corepack pnpm`. Do not install this package with npm or Yarn in a Make App. Existing Make Apps retain their declared runtime during filter work; do not alter `packageManager`, Node, or lockfiles merely to add this package. Use Corepack so it resolves the version declared by that project.
+
 If `@qfei-design/make-app-filter` is missing:
 
-- `pnpm-lock.yaml` -> `pnpm add @qfei-design/make-app-filter@^1.0.0`
-- `yarn.lock` -> `yarn add @qfei-design/make-app-filter@^1.0.0`
-- `package-lock.json` -> `npm install @qfei-design/make-app-filter@^1.0.0`
-- no lockfile -> default to `npm install @qfei-design/make-app-filter@^1.0.0`
+- `pnpm-lock.yaml` -> `corepack pnpm add @qfei-design/make-app-filter@^1.0.0`
+- no lockfile -> after the runtime contract is present, run `corepack pnpm add @qfei-design/make-app-filter@^1.0.0`
 
 Migrate any retired pre-1.0 package dependency to
 `@qfei-design/make-app-filter@^1.0.0` and update public imports together. If an

@@ -2,7 +2,7 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.1
+  version: 0.2.2
 ---
 
 # make-app-service
