@@ -3,13 +3,15 @@ name: make-env-setup
 description: Use when preparing or updating the local Make development environment before development. Triggered by Make 环境安装, Make 环境初始化, 更新 Make 环境. Does not manage Make resources, deploy Apps, or write PRD, DSL, Service, or UI code; use makecli for resource/deploy operations and the owning skills for implementation.
 metadata:
   version: 0.3.2
+  homepage: https://github.com/qfeius/make-platform-skills
 ---
 
 # make-env-setup
+
 Prepare the local environment and initialize the project folder for a Make App before any PRD, DSL, Service, UI, apply, deploy, or git work.
 
-
 ## Safety Rules
+
 - Do not print or store tokens, cookies, Authorization headers, passwords, or secrets.
 - Do not manually create PRD, DSL, Service, or UI files; only run `makecli app init` in the selected directory.
 - Interactive secret entry must be completed by the user. Do not ask the user to paste secrets into chat.
