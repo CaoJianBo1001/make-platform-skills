@@ -112,7 +112,8 @@ makecli relation create <key> --app <app> --json rel.json [--dry-run]
 
 # Record (require --app + --entity; JSON = flat field map)
 makecli record create --app <app> --entity <entity> --json data.json [--dry-run]
-makecli record list --app <app> --entity <entity> --filter "status in ['todo'] && owner == _currentUser"
+makecli record list --app <app> --entity <entity> --filter "status in ['todo'] && owner == _currentUser" [--sort-json '[{"fieldKey":"createdAt","order":"desc"}]']
+makecli record aggregate --app <app> --entity <entity> --group-json '[{"fieldKey":"status"}]' --aggregates-json '[{"aggregate":"count","alias":"n"}]'   # server-side GROUP BY
 makecli record update <id> [id...] --app <app> --entity <entity> --json data.json
 makecli record delete <id> [id...] --app <app> --entity <entity>
 ```

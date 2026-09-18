@@ -218,10 +218,13 @@ All subcommands require `--app <appKey> --entity <entityKey>`.
 ```
 makecli record create --app <app> --entity <entity> --json data.json [--dry-run]
 makecli record get    <record-id> [--output table|json]
-makecli record list   [--filter <CEL>] [--fields a,b] [--sort createdAt:desc] [--page] [--size] [--output table|json]
+makecli record list   [--filter <CEL>] [--fields a,b] [--sort-json <JSON>] [--page] [--size] [--output table|json]
 makecli record update <record-id> [record-id...] --json data.json
 makecli record delete <record-id> [record-id...]
+makecli record aggregate --aggregates-json <JSON> [--group-json <JSON>] [--filter <CEL>] [--aggregate-filter <CEL>] [--sort-json <JSON>] [--page] [--size 10] [--output table|json]
 ```
+
+JSON flags (`--*-json`) take inline JSON, `@file`, or `-` for stdin (stdin at most once per call). Keys are checked locally (unknown key = error); values are validated server-side.
 
 - Record JSON is a flat field map: `{"title": "Test Record", "status": "active"}`
 - `update` with one ID → record API; multiple IDs → batch field API (same field values applied to all)
@@ -232,6 +235,22 @@ makecli record delete <record-id> [record-id...]
 makecli record list --app crm --entity order --filter "amount >= 100 && status in ['todo','doing']"
 makecli record list --app crm --entity order --filter "title.contains('升级') && owner != null"
 makecli record list --app crm --entity order --filter "owner == _currentUser"   # Make system variable
+makecli record list --app crm --entity order --sort-json '[{"fieldKey":"createdAt","order":"desc"}]'
+```
+
+- `aggregate` is a server-side GROUP BY over one entity; `--group-json` (dimensions) + `--aggregates-json` (metrics, required) decide the columns. Omit `--group-json` for a single global row.
+  - group element: `{"fieldKey","granularity"?,"alias"?}` — `granularity` only on Date fields: `day|week|month|quarter|year`; same field twice needs distinct `alias`; at most 3 dimensions
+  - aggregates element: `{"fieldKey"?,"aggregate","alias"}` — `count` (no fieldKey) | `countDistinct` | `sum`/`avg` (Number/Currency/Percent) | `min`/`max` (numeric or Date/DateTime); `alias` required, unique across all columns; at most 10 metrics
+  - `--filter` runs before aggregation (WHERE, same CEL as `list`); `--aggregate-filter` runs after (HAVING) and may only reference metric aliases
+  - sort element: `{"alias":..}` or `{"fieldKey":..}` + `"order":"asc|desc"`; default is all dimensions ascending
+  - rows: dimension columns are `{value,label}` (null group → `label: "未填写"`), metric columns are raw JSON numbers; `pagination.total` counts groups, not records
+
+```bash
+makecli record aggregate --app crm --entity order \
+  --group-json '[{"fieldKey":"status"},{"fieldKey":"orderDate","granularity":"month","alias":"month"}]' \
+  --aggregates-json '[{"aggregate":"count","alias":"orderCount"},{"fieldKey":"amount","aggregate":"sum","alias":"totalAmount"}]' \
+  --filter "status != 'draft'" --aggregate-filter "totalAmount > 10000" \
+  --sort-json '[{"alias":"totalAmount","order":"desc"}]'
 ```
 
 ---
