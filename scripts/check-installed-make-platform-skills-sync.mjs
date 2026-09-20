@@ -10,6 +10,7 @@ const skillNames = [
   'make-app-actions',
   'make-app-sort',
   'make-app-group',
+  'make-ai-assistant',
 ];
 
 const [sourceSkillsRootArg, installedSkillsRootArg] = process.argv.slice(2);

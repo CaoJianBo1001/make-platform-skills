@@ -2,7 +2,7 @@
 name: make-app-auth
 description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user menu logout wiring, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. Preserve authenticated context for the default /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for the current-user header menu surface and make-app-permission for single-app permission enforcement.
 metadata:
-  version: 0.1.8
+  version: 0.1.9
 ---
 
 # make-app-auth
@@ -43,12 +43,12 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 
 - Always use `@qfeius/make-app-auth`; do not fork a separate auth implementation.
 - Direct-gateway business requests to Make backend must go through `auth.api` under `/api/make/**`.
-- All frontend requests to Make backend must go through `auth.api`, including schema/meta, list, get, create, update, delete, attachment/file, lookup, user, and department candidate requests.
+- Ordinary frontend Make backend requests go through `auth.api`, including schema/meta, record CRUD, ordinary file/lookup/user/department requests. The fixed Make App AI v1 `/client` contract is a narrow exception: its `AuthenticatedTransport` needs HTTP status, headers and raw `AsyncIterable<Uint8Array>` for 202/204, SSE and file bytes, which `auth.api` does not expose. Implement that bridge only under same-origin `/api/make/app/ai/v1/**` inside the shared authenticated adapter, preserve unified-login cookie handling, and follow `make-ai-assistant` for its exact scope and lifecycle. This does not authorize generic raw fetch for other `/api/make/**` calls.
 - Generated Apps must centralize Make backend access in a shared API adapter or data-source layer that wraps `auth.api`.
 - Service-fronted Apps must preserve the `UI -> Service -> make-gateway` contract; do not let UI bypass Service for meta/data calls.
 - Service-fronted Apps must preserve this contract for the default permission call. UI uses `auth.api("/app/principal/permission")`, and the single-app permission behavior belongs to `make-app-permission`.
 - Service-fronted published Apps use `gatewayBaseUrl: "/api/make"` in UI. UI calls `auth.api("/app/**")`, which becomes browser requests to `/api/make/app/**`. Auth bootstrap and OAuth callbacks must stay under `/api/make/auth/**` and `/api/make/oauth/**`; do not generate `/api/auth/**`, `/api/oauth/**`, or `gatewayBaseUrl: "/api"` for this mode.
-- Do not generate raw `window.fetch('/api/make/...')` for Make backend calls.
+- Do not scatter raw `window.fetch('/api/make/...')` in UI components or for ordinary Make business APIs. The AI v1 `AuthenticatedTransport` bridge above is the sole raw-response exception; reject arbitrary origins/scopes and never read browser tokens or cookies in App code.
 - Do not hand-write `Authorization`.
 - Browser resource requests such as `<img src>`, `<object data>`, and plain `<a href>` cannot attach custom `Authorization` headers. If a Make file download requires a bearer token, UI must use a same-origin Service download proxy URL, and the Service must validate the current App session before using any deployment-injected download token.
 - `gatewayBaseUrl` is the SDK option for the Make backend API base. Reuse the host Make backend config first; for local preview, prefer `makecli configure resolve --target local-preview --output=json` and its `make_api_origin` field instead of creating a second environment concept for the same URL.
