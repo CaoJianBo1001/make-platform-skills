@@ -1,8 +1,8 @@
 ---
 name: makecli
-description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, check build/deploy progress or app URLs, entities, relations, records, inspect resources, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"部署进度\", \"构建状态\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
+description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, entities, relations, records, inspect resources, switch backend context, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"发布到 production\", \"promote\", \"部署进度\", \"构建状态\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", \"切换环境\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.5.8
+  version: 0.6.0
 ---
 
 # makecli — Make Platform CLI
@@ -27,8 +27,20 @@ Before executing ANY makecli command, verify the environment:
    - Not configured / expired: user must run `makecli login` (browser OAuth)
    - **INTERACTIVE** (opens browser, blocks) — instruct user to run it themselves via the `!` shell prefix (supported by Claude Code and Codex)
    - Fallback for manual tokens: `makecli configure token` (also interactive, via `!`)
+2. Config errors mentioning stale keys → run `makecli doctor` (read-only report); `makecli doctor --fix` migrates them in place
 
-Environment defaults to `production`. Switch with `makecli configure set environment dev|test` or per-call `--env`.
+Backend context defaults to `production`. Switch with `makecli context use dev|test` or per-call `--context`.
+
+## Vocabulary: context vs environment
+
+Two different axes — never mix them up:
+
+| Word | Meaning | Values | Where |
+|------|---------|--------|-------|
+| **context** | which Make backend the CLI talks to | `dev` / `test` / `production` | global `--context`, `makecli context use`, `[settings] context` |
+| **environment** | an app's deployment target | `beta` / `production` | local `--env` on `app delete`; `app deploy` is beta-only, `app promote` is beta → production |
+
+Every app is a **prod/beta pair** on the server. `app deploy` only ever pushes to beta (no `--env`). Production is reached **only** by `app promote` (beta → production) — there is no direct production push.
 
 ## Decision Tree
 
@@ -42,9 +54,11 @@ User request arrives
     +- Create/update schema (entity, relation)?
     |   --> Declarative Workflow (preferred)
     |
-    +- Publish code? --> Deploy Workflow
+    +- Publish code to beta? --> Deploy Workflow
     |
-    +- Build/deploy progress? --> app deploy --status / --wait
+    +- Release what's in beta to production? --> app promote
+    |
+    +- Build/deploy progress? --> app deploy --status / --wait ; app promote --status / --wait
     |
     +- App overview + environment URLs? --> app info <appKey>
     |
@@ -76,8 +90,7 @@ Key rules:
 ```bash
 makecli preflight                      # validate layout (--app-type fullstack|service|ui)
 git add -A && git commit -m "..."      # deploy pushes committed HEAD; dirty worktree is refused
-makecli app deploy --wait              # push + block until build reaches terminal state
-makecli app deploy --env production    # prompts confirmation — needs user consent (--yes to skip)
+makecli app deploy --wait              # push to beta + block until build reaches terminal state
 ```
 
 Deploy reads the app key from `apps/dsl/app.yaml` and refuses apps never registered via `app create`.
@@ -93,6 +106,20 @@ makecli app deploy --status --output json  # machine-readable (BuildTask fields 
 makecli app deploy --status --wait         # block until terminal state, no push
 ```
 
+## Workflow: Release to Production
+
+The only path is `app promote`; it prompts for confirmation (`--yes` skips — needs explicit user consent):
+
+```bash
+makecli app promote --wait                 # publish what is running in beta → production
+```
+
+**`app promote`**:
+- Source is the **server-side beta state** (beta's last successful deployment commit + console config) — nothing is pushed, local git is not read. Beta must be deployed first; never-deployed beta fails fast
+- Runs asynchronously on the server; `--wait` blocks until terminal state — exit **0** success / **2** failed / **124** timeout (`--timeout`, default 10m)
+- The run receipt is saved locally per context + app, so `app promote --status [--wait]` reports the last promote without any ID
+- `--output json` (with `--status`): stdout is one status object; with `--wait`, progress goes to stderr
+
 ## Workflow: Imperative Operations
 
 **When:** Single deletions, data CRUD, or operations not covered by apply.
@@ -102,7 +129,7 @@ Read `@references/cli-reference.md` for exact flag syntax and JSON file formats.
 ```bash
 # App
 makecli app create <appKey> [--name <display>] [--description <desc>] [--dry-run]
-makecli app delete <key> --yes            # confirmation prompt without --yes
+makecli app delete <key> --env beta|production|ALL --yes   # --env required; confirmation prompt without --yes
 makecli app list [--filter "name=待办,key=todo"] [--output json]
 
 # Entity / Relation (require --app)
@@ -120,27 +147,33 @@ makecli record delete <id> [id...] --app <app> --entity <entity>
 
 All create commands accept `--dry-run` — server validates without persisting.
 
-## Environment Configuration
+## Configuration
 
 ```bash
 # Step 1: Authenticate (INTERACTIVE -- user must run via !)
 ! makecli login                                  # browser OAuth; manual fallback: configure token
 
-# Step 2: Set backend environment and profile headers (if non-default)
-makecli configure set environment test           # dev|test|production (global)
+# Step 2: Global settings ([settings] section, shared by every profile)
+makecli settings set channel beta                # release channel stable|beta for `makecli update`
+makecli settings list                            # every global key with value + source
+
+# Step 3: Per-profile overrides (only if non-default)
 makecli configure set meta-server-url <host>     # host only, /api/make auto-added
 makecli configure set X-Tenant-ID <tenant>
 makecli configure set X-Operator-ID <operator>
 makecli configure --sample                       # print full config reference
 
 # Verify
+makecli doctor                                   # local config health check (exit 1 on problems; --fix for safe repairs)
 makecli configure verify --output=json
 makecli configure resolve --target local-preview --output=json
 ```
 
-`environment` is global and accepts `dev`, `test`, or `production`. The `--env` flag overrides it for one command. For local preview, use `configure resolve --target local-preview --output=json` as the primary source of the effective public Make origin. Consume `make_api_origin` as a bare origin and let the local-preview Service add the browser-facing `/api/make` scope. Profile-specific host overrides such as `meta-server-url` and `repo-server-url` should be origins; path-scoped legacy values must be normalized before adapter URL construction.
+`configure` only manages **profile** keys (`meta-server-url`, `repo-server-url`, `auth-server-url`, `X-Tenant-ID`, `X-Operator-ID`); global keys (`context`, `channel`, `role`, `check-for-updates`) go through `settings` — each command refuses the other's keys and points you to the right one. The global `--context` flag overrides the setting for one command.
 
-`--env` belongs on the specific `makecli` command being executed; do not route it through project-local package scripts such as `corepack pnpm run verify:publish -- --env production`. New Make Apps and explicit runtime migrations use the `make-app-runtime` runtime baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0` through Corepack); ordinary deployment work must not rewrite an existing App's runtime declaration. For code publishing, run the project gate first, then run `makecli app deploy --env preview` or `makecli app deploy --env production`.
+For local preview, use `configure resolve --target local-preview --output=json` as the primary source of the effective public Make origin. Consume `make_api_origin` as a bare origin and let the local-preview Service add the browser-facing `/api/make` scope. Profile-specific host overrides such as `meta-server-url` and `repo-server-url` should be origins; path-scoped legacy values must be normalized before adapter URL construction.
+
+`--context` / `--env` belong on the specific `makecli` command being executed; do not route them through project-local package scripts such as `corepack pnpm run verify:publish -- --env production`. New Make Apps and explicit runtime migrations use the `make-app-runtime` runtime baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0` through Corepack); ordinary deployment work must not rewrite an existing App's runtime declaration. For code publishing, run the project gate first, then `makecli app deploy` (beta) and `makecli app promote` (production).
 
 **Profiles:** All commands accept `--profile <name>` (default: "default").
 **Config files:** `~/.make/credentials` and `~/.make/config` (INI format).
@@ -153,20 +186,21 @@ makecli whoami
 
 ## Common Patterns
 
-**From zero to deployed app:**
+**From zero to production:**
 ```bash
 ! makecli login                                   # 1. Authenticate (user runs via !)
 makecli app create shop --name "我的商城"          # 2. Scaffold + register + initial commit
 cd shop                                           # 3. Write DSL (makedsl skill) under apps/dsl/
 makecli diff -f apps/dsl && makecli apply -f apps/dsl
 git add -A && git commit -m "feat: initial app"   # 4. Develop, then commit
-makecli app deploy --wait                         # 5. Deploy to preview, wait for build, get URL
+makecli app deploy --wait                         # 5. Deploy to beta, wait for build, get URL
+makecli app promote --wait                        # 6. Verified in beta? Publish it to production (confirm)
 ```
 
 **Inspect remote state:**
 ```bash
 makecli app list --filter "key=shop"
-makecli app info <appKey>                 # app meta + preview/production deploy status & URLs
+makecli app info <appKey>                 # app meta + beta/production deploy status & URLs
 makecli entity list --app <app>
 makecli entity list <key> --app <app>     # detail view: fields + unique constraints
 makecli schema --app <app>                # aggregated app + entities + relations
@@ -178,7 +212,8 @@ makecli schema --app <app>                # aggregated app + entities + relation
 - **Don't use imperative commands for bulk schema setup.** Use YAML + apply instead.
 - **Don't guess CLI flags.** Read `@references/cli-reference.md` if unsure.
 - **Don't run interactive commands via Bash tool.** `login`, `configure token`, `configure config` block on user input — tell user to run via `!`.
-- **Don't pass `--yes` to `app delete` or `app deploy --env production` without explicit user consent.** These flags skip safety confirmations.
+- **Don't pass `--yes` to `app delete` or `app promote` without explicit user consent.** These flags skip safety confirmations.
+- **Don't promote before beta is deployed and verified.** `app promote` publishes the server's beta state, not your local code.
 - **Don't deploy with a dirty worktree.** `app deploy` pushes committed HEAD only — commit first, it never auto-commits.
-- **Don't hand-roll polling loops over `--status`.** Use `deploy --status --wait`.
+- **Don't hand-roll polling loops over `--status`.** Use `deploy --status --wait` / `promote --status --wait`.
 - **Don't write DSL YAML from memory.** Invoke the `makedsl` skill for schema reference.
