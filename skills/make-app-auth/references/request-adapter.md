@@ -4,9 +4,22 @@ Use this reference when generating or reviewing Make backend request code.
 
 ## Rule
 
-All frontend requests to Make backend must go through one shared adapter that wraps `auth.api`. In direct-gateway mode this includes schema/meta loading, record list/get/create/update/delete, cell updates, attachment/file APIs, lookup resolution, user candidates, department candidates, and other `/api/make/**` calls. In Service-fronted mode the same UI adapter calls Service-owned `/app/**` paths through `gatewayBaseUrl=/api/make`.
+All ordinary frontend requests to Make backend must go through one shared adapter that wraps `auth.api`. In direct-gateway mode this includes schema/meta loading, record list/get/create/update/delete, cell updates, ordinary attachment/file APIs, lookup resolution, user candidates and department candidates. In Service-fronted mode the same UI adapter calls Service-owned `/app/**` paths through `gatewayBaseUrl=/api/make`.
 
-Do not call raw `window.fetch('/api/make/...')`. Do not scatter unhandled `auth.api` calls across UI components, drawers, tables, field editors, or route loaders.
+Do not call raw `window.fetch('/api/make/...')` for ordinary business APIs. Do not scatter unhandled `auth.api` calls across UI components, drawers, tables, field editors, or route loaders.
+
+The Make App AI v1 `/client` contract is one narrow raw-response exception.
+`auth.api` consumes successful responses and cannot return the required
+`{ status, headers, body?: AsyncIterable<Uint8Array> }` for JSON, 204, SSE and
+file bytes. Implement `AuthenticatedTransport.request` inside this shared
+adapter, limited to same-origin `/api/make/app/ai/v1/**`, using the established
+session cookie through `credentials: "include"`, not a browser-read token.
+Forward method, request headers/bytes and AbortSignal; return the unconsumed
+response status, headers and lazy byte stream. Keep 401/403 login and permission
+handling without swallowing the SDK error body or redirect-looping on ordinary
+403. Select one retry owner. The SDK handles SSE parsing/recovery and cancellation;
+do not add native `EventSource`, a parallel reconnect loop or a general raw-fetch
+exception. Read `make-ai-assistant` for versioned routes and Service scope.
 
 ## Request Shape
 
@@ -112,5 +125,5 @@ When touching request code, add or update tests for:
 - Service-fronted auth and business proxy calls use the same host-context helper, deriving `X-Forwarded-Host` from inbound `Host` and not passing through client-supplied `X-Forwarded-Host`
 - Service-fronted proxy calls add `X-Forwarded-Proto` before calling make-gateway
 - Service-fronted proxy calls use k8s-internal make-gateway paths without the external `/api` prefix, for example `http://make-gateway/make/auth/**`, `/make/meta/**`, and `/make/data/**`
-- no raw `window.fetch('/api/make/...')`
+- no raw `window.fetch('/api/make/...')` outside the fixed AI v1 `AuthenticatedTransport` bridge
 - no scattered unhandled `auth.api` calls in UI components

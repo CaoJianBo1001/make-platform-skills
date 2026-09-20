@@ -1,118 +1,106 @@
-# Testing and pitfalls
+# Testing and delivery gates
 
-## TDD checklist
+## TDD and public-contract checks
 
-Use TDD / Test first for non-trivial assistant changes:
+Test first: demonstrate a failing behavior/contract, make the minimal fix,
+then refactor. Verify the installed exact package version and public `/client`,
+`/make-app`, `/react` and `/styles.css` exports. Static audit is only a preflight;
+focused executable UI, Service, typecheck, build and published-route checks
+remain required.
 
-1. Add failing tests for the expected package import, selected adapter/route
-   family, context, transport, Artifact shape, or UI behavior.
-2. Implement the smallest change.
-3. Add regression checks around cancellation, stale responses, history restore,
-   permissions, and error rendering.
-4. Run host typecheck/build and relevant Service tests.
+## Make App v1 matrix
 
-## Required tests
+- Discovery: current authenticated App/tenant/user identity; Agent page 1 empty
+  with continuation; mixed `channel` and `app_internal`; exactly one matching
+  App-internal Agent; zero/multiple, mismatched App, missing/unknown type,
+  repeated/absent cursor, abort and retry. Keep launcher visible throughout.
+- Adapter: async capabilities fetch; optional feature gates; `retryOwner`
+  exactly once; 401 login recovery without loop on permission 403; identity
+  switch abort/dispose and no stale chat leakage.
+- Service: exact `/api/make/app/ai/v1/**` 18-operation allowlist, method and
+  query/body validation, `MAKE_APP_KEY` equality where present, all-write
+  same-origin check, strict Gateway origin, local-preview/published path mapping,
+  and acceptance of a trusted internal HTTP Gateway origin; no unversioned
+  fallback or generic proxy. Cover all 18 operations in executable
+  Service route tests; the static audit does not verify route completeness.
+- HTTP: bare JSON; 201 chat, 202 message, 204 no-body; required
+  `Make-AI-Api-Version` response header; version mismatch failure; SSE and file
+  bytes untouched; `X-Request-ID`/retry headers; flat public errors across
+  400/401/403/404/409/410/413/415/422/429/5xx without upstream diagnostics.
+  A schema-valid unknown code retains its HTTP status and safe message; an
+  invalid envelope becomes a safe upstream error. Test unknown code by HTTP
+  category rather than a closed code allowlist.
+- Chats: independent creation, opaque paginated Agent/chat/history cursors,
+  initial history cursor omitted, titlePending refresh, revision conflicts,
+  selection, feedback, update/pin/delete where `chat.management` is enabled.
+- Stream: real incremental `response.*` deltas, optional unknown event, item
+  done, reset, snapshot replacement, non-empty cursor resume, replay
+  deduplication, terminal completion/failure/cancel and explicit remote cancel.
+  Closing the panel keeps an in-flight run; switching identity cannot apply
+  stale events. No native EventSource or host reconnect loop for Make App v1.
+- File/image: stable upload/file/message IDs, server-sized parts, byte/digest
+  integrity, retry/resume, complete/ready reference, content download only
+  when supported, 202 acceptance versus later model interpretation failure.
+  A product/security policy may narrow displayed `modelInputKinds`; claiming
+  broader model support needs deployed-model evidence. Upload availability
+  alone is insufficient.
+- UI: package-owned task list, new conversation, plus menu, upload state,
+  responsive layout, keyboard/focus behavior and drawer close/reopen. No host
+  internal-selector override or duplicated error/composer UI. Safe context is
+  not a permission grant.
 
-Package integration:
+## Platform Skill release forward test
 
-- imports use only public entrypoints
-- package `styles.css` is imported once
-- package version and documented public props match the host integration
-- demo/mock transport is gated and visibly labeled
+Before releasing a changed protocol, host integration workflow, or ownership
+boundary, run an independent fresh-agent forward test. Prepare an isolated
+temporary Make App workspace with an authenticated shell, shared auth adapter,
+empty assistant placement, Service skeleton, installed public package, and a
+v1 Gateway fixture derived from the current backend OpenAPI, not from this
+Skill's route table. It must not contain assistant integration code, another
+App's implementation, or this change's proposed solution.
 
-Transport:
+The Gateway fixture must retain operation request/response schemas and the
+SSE event schemas from that pinned OpenAPI, including conditional upload
+response fields and terminal event shapes. Test representative accepted and
+rejected payloads, not just methods, paths and successful statuses. A
+route/status-only fixture leaves DTO validation and stream recovery unverified;
+record those gaps as release gates instead of calling the synthetic test
+end-to-end coverage.
 
-- adapter selection test: a configured/queryable Console Agent or explicit Agent
-  Gateway request selects `make-console`; a confirmed Make App AI Chat contract
-  selects `make-app`; neither contract stops for confirmation
-- wrong adapter / wrong route regression: Console code cannot construct the Make
-  App adapter or call `/api/make/app/ai/**`
-- locate, history, send, and events use the host authenticated request boundary
-- send request includes stable `messageId`
-- capabilities are included or explicitly documented as unsupported
-- EventSource uses credentials when required by the host auth mode
-- AbortSignal reaches Service and downstream gateway
-- stale streams cannot mutate the active conversation
+Give the independent evaluator only that workspace, this Skill, and a realistic
+request to add the Agent chat with multi-session history, streaming, file/image
+input, and Service routes. Do not reveal prior conclusions or direct the
+evaluator to a reference POC. No real deployment, production credentials, or
+external writes are needed. Inspect the resulting code and executable tests for
+public-package imports, full Agent pagination and uniqueness, identity cleanup,
+same-origin authenticated byte transport, the exact 18-route Service boundary,
+SSE recovery, file/image transfer, and package-owned UI. Run the fixture tests,
+typecheck, build, and the Skill's static audit; a static pass alone is not enough.
 
-Artifact:
+Record the fixture and backend-contract revisions, resolved package version,
+evaluator result, test commands, failures, and corrective follow-up in the
+release evidence. If the
+evaluator needs another project's code, invents a legacy route, or cannot
+complete the integration from this Skill and public package declarations,
+release is blocked until the guidance is corrected and a fresh attempt passes.
+If independent execution is unavailable, report that gate as unverified rather
+than claiming the Skill is release-ready. Ordinary host fixes do not require
+this platform-release exercise unless they change the Skill's contract.
 
-- Artifact validation / Artifact 校验 must cover both live SSE stream events and
-  history restore payloads.
-- valid `metric`, `comparison`, `trend`, `ranking`, `record-list`, and `notice`
-  payloads render
-- invalid kind, unknown fields, duplicate ids, oversized data, and unsafe values
-  are rejected safely
-- live SSE Artifacts and history Artifacts render the same after refresh
-- text-only backend responses do not pretend to have components
+## Completion and failure reporting
 
-UI:
+Run the Skill's audit, relevant host tests, Service tests, typecheck, build and
+an existing-route render smoke test. Then verify authenticated published Dev
+requests for discovery, capabilities, chat creation, message 202, real SSE,
+history, cancellation and a representative file/image transfer where enabled.
+Do not call an integration complete solely because tests or upload storage
+pass. When the backend/model is not ready, report precisely which boundary
+failed instead of adding a mock fallback to production.
 
-- launcher is reachable, keyboard focusable, and placed by the host layout rules
-- assistant panel open/close does not lose active conversation state unexpectedly
-- `theme` is scoped to each supported React surface, does not mutate host global
-  variables, and reaches custom Artifact roots through `themeStyle`
-- `privacyNotice` renders the package focusable Tooltip rather than a duplicate
-  host banner; header height, long-title/context overflow, and keyboard focus
-  remain usable
-- `MakeAiAssistant` width respects `maxDrawerWidth`, the configured minimum, and
-  viewport changes; pointer and keyboard resize remain accessible, while
-  560px-or-less viewports use full width without a resize handle and the 561px
-  boundary restores desktop resize behavior
-- embedded panels and wide drawers retain package container-query behavior for
-  content, Artifacts, code blocks, and Markdown table overflow
-- current user name/avatar render when provided
-- suggestions can be customized or hidden
-- action intents call host handlers and permission failures are visible
-- closing the drawer preserves an active run and scroll intent; only explicit
-  cancellation/new conversation/reinitialization/unmount stops it
-- progress appears only while the assistant turn is generating; completed,
-  failed, and restored turns omit internal process steps, and load failures show
-  safe retryable UI without upstream diagnostics
-- when an existing host page or route changes, run lint/typecheck or a build that
-  catches missing imports and undefined Hook references; also run a page-level
-  render/smoke test when the host test setup supports it. Cover the assistant
-  mount, newly added Hook/callback imports, prop chain, and first paint state.
-
-Service:
-
-- route validators reject malformed path/body/query params
-- unsafe browser writes enforce same-origin checks
-- upstream error codes map to stable UI messages
-- logs redact Cookie, Authorization, token, and sensitive payload data
-- for `make-console`, use the five-operation BFF allowlist from
-  `make-console-service-contract.md`; reject cross-App input, unknown paths,
-  repeated/unknown query parameters, and illegal request bodies before proxying
-- Console upstream failures expose stable errors only; they never expose upstream
-  diagnostics or raw response bodies
-- only Console Run SSE returns `text/event-stream`; an upstream failure after the
-  first frame closes the stream without JSON error middleware, and client
-  disconnect aborts the upstream run
-
-## Common pitfalls
-
-- Parsing Markdown tables or prose to guess a component. This is unreliable; use
-  structured Artifact data.
-- Returning React component names from backend. Backend returns Artifact
-  semantics; frontend chooses registered templates.
-- Streaming Artifacts live but omitting them from history. Refresh then loses the
-  rich UI.
-- Forgetting capabilities negotiation. Backend may return unsupported kinds or
-  skip structured output entirely.
-- Passing visual props such as `userName` as authorization context. Server-side
-  auth must recheck identity.
-- Calling Agent Gateway or Make APIs directly from UI instead of using the host
-  authenticated Service/request boundary.
-- Logging cookies, Authorization, tokens, prompts with sensitive data, or full
-  record payloads.
-- Treating mock/demo transport as backend readiness.
-- Hard-coding gateway domains, tenant ids, App ids, Agent ids, or local paths in
-  reusable package or Skill guidance.
-- Replacing the package registry with host-specific one-off render switches that
-  cannot be reused across Make Apps.
-- Selecting `make-app` only because the page is a Make App page. Adapter choice
-  follows the confirmed backend capability, not the UI container.
-- Treating Console as a generic proxy. Its Agent query, Session, durable event,
-  send message, and Run SSE operations require an explicit allowlist and separate
-  JSON/SSE error handling.
-- Letting a Run SSE upstream failure after its first frame flow into JSON error
-  middleware. Close the stream instead.
+If the installed package lacks required public exports/types, the route family
+is unknown, or a deployed capability cannot be verified, stop that branch and
+report the missing contract. Do not infer behavior from another App, package
+source, examples, or an old unversioned endpoint.
+Likewise, a skipped complete upload test because the current v1 backend fixture
+is missing is an explicit unverified release gate, not a passing end-to-end
+attachment result. Keep the skipped count in the release evidence.

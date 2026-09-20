@@ -24,7 +24,8 @@ code:
   the upstream status, Content-Type, and body unchanged for every status,
   including 2xx, 4xx, and 5xx. Do not parse and reserialize a JSON body before
   forwarding it, and do not replace it with a generic Service envelope,
-  synthesized `FORBIDDEN` code, or different status.
+  synthesized `FORBIDDEN` code, or different status. This ordinary-proxy rule
+  does **not** govern the selected Make AI assistant adapter's error response.
 - A response whose body stream ends abnormally is not complete. If Service has
   not written response headers or body bytes, it may return the documented
   transport failure. After any upstream response data is written, preserve the
@@ -38,6 +39,17 @@ code:
   remap that Make error. Service-owned validation that rejects a request before a
   Make call, and a transport failure with no upstream response, may use a
   documented Service-generated error.
+
+**AI safe-error exception:** The Make App v1 assistant keeps success responses
+as bare JSON, empty 204, SSE, or bytes. Public errors use flat
+`{code,message,requestId?,details?}` with an extensible code. Preserve the
+original HTTP status and bounded schema-valid public fields, including a
+previously unknown code and safe message. Classify unknown code by HTTP status;
+do not apply a closed code allowlist. A malformed or non-JSON upstream error
+becomes a safe Service-generated upstream error rather than raw diagnostics.
+Never turn a valid public typed 4xx/5xx into a generic 502. After SSE headers or bytes
+are written, close the stream on failure rather than sending JSON. Document this exception in
+`apps/docs/api.md`; do not generalize it to ordinary Make data/auth proxies.
 
 ## Default route response modes
 
@@ -69,6 +81,10 @@ contracts defined by `make-app-actions`. They are explicit exceptions to the
 direct-proxy/non-proxy response classification above: do not use this rule to
 change either route's established successful or failed response shape, including
 the documented action-specific error envelope.
+
+The selected Make AI assistant adapter is another explicit response-mode
+exception: use `make-ai-assistant` for its Make App v1 success/error contract
+instead of the ordinary completed-error column above.
 
 For Make Deploy Service-fronted Apps, published browser-facing Service routes live under `/api/**` because the default HTTPRoute sends `/api` to App Service and `/` to UI. In Make App projects that use `gatewayBaseUrl: "/api/make"`, document the browser-facing paths under `/api/make/**`. Prefix-free routes such as `/app/**` or `/auth/**` may exist for local Service tests or compatibility, but they must not be the only documented or tested published path.
 
