@@ -2,7 +2,7 @@
 name: make-app-runtime
 description: Use when generating, refactoring, reviewing, or debugging Make App project runtime structure, workspace manifests, Service runtime, local/dev scripts, build outputs, Docker/K8s image entrypoints, publish readiness, or packaging errors such as missing `apps/service/dist/server.js`. Covers `apps/` workspace contracts, `apps/ui/dist`, `apps/service` port/build/start contracts, runtime config file location, runtime artifact tests, forwarded host/proto header preservation, and publish gates that include auth plus applicable permission audits. Does not cover UI layout, authentication implementation, permission logic, Make adapter env semantics, DSL modeling, Make CLI resource deployment, or canvas-table internals.
 metadata:
-  version: 0.1.3
+  version: 0.1.4
 ---
 
 # make-app-runtime
@@ -108,7 +108,7 @@ For an App with single-app permission enforcement, add `"permission:audit": "nod
 
 Do not describe `verify:publish` as a universal makecli hook unless the target makecli version supports it. It is a project-local quality gate to run before `makecli app deploy`.
 
-Do not pass deploy-environment flags through `verify:publish`. Run the gate as `corepack pnpm run verify:publish`; choose the publish target on the follow-up deploy command, for example `makecli app deploy --env preview` or `makecli app deploy --env production`. If a project-local Node wrapper must accept flags through `corepack pnpm run`, normalize argv by dropping a standalone `--` before parsing because `corepack pnpm run <script> -- --flag` can expose that separator to the script.
+Do not pass backend-context flags through `verify:publish`. Run the gate as `corepack pnpm run verify:publish`, then deploy to Beta with `makecli app deploy --context <context> --profile <profile> --wait`. Follow the `makecli` skill for the Beta completion guide and, after explicit user authorization, publish that Beta version to Prod with `makecli app promote --context <context> --profile <profile> --yes --wait`. Keep the same backend context/profile throughout; promotion uses the deployed Beta version and does not push local code. If a project-local Node wrapper must accept flags through `corepack pnpm run`, normalize argv by dropping a standalone `--` before parsing because `corepack pnpm run <script> -- --flag` can expose that separator to the script.
 
 For Service-fronted Apps, the Service test suite behind `corepack pnpm run test` must include the gateway-mode contract:
 

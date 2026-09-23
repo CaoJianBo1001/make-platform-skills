@@ -1,15 +1,14 @@
 # makecli CLI Reference
 
-> Verify locally with `makecli version` before relying on command output.
+> Verify locally with `makecli version` and command `--help` before relying on flags. Current publishing uses `app deploy` for Beta, `app promote` for Prod, and `--context` for the backend platform.
 
 ## Global Flags (all commands)
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--env` | Backend environment `dev\|test\|production` (overrides `[settings] environment`) | `production` |
+| `--context` | Backend platform `dev\|test\|production` (overrides `MAKE_CLI_CONTEXT` and configured context) | `production` when unset |
 | `--profile` | Credentials profile | `default` |
 | `--meta-server-url` | Meta Server **host** override for the current profile (gateway prefix `/api/make` auto-added) | environment preset |
-| `--repo-server-url` | Code Repository Server host override for the current profile | environment preset |
 
 Environment presets: `production` → `qfei.cn` hosts, `dev`/`test` → `qtech.cn` hosts.
 
@@ -41,20 +40,20 @@ Manages `~/.make/credentials` (tokens) and `~/.make/config` (INI, `[settings]` +
 | `configure resolve [--target local-preview]` | Token-free, offline; prints JSON (`make_api_origin`, `tenant_id`, `operator_id`) for wiring a local preview backend |
 | `configure --sample` | Print a commented INI reference template |
 
-**Keys for set/get** — profile keys: `meta-server-url`, `repo-server-url`, `auth-server-url`, `X-Tenant-ID`, `X-Operator-ID`. Special key `environment` (values `dev|test|production`) writes the global `[settings]` section shared by every profile.
+**Keys for set/get** — profile keys: `context`, `meta-server-url`, `repo-server-url`, `auth-server-url`, `X-Tenant-ID`, `X-Operator-ID`. `context` accepts `dev|test|production`; global context defaults are managed by `makecli settings`.
 
 `X-Tenant-ID` / `X-Operator-ID` are injected as HTTP headers on every request. Server URLs are host-only (no path).
 
 ```bash
-makecli configure set environment test        # global [settings], affects every profile
+makecli configure set context test            # current profile backend default
 makecli configure set meta-server-url <host>
-makecli configure get environment
+makecli configure get context
 ```
 
 ### configure resolve
 
 ```
-makecli configure resolve --target local-preview --output=json [--profile <name>] [--env dev|test|production]
+makecli configure resolve --target local-preview --output=json [--profile <name>] [--context dev|test|production]
 ```
 
 Resolve the current MakeCLI configuration for local-preview tooling without online token validation.
@@ -64,14 +63,14 @@ Minimal JSON contract:
 ```json
 {
   "profile": "default",
-  "environment": "production",
+  "context": "production",
   "make_api_origin": "https://make.qfei.cn",
   "tenant_id": "",
   "operator_id": ""
 }
 ```
 
-Use `make_api_origin` as a bare public gateway origin. Local-preview Services add `/api/make` when constructing upstream Make Meta/Data/Auth URLs. The command resolves `--env` first, then `[settings].environment`, then the default environment; profile `meta-server-url` and global `--meta-server-url` overrides are normalized to a bare origin.
+Use `make_api_origin` as a bare public gateway origin. Local-preview Services add `/api/make` when constructing upstream Make Meta/Data/Auth URLs. Backend selection follows `--context`, `MAKE_CLI_CONTEXT`, profile/global context, then the default context; profile `meta-server-url` and global `--meta-server-url` overrides are normalized to a bare origin.
 
 ---
 
@@ -116,14 +115,14 @@ Confirms by typing the app key (gh-style). Non-interactive shells are refused un
 ### app deploy
 
 ```
-makecli app deploy [--env preview|production] [--force] [--yes|-y]
+makecli app deploy [--context dev|test|production] [--force]
                    [--wait] [--timeout 5m] [--status] [--output table|json]
 ```
 
 - Runs from the project directory; app key comes from `apps/dsl/app.yaml` (no `--app` flag)
 - Pushes the **committed HEAD as-is** — errors if worktree dirty, no commits, or no git repo (commit first)
 - Refuses apps never registered via `app create` (guides to `makecli app create -f apps/dsl/app.yaml`)
-- `--env` defaults to `preview`; `production` prompts continue/abort confirmation (`--yes` skips; non-interactive shells refused without it)
+- Always deploys to the App's Beta environment. Use `app promote` to publish that Beta version to Prod; `--context` chooses the backend platform only.
 
 **Progress & waiting** (build task located by local HEAD commit sha — no task ID needed, re-runs re-attach idempotently):
 
@@ -137,6 +136,22 @@ makecli app deploy [--env preview|production] [--force] [--yes|-y]
 - `--timeout` (default `5m`, requires `--wait`) bounds the wait; right after push the task may briefly not exist yet ("task not created yet") — the wait tolerates this window
 - On SUCCESS the environment URL is shown (`URL:` row; same source as `app info`)
 - `--output json` (requires `--status`): stdout is a single BuildTask object (`status`, `phase`, `errorCode`, `errorMessage`, `url` on success, …); with `--wait`, progress goes to stderr so stdout stays parseable
+
+### app promote
+
+```bash
+makecli app promote [--context dev|test|production] [--profile <name>]
+                    [--yes|-y] [--wait] [--timeout 10m] [--output table|json]
+makecli app promote --status --id <promoteId> [--wait] [--timeout 10m]
+                    [--context dev|test|production] [--profile <name>] [--output table|json]
+```
+
+- Run in the App project directory; the source is Beta's Console configuration and last successful deployment commit, not local HEAD. Nothing is pushed from the local repository.
+- Publishes to the paired Prod App in the **same backend context and profile**. Preserve both explicitly when continuing a Beta deployment task.
+- Starting a promotion prompts for confirmation. `--yes` is allowed after an explicit user request to publish to Prod, including a submitted deployment follow-up action. Rendering the action alone is not consent.
+- `--wait` waits for a terminal result: **0 = succeeded / 2 = failed / 124 = timeout**. The default wait timeout is `10m`.
+- Save the returned promote ID. `--status` requires `--id`; after a timeout, use `--status --id <promoteId> --wait` to resume waiting on that run without starting another promotion.
+- Results include the promotion state/step, source and product build IDs, and URL on success. Confirm Prod `Ready` and the expected commit with `app info`, then verify the returned URL.
 
 ### app info
 

@@ -1,8 +1,8 @@
 ---
 name: makecli
-description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, check build/deploy progress or app URLs, entities, relations, records, inspect resources, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"部署进度\", \"构建状态\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
+description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, entities, relations, records, inspect resources, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"部署进度\", \"构建状态\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.5.8
+  version: 0.5.9
 ---
 
 # makecli — Make Platform CLI
@@ -28,7 +28,7 @@ Before executing ANY makecli command, verify the environment:
    - **INTERACTIVE** (opens browser, blocks) — instruct user to run it themselves via the `!` shell prefix (supported by Claude Code and Codex)
    - Fallback for manual tokens: `makecli configure token` (also interactive, via `!`)
 
-Environment defaults to `production`. Switch with `makecli configure set environment dev|test` or per-call `--env`.
+Backend context selects the Make platform (`dev`, `test`, or `production`); the App has separate Beta and Prod environments within that context. Preserve the current profile and backend context through deploy, promote, and verification. Use per-call `--context <context>`; check local command help before relying on flags from an older CLI.
 
 ## Decision Tree
 
@@ -42,7 +42,9 @@ User request arrives
     +- Create/update schema (entity, relation)?
     |   --> Declarative Workflow (preferred)
     |
-    +- Publish code? --> Deploy Workflow
+    +- Deploy code to Beta (including recreate and deploy)? --> Deploy Code
+    |
+    +- Publish Beta to Prod / 发布到 prod 环境上? --> Promote Beta to Prod
     |
     +- Build/deploy progress? --> app deploy --status / --wait
     |
@@ -76,8 +78,7 @@ Key rules:
 ```bash
 makecli preflight                      # validate layout (--app-type fullstack|service|ui)
 git add -A && git commit -m "..."      # deploy pushes committed HEAD; dirty worktree is refused
-makecli app deploy --wait              # push + block until build reaches terminal state
-makecli app deploy --env production    # prompts confirmation — needs user consent (--yes to skip)
+makecli app deploy --context <context> --profile <profile> --wait  # push committed HEAD to Beta
 ```
 
 Deploy reads the app key from `apps/dsl/app.yaml` and refuses apps never registered via `app create`.
@@ -92,6 +93,37 @@ makecli app deploy --status                # one-shot snapshot of the current HE
 makecli app deploy --status --output json  # machine-readable (BuildTask fields + url on success)
 makecli app deploy --status --wait         # block until terminal state, no push
 ```
+
+### Beta deployment result and next step
+
+Apply this completion flow to every successful Beta deployment, including a user-authorized recreate-and-deploy flow:
+
+- Verify `app info <appKey>` in the same context/profile reports Beta `Ready` for the deployed commit. Report the Beta URL, build/commit, and checks actually completed; keep authenticated browser acceptance separate.
+- Offer **发布到 prod 环境上** as the next step. In Codex clients that support follow-up actions, emit the following as a Markdown list item outside a code fence. Replace every placeholder with the verified non-secret value before emitting it:
+
+```markdown
+- :codex-followup[发布到 prod 环境上]{prompt="将应用 <appKey> 在 backend context <context>、profile <profile> 下刚完成的 Beta 构建 <buildId>（commit <commitSha>）发布到同一 context 的 Prod 环境。先核对 Beta 仍是该构建，若已变化则说明差异并等待确认；发布后验证 Prod Ready、健康接口和统一登录响应。"}
+```
+
+- In clients without follow-up actions, say: `如需发布当前 Beta 版本到正式环境，请输入“发布到 prod 环境上”。`
+- Showing the guide does not authorize promotion. A submitted follow-up or an explicit equivalent request does; proceed without asking for the same permission again.
+- Do not show the guide for pending/failed deployments, after successful promotion of this release, or when the same Beta code **and Console configuration** are already confirmed published. Matching commit SHAs alone cannot rule out unpublished Console changes. If Prod publication is already authorized, continue to promotion instead of offering the guide.
+
+## Workflow: Promote Beta to Prod
+
+`app promote` publishes Beta's Console configuration and last successful deployment commit to the paired Prod App. It pushes no local code. A request such as **发布到 prod 环境上** after Beta deployment selects this workflow and keeps the same backend context/profile; changing the backend context is a separate user request.
+
+1. Read `makecli app promote --help` and refresh `app info <appKey>` in the established context/profile. Confirm the Beta source is Ready; if a follow-up names a build that has changed, report the difference and obtain confirmation for the new source. If the installed CLI lacks `promote`, report the limitation rather than guessing a legacy command.
+2. With the user's explicit production authorization, run from the App project directory:
+
+```bash
+makecli app promote --context <context> --profile <profile> --yes --wait
+```
+
+3. If the wait times out, retain the promote ID and resume the same run with `app promote --status --id <promoteId> --wait` in the same context/profile. Do not start a duplicate promotion to check progress.
+4. Verify `app info <appKey>` reports Prod `Ready` and the expected commit, then check the Prod URL and applicable health/auth endpoints. Report the Prod URL, build/commit, backend context, and any unverified browser acceptance. On failure, report the failed step and error without claiming publication succeeded.
+
+See [CLI reference](references/cli-reference.md#app-promote) for promote status flags and exit codes.
 
 ## Workflow: Imperative Operations
 
@@ -127,7 +159,7 @@ All create commands accept `--dry-run` — server validates without persisting.
 ! makecli login                                  # browser OAuth; manual fallback: configure token
 
 # Step 2: Set backend environment and profile headers (if non-default)
-makecli configure set environment test           # dev|test|production (global)
+makecli configure set context test               # backend default for the current profile
 makecli configure set meta-server-url <host>     # host only, /api/make auto-added
 makecli configure set X-Tenant-ID <tenant>
 makecli configure set X-Operator-ID <operator>
@@ -138,9 +170,9 @@ makecli configure verify --output=json
 makecli configure resolve --target local-preview --output=json
 ```
 
-`environment` is global and accepts `dev`, `test`, or `production`. The `--env` flag overrides it for one command. For local preview, use `configure resolve --target local-preview --output=json` as the primary source of the effective public Make origin. Consume `make_api_origin` as a bare origin and let the local-preview Service add the browser-facing `/api/make` scope. Profile-specific host overrides such as `meta-server-url` and `repo-server-url` should be origins; path-scoped legacy values must be normalized before adapter URL construction.
+`context` accepts `dev`, `test`, or `production`. The `--context` flag overrides the configured backend for one command; it does not select the App's Beta/Prod environment. For local preview, use `configure resolve --target local-preview --output=json` as the primary source of the effective public Make origin. Consume `make_api_origin` as a bare origin and let the local-preview Service add the browser-facing `/api/make` scope. Profile-specific host overrides such as `meta-server-url` and `repo-server-url` should be origins; path-scoped legacy values must be normalized before adapter URL construction.
 
-`--env` belongs on the specific `makecli` command being executed; do not route it through project-local package scripts such as `corepack pnpm run verify:publish -- --env production`. New Make Apps and explicit runtime migrations use the `make-app-runtime` runtime baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0` through Corepack); ordinary deployment work must not rewrite an existing App's runtime declaration. For code publishing, run the project gate first, then run `makecli app deploy --env preview` or `makecli app deploy --env production`.
+`--context` belongs on the specific `makecli` command being executed; do not route it through project-local package scripts such as `corepack pnpm run verify:publish -- --context dev`. New Make Apps and explicit runtime migrations use the `make-app-runtime` runtime baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0` through Corepack); ordinary deployment work must not rewrite an existing App's runtime declaration. Run the project gate before `makecli app deploy --wait` to Beta. After explicit production authorization, use `makecli app promote --yes --wait` in the same context/profile.
 
 **Profiles:** All commands accept `--profile <name>` (default: "default").
 **Config files:** `~/.make/credentials` and `~/.make/config` (INI format).
@@ -160,7 +192,7 @@ makecli app create shop --name "我的商城"          # 2. Scaffold + register 
 cd shop                                           # 3. Write DSL (makedsl skill) under apps/dsl/
 makecli diff -f apps/dsl && makecli apply -f apps/dsl
 git add -A && git commit -m "feat: initial app"   # 4. Develop, then commit
-makecli app deploy --wait                         # 5. Deploy to preview, wait for build, get URL
+makecli app deploy --wait                         # 5. Deploy to Beta, wait for build, get URL
 ```
 
 **Inspect remote state:**
@@ -178,7 +210,7 @@ makecli schema --app <app>                # aggregated app + entities + relation
 - **Don't use imperative commands for bulk schema setup.** Use YAML + apply instead.
 - **Don't guess CLI flags.** Read `@references/cli-reference.md` if unsure.
 - **Don't run interactive commands via Bash tool.** `login`, `configure token`, `configure config` block on user input — tell user to run via `!`.
-- **Don't pass `--yes` to `app delete` or `app deploy --env production` without explicit user consent.** These flags skip safety confirmations.
+- **Don't pass `--yes` to `app delete` or `app promote` without explicit user consent.** These flags skip safety confirmations.
 - **Don't deploy with a dirty worktree.** `app deploy` pushes committed HEAD only — commit first, it never auto-commits.
 - **Don't hand-roll polling loops over `--status`.** Use `deploy --status --wait`.
 - **Don't write DSL YAML from memory.** Invoke the `makedsl` skill for schema reference.
