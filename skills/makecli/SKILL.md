@@ -29,7 +29,7 @@ Before executing ANY makecli command, verify the environment:
    - Fallback for manual tokens: `makecli configure token` (also interactive, via `!`)
 2. Config errors mentioning stale keys → run `makecli doctor` (read-only report); `makecli doctor --fix` migrates them in place
 
-Backend context defaults to `production`. Switch with `makecli context use dev|test` or per-call `--context`.
+Backend context defaults to `production`. Switch the global default with `makecli context use dev|test`, a profile default with `makecli configure set context <ctx>`, or per-call `--context`. Resolution order: `--context` > `$MAKE_CLI_CONTEXT` > profile `context` > `[settings] context` > `production`.
 
 ## Vocabulary: context vs environment
 
@@ -37,10 +37,10 @@ Two different axes — never mix them up:
 
 | Word | Meaning | Values | Where |
 |------|---------|--------|-------|
-| **context** | which Make backend the CLI talks to | `dev` / `test` / `production` | global `--context`, `makecli context use`, `[settings] context` |
+| **context** | which Make backend the CLI talks to | `dev` / `test` / `production` | global `--context`, profile `context`, `makecli context use` (`[settings] context`) |
 | **environment** | an app's deployment target | `beta` / `production` | local `--env` on `app delete`; `app deploy` is beta-only, `app promote` is beta → production |
 
-Every app is a **prod/beta pair** on the server. `app deploy` only ever pushes to beta (no `--env`). Production is reached **only** by `app promote` (beta → production) — there is no direct production push.
+Every app is a **prod/beta pair** on the server, both living in the same backend context. `app deploy` only ever pushes to beta (no `--env`). Production is reached **only** by `app promote` (beta → production) — there is no direct production push. Preserve the current profile and backend context through deploy, promote, and verification; check local command help before relying on flags from an older CLI.
 
 ## Decision Tree
 
@@ -54,11 +54,11 @@ User request arrives
     +- Create/update schema (entity, relation)?
     |   --> Declarative Workflow (preferred)
     |
-    +- Publish code to beta? --> Deploy Workflow
+    +- Deploy code to Beta (including recreate and deploy)? --> Deploy Code
     |
-    +- Release what's in beta to production? --> app promote
+    +- Publish Beta to Prod / 发布到 prod 环境上? --> Promote Beta to Prod
     |
-    +- Build/deploy progress? --> app deploy --status / --wait ; app promote --status / --wait
+    +- Build/deploy progress? --> app deploy --status / --wait ; app promote --status --id <promoteId> / --wait
     |
     +- App overview + environment URLs? --> app info <appKey>
     |
@@ -90,7 +90,7 @@ Key rules:
 ```bash
 makecli preflight                      # validate layout (--app-type fullstack|service|ui)
 git add -A && git commit -m "..."      # deploy pushes committed HEAD; dirty worktree is refused
-makecli app deploy --wait              # push to beta + block until build reaches terminal state
+makecli app deploy --context <context> --profile <profile> --wait  # push committed HEAD to Beta + block until terminal state
 ```
 
 Deploy reads the app key from `apps/dsl/app.yaml` and refuses apps never registered via `app create`.
@@ -106,19 +106,36 @@ makecli app deploy --status --output json  # machine-readable (BuildTask fields 
 makecli app deploy --status --wait         # block until terminal state, no push
 ```
 
-## Workflow: Release to Production
+### Beta deployment result and next step
 
-The only path is `app promote`; it prompts for confirmation (`--yes` skips — needs explicit user consent):
+Apply this completion flow to every successful Beta deployment, including a user-authorized recreate-and-deploy flow:
 
-```bash
-makecli app promote --wait                 # publish what is running in beta → production
+- Verify `app info <appKey>` in the same context/profile reports Beta `Ready` for the deployed commit. Report the Beta URL, build/commit, and checks actually completed; keep authenticated browser acceptance separate.
+- Offer **发布到 prod 环境上** as the next step. In Codex clients that support follow-up actions, emit the following as a Markdown list item outside a code fence. Replace every placeholder with the verified non-secret value before emitting it:
+
+```markdown
+- :codex-followup[发布到 prod 环境上]{prompt="将应用 <appKey> 在 backend context <context>、profile <profile> 下刚完成的 Beta 构建 <buildId>（commit <commitSha>）发布到同一 context 的 Prod 环境。先核对 Beta 仍是该构建，若已变化则说明差异并等待确认；发布后验证 Prod Ready、健康接口和统一登录响应。"}
 ```
 
-**`app promote`**:
-- Source is the **server-side beta state** (beta's last successful deployment commit + console config) — nothing is pushed, local git is not read. Beta must be deployed first; never-deployed beta fails fast
-- Runs asynchronously on the server; `--wait` blocks until terminal state — exit **0** success / **2** failed / **124** timeout (`--timeout`, default 10m)
-- The run receipt is saved locally per context + app, so `app promote --status [--wait]` reports the last promote without any ID
-- `--output json` (with `--status`): stdout is one status object; with `--wait`, progress goes to stderr
+- In clients without follow-up actions, say: `如需发布当前 Beta 版本到正式环境，请输入“发布到 prod 环境上”。`
+- Showing the guide does not authorize promotion. A submitted follow-up or an explicit equivalent request does; proceed without asking for the same permission again.
+- Do not show the guide for pending/failed deployments, after successful promotion of this release, or when the same Beta code **and Console configuration** are already confirmed published. Matching commit SHAs alone cannot rule out unpublished Console changes. If Prod publication is already authorized, continue to promotion instead of offering the guide.
+
+## Workflow: Promote Beta to Prod
+
+`app promote` publishes Beta's Console configuration and last successful deployment commit to the paired Prod App. It pushes no local code. A request such as **发布到 prod 环境上** after Beta deployment selects this workflow and keeps the same backend context/profile; changing the backend context is a separate user request.
+
+1. Read `makecli app promote --help` and refresh `app info <appKey>` in the established context/profile. Confirm the Beta source is Ready; if a follow-up names a build that has changed, report the difference and obtain confirmation for the new source. If the installed CLI lacks `promote`, report the limitation rather than guessing a legacy command.
+2. With the user's explicit production authorization, run from the App project directory:
+
+```bash
+makecli app promote --context <context> --profile <profile> --yes --wait
+```
+
+3. If the wait times out, retain the promote ID and resume the same run with `app promote --status --id <promoteId> --wait` in the same context/profile. Do not start a duplicate promotion to check progress.
+4. Verify `app info <appKey>` reports Prod `Ready` and the expected commit, then check the Prod URL and applicable health/auth endpoints. Report the Prod URL, build/commit, backend context, and any unverified browser acceptance. On failure, report the failed step and error without claiming publication succeeded.
+
+See [CLI reference](references/cli-reference.md#app-promote) for promote status flags and exit codes.
 
 ## Workflow: Imperative Operations
 
@@ -154,10 +171,12 @@ All create commands accept `--dry-run` — server validates without persisting.
 ! makecli login                                  # browser OAuth; manual fallback: configure token
 
 # Step 2: Global settings ([settings] section, shared by every profile)
+makecli context use test                         # global default backend context (= settings set context test)
 makecli settings set channel beta                # release channel stable|beta for `makecli update`
 makecli settings list                            # every global key with value + source
 
 # Step 3: Per-profile overrides (only if non-default)
+makecli configure set context test               # backend default for the current profile (beats [settings] context)
 makecli configure set meta-server-url <host>     # host only, /api/make auto-added
 makecli configure set X-Tenant-ID <tenant>
 makecli configure set X-Operator-ID <operator>
@@ -169,11 +188,11 @@ makecli configure verify --output=json
 makecli configure resolve --target local-preview --output=json
 ```
 
-`configure` only manages **profile** keys (`meta-server-url`, `repo-server-url`, `auth-server-url`, `X-Tenant-ID`, `X-Operator-ID`); global keys (`context`, `channel`, `role`, `check-for-updates`) go through `settings` — each command refuses the other's keys and points you to the right one. The global `--context` flag overrides the setting for one command.
+`configure` manages **profile** keys (`context`, `meta-server-url`, `repo-server-url`, `auth-server-url`, `X-Tenant-ID`, `X-Operator-ID`); `settings` manages **global** keys (`context`, `channel`, `role`, `check-for-updates`). `context` exists at both levels — the profile value wins over the global one. Other keys sent to the wrong command are refused with a pointer to the right one. The `--context` flag overrides both for one command; it selects the backend only, never the App's Beta/Prod environment.
 
 For local preview, use `configure resolve --target local-preview --output=json` as the primary source of the effective public Make origin. Consume `make_api_origin` as a bare origin and let the local-preview Service add the browser-facing `/api/make` scope. Profile-specific host overrides such as `meta-server-url` and `repo-server-url` should be origins; path-scoped legacy values must be normalized before adapter URL construction.
 
-`--context` / `--env` belong on the specific `makecli` command being executed; do not route them through project-local package scripts such as `corepack pnpm run verify:publish -- --env production`. New Make Apps and explicit runtime migrations use the `make-app-runtime` runtime baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0` through Corepack); ordinary deployment work must not rewrite an existing App's runtime declaration. For code publishing, run the project gate first, then `makecli app deploy` (beta) and `makecli app promote` (production).
+`--context` / `--env` belong on the specific `makecli` command being executed; do not route them through project-local package scripts such as `corepack pnpm run verify:publish -- --context dev`. New Make Apps and explicit runtime migrations use the `make-app-runtime` runtime baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0` through Corepack); ordinary deployment work must not rewrite an existing App's runtime declaration. Run the project gate before `makecli app deploy --wait` to Beta. After explicit production authorization, use `makecli app promote --yes --wait` in the same context/profile.
 
 **Profiles:** All commands accept `--profile <name>` (default: "default").
 **Config files:** `~/.make/credentials` and `~/.make/config` (INI format).
@@ -193,8 +212,8 @@ makecli app create shop --name "我的商城"          # 2. Scaffold + register 
 cd shop                                           # 3. Write DSL (makedsl skill) under apps/dsl/
 makecli diff -f apps/dsl && makecli apply -f apps/dsl
 git add -A && git commit -m "feat: initial app"   # 4. Develop, then commit
-makecli app deploy --wait                         # 5. Deploy to beta, wait for build, get URL
-makecli app promote --wait                        # 6. Verified in beta? Publish it to production (confirm)
+makecli app deploy --wait                         # 5. Deploy to Beta, wait for build, get URL
+makecli app promote --wait                        # 6. Verified in Beta + user authorized? Publish it to Prod (confirm)
 ```
 
 **Inspect remote state:**
@@ -215,5 +234,5 @@ makecli schema --app <app>                # aggregated app + entities + relation
 - **Don't pass `--yes` to `app delete` or `app promote` without explicit user consent.** These flags skip safety confirmations.
 - **Don't promote before beta is deployed and verified.** `app promote` publishes the server's beta state, not your local code.
 - **Don't deploy with a dirty worktree.** `app deploy` pushes committed HEAD only — commit first, it never auto-commits.
-- **Don't hand-roll polling loops over `--status`.** Use `deploy --status --wait` / `promote --status --wait`.
+- **Don't hand-roll polling loops over `--status`.** Use `deploy --status --wait` / `promote --status --id <promoteId> --wait`.
 - **Don't write DSL YAML from memory.** Invoke the `makedsl` skill for schema reference.

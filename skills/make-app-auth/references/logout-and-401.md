@@ -36,7 +36,7 @@ Handle 401/403 in one Make API adapter or data-source layer. Every frontend requ
 - Generating token mode, local debug token prompts, or no-login bypasses.
 - Handling 401 only in App bootstrap while business requests use unhandled `auth.api` calls.
 - Calling `auth.api` directly from scattered UI components without the shared 401/403 handler.
-- Using raw `window.fetch('/api/make/...')` for any Make backend request.
+- Using raw `window.fetch('/api/make/...')` for ordinary Make backend requests or outside the fixed AI v1 `AuthenticatedTransport` bridge in the shared adapter.
 - Automatically retrying unified login multiple times after state/challenge expiration.
 - Hand-writing per-request 401/403 login wrappers when the SDK option `apiAuthRedirect: true` is available.
 - Rebuilding Org authorize/logout URLs in App code.

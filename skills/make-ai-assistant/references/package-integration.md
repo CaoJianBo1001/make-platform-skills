@@ -1,150 +1,99 @@
 # Package integration
 
-## Required package workflow
+## Resolve the consumer contract
 
-1. Locate the host UI package.
-2. Ensure `@qfei-design/make-ai-assistant` is installed at the platform-approved
-   version for the host. Prefer the latest published compatible version when the
-   user asks to upgrade.
-3. Read package docs from `package.ai.json`:
-   - `node_modules/@qfei-design/make-ai-assistant/package.ai.json`
-   - every file listed in `package.ai.json.readOrder`
-4. Before building a transport, select the adapter under `SKILL.md` and read the
-   selected public recipe from `recipes.json` plus its matching capability entry
-   from `capabilities.json`. These files define which adapter operations, route
-   shapes, SSE events, and feature flags are actually published. If the selected
-   adapter or its required recipe/capability metadata is unavailable, report the
-   package version and stop for confirmation; do not infer it from package source
-   or the host page type.
-5. Import only public entrypoints:
-   - `@qfei-design/make-ai-assistant`
-   - `@qfei-design/make-ai-assistant/react`
-   - `@qfei-design/make-ai-assistant/sse`
-   - `@qfei-design/make-ai-assistant/make-app`
-   - `@qfei-design/make-ai-assistant/make-console`
-   - `@qfei-design/make-ai-assistant/testing` for tests and controlled demo only
-   - `@qfei-design/make-ai-assistant/styles.css`
+For a new integration or a requested latest upgrade, query the configured npm
+registry, install its latest published `@qfei-design/make-ai-assistant` in the
+consumer UI workspace, and verify the lockfile's exact resolved version. Do not
+put the dependency only at a monorepo root. Package `0.3.2` is the first
+validated baseline for the current public failure fields and negotiated UI-limit
+projection described below. Package `0.3.1` predates those public contracts and
+must fail this Skill's current audit; do not weaken the audit or add a host-side
+compatibility shim to accept it. Use `0.3.2` or a later published version only
+if its public declarations satisfy the current contract and the v1
+route/response tests pass. If registry access, peer
+compatibility or the required public contract cannot be confirmed, stop and
+report the exact gap instead of guessing an old adapter.
 
-Do not import package `src`, `dist`, examples, gallery files, or other internal
-paths. Do not copy package templates, reducers, SSE parsers, state machines, or
-CSS into the host.
+Read the installed `package.json` export map, each exported type target, and only
+the transitively referenced declarations needed to understand those public
+types. Do not inspect unexported declaration files or package implementation
+merely because they are present under `dist`; an unexported file cannot add a
+host-facing contract.
+For `make-app`, require these public entry points and symbols:
 
-The selected adapter is a backend capability choice, not a UI framework choice:
+| Entry point | Required public surface |
+| --- | --- |
+| `/client` | `createMakeAgentClient`, `AuthenticatedTransport`, `Client`, `Scope`, `Agent`, `Capabilities`, and `ResponseSnapshot.code/message` plus `response.failed` `code/message/requestId` |
+| `/make-app` | async `createMakeAppAssistantTransport`, `MakeAppAssistantTransportOptions` |
+| `/react` and root public types | `MakeAiAssistant`, `AssistantPanel`, public props, `MakeAiTheme`, and `AssistantTransportFeatures.limits` for negotiated upload/input budgets |
+| `/styles.css` | declared style export |
 
-- a configured/queryable Console Agent or an explicit Agent Gateway request uses
-  `@qfei-design/make-ai-assistant/make-console`;
-- a confirmed Make App AI Chat backend contract uses
-  `@qfei-design/make-ai-assistant/make-app`;
-- a Make App page alone does not select `make-app`.
+The installed type target is read-only verification; host code must never
+import `dist`, `src`, examples or an undeclared subpath.
 
-Add a regression test that rejects the wrong adapter and route family. In
-particular, a Console selection must not instantiate the Make App adapter or call
-`/api/make/app/ai/**`.
+Do not infer `ResponseSnapshot.code/message` or `AssistantTransportFeatures.limits`
+from an unexported internal file. If the registry still resolves a build without
+these public fields, report the package release dependency and pause full v1
+integration; a host-side duplicate parser or fixed upload limits is not a
+compatible substitute.
 
-## Public React surfaces
+The Skill's versioned references define the selected backend protocol. Package
+README/recipe/example text and another App are not substitutes for that protocol.
+If the installed public types or exports are incompatible, report “当前包版本缺少所需公开契约”
+with the version and missing symbol. Do not reconstruct internals or silently
+enable a legacy route. A dedicated legacy adapter is not bundled here.
 
-- `MakeAiAssistant`: default surface with floating launcher and assistant panel.
-- `AssistantPanel`: embedded panel when the host owns the conversation surface or page region.
-- `ArtifactRenderer`: render one Artifact inside a custom host surface.
-- `MakeAiTheme`: local visual contract shared by all three React surfaces.
+## Make App v1 composition
 
-Public props vary by surface:
+Import the public entry point, not an internal build file:
 
-- All three surfaces support `theme?: MakeAiTheme`, `context`, `onAction`, and
-  `onActionError`; `ArtifactRenderer` also requires `artifact` and `registry`,
-  and may accept `fallback`.
-- `MakeAiAssistant` and `AssistantPanel` require `transport` and support an
-  optional `registry`, `brandName`, `title`, `subtitle`, `assistantName`,
-  `userName`, `userAvatarUrl`, `privacyNotice`, `headerHeight`, and
-  `suggestions`, and `onNewConversation`; `AssistantPanel` additionally
-  supports `onClose`.
-- Only `MakeAiAssistant` supports `open`, `defaultOpen`, `onOpenChange`,
-  `launcher`, `hideLauncher`, and `maxDrawerWidth`.
-
-User display name/avatar, brand copy, privacy prompt, and theme are presentation
-props only. They do not change authorization and must not be forwarded as
-credentials.
-
-## Visual and responsive contract
-
-Use public props and package namespace variables; do not copy package CSS or
-replace the assistant with a host-owned generic Drawer.
-
-- `theme` requires `primary`; optional `MakeAiTheme` values refine hover,
-  foreground, surface, text, border, and overlay colors. The prop applies local
-  `--make-ai-theme-*` variables to the rendered package root, so it must not
-  mutate host global CSS. A light primary needs a readable `onPrimary` value.
-- Theme precedence is `theme` prop, then `--make-ai-theme-*`, then other
-  `--make-ai-*` overrides, host `--make-color-*`, and finally package defaults.
-  Semantic success, warning, and error colors remain semantic rather than being
-  recolored as brand status.
-- Package templates receive the same theme automatically. A custom Artifact
-  template that returns its own root element or a Fragment must apply
-  `renderContext.themeStyle` to its own root when it needs the package theme;
-  never add a wrapper solely to theme an Artifact.
-- `privacyNotice` and `headerHeight` are `MakeAiAssistant` / `AssistantPanel`
-  header props. `privacyNotice` creates the package header's focusable help
-  Tooltip beside the current context. Pass text only; do not build a duplicate
-  broadcast row. Empty or blank text hides the control. `headerHeight` accepts a
-  number or CSS length; `--make-ai-header-height` is the namespace-variable
-  alternative. Do not pass either prop to `ArtifactRenderer`.
-- `MakeAiAssistant` defaults to a 432px desktop drawer. It is resizable from the
-  left edge, exposes a keyboard-focusable separator, and keeps the initial width
-  as its minimum. `maxDrawerWidth` is a pixel cap with a default of
-  `min(1024px, 72vw)` and is clamped to the minimum/current viewport. Do not pass
-  this prop to `AssistantPanel` or emulate it with page-level media queries.
-- At viewport widths of 560px or less, the package uses a full-width drawer and
-  hides the resize handle. Use `--make-ai-drawer-width`, `--make-ai-drawer-resize-line`,
-  `--make-ai-panel-gutter-wide`, and launcher position variables only when a
-  documented override is necessary. The panel and Artifacts use container
-  queries, so embedded and widened surfaces adapt to available container width.
-- Closing an opened `MakeAiAssistant` hides the drawer without unmounting the
-  panel or cancelling an active run. Let the package preserve scroll and focus;
-  cancel only through stop, new conversation, context reinitialization, or host
-  unmount according to the transport contract.
-
-## Host context
-
-Pass a complete `MakeAssistantHostContext`:
-
-```json
-{
-  "app": { "id": "<appKey>", "name": "<appName>" },
-  "location": { "pathname": "<currentPath>", "routeId": "<routeId>" },
-  "resource": { "entityKey": "<entityKey>", "recordId": "<recordId>", "viewKey": "<viewKey>" },
-  "selection": { "recordIds": ["<recordId>"] },
-  "locale": "zh-CN",
-  "timezone": "Asia/Shanghai",
-  "extensions": { "view": "<safeViewSnapshot>" }
-}
+```ts
+import { createMakeAgentClient } from "@qfei-design/make-ai-assistant/client";
 ```
 
-Only include small, safe, non-secret context. Do not send tokens, cookies,
-Authorization headers, raw permission grants, full table data, or unbounded row
-snapshots through `extensions`.
+The host creates `createMakeAgentClient({ scope: { appKey, identityKey },
+transport: authenticatedTransport })`; its default base path is
+`/api/make/app/ai`, and the SDK appends `/v1`. A host whose auth URL resolver
+prepends `/api/make` may instead use `basePath: "/app/ai"`, provided the final
+browser URL is the same-origin `/api/make/app/ai/v1/**`. Never pass a base path
+already ending in `/v1`.
 
-## Demo and mock transport
+`AuthenticatedTransport.request` executes one authenticated HTTP operation and
+returns `{ status, headers, body?: AsyncIterable<Uint8Array> }`. Set
+`retryOwner: "sdk"` if this bridge itself does not retry, or `"transport"` if
+the existing transport owns retries. Never stack both retry loops. Preserve the
+request's method, headers, bytes and AbortSignal. The response body must remain
+unconsumed for the SDK to decode JSON, empty 204, SSE or file bytes. The SDK
+requires the upstream `Make-AI-Api-Version: v1` response header. The bridge
+uses the established unified-login session and handles 401/403 through host
+auth policy; it does not read or store tokens, cookies or Provider keys.
 
-`@qfei-design/make-ai-assistant/testing` and any demo/mock transport are only
-for development, tests, local demos, and explicitly gated preview demonstrations.
-A demo/mock transport must be opt-in and visibly labeled, for example with a
-query flag plus allowed host check.
-换句话说，demo/mock/testing 能力仅用于开发、测试和演示，不进入生产真实语义。
+Read all Agent pages via `client.agents.list()` before creating the UI adapter:
 
-Demo mode must not:
+```ts
+const assistantTransport = await createMakeAppAssistantTransport({
+  client,
+  agentId,
+  signal,
+});
+```
 
-- replace the real transport silently
-- run on production domains by default
-- persist mock results as real assistant history
-- be used as evidence that backend Artifact support is complete
+The async factory reads capabilities for the selected Agent, then returns a
+public `AssistantTransport` for `MakeAiAssistant` or `AssistantPanel`. It owns
+v1 DTO validation, request/response decoding, bounded retries, SSE parsing and
+recovery, file upload/read helpers, feature gating and history mapping. A host
+must not copy those algorithms into callbacks. Dispose the old client after
+identity/App change or host unmount; disposal does not log out or remotely
+cancel a running response.
 
-## Package upgrade checks
+Import `@qfei-design/make-ai-assistant/styles.css` once. Use the package's
+public React props for brand/title, user display, safe context, suggestions,
+controlled open state, launcher position and theme. New hosts do not pass the
+ignored compatibility props `subtitle` or `privacyNotice`. The package owns
+internal header, task list, composer, upload menu, message layout and responsive
+styles. Host CSS should affect only external placement and documented theme
+variables, not internal selectors or a competing drawer.
 
-When upgrading the package:
-
-- read the new public docs before changing host code
-- update direct imports and CSS imports only through public entrypoints
-- check whether new required props, capabilities, events, or template ids were
-  added
-- add or update tests before changing the integration
-- run host build/typecheck and package-specific contract tests
+Mock/testing entry points are for tests and controlled demos only. They cannot
+prove Service routes, authentication or model behavior are ready.

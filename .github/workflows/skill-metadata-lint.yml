@@ -23,3 +23,11 @@ jobs:
 
       - name: Validate skill metadata
         run: node scripts/lint-skill-metadata.mjs
+
+      - name: Run skill contract tests
+        run: |
+          set -euo pipefail
+          for file in scripts/test-*.mjs; do
+            node "$file"
+          done
+          node skills/make-ai-assistant/scripts/test-audit-make-ai-assistant-project.mjs

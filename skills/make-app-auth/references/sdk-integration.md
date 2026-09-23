@@ -86,7 +86,7 @@ if (boot.status === 'authenticated') {
 
 ## Business Requests
 
-Use `auth.api` for Make backend calls. In direct gateway mode, the SDK handles `/api/make`, cookies, JSON request bodies, and unified auth errors.
+Use `auth.api` for ordinary Make backend calls. The fixed Make App AI v1 raw-byte bridge is the only exception described in `request-adapter.md`; it preserves the same unified-login session while returning HTTP status, headers and bytes to the public AI Client. In direct gateway mode, the auth SDK handles `/api/make`, cookies, JSON request bodies, and unified auth errors for ordinary calls.
 
 `gatewayBaseUrl` is the SDK option for the Make backend API base. In Make tooling the effective local-preview backend origin is resolved by `makecli configure resolve --target local-preview --output=json`; consume the returned `make_api_origin` and add `/api/make` in Service-only local preview. Legacy `configure get environment` / `configure get meta-server-url` probing is only a fallback for older makecli installations. Reuse that host Make backend config when generating App configuration; do not invent a separate backend URL setting.
 
@@ -119,7 +119,7 @@ For published/vibe Apps, auth integration is not complete until the agent or pla
 - Unified-login API 401/403 with `apiAuthRedirect: true` redirects through SDK login once.
 - Unified-login unauthenticated state does not loop redirects.
 - Business-request 401 from schema/list/create/update/delete enters the shared expired-session handler.
-- Make backend calls are routed through the shared adapter; no raw `window.fetch('/api/make/...')` and no scattered unhandled `auth.api` calls in UI components.
+- Make backend calls are routed through the shared adapter; no raw `window.fetch('/api/make/...')` outside the fixed AI v1 byte bridge, and no scattered unhandled `auth.api` calls in UI components.
 - Unified-login state/challenge expiration renders a relogin prompt instead of automatically redirecting again.
 - Authenticated unified-login state exposes a visible logout action wired to `auth.logout()`, preferably in the top-header current-user menu defined by `makeui`.
 - Logout does not consume or rewrite `orgSsoLogoutUrl` in App code; the SDK calls make-gateway logout and follows gateway `redirectUri`, which should be an App return URL rather than an account-center or Org logout URL.
@@ -139,6 +139,6 @@ For published/vibe Apps, auth integration is not complete until the agent or pla
 - Constructing Org OAuth URLs, `redirect_uri`, `state`, or `code_challenge`.
 - Constructing Org logout URLs or adding App-side fallback logic for `token不能为空`.
 - Handling Org OAuth `code` in the App.
-- Raw `window.fetch('/api/make/...')` for Make backend calls.
+- Raw `window.fetch('/api/make/...')` for ordinary Make backend calls or outside the narrow shared Make App AI v1 `AuthenticatedTransport` bridge.
 - Monkey-patching `window.fetch`.
 - Treating browser context data as server-trusted authorization.
