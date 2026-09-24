@@ -1,4 +1,4 @@
 interface:
   display_name: "Make App Filter"
-  short_description: "Make filtering with CEL and table linkage"
-  default_prompt: "Use $make-app-filter to add Make record-list filtering with the package panel, permission-aware Entity Preset persistence, Service filter.expression, and CanvasTable header linkage."
+  short_description: "Make record search and advanced filtering"
+  default_prompt: "Use $make-app-filter to choose search-only (package compiler, no filter Preset or panel) or advanced-filter (package panel and permission-aware Preset, desktop/tablet header linkage, phone mobile Sheet) for a Make record list."

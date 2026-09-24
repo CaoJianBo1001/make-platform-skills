@@ -14,14 +14,22 @@ New Make App code sends record filters as:
 }
 ```
 
-Use package `compileListFilter`:
+Use package `compileListFilter`. For search-only lists, call
+`compileListFilter({ fields, searchText })` without an `advancedFilter` or filter
+Preset read:
 
 ```ts
-const filter = compileListFilter({
-  fields,
-  searchText,
-  advancedFilter: appliedGroup,
-});
+const filter = compileListFilter({ fields, searchText }); // search-only
+
+const query = filter ? { filter } : {};
+```
+
+Only when advanced filtering is enabled, combine its applied value with the
+session keyword; the filter Preset lifecycle is defined in
+`preset-integration.md`:
+
+```ts
+const filter = compileListFilter({ fields, searchText, advancedFilter: appliedGroup });
 
 const query = filter ? { filter } : {};
 ```
@@ -46,8 +54,8 @@ unchanged to Service/backend. Do not parse, distribute, normalize, or otherwise
 rewrite boolean expressions in the host. If the backend rejects current package
 output, report a package/backend contract mismatch and fix that shared boundary.
 
-Host integration checks should verify that the same normalized fields and applied
-state are passed to `compileListFilter`, and that its result reaches Service
+Host integration checks should verify that the same normalized fields and, when
+advanced filtering is enabled, its applied state are passed to `compileListFilter`, and that its result reaches Service
 unchanged. Exact comparison, collection, range, empty-check, and boolean-grouping
 syntax belongs to package tests and published package documentation.
 

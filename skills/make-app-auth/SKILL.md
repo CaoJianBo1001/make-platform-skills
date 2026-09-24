@@ -1,8 +1,8 @@
 ---
 name: make-app-auth
-description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user menu logout wiring, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. Preserve authenticated context for the default /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for the current-user header menu surface and make-app-permission for single-app permission enforcement.
+description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user/account-drawer auth wiring, current-context identity, Feishu-container logout visibility, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. Preserve authenticated context for the default /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for account surfaces and make-app-permission for single-app permission enforcement.
 metadata:
-  version: 0.1.9
+  version: 0.1.11
 ---
 
 # make-app-auth
@@ -19,6 +19,7 @@ This skill covers:
 - direct Make gateway `/api/make/**` authenticated requests
 - Service-fronted published App auth under the deployed App Service prefix, normally `/api/make/auth/**`
 - 401, 403, and logout behavior
+- current-context identity normalization and host runtime signals needed by account surfaces
 - cookie, session, redirect, and callback troubleshooting
 
 This skill does not cover:
@@ -66,7 +67,9 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - Every Service-fronted Make App must ensure the default `/api/make/app/principal/permission` route receives the established browser session context.
 - Do not implement auth readiness by adding a broad `/api/make/**` passthrough. Only auth/oauth are default transparent namespaces; Service-owned business requests stay under explicit `/api/make/app/**` routes, and unknown `/api/make/**` paths fail closed.
 - For Service-fronted Apps, Service must preserve the App host context for every make-gateway call: derive `X-Forwarded-Host` from inbound `Host`, do not trust client-supplied `X-Forwarded-Host`, add `X-Forwarded-Proto`, and share the same helper for auth and business proxy requests.
-- Generated authenticated App shells must expose a visible logout action in the current-user menu or the host's established account area, and that action must call `auth.logout()`. The visual menu surface belongs to `makeui`; this skill owns the auth handler and logout behavior. Do not implement logout by clearing cookies, rewriting Org URLs, or hiding logout in page-specific controls.
+- Preserve display identity from authenticated current-context responses, including `name`, `avatar`, and `tenantName`, while keeping it untrusted for server authorization. The mobile account drawer consumes this normalized identity through `makeui`; do not discard `tenantName` merely because desktop UI does not render it.
+- 生成的认证 App 壳层必须在当前用户菜单或宿主既有账户区域提供调用 `auth.logout()` 的退出操作。视觉表面归 `makeui`，本 Skill 负责认证 handler 与退出行为。标准例外是检测到的飞书容器：移动账户表面隐藏退出入口，但不得删除或替换认证 handler。不得通过清理 cookie、重写 Org URL，或在无关页面操作中隐藏退出实现该行为。
+- Keep Feishu-container detection in one pure, tested host helper. Prefer an established host/runtime signal; otherwise check `window.lark`, `window.feishu`, or `window.LarkJSBridge`, then use a case-insensitive `Lark|Feishu` user-agent match only as fallback. Do not infer the container from `tenantName`, deployment environment, screen width, or the mobile package. Pass the resulting boolean to the `makeui` account surface.
 - Generated Apps must handle recoverable unified-login expiry: when SDK init returns `reason: "state_expired"` or `reason: "challenge_expired"`, show a relogin prompt and call `auth.login({ redirect: true })` from user action.
 
 ## Pre-flight Workflow
@@ -82,7 +85,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 6. Keep auth bootstrap thin. Business features must consume the project Make API adapter and auth state, not auth internals.
 7. Before claiming publish/login readiness, verify the auth path: current-context route, unified redirect, session callback, cookie-preserving business requests, and Service-fronted auth proxy when applicable.
 8. Run `scripts/audit-auth-contract.mjs <project-root> --published` for generated Apps when a project tree is available; use `--mode service-fronted` when the App keeps a Service layer.
-9. When changing generated code, add or update tests for the touched auth path: unauthenticated session, expired session, 403, logout, unified-login redirect, callback proxy, or business-request 401 handling.
+9. When changing generated code, add or update tests for the touched auth path: unauthenticated session, expired session, 403, logout, unified-login redirect, callback proxy, business-request 401 handling, current-context identity normalization, or normal-browser/Feishu account visibility.
 
 ## Reference Selection
 

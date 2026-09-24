@@ -12,13 +12,18 @@ const tempRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'make-platform-skills-syn
 const sourceRoot = path.join(tempRoot, 'source');
 const installedRoot = path.join(tempRoot, 'installed');
 const skillNames = [
+  'makeui',
   'make-app-permission',
   'make-app-service',
   'make-app-auth',
   'make-app-actions',
+  'make-app-filter',
   'make-app-sort',
   'make-app-group',
   'make-ai-assistant',
+  'make-app-runtime',
+  'make-env-setup',
+  'canvas-table-integration',
 ];
 
 try {
@@ -29,10 +34,31 @@ try {
 
   assert.match(runChecker(), /installed Make platform skills sync: PASS/);
 
+  writeSkill(installedRoot, 'makeui', 'stale');
+  const makeuiMismatchOutput = runChecker({ expectFailure: true });
+  assert.match(makeuiMismatchOutput, /makeui/);
+  assert.match(makeuiMismatchOutput, /content_mismatch/);
+  writeSkill(installedRoot, 'makeui', 'source');
+
   writeSkill(installedRoot, 'make-app-auth', 'stale');
   const mismatchOutput = runChecker({ expectFailure: true });
   assert.match(mismatchOutput, /make-app-auth/);
   assert.match(mismatchOutput, /content_mismatch/);
+  writeSkill(installedRoot, 'make-app-auth', 'source');
+
+  writeSkill(installedRoot, 'make-app-filter', 'stale');
+  const filterMismatchOutput = runChecker({ expectFailure: true });
+  assert.match(filterMismatchOutput, /make-app-filter/);
+  assert.match(filterMismatchOutput, /content_mismatch/);
+  writeSkill(installedRoot, 'make-app-filter', 'source');
+
+  for (const skillName of ['make-app-runtime', 'make-env-setup', 'canvas-table-integration']) {
+    writeSkill(installedRoot, skillName, 'stale');
+    const mismatchOutput = runChecker({ expectFailure: true });
+    assert.match(mismatchOutput, new RegExp(skillName));
+    assert.match(mismatchOutput, /content_mismatch/);
+    writeSkill(installedRoot, skillName, 'source');
+  }
 
   console.log('installed Make platform skills sync tests: PASS');
 } finally {

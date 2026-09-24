@@ -2,6 +2,12 @@
 
 Use this reference when wiring `@qfei-design/make-app-filter` into a Make App host.
 
+Choose the capability mode in `SKILL.md` first. Search-only `filter.expression`
+uses the package core compiler without a filter Preset GET/PATCH, controller,
+panel, React adapter, stylesheet or mobile panel-layout gate. The advanced-filter
+integration below applies only when that capability is requested or already
+established; sibling sort/group Preset work remains owned by their Skills.
+
 ## Package version baseline
 
 Use `@qfei-design/make-app-filter@^1.0.0` for new Make advanced-filter integrations. This is the validated baseline for Lookup filtering with source-field CEL expressions and the package `AdvancedFilterPanel` fixed header/body/footer structure. If the host has an older package version, upgrade before implementing the advanced filter instead of relying on older package behavior.
@@ -43,19 +49,21 @@ Never import from `src`, `dist`, or package-internal files.
 - Service request adapter and record reload timing
 - permission-aware `{ enabled, entityKey, generation }` Preset context
 - shared request-ID-based pending state for concurrent filter/sort saves
-- CanvasTable header filter UI/menu and `openWithField` linkage
+- desktop/tablet CanvasTable header filter UI/menu and `openWithField` linkage
 - optional URL/deep-link encoding and parsing policy
 
 ## Integrated Make App baseline
 
-In Make record-list pages, any filtering request is one integrated feature:
+On desktop/tablet Make record-list pages, an advanced-filtering request is one integrated feature:
 
 - toolbar advanced filter uses this package
 - header `按该字段筛选` UI/menu is implemented by the host through CanvasTable
 - header action calls the same package controller, usually `openWithField(fieldKey)`
 - both paths commit through the same advanced-filter draft and Service `filter.expression`
 
-Do not ship only the toolbar package panel or only the table header filter menu.
+On desktop/tablet, do not ship only the toolbar package panel or only the table header filter menu.
+
+When advanced filtering is enabled, phone uses the same package panel/controller, Preset and Service `filter.expression`, but only a toolbar entry plus `AdvancedFilterPanel layout="mobile"` inside a mobile-safe host sheet: no CanvasTable or header linkage, including hidden instances. Verify the installed public React declaration includes the `"mobile"` layout; 1.0.0–1.0.3 do not. The Popover/header examples below are desktop/tablet examples; use `ui-style.md` for the phone container without copying panel internals. Search-only phone lists use no filter panel or mobile-layout gate.
 
 ## Lookup schema handoff
 
@@ -145,13 +153,13 @@ function AdvancedFilterPopover({
   const activeRef = useRef(true);
   const saveRequestRef = useRef<symbol | null>(null);
 
-  useLayoutEffect(
-    () => () => {
+  useLayoutEffect(() => {
+    activeRef.current = true;
+    return () => {
       activeRef.current = false;
       saveRequestRef.current = null;
-    },
-    [],
-  );
+    };
+  }, []);
 
   const controller = useAdvancedFilterController({
     fields: filterableFields,

@@ -32,6 +32,9 @@ const serviceContract = read(
 const batchEdit = read(
   'skills/make-app-actions/references/batch-edit-flow.md',
 );
+const mobileCardActions = read(
+  'skills/make-app-actions/references/mobile-card-actions.md',
+);
 const testing = read(
   'skills/make-app-actions/references/testing-and-pitfalls.md',
 );
@@ -84,9 +87,37 @@ const skillBundle = [
   selectionFlow,
   serviceContract,
   batchEdit,
+  mobileCardActions,
   testing,
 ].join('\n');
 const frontmatter = skill.split('---')[1] ?? '';
+
+const readScenarioTable = (markdown, heading) => {
+  const headingIndex = markdown.indexOf(`## ${heading}`);
+  assert.notEqual(headingIndex, -1, `missing scenario table: ${heading}`);
+  const section = markdown.slice(headingIndex).split(/\n## /, 1)[0];
+  return section
+    .split('\n')
+    .map((line) => line.trim())
+    .filter((line) => /^\|.*\|$/.test(line) && !/^\|\s*:?-/.test(line))
+    .slice(1)
+    .map((line) => line
+      .split('|')
+      .slice(1, -1)
+      .map((cell) => cell.trim().replaceAll('`', '')));
+};
+
+assert.deepEqual(
+  readScenarioTable(mobileCardActions, '手机单记录操作场景矩阵'),
+  [
+    ['both-allowed', '允许', '允许', '卡片与详情均显示编辑、删除'],
+    ['edit-only', '允许', '拒绝', '卡片与详情只显示编辑'],
+    ['delete-only', '拒绝', '允许', '卡片与详情只显示删除'],
+    ['neither-allowed', '拒绝', '拒绝', '卡片无操作区；详情无底部操作栏'],
+    ['stale-precheck', '任意', '任意', '丢弃结果，不打开任务页且不删除记录'],
+  ],
+  'phone card and detail actions must preserve independent permission scenarios',
+);
 
 assert.doesNotMatch(
   skillBundle,
@@ -103,6 +134,51 @@ assert.match(
   frontmatter,
   /(编辑|edit)[^"\n]*(删除|delete)[^"\n]*(批量|bulk)|(?:批量|bulk)[^"\n]*(编辑|edit)/i,
   'frontmatter must trigger for edit, delete, and batch-edit actions',
+);
+assert.match(
+  frontmatter,
+  /(手机|mobile|phone)[^"\n]*(卡片|card)[^"\n]*(编辑|edit)[^"\n]*(删除|delete)/i,
+  'frontmatter must route phone-card single-record actions to make-app-actions',
+);
+assert.match(
+  skill,
+  /references\/mobile-card-actions\.md/,
+  'make-app-actions must route phone-card work to its dedicated contract',
+);
+assert.match(
+  mobileCardActions,
+  /(手机|Phone)[\s\S]{0,220}(不支持|不提供|不得)[^\n]*(多选|全选)[^\n]*(批量|batch)/i,
+  'standard phone lists must not expose selection or batch operations',
+);
+assert.match(
+  mobileCardActions,
+  /resolveRecordSelectionActionState[\s\S]{0,320}selectedRecords[^\n]*\[record\][\s\S]{0,220}selectedCount[^\n]*1/,
+  'phone cards must reuse the package headless core for one-record action resolution',
+);
+assert.match(
+  mobileCardActions,
+  /(单条编辑|single edit)[\s\S]{0,360}(record-write-permission)[\s\S]{0,360}(全屏任务|task route)/i,
+  'phone edit must precheck the frozen record before opening the task route',
+);
+assert.match(
+  mobileCardActions,
+  /(单条删除|single delete)[\s\S]{0,360}(确认|confirm)[\s\S]{0,360}(delete Service|删除 Service|删除接口)[\s\S]{0,260}(最终|authoritative)[^\n]*(鉴权|authorization)/i,
+  'phone delete must confirm and retain authoritative endpoint authorization',
+);
+assert.match(
+  mobileCardActions,
+  /(详情|detail)[^\n]*(MobileBottomActionBar)[\s\S]{0,260}(编辑|edit)[^\n]*(删除|delete)[\s\S]{0,260}(独立|independent)[^\n]*(权限|permission)/i,
+  'phone detail must render independently permissioned edit and delete actions',
+);
+assert.match(
+  mobileCardActions,
+  /(卡片|card)[^\n]*(操作|actions)[^\n]*(不能|不得|must not)[^\n]*(替代|取消|eliminate)[^\n]*(详情|detail)[^\n]*(操作|actions)/i,
+  'card actions must not eliminate the phone detail action bar',
+);
+assert.match(
+  mobileCardActions,
+  /(编辑|edit)[^\n]*(删除|delete)[^\n]*(都不可用|neither available)[^\n]*(整条|whole)[^\n]*(操作栏|action bar)[^\n]*(不渲染|remove)/i,
+  'the detail action bar must disappear only when neither action is available',
 );
 
 assert.match(

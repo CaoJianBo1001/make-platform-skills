@@ -177,8 +177,8 @@ assert.match(
 );
 assert.match(
   authSkill,
-  /metadata:\s*\n\s*version:\s*0\.1\.9/,
-  'make-app-auth must retain the default-permission and native SSE exception revision',
+  /metadata:\s*\n\s*version:\s*0\.1\.11/,
+  'make-app-auth must retain the account-context, default-permission, native SSE exception, and mobile-container wording revision',
 );
 assert.match(
   authRequestAdapter,

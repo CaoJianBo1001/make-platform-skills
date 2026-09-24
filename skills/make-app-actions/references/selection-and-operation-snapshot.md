@@ -144,6 +144,13 @@ obsolete request.
 
 ## Table instance and total-count lifecycle
 
+This also applies when desktop/tablet switches to phone and unmounts CanvasTable.
+Returning to desktop creates a new instance with an empty action selection; do
+not retain a dormant write target. A same-instance resize that does not dispose
+the table is not a selection boundary. Keep unrelated form drafts, applied
+filters and request caches in the shared Controller; clearing action-owned
+surfaces must not discard those business values or bypass dirty-navigation guards.
+
 Treat a CanvasTable instance replacement or recreation as a selection boundary,
 even when the object and normalized applied query identity are unchanged. Before
 disposing the old instance, increment `selectionGeneration`, invalidate pending

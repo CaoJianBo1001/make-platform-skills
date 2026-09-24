@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { runInNewContext } from 'node:vm';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(process.argv[2] ?? path.join(scriptDir, '..'));
@@ -27,6 +28,37 @@ const headerTableLinkage = read('skills/make-app-filter/references/header-table-
 const filterPreset = read('skills/make-app-filter/references/preset-integration.md');
 const makeui = read('skills/makeui/SKILL.md');
 const readme = read('README.md');
+
+const section = (content, heading) => {
+  const start = content.indexOf(`## ${heading}\n`);
+  assert.notEqual(start, -1, `missing section: ${heading}`);
+  return content.slice(start).split(/\n## /, 1)[0];
+};
+
+const phoneStyle = section(uiStyle, 'Phone sheet');
+assert.match(phoneStyle, /layout="mobile"/);
+assert.match(phoneStyle, /(host-owned|宿主)[^\n]*(sheet|Sheet)/i);
+assert.match(phoneStyle, /(不使用|不得|not|never)[^\n]*(Popover|桌面弹层)/i);
+assert.match(phoneStyle, /(横向溢出|horizontal overflow)[\s\S]*(390px|767px)/i);
+assert.match(skill, /(1\.0\.0.*1\.0\.3|1\.0\.0[–-]1\.0\.3)[^\n]*(mobile|移动)/i);
+assert.match(skill, /(React declaration|公开类型|公开声明)[^\n]*mobile/i);
+assert.match(testing, /(390px|390)[\s\S]{0,400}(layout="mobile"|mobile layout)[\s\S]{0,300}(Sheet|sheet)/i);
+assert.doesNotMatch(section(uiStyle, 'Placement'), /phone[^\n]*刷新/i);
+
+const filterDefaults = skill.split(/\r?\n/).find((line) => line.includes('advanced filter panel must keep its three regions explicit'));
+assert.ok(filterDefaults, 'fixed panel regions must remain in the entrypoint');
+assert.match(filterDefaults, /^- (On )?desktop\/tablet/i);
+assert.match(filterDefaults, /筛选[\s\S]*确认/);
+const fixedLayout = section(uiStyle, 'Fixed three-region panel layout baseline');
+assert.match(fixedLayout, /Desktop\/tablet[^\n]*(筛选|确认)/i);
+assert.match(phoneStyle, /设置筛选条件/);
+assert.match(phoneStyle, /完成/);
+assert.match(phoneStyle, /layout="mobile"[\s\S]{0,850}(设置筛选条件)[\s\S]{0,250}(完成)/);
+const conditionBehavior = section(uiStyle, 'Condition and validation behavior');
+const inlineRowRule = conditionBehavior.split(/\r?\n/).find((line) => line.includes('row controls share one connected line'));
+assert.ok(inlineRowRule, 'desktop inline row contract must remain visible');
+assert.match(inlineRowRule, /^- (On )?desktop\/tablet/i);
+assert.match(testing, /phone[^\n]*(设置筛选条件)[^\n]*(完成)/i);
 
 assert.doesNotMatch(
   skill,
@@ -205,6 +237,43 @@ assert.match(
   /onPersistError[\s\S]*onApplyError[\s\S]*(separate|区分|only|仅)/i,
   'filter host example must keep persistence and applied-state callback errors separate',
 );
+const saveLifecycleEffect = packageIntegration.match(
+  /useLayoutEffect\(\s*(?<callback>\(\) => \{(?<setup>[\s\S]*?)return \(\) => \{(?<cleanup>[\s\S]*?)\};\s*\})\s*,\s*\[\]\s*\);/,
+);
+assert.ok(saveLifecycleEffect, 'filter host example must define an effect setup and cleanup for save lifecycle');
+assert.match(
+  saveLifecycleEffect.groups.setup,
+  /activeRef\.current\s*=\s*true\s*;/,
+  'effect setup must re-arm the active flag after a StrictMode setup-cleanup-setup replay',
+);
+assert.match(saveLifecycleEffect.groups.cleanup, /activeRef\.current\s*=\s*false\s*;/);
+assert.match(saveLifecycleEffect.groups.cleanup, /saveRequestRef\.current\s*=\s*null\s*;/);
+const activeRef = { current: false };
+const saveRequestRef = { current: null };
+const setupSaveLifecycle = runInNewContext(
+  `(${saveLifecycleEffect.groups.callback})`,
+  { activeRef, saveRequestRef },
+  { timeout: 1000 },
+);
+const firstCleanup = setupSaveLifecycle();
+assert.equal(activeRef.current, true);
+const obsoleteRequest = {};
+saveRequestRef.current = obsoleteRequest;
+firstCleanup();
+assert.equal(activeRef.current, false);
+assert.equal(saveRequestRef.current, null);
+const secondCleanup = setupSaveLifecycle();
+assert.equal(activeRef.current, true, 'StrictMode effect replay must leave the save lifecycle active');
+assert.notEqual(saveRequestRef.current, obsoleteRequest, 'effect replay must invalidate an old save request');
+secondCleanup();
+assert.match(
+  packageIntegration,
+  /if\s*\(!activeRef\.current\s*\|\|\s*saveRequestRef\.current\s*!==\s*requestId\)\s*return\s*;/,
+  'a stale or unmounted save must not apply a filter',
+);
+assert.match(testing, /validation failure[^\n]*(Popover|popover)[^\n]*(Sheet|sheet)[^\n]*open/i);
+assert.match(testing, /every keystroke[^\n]*`确认`[^\n]*`完成`/i);
+assert.match(testing, /unconfirmed draft changes[^\n]*(Popover|popover|Sheet|sheet)|(?:Popover|popover|Sheet|sheet)[^\n]*unconfirmed draft changes/i);
 assert.match(
   filterPreset,
   /(filter|筛选)[\s\S]*(sort|排序)[\s\S]*(shared|共享|共同)[\s\S]*(request ID|请求 ID|pending-request|pending request)/i,
@@ -214,6 +283,16 @@ assert.match(
   filterPreset,
   /(unsupported|不支持|无法.*编辑)[\s\S]*(backend|后端)[\s\S]*(active|生效)[\s\S]*(warning|提示|可见)/i,
   'unsupported saved CEL must stay visibly active while backend filtering remains active',
+);
+assert.match(
+  skill,
+  /(手机|phone)[\s\S]{0,260}(顶部|toolbar)[^\n]*(筛选|filter)[\s\S]{0,260}(不需要|不得|without)[^\n]*(CanvasTable|表头|header linkage)/i,
+  'phone filtering must not require a hidden CanvasTable header linkage',
+);
+assert.match(
+  skill,
+  /(desktop|桌面)[^\n]*(tablet|平板)[\s\S]{0,260}(CanvasTable)[^\n]*(表头|header)[^\n]*(联动|linkage)/i,
+  'desktop and tablet filtering must retain CanvasTable header linkage',
 );
 
 console.log('make filter panel layout contract passed');

@@ -1,5 +1,10 @@
 # Action and permission model
 
+App permission keys and cached principal rules apply to every presentation.
+Selection, scheme-two and CanvasTable row-color feedback below apply only to
+desktop/tablet. Phone card/detail actions use [mobile-card-actions.md](mobile-card-actions.md)
+for single-record resolution and toast feedback without selection or row colors.
+
 ## Principal lifecycle
 
 Load and cache principal permissions at application initialization. Reload them
@@ -111,9 +116,14 @@ calls.
 
 ## Action surfaces
 
-The selection bar owns edit and delete commands. Detail surfaces remain display
-only and must not duplicate edit/delete buttons. The row-head open-detail icon is
-still valid and is owned by `canvas-table-integration`.
+On desktop/tablet, detail surfaces remain display only: the selection bar owns
+edit/delete, so the detail must not duplicate those commands. The row-head
+open-detail icon remains owned by `canvas-table-integration`.
+
+On phone, detail shows independent edit/delete actions through
+`MobileBottomActionBar` as defined in `mobile-card-actions.md`. Card actions do
+not replace detail actions. The following Drawer flow applies to desktop/tablet;
+phone task routes use that reference's mandatory edit/delete precheck lifecycle.
 
 Single edit requires the cached `data.record.update` permission, local selection
 validation, and one Service row-write precheck before opening the edit Drawer.

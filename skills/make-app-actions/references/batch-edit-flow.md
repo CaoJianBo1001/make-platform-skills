@@ -1,5 +1,7 @@
 # Action and batch-edit flow
 
+本文件的选择操作栏和批量编辑合同适用于 desktop/tablet CanvasTable。手机卡片不支持记录多选或批量操作；手机单条编辑、删除读取 `mobile-card-actions.md`。
+
 ## Bottom action bar
 
 Use package `AntdRecordSelectionActionBar` for Ant Design hosts. A non-AntD host

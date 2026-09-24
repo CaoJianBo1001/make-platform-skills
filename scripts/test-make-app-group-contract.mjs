@@ -549,18 +549,23 @@ assert.match(
 );
 assert.match(
   readme,
-  /同时做筛选和排序[^\n]*make-app-filter[^\n]*make-app-sort[^\n]*make-app-permission/i,
-  'README must keep the filter+sort composition without forcing grouping',
+  /同时做高级筛选和排序[^\n]*make-app-filter[^\n]*make-app-sort[^\n]*make-app-permission/i,
+  'README must keep the advanced-filter+sort composition without forcing grouping',
 );
 assert.match(
   readme,
-  /同时做筛选、分组和排序[^\n]*make-app-filter[^\n]*make-app-group[^\n]*make-app-sort[^\n]*make-app-permission/i,
-  'README must document the filter+group+sort composition',
+  /同时做高级筛选、分组和排序[^\n]*make-app-filter[^\n]*make-app-group[^\n]*make-app-sort[^\n]*make-app-permission/i,
+  'README must document the advanced-filter+group+sort composition',
 );
 assert.doesNotMatch(
   activeGroupingDocs,
   /(future\s+`?group`?|future\s+capabilities\.groupable|future compatibility|no\s+`group`\s+UI\/request exists yet|后续分组|未来分组|分组.*第二阶段|later grouping contract)/i,
   'active platform skills must not describe grouping as a future or unimplemented capability',
+);
+assert.match(
+  skill,
+  /(手机|phone)[\s\S]{0,260}(不展示|隐藏|does not render)[^\n]*(分组|group)[\s\S]{0,260}(CanvasTable|GroupTableComponent)/i,
+  'standard phone lists must not render grouping controls or grouped CanvasTable',
 );
 
 console.log('make-app-group skill contract passed');

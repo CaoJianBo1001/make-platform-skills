@@ -21,7 +21,11 @@ Logout:
 await auth.logout();
 ```
 
-Generated App shells must expose logout as a visible account action. The default Make UI placement is the top-header current-user dropdown: avatar plus display name opens a menu below the header, and the menu contains `退出`. If the host project already has an equivalent account menu, use that established surface, but the action must still call `auth.logout()`.
+Generated App shells must expose logout as an account action. On desktop, the default Make UI placement is the top-header current-user dropdown: avatar plus display name opens a menu below the header, and the menu contains `退出`. If the host project already has an equivalent account menu, use that established surface, but the action must still call `auth.logout()`.
+
+For the package-backed mobile account drawer, normalize `name`, `avatar`, and `tenantName` from authenticated current-context data, then pass them to the visual surface owned by `makeui`. These fields are for display only and must not become authorization evidence.
+
+在检测到的飞书容器中，隐藏移动端退出操作，因为宿主容器负责账户退出。检测必须收敛在一个纯宿主 helper：优先使用既有运行时信号；否则检查 `window.lark`、`window.feishu` 或 `window.LarkJSBridge`，最后才以大小写不敏感的 `Lark|Feishu` user-agent 作为回退。测试每个阳性信号与普通浏览器阴性场景。不得依据 tenantName、环境名、视口宽度或移动组件包推断飞书容器。隐藏按钮不替代、弱化或重实现普通浏览器的 `auth.logout()`。
 
 Do not construct Org logout URLs in generated App code. make-gateway and Org own global logout behavior.
 
