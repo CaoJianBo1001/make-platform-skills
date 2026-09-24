@@ -22,6 +22,7 @@ const filter = read('skills/make-app-filter/SKILL.md');
 const auth = read('skills/make-app-auth/SKILL.md');
 const canvas = read('skills/canvas-table-integration/SKILL.md');
 const cli = read('skills/makecli/SKILL.md');
+const mobileDefaults = read('skills/makeui/references/mobile-defaults.md');
 
 assert.match(
   runtime,
@@ -50,6 +51,21 @@ assert.match(
 );
 assert.doesNotMatch(
   runtime,
+  /Run all project package commands through Corepack|Enable Corepack before project work and run installation, tests, builds, package additions, and publish gates as `corepack pnpm/,
+  'make-app-runtime must not impose Corepack pnpm on every existing Make App',
+);
+assert.match(
+  runtime,
+  /Existing Make Apps[\s\S]*npm[\s\S]*Yarn[\s\S]*lockfile[\s\S]*make-app-runtime/,
+  'make-app-runtime must preserve a compatible legacy npm/Yarn workflow and own migration blockers',
+);
+assert.doesNotMatch(
+  runtime,
+  /For publish-ready Service-fronted Apps, prefer a project-local `verify:publish`|For Service-fronted Apps, the Service test suite behind `corepack pnpm run test`|^`apps\/service\/package\.json` must include the Node engine and scripts equivalent to/m,
+  'make-app-runtime must not impose pnpm-specific publish scripts, test commands, or Node engines on a legacy App',
+);
+assert.doesNotMatch(
+  runtime,
   /engineStrict:\s*true/,
   'make-app-runtime must not enable dependency engine strictness solely to pin the project runtime',
 );
@@ -62,6 +78,27 @@ assert.match(
   runtime,
   /corepack pnpm run verify:publish/,
   'make-app-runtime must run the publish gate with the declared pnpm version',
+);
+assert.doesNotMatch(
+  runtime,
+  /makecli app deploy --env (?:preview|production)/,
+  'runtime guidance must not send code directly to preview or production through a retired deploy flag',
+);
+assert.doesNotMatch(runtime, /Preview deployment/, 'runtime migration verification must use the Beta deployment flow');
+assert.match(
+  runtime,
+  /makecli app deploy --context <context> --profile <profile> --wait/,
+  'runtime publish guidance must deploy the verified build to Beta in the selected backend context',
+);
+assert.match(
+  runtime,
+  /makecli app promote --context <context> --profile <profile> --yes --wait/,
+  'runtime guidance must reserve Prod publication for an explicitly authorized Beta promotion',
+);
+assert.match(
+  runtime,
+  /explicit user authorization[\s\S]{0,180}makecli app promote/,
+  'runtime guidance must require user authorization before publishing Beta to Prod',
 );
 assert.match(
   environment,
@@ -98,6 +135,26 @@ assert.match(
   /nvm install 22\.20\.0/,
   'make-env-setup must provide an exact Node.js installation path when nvm is available',
 );
+assert.match(
+  environment,
+  /existing Make App[\s\S]*npm[\s\S]*Yarn[\s\S]*make-app-runtime/i,
+  'make-env-setup must preserve existing npm/Yarn Apps and route conflicts to make-app-runtime',
+);
+assert.match(
+  environment,
+  /existing Make App[\s\S]*do not run `makecli app init`/i,
+  'make-env-setup must not reinitialize an existing App during an environment update',
+);
+assert.doesNotMatch(
+  environment,
+  /For Make App work, the runtime is fixed:|Make Apps must use `pnpm@10\.20\.0`/,
+  'make-env-setup must not impose the new-App pnpm baseline on all existing Apps',
+);
+assert.doesNotMatch(
+  environment,
+  /Do not use `npm` to install pnpm or Make App dependencies/,
+  'make-env-setup must not forbid an existing npm App from using its declared installer',
+);
 assert.doesNotMatch(
   environment,
   /npm install -g pnpm/,
@@ -123,6 +180,26 @@ assert.match(
   /"node"\s*:\s*"22\.20\.0"[\s\S]*corepack pnpm add @qfei-design\/make-app-filter@\^1\.0\.0/,
   'make-app-filter must add its dependency with the declared pnpm version',
 );
+assert.doesNotMatch(
+  filter,
+  /Do not install this package with npm or Yarn in a Make App/,
+  'make-app-filter must not prohibit the declared manager of a compatible legacy App',
+);
+assert.match(
+  filter,
+  /Existing Make Apps[\s\S]*package-lock\.json[\s\S]*yarn\.lock[\s\S]*make-app-runtime/,
+  'make-app-filter must explicitly route legacy npm/Yarn lockfiles and runtime conflicts',
+);
+assert.match(
+  filter,
+  /(?:second|additional|第二)[^\n]*lockfile|(?:第二|额外)[^\n]*锁文件/,
+  'make-app-filter must forbid generating a second lockfile in a legacy App',
+);
+assert.match(
+  mobileDefaults,
+  /npm\/yarn 项目引入 Corepack 或 pnpm/,
+  'makeui mobile preflight must retain the declared legacy package manager',
+);
 assert.match(
   auth,
   /MAKE_APP_LOCAL_PREVIEW=true corepack pnpm run dev[\s\S]*Node\.js `22\.20\.0`/,
@@ -142,6 +219,17 @@ assert.match(
   canvas,
   /If no lockfile exists:[\s\S]*Make App:[\s\S]*corepack pnpm add @qfei-design\/canvas-table/,
   'CanvasTable must not fall back to npm when a new Make App has no lockfile yet',
+);
+const canvasNoLockfile = canvas.split('4. If no lockfile exists:')[1]?.split('5. If install fails')[0] ?? '';
+assert.match(
+  canvasNoLockfile,
+  /existing Make App[\s\S]*stop[\s\S]*make-app-runtime/i,
+  'CanvasTable must hand off an existing Make App without a lockfile instead of assuming pnpm',
+);
+assert.doesNotMatch(
+  canvasNoLockfile,
+  /An existing Make App uses Corepack to resolve its declared pnpm version/,
+  'CanvasTable must not treat every existing lockfile-free App as pnpm',
 );
 assert.match(
   canvas,

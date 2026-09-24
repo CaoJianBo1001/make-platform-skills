@@ -3,6 +3,11 @@
 Use this reference when an entity object list saves and restores advanced filters
 through the current user's Entity Preset.
 
+Do not use this filter Preset lifecycle for a search-only list. Keyword search
+through `compileListFilter({ fields, searchText })` must not load, hydrate or
+write the filter dimension. If sort/group independently loads a shared Preset,
+do not apply its saved filter expression behind an absent advanced-filter UI.
+
 ## Persisted boundary
 
 Persist only the advanced-filter expression:

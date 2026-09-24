@@ -3,6 +3,7 @@
 ## Contents
 
 - [Default list page](#default-list-page)
+- [Phone list override](#phone-list-override)
 - [Recommended structure](#recommended-structure)
 - [Optional actions](#optional-actions)
 - [Table boundary](#table-boundary)
@@ -10,7 +11,7 @@
 
 ## Default list page
 
-Default Make list pages are simple object lists.
+Default desktop/tablet Make list pages are simple object lists. Phone uses the override below.
 
 They must live inside the Make App shell. Do not generate a list page that owns the app title, user identity, and object navigation in the page body. Those belong to `app-shell-layout.md`.
 
@@ -56,9 +57,43 @@ Do not create a view switcher. A default list page includes only:
 - create/new
 - table area
 
+This section is the desktop/tablet default. Phone list pages use the package-backed card presentation from `mobile-defaults.md` for both read-only and writable resources and must not render CanvasTable. Both presentations reuse metadata, permissions, queries and request caches. Unmounting CanvasTable clears its action selection through [make-app-actions](../../make-app-actions/) and its `selection-and-operation-snapshot.md` reference; returning to desktop starts with an empty selection, not a replayed target. Do not mount the desktop CanvasTable and phone list simultaneously merely to hide one with CSS.
+
+## Phone list override
+
+The standard phone list is a separate View composition over the shared business Controller:
+
+1. phone page header
+2. phone-local compact toolbar with search and, only when advanced filtering is enabled or requested, a filter trigger
+3. vertically scrolling record cards
+4. in-flow list end state
+5. permission-gated floating create action
+
+Do not pass the desktop `listToolbar`, `listContent`, CanvasTable host, or desktop action-bar fragment directly into the phone shell and rely on responsive CSS. The phone View owns its layout and card rendering; the shared Controller owns records, query state, permissions, requests, routes, and mutations.
+
+Phone defaults:
+
+- card body click opens the full-screen detail task route and does not create record selection
+- writable cards load [`make-app-actions`](../../make-app-actions/) and use its `mobile-card-actions.md` reference for clicked-record edit/delete permission and precheck behavior
+- no CanvasTable, record checkbox, select-all, selection action bar, batch edit, or other batch operation
+- no group or sort trigger, even when the desktop/tablet View already supports those capabilities
+- search stays in one compact phone toolbar; when advanced filtering is enabled or requested, place its filter trigger beside search instead of stacking desktop buttons vertically. Use medium visual controls (`size="middle"`, the library's default medium size, or equivalent) with matching visible heights, not CSS-enlarged small controls, while retaining at least 44px touch targets. A `search-only` list has no filter trigger.
+- pull-to-refresh starts only at the top of the list's own scroll region and preserves applied search/filter context; do not show a separate refresh button or refresh icon on the phone toolbar, even if desktop/tablet has one
+- when advanced filtering is enabled or requested, the filter trigger opens the package panel in a host mobile Sheet with `layout="mobile"`; do not reuse the desktop Popover trigger/content fragment
+- create uses the permission-gated floating action and full-screen new task route
+
+Phone card visual contract:
+
+- 手机卡片使用扁平白底、无边框、无阴影和无大圆角；相邻卡片由 8–12px 的页面灰底间隔分组，不再嵌套外层卡片。
+- 内容按标题、状态、2–3 个已授权摘要字段的顺序展示；字段不足时不补占位，字段过多时也不把详情页搬进卡片。
+- 编辑／删除入口视觉保持紧凑，但每个入口提供至少 44px 触控目标。没有可用单条操作时不渲染空的操作区、分隔线或“暂无可用操作”。
+- 卡片字段、状态和动作颜色使用主题 token；对象语义不明确时只使用统一保底图标，不根据字段名硬编码颜色。
+
+An explicit custom product requirement may replace this phone presentation. Do not treat an existing desktop toolbar or project-level “all record lists use CanvasTable” rule as a valid reason to override the phone default silently.
+
 ## Recommended structure
 
-Use this order:
+On desktop/tablet, use this order:
 
 1. local page toolbar
 2. table container
@@ -67,7 +102,7 @@ Add pagination below or inside the table container only when the user explicitly
 
 Do not add an intermediate card or panel that repeats the object title and record count before the toolbar/table. Record count can appear only when the host table component already supports it in a compact table status area or when the user asks for it.
 
-Toolbar placement:
+Desktop/tablet toolbar placement:
 
 - search input on the left
 - optional filter next to search only when requested or already established by the project
@@ -83,7 +118,7 @@ The local toolbar sits below the workspace header, not inside the header. Keep p
 
 ## Optional actions
 
-Only add these when the user explicitly asks:
+On desktop/tablet, only add these when the user explicitly asks:
 
 - pagination
 - filter
@@ -107,11 +142,11 @@ Recommended placement:
   override the Make action-bar contract
 - pagination: bottom-right or bottom-center inside the list/table container; do not reserve pagination space when pagination is not requested
 
-Do not add optional actions as decorative placeholders.
+Do not add optional actions as decorative placeholders. Phone does not surface group, sort, column settings, import, export, record selection, or batch actions in the standard presentation.
 
 ## Table boundary
 
-Use `@qfei-design/canvas-table` through `canvas-table-integration` for table implementation.
+On desktop/tablet, use `@qfei-design/canvas-table` through `canvas-table-integration` for table implementation. This table boundary does not apply to the phone card View.
 
 This skill only specifies:
 
@@ -143,7 +178,7 @@ The table region should have:
 - `overflow: hidden` around the canvas table host
 - internal table scroll instead of page scroll
 
-Treat page-level scrolling on object-list pages as a defect. If records overflow vertically or horizontally, the CanvasTable/table region owns that scroll. If the left object navigation overflows, the sidebar navigation area owns that scroll. Do not fix overflow by allowing `body`, app root, shell, workspace, or list-page containers to scroll.
+Treat page-level scrolling on desktop/tablet object-list pages as a defect. If records overflow vertically or horizontally, the CanvasTable/table region owns that scroll. On phones, the card-list region owns vertical scrolling. If the left object navigation overflows, the sidebar navigation area owns that scroll. Do not fix overflow by allowing `body`, app root, shell, workspace, or list-page containers to scroll.
 
 CanvasTable sizing requirements:
 
@@ -154,7 +189,7 @@ CanvasTable sizing requirements:
 - prefer a flex height chain; if `calc()` is unavoidable, subtract the actual header, toolbar, padding, and border sizes instead of using a guessed constant
 - when the canvas-table instance needs explicit dimensions, observe the host container resize and update the table through documented public APIs
 
-Default CanvasTable row behavior for every table unless the user explicitly says the table does not need a detail entry:
+Default desktop/tablet CanvasTable row behavior for every table unless the user explicitly says the table does not need a detail entry:
 
 - enable `showSN` row sequence numbers by default
 - enable `bodyRowHeadSuffixOptions` with an open-detail icon by default

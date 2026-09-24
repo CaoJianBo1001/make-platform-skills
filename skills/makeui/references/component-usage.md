@@ -23,7 +23,11 @@ Use this priority:
 
 Do not add a new component library to an existing project unless the user asks.
 
-Use this same rule for icons and styling tools.
+Use this same rule for styling tools. For new Make Apps and newly added Make App icons, default to `lucide-react` as specified in `mobile-defaults.md`; do not bulk-migrate unrelated existing icons unless the user asks.
+
+## Presentation priority
+
+The component-library mapping below is the desktop/tablet default. On phones, `mobile-defaults.md` takes precedence for shell, task pages, account navigation, pickers, and record-list presentation, and `mobile-form-controls.md` defines field adapters and overlay fit. Use public `@qfei-design/make-app-mobile` components where they exist rather than treating a desktop Drawer or Sheet as the mobile CRUD default; do not invent package exports for field types the package does not own.
 
 ## Overlay portal contract
 
@@ -76,7 +80,7 @@ When shadcn/ui is selected, treat it as a source-code component system, not a tr
 
 ## Default candidate mapping
 
-When Ant Design is the selected component library:
+When Ant Design is the selected component library on desktop/tablet:
 
 - shell: `Layout`
 - sidebar navigation: `Menu`
@@ -89,9 +93,9 @@ When Ant Design is the selected component library:
 - feedback: `message`, `Alert`, `Result`, `Spin`, `Empty`
 - avatar and user menu: `Avatar`, `Dropdown`
 
-Use project-standard icons first. If using Ant Design, prefer `@ant-design/icons`.
+Use `lucide-react` for newly generated Make App icons, including Ant Design hosts. Keep existing project-standard icons only where replacing them would be an unrelated migration.
 
-When shadcn/ui is the selected component system:
+When shadcn/ui is the selected component system on desktop/tablet:
 
 - shell: CSS/Tailwind layout with project-local shell components
 - sidebar navigation: project-local sidebar/menu components, or shadcn/ui navigation primitives when already added
@@ -143,6 +147,8 @@ Use type-appropriate controls:
 
 Do not silently degrade date, user, department, select, file, or lookup fields to a bare `Input`.
 
+The table above names value semantics, not a requirement to reuse the same visual component at every breakpoint. Desktop/tablet may use the chosen design system's DatePicker, RangePicker and Select. Phone create/edit/detail must resolve these field groups through `mobile-form-controls.md`: wheel-based Date/DateTime, a single-month DateRange calendar, ordinary non-search Select sheets, searchable identity pickers, confirm-only Lookup, and mobile-safe attachment presentation.
+
 If a field type is unknown, prefer a read-only display or an explicit unsupported-field fallback. Do not pretend it is a plain text field unless the user confirms that downgrade.
 
 File fields are mode-sensitive. If the host exposes only `.../records/:recordID/files/:fieldKey`, create forms must omit `Make.Field.File` controls. A create control is allowed only when the host explicitly implements and tests pre-upload/direct-create returning the backend-approved attachment array without `recordID`; submit that array, never browser `File`, `blob:` or `data:` values. Render persisted-record attachment upload/edit only after a record exists and the stable id is available. Detail views may display existing attachments.
@@ -190,12 +196,14 @@ Host form controlled custom field components are mandatory for Make create/edit 
 
 - required controlled props: `value`, `onChange`, `onBlur`, `id`, `disabled`
 - also preserve when provided: `name`, `ref`, `required`, validation status, `aria-invalid`, `aria-describedby`, and project-specific form item context
-- normalize event shapes if needed, but call `onChange(nextValue)` with the submitted value shape every time the user commits text, selects an option, clears a value, uploads/removes a file, or confirms a picker
+- normalize event shapes if needed; call `onChange(nextValue)` with the submitted value shape at the control's commit boundary. Immediate controls commit input/selection/clear; confirm-only pickers commit the complete snapshot only on confirmation
 - call or forward `onBlur` so touched state, required validation, and submit-time validation behave the same as native/project controls
 
 The form store and validation state must match the displayed selection. If `validateFields`, a resolver, or a submit handler reads an empty value while the control visually displays a selected user, department, lookup record, date, or option, the field adapter is broken. Display labels, avatars, option objects, and popup rows are presentation data; the form value remains the source of truth.
 
-This contract applies to all type-specific field controls, especially `SingleUser` / `MultiUser`, `SingleDepartment` / `MultiDepartment`, `Lookup`, select, date, file, and custom relation selectors. For `SingleUser`, `SingleDepartment`, and `Lookup`, the selector may keep transient search text, popup open state, loading flags, and fetched candidate options in local state, but local state must not be the source of truth for selected values. Current selected options may be merged into the options list for display, yet the rendered selection must come from the host `value`, and every selection/clear must update the host form through `onChange`.
+This contract applies to all type-specific field controls, especially `SingleUser` / `MultiUser`, `SingleDepartment` / `MultiDepartment`, `Lookup`, select, date, file, and custom relation selectors. The committed trigger/display value comes from host `value`; candidate labels and transient search/open/loading state are not the source of truth for committed values.
+
+Immediate controls write each committed selection/clear once. On phones, `MobileIdentityField`, `MobileDateField` and `MobileDateRangeField` keep their transient sheet draft inside the package; the host passes committed `value` and forwards the public `onChange`/`onBlur` once, without mirroring that draft or adding a close-path commit. Host-composed `MobileOptionPickerSheet`, direct `MobileSearchPickerSheet`, and editable Lookup (even single) keep a host-owned draft initialized from `value` on open. Their draft selection/removal/clear callbacks, including `onSelectedKeysChange`, never write the real form; only `onConfirm` writes one snapshot (a single option may confirm immediately), while cancel/close discards unconfirmed changes. Cancel/close never writes `onChange`, but must preserve the control's documented `onBlur` behavior; package-owned identity/date fields call `onBlur` on close. For host-composed controls, the adapter forwards `onBlur` once when the interaction ends, after confirm or cancel/close, never per draft change. Reopen from committed `value`. Use `mobile-form-controls.md` and `mobile-defaults.md` for phone commit boundaries; preserve the existing desktop control's documented commit behavior.
 
 Component library choice does not require a different contract.
 
@@ -285,6 +293,16 @@ Platform selector behavior:
 - merge current record values into options before candidate results so existing selections still display readable labels while async options are empty
 - submit user values as `userId`; submit department values as `departmentId`; keep labels only for display
 - do not submit display labels, fake ids, or local demo candidates
+
+On phones, present user and department fields through `MobileIdentityField` from `@qfei-design/make-app-mobile/fields` at the `0.1.7` baseline in `mobile-defaults.md`; use `MobileSearchPickerSheet` directly only for an explicit custom field composition that the field-level API cannot represent. `MobileIdentityField` is the controlled boundary: forward its `onChange` and `onBlur` to the host form exactly once. Present ordinary options through `MobileOptionPickerSheet` and dates through `MobileDateField` / `MobileDateRangeField` from `/pickers`. Preserve the remote candidate and normalized id contract. Follow the frozen Make App phone visual baseline in `mobile-visual-standard.md`; desktop controls and selectors owned by other Skills retain their own surface contracts.
+
+- `SingleUser` / `SingleDepartment`: pass `selectionMode="single"`; the field omits “确定”. Selection, selected-chip removal, and clear immediately call the field `onChange` with the committed snapshot and close.
+- `MultiUser` / `MultiDepartment`: pass `selectionMode="multiple"`; the package owns transient open-session draft state, and “确定” remains the only call to the field `onChange`. Selection, chip removal, and clear do not write the host form; cancelling discards them.
+- Pass committed ids as `value`, labels/avatar metadata as `selectedItems`, and current remote results as `items`. Normalize single empty selection to the host field's empty value; submit user ids or department ids, not labels. Forward package `onChange` and `onBlur` into the host-form controlled adapter once; do not add a second effect or close-path commit.
+- Multi-value create/edit triggers render wrapped tags rather than joined/truncated text. User items show avatar or deterministic initials fallback; department items show the standard circular abbreviation in both selected chips and candidate rows.
+- If a special composition directly uses `MobileSearchPickerSheet`, the host must manage draft `selectedKeys`/`selectedItems` and commit only the `onConfirm(payload)` snapshot. This low-level exception must not replace `MobileIdentityField` for ordinary user/department fields.
+
+Phone edit attachment fields use `MobileAttachmentField` from `/fields`. The host maps its normalized attachment state to package `items` and owns upload, retry, remove, permission, record identity, and persistence calls; the package owns thumbnails/file icons, filename/status cards, removal confirmation, and the full-width upload entry. Do not use the component-library default Upload list as the standard phone presentation.
 
 Detail display for identity fields:
 

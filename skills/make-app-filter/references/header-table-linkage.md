@@ -1,10 +1,10 @@
 # Header Table Linkage
 
-Use this reference when connecting CanvasTable header menus to the package-backed advanced filter.
+Use this reference when connecting desktop/tablet CanvasTable header menus to the package-backed advanced filter. Phone has no CanvasTable or header linkage; use the toolbar package panel and mobile-safe sheet from `package-integration.md` and `ui-style.md` instead. All header implementation and tests below are desktop/tablet-only.
 
 ## Default behavior
 
-When filtering is in scope for a Make record-list page, add both the toolbar advanced filter and the CanvasTable header filter linkage. The menu should include `按该字段筛选` only for package-supported fields. Do not report filtering complete if the toolbar package panel is implemented but the header linkage is missing, or if the header menu exists without the package-backed toolbar panel.
+When filtering is in scope for a desktop/tablet Make record-list page, add both the toolbar advanced filter and the CanvasTable header filter linkage. The menu should include `按该字段筛选` only for package-supported fields. Do not report desktop/tablet filtering complete if the toolbar package panel is implemented but the header linkage is missing, or if the header menu exists without the package-backed toolbar panel.
 
 Clicking `按该字段筛选` must:
 

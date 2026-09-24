@@ -19,10 +19,10 @@ For app shells and list pages:
 - preserve `flex: 1`
 - use `min-height: 0` and `min-width: 0`
 - put scrolling in the intended region only
-- keep table wrappers and canvas hosts at `width: 100%` and `height: 100%`
+- on desktop/tablet, keep table wrappers and canvas hosts at `width: 100%` and `height: 100%`; on phones, give the card-list region the remaining height and its own vertical scroll
 - avoid fixed table widths/heights unless the user explicitly asks for a fixed-size embedded table
 
-For list pages, the table region scrolls. For long side navigation, the sidebar navigation area scrolls. For drawers, the Drawer body scrolls. For route pages, the content region may scroll. The `body`, app root, shell, workspace, and list-page containers are not acceptable scroll containers for normal object-list browsing.
+For desktop/tablet list pages, the table region scrolls. For phone list pages, the card-list region scrolls. For long side navigation, the sidebar navigation area scrolls. For drawers, the Drawer body scrolls. For route pages, the content region may scroll. The `body`, app root, shell, workspace, and list-page containers are not acceptable scroll containers for normal object-list browsing.
 
 ## Overlay stacking and clipping
 
@@ -54,7 +54,7 @@ Prefer:
 - section titles for structure
 - compact grouped sidebar navigation when no existing shell style exists; background color follows project theme tokens
 - active sidebar items centered within the sidebar content gutter, with equal left/right inset
-- flat workspace header and direct toolbar-to-table flow for object list pages
+- flat workspace header and direct toolbar-to-table flow for desktop/tablet object lists; phones use their separately composed compact toolbar and card list
 
 Avoid:
 
@@ -91,11 +91,13 @@ Avoid:
 
 ## Responsive defaults
 
-- sidebar may collapse or become an overlay on small screens
-- Drawer width may become `100%` on small screens, but create/edit/detail surfaces still open from the right rather than becoming bottom sheets
-- form grids collapse from two columns to one column
-- toolbar actions may wrap, but create/new should remain easy to find
-- table horizontal overflow belongs inside the table container
+- use the container-width presentation model and package components in `mobile-defaults.md` for new Make Apps and mobile/responsive work
+- phone record lists use cards rather than CanvasTable and do not reuse desktop toolbar/table fragments through CSS; standard phone toolbars omit group, sort, record selection and batch actions
+- tablet navigation may become an overlay while preserving the desktop information architecture
+- phone create/edit/detail surfaces use full-screen route task pages; desktop/tablet CRUD remains a right-side Drawer
+- On desktop/tablet, form grids may collapse from two columns to one when their owning Drawer becomes narrow; this is not the phone task-page field layout.
+- On desktop/tablet, toolbar actions may wrap, but create/new should remain easy to find; the phone toolbar is separately composed in `mobile-defaults.md`.
+- On desktop/tablet, table horizontal overflow belongs inside the table container; phone card lists must not inherit table overflow styles.
 
 ## States
 

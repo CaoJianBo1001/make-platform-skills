@@ -14,6 +14,11 @@ a Make CanvasTable record list, ensure both packages are installed:
 Use the host package manager. Do not change package managers or create a second
 lockfile.
 
+A phone-only card/detail task uses the actions root headless core from
+`mobile-card-actions.md`; it does not install or validate CanvasTable merely for
+single-record actions. Canvas version gates, selection adapters and selection-bar
+examples below apply to desktop/tablet integration, including dual-mode hosts.
+
 The published package exposes headless core, generic React action-bar and
 batch-modal primitives, a CanvasTable adapter, and Ant Design action-bar/modal
 adapters:

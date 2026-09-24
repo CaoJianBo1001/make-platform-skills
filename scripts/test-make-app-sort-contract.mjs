@@ -364,8 +364,13 @@ assert.doesNotMatch(
 );
 assert.match(
   readme,
-  /同时做筛选和排序[^\n]*make-app-filter[^\n]*make-app-sort[^\n]*make-app-permission/i,
-  'README filter/sort composition must include make-app-permission without forcing grouping',
+  /同时做高级筛选和排序[^\n]*make-app-filter[^\n]*make-app-sort[^\n]*make-app-permission/i,
+  'README advanced-filter/sort composition must include make-app-permission without forcing grouping',
+);
+assert.match(
+  skill,
+  /(手机|phone)[\s\S]{0,260}(不展示|隐藏|does not render)[^\n]*(排序|sort)[\s\S]{0,260}(CanvasTable|表头|header)/i,
+  'standard phone lists must not render sorting controls or CanvasTable headers',
 );
 
 console.log('make app sort contract passed');

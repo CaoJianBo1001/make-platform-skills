@@ -1,5 +1,9 @@
 # Testing and pitfalls
 
+CanvasTable selection, scheme-two, row-color and batch tests below apply to
+desktop/tablet. Phone card/detail tests follow `mobile-card-actions.md`; shared
+permission independence and final Service authorization remain required.
+
 ## TDD order
 
 Use TDD: add a failing test first, implement the smallest contract, then refactor.
@@ -52,6 +56,9 @@ Selection and limits:
 - CanvasTable recreation publishes exactly one empty selection snapshot, rejects
   disposed-instance events, invalidates pending work, and does not replay the old
   action selection
+- desktop/tablet → phone → desktop clears the old action selection once, rejects
+  late prechecks and starts the replacement table empty; same-instance resize
+  preserves selection, while shared form drafts and filters survive both cases
 - same-query `totalCount` growth re-normalizes the current public snapshot and
   invalidates pending work when the normalized intent/count changes
 - same-query `totalCount` shrink calls public `clearSelection()` and produces one
@@ -89,7 +96,9 @@ Service:
 UI:
 
 - one row shows edit/delete; two rows show batch edit
-- detail surface has no duplicate edit/delete actions
+- desktop/tablet detail surface has no duplicate edit/delete actions
+- phone detail exposes independent edit/delete actions; when neither is allowed,
+  hide the entire bottom action bar, and never replace detail actions with card actions
 - no-action bar, close, selected count, and row-alert cleanup
 - the default modal title is exactly `批量编辑`
 - batch field list enforces meta.field.update and package capability

@@ -2,7 +2,7 @@
 name: make-app-runtime
 description: Use when generating, refactoring, reviewing, or debugging Make App project runtime structure, workspace manifests, Service runtime, local/dev scripts, build outputs, Docker/K8s image entrypoints, publish readiness, or packaging errors such as missing `apps/service/dist/server.js`. Covers `apps/` workspace contracts, `apps/ui/dist`, `apps/service` port/build/start contracts, runtime config file location, runtime artifact tests, forwarded host/proto header preservation, and publish gates that include auth plus applicable permission audits. Does not cover UI layout, authentication implementation, permission logic, Make adapter env semantics, DSL modeling, Make CLI resource deployment, or canvas-table internals.
 metadata:
-  version: 0.1.4
+  version: 0.1.5
 ---
 
 # make-app-runtime
@@ -18,14 +18,14 @@ It does not own UI layout (`makeui`), authentication implementation (`make-app-a
 1. Identify whether the task touches `apps/`, `apps/service`, `apps/ui/dist`, package scripts, Docker/K8s, image entrypoints, publish readiness, or a runtime error such as `Cannot find module '/app/apps/service/dist/server.js'`.
 2. Preserve the platform image contract unless the user explicitly says the platform contract itself is changing.
 3. For a new App or an explicit runtime migration, verify the runtime baseline in `apps/package.json`: it must declare `"packageManager": "pnpm@10.20.0"` and `"engines": { "node": "22.20.0", "pnpm": "10.20.0" }`. Existing Make Apps keep their declared runtime during unrelated work; change it only after the user requests an explicit runtime migration.
-4. Run all project package commands through Corepack (`corepack pnpm`); do not use an ambient `pnpm` binary whose version is unknown.
-5. Verify workspace manifests: `apps/package.json`, `apps/pnpm-workspace.yaml`, `apps/ui/package.json`, and `apps/service/package.json`.
-6. Verify build artifacts before declaring ready: frontend `apps/ui/dist`, Service `apps/service/dist/server.js`.
+4. For a new or explicitly migrated App, run package commands through Corepack (`corepack pnpm`), not an ambient `pnpm` binary. For an existing App without a runtime migration, use its compatible declared package manager, lockfile, and established workspace workflow.
+5. For a new or explicitly reorganized App, verify workspace manifests: `apps/package.json`, `apps/pnpm-workspace.yaml`, `apps/ui/package.json`, and `apps/service/package.json`. For a legacy App, first identify its actual workspace structure without rewriting it.
+6. Verify build artifacts before declaring ready: frontend `apps/ui/dist` and the Service entry selected by the actual platform image (`apps/service/dist/server.js` for the default contract).
 7. Add or preserve a contract test for the Service runtime entry.
 
 ## Workspace contract
 
-Generated or reorganized Make App projects use:
+Newly generated or explicitly runtime-reorganized Make App projects use:
 
 - `apps/ui`
 - `apps/service`
@@ -67,17 +67,17 @@ Each executable workspace package, including `apps/ui/package.json` and `apps/se
 
 The repository must also contain a `.nvmrc` with exactly `22.20.0`, and CI or the Make build image must select exactly Node.js `22.20.0`. `engines` is a compatibility guard; it does not select the Node binary used by a build environment.
 
-Existing Make Apps retain their declared Node and pnpm versions during UI, auth, filtering, Service, or DSL work. Do not rewrite `packageManager`, `engines`, lockfiles, or Node-selection files unless the user explicitly requests an explicit runtime migration. Perform that migration in a dedicated change with the project's tests and a Preview deployment.
+Existing Make Apps retain their declared Node and package-manager versions during UI, auth, filtering, Service, or DSL work. That includes compatible npm and Yarn projects: preserve their existing `package-lock.json` or `yarn.lock`, workspace install target, and CI workflow. Do not rewrite `packageManager`, `engines`, lockfiles, or Node-selection files unless the user explicitly requests an explicit runtime migration. Perform that migration in a dedicated change with the project's tests and a Beta deployment. If the manager declaration, lockfile, workspace/CI workflow, or target platform build requirement conflicts, stop and report the compatibility blocker under `make-app-runtime`; do not generate a second lockfile or silently convert the App to pnpm.
 
-Enable Corepack before project work and run installation, tests, builds, package additions, and publish gates as `corepack pnpm ...`. Corepack reads the project declaration; a globally installed `pnpm`, including a newer major version, must not be used for a Make App. Child workspace manifests must not declare a different package-manager version.
+For new or explicitly migrated pnpm Apps, enable Corepack before project work and run installation, tests, builds, package additions, and publish gates as `corepack pnpm ...`. Corepack reads the project declaration; a globally installed `pnpm`, including a newer major version, must not be used for these Apps. For an existing compatible pnpm App, use its declared pnpm version through Corepack. For an existing npm or Yarn App without migration, use the repository's established commands and lockfile; do not introduce Corepack or pnpm solely for an unrelated change. Child workspace manifests must not declare a conflicting package-manager version.
 
-`apps/package.json` must provide runnable scripts such as `app:ui`, `app:service`, `dev`, `test`, and `build`. `corepack pnpm --filter` targets must match the actual package names, including scoped names.
+For a new or explicitly migrated pnpm App, `apps/package.json` must provide runnable scripts such as `app:ui`, `app:service`, `dev`, `test`, and `build`. `corepack pnpm --filter` targets must match the actual package names, including scoped names. A legacy App keeps its established equivalent scripts and workspace targets.
 
 `make-app-runtime` is the owner of `apps/package.json` generation and repair. `makecli app deploy` must not generate or rewrite workspace manifests.
 
 Treat `makecli app deploy` as a code deployment boundary unless the target makecli version is proven to run a stricter publish gate. Do not report a generated App as publish-ready merely because deploy succeeded.
 
-When preparing a generated App for publish, provide enough project-local scripts and documentation for the agent or CI to run publish-readiness checks before deploy:
+When preparing a new or explicitly migrated App for publish, provide enough project-local scripts and documentation for the agent or CI to run publish-readiness checks before deploy:
 
 - enable Corepack and install dependencies for `apps` with `corepack pnpm install --frozen-lockfile`
 - verify Node.js is exactly `22.20.0` and Corepack is exactly `0.34.0`
@@ -88,9 +88,9 @@ When preparing a generated App for publish, provide enough project-local scripts
 - verify `apps/ui/dist` and `apps/service/dist/server.js`
 - run Service contract tests, including auth callback proxy behavior, when tests exist
 
-For publish-ready Service-fronted Apps, prefer a project-local `verify:publish` script that runs the publish gate in one command. Keep `check:publish` for build/artifact checks, but do not make it the only release gate. When single-app permission enforcement is enabled or locally required, add `permission:audit` to that command; do not make unrelated Apps depend on a missing permission runtime.
+For a new or explicitly migrated pnpm Service-fronted App, prefer a project-local `verify:publish` script that runs the publish gate in one command. Keep `check:publish` for build/artifact checks, but do not make it the only release gate. When single-app permission enforcement is enabled or locally required, add `permission:audit` to that command; do not make unrelated Apps depend on a missing permission runtime. A legacy App uses its existing release command with the equivalent applicable checks.
 
-Recommended workspace scripts. Before adding these to `package.json`, copy or wrap the audit utilities into project-local `scripts/`; do not write user-specific skill install paths into generated projects.
+Recommended workspace scripts for a new or explicitly migrated pnpm App. Before adding these to `package.json`, copy or wrap the audit utilities into project-local `scripts/`; do not write user-specific skill install paths into generated projects. Do not copy these pnpm-specific scripts into a legacy npm/Yarn App without an explicit runtime migration.
 
 ```json
 {
@@ -108,9 +108,9 @@ For an App with single-app permission enforcement, add `"permission:audit": "nod
 
 Do not describe `verify:publish` as a universal makecli hook unless the target makecli version supports it. It is a project-local quality gate to run before `makecli app deploy`.
 
-Do not pass backend-context flags through `verify:publish`. Run the gate as `corepack pnpm run verify:publish`, then deploy to Beta with `makecli app deploy --context <context> --profile <profile> --wait`. Follow the `makecli` skill for the Beta completion guide and, after explicit user authorization, publish that Beta version to Prod with `makecli app promote --context <context> --profile <profile> --yes --wait`. Keep the same backend context/profile throughout; promotion uses the deployed Beta version and does not push local code. If a project-local Node wrapper must accept flags through `corepack pnpm run`, normalize argv by dropping a standalone `--` before parsing because `corepack pnpm run <script> -- --flag` can expose that separator to the script.
+Do not pass backend-context flags through `verify:publish`. For a new or explicitly migrated pnpm App, run the gate as `corepack pnpm run verify:publish`; a compatible legacy App uses its established equivalent gate and package manager. Then deploy code to Beta with `makecli app deploy --context <context> --profile <profile> --wait`. Follow the `makecli` skill for the Beta completion guide and, after explicit user authorization, publish that Beta version to Prod with `makecli app promote --context <context> --profile <profile> --yes --wait`. Keep the same backend context/profile throughout; promotion uses the deployed Beta version and does not push local code. If a project-local Node wrapper must accept flags through `corepack pnpm run`, normalize argv by dropping a standalone `--` before parsing because `corepack pnpm run <script> -- --flag` can expose that separator to the script.
 
-For Service-fronted Apps, the Service test suite behind `corepack pnpm run test` must include the gateway-mode contract:
+For Service-fronted Apps, the Service test suite (run via the project's declared package manager; `corepack pnpm run test` for a new/migrated pnpm App) must include the gateway-mode contract:
 
 - `MAKE_APP_LOCAL_PREVIEW=true`: Service uses `makecli configure resolve --target local-preview --output=json` field `make_api_origin` and `/api/make/**`.
 - published mode, where the flag is absent or false: Service uses the deployed k8s-internal gateway origin and `/make/**`.
@@ -157,7 +157,7 @@ Therefore the default TypeScript Service contract is:
 }
 ```
 
-`apps/service/package.json` must include the Node engine and scripts equivalent to:
+For a new or explicitly migrated pnpm App, `apps/service/package.json` must include the Node engine and scripts equivalent to:
 
 ```json
 {
@@ -173,13 +173,13 @@ Therefore the default TypeScript Service contract is:
 }
 ```
 
-Do not leave Docker, K8s, makecli, package scripts, or docs pointing at `/app/apps/service/dist/server.js` unless `corepack pnpm --filter <service-package> build` creates `apps/service/dist/server.js`.
+Do not leave Docker, K8s, makecli, package scripts, or docs pointing at `/app/apps/service/dist/server.js` unless the project's declared build workflow creates `apps/service/dist/server.js` (for a new or migrated pnpm App, `corepack pnpm --filter <service-package> build`).
 
 If a legacy project intentionally uses a different Service entry or build tool, keep it only when all runtime references agree: Docker/K8s entrypoint, package `start`, docs, build output, and readiness tests.
 
 ## Service build contract test
 
-Service-backed Apps should include a test that protects the runtime entry contract. The test may live in `apps/service/test/service-build-contract.test.ts` or the project's established test location.
+Service-backed Apps should include a test that protects the runtime entry contract. The test may live in `apps/service/test/service-build-contract.test.ts` or the project's established test location. The fixed-version assertions below apply only to new or explicitly migrated pnpm Apps; legacy Apps assert their own declared runtime and lockfile without changing them.
 
 It should assert:
 
@@ -192,12 +192,14 @@ It should assert:
 - `apps/service/tsconfig.json` uses `rootDir: "src"` and `outDir: "dist"`
 - after build, `apps/service/dist/server.js` exists
 
-Run the Service build before relying on that artifact:
+Run the Service build before relying on that artifact. For a new or explicitly migrated pnpm App:
 
 ```bash
 corepack pnpm --filter <service-package-name> build
 test -f apps/service/dist/server.js
 ```
+
+For a legacy App, use its established package-manager build command and verify the actual production entry artifact instead.
 
 ## Runtime config location and port
 
@@ -220,7 +222,7 @@ Do not hard-code environment domains in generated Service code. Use the incoming
 
 ## Readiness checks
 
-Before reporting a Service-backed App as ready to publish or ready for user-domain access:
+Before reporting a Service-backed App as ready to publish or ready for user-domain access, distinguish a new/explicitly migrated pnpm App from a legacy App. For the former:
 
 1. Verify `node --version` reports `v22.20.0` and `corepack --version` reports `0.34.0`. Then run `cd apps && corepack pnpm install --frozen-lockfile` and verify `corepack pnpm --version` reports `10.20.0`.
 2. Run `cd apps && corepack pnpm run verify:publish` when the project provides it.
@@ -230,6 +232,8 @@ Before reporting a Service-backed App as ready to publish or ready for user-doma
 6. Run the Service contract test and the make-app-auth published audit for Service-fronted Apps.
 7. For Service-fronted Apps, verify the Service contract test covers both local-preview and published gateway modes. Published upstream requests must not use `/api/make/**`; local preview must consume makecli resolve `make_api_origin` and must not use k8s-internal `/make/**`.
 8. If a start smoke is available, start the built Service with the production start script and verify it reaches the expected health or root response, then stop it.
+
+For an existing App without runtime migration, first verify that its declared Node/package manager, lockfile, workspace and CI/install workflow agree with the target platform build image. Use that App's established frozen/clean install, test, build and release commands, then perform the same applicable auth, permission, gateway-mode, artifact and start checks above. Do not require the `22.20.0`/`10.20.0` triple, `pnpm-workspace.yaml`, or `corepack pnpm run verify:publish` merely because an unrelated UI feature changed. If the platform actually requires a runtime the legacy App cannot meet, report a publish blocker and request an explicit migration; a successful local build alone is not release readiness.
 
 Do not mark a Service-backed App ready based only on successful local `tsx src/server.ts` development startup.
 

@@ -74,9 +74,10 @@ Before finishing a new Make App UI or a non-trivial UI feature, verify this mini
 - `App.tsx`: providers, router mounting, and app-level shell composition only. `App.tsx` must not own data fetching, schema normalization, table column building, form/detail mapping, Drawer state, row actions, or field display rendering.
 - route/page module under `pages/` or `routes/`: reads route params, selects the current object/module, and composes feature modules with shallow page state only.
 - page shell component under `components/page-shell/` or the host equivalent: owns layout slots, sidebar/header placement, and current-user surface.
-- feature container under `components/<feature>/` or `features/<feature>/`: composes list toolbar, table host, Drawer surfaces, and state surfaces.
-- toolbar module: owns search, refresh, filter trigger placement, and primary action placement.
+- feature container under `components/<feature>/` or `features/<feature>/`: composes shared Controller state with separate desktop/tablet table composition and phone card-list composition, plus task/Drawer and state surfaces.
+- desktop/tablet toolbar module: owns search, refresh, filter trigger placement, and primary action placement; the separate phone list module below owns its compact toolbar without a standalone refresh control.
 - CanvasTable host module: owns sizing wrapper, table lifecycle, row-head defaults, and table identity reset.
+- phone list module: owns its compact search toolbar and a conditional filter trigger only when advanced filtering is enabled or requested (`search-only` has no trigger), record-card mapping, card action placement, list scrolling and end state; it must not receive the desktop toolbar/table render fragments as opaque children.
 - table column/config builder: converts normalized schema fields plus field-type registry metadata into column config.
 - field display adapter: converts raw record values into display models before table/detail renderers consume them.
 - Drawer/form/detail modules: own create/edit/detail surfaces and type-appropriate field rendering, not the route page.
@@ -91,7 +92,7 @@ Route/page files are orchestration modules. They may:
 
 - read route params and query params
 - choose the current object/module
-- compose shell, toolbar, table, Drawer, and state surfaces
+- compose shell, presentation-specific toolbar, desktop/tablet table or phone card list, task/Drawer, and state surfaces
 - connect feature hooks to feature components
 - provide shallow page-level state that cannot be owned by a child module
 
@@ -103,7 +104,7 @@ Use feature modules for non-trivial object-management UI. A feature module may c
 
 - container component for the object list or workflow surface
 - toolbar/search/filter controls
-- table region component
+- desktop/tablet table-region component and phone card-list component
 - row action and detail-entry components
 - create/edit/detail Drawer or route-page components
 - hooks for loading metadata, records, selected record, and UI state
@@ -118,6 +119,7 @@ For Make record list pages, split the page before it becomes a large all-in-one 
 - page shell and route binding
 - list toolbar
 - CanvasTable host and sizing wrapper
+- phone card-list View and card presentation adapter
 - table column/config builder
 - row actions and detail entry
 - create/edit/detail Drawer surfaces

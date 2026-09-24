@@ -78,10 +78,13 @@ Default active trigger style uses a restrained green-tinted state:
 
 Toolbar keyword search is separate from advanced filter.
 
-Keep search text separate from `AdvancedFilterGroup` state and pass both to
-`compileListFilter({ fields, searchText, advancedFilter })`. The package decides
-which fields are searchable, omits blank search text, creates the search group,
-and owns all boolean grouping and CEL serialization.
+For search-only lists, call `compileListFilter({ fields, searchText })`; do not
+create an `AdvancedFilterGroup`, hydrate the filter Preset, or pass a hidden
+saved expression without a filter UI. When advanced filtering is enabled, keep
+search text separate from its applied `AdvancedFilterGroup` state and pass both
+to `compileListFilter({ fields, searchText, advancedFilter })`. The package
+decides which fields are searchable, omits blank search text, creates the
+search group, and owns all boolean grouping and CEL serialization.
 
 Submit the returned `{ expression }` without parsing, redistributing, or rewriting
 it in the host. Do not implement host-side DNF conversion or expression expansion.

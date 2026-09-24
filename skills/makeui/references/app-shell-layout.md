@@ -1,5 +1,9 @@
 # App shell layout
 
+## Presentation priority
+
+This reference defines the desktop/tablet shell unless a section explicitly says otherwise. On phones, `mobile-defaults.md` takes precedence: use the package-backed header, account drawer, bottom navigation, workbench, task pages, and local scrolling model instead of the desktop sidebar/header shell.
+
 ## Contents
 
 - [Structure](#structure)
@@ -84,6 +88,8 @@ Default pattern:
 Do not fabricate a fake user. If the host auth context has not loaded the current user's name yet, show a small loading/skeleton state or a neutral account placeholder until the real identity is available. Do not eagerly render `userId` as both avatar text and display name while `name`, `userName`, `displayName`, or avatar fields are still available in the same context payload.
 
 `makeui` only owns the visual slot, menu item, and interaction surface. The `退出` action handler must come from the host auth integration defined by `make-app-auth`; do not construct logout URLs, clear cookies, or implement auth/session behavior in UI layout code.
+
+The rules above are the desktop default. On phones, use the avatar-only top-left trigger and left account drawer defined in `mobile-defaults.md`; do not show the desktop avatar-plus-name trigger or restore the old object-navigation hamburger in that slot.
 
 ## Sidebar
 

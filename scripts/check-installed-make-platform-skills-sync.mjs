@@ -4,13 +4,18 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const skillNames = [
+  'makeui',
   'make-app-permission',
   'make-app-service',
   'make-app-auth',
   'make-app-actions',
+  'make-app-filter',
   'make-app-sort',
   'make-app-group',
   'make-ai-assistant',
+  'make-app-runtime',
+  'make-env-setup',
+  'canvas-table-integration',
 ];
 
 const [sourceSkillsRootArg, installedSkillsRootArg] = process.argv.slice(2);

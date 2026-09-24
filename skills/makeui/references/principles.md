@@ -22,7 +22,7 @@
 - Do not add or modify Service structure, Service config, Service port, Service build output, Docker/K8s, frontend build output, package scripts, Node runtime, or publish readiness rules in `makeui`.
 - Do not decide where field metadata comes from. `makeui` consumes the host project's object/field metadata and renders the UI from it.
 - Do not infer that a requested table needs pagination, cell editing, virtual loading, or custom renderers; table implementation belongs to `canvas-table-integration`.
-- Make record tables and list tables must use `@qfei-design/canvas-table` through `canvas-table-integration`. If cell editing is needed, use `canvas-table-integration` for the editing design too.
+- Desktop/tablet Make record tables and list tables use `@qfei-design/canvas-table` through `canvas-table-integration`. Phone object lists use the card View from `mobile-defaults.md` and must not render CanvasTable. If desktop/tablet cell editing is needed, use `canvas-table-integration` for the editing design too.
 - Do not add product capabilities that were not requested, especially pagination, views, advanced filters, grouping, sorting, column settings, import, or export.
 - Do not force Ant Design or Less when the user or project already has another UI/styling system.
 - Do not silently choose Ant Design, Arco Design, or shadcn/ui for a new project. Component-library selection is blocking until the user explicitly names one of those three libraries or delegates to the default/recommended option, which means Ant Design.
@@ -34,15 +34,16 @@
 
 Use a focused object-management layout:
 
-- global shell with top header and left navigation for generated Make App object-list UI
+- desktop/tablet global shell with top header and left navigation for generated Make App object-list UI; phones use the package-backed shell in `mobile-defaults.md`
 - list page as the main entry
 - object navigation through dynamic React Router params
-- create/edit/detail as right-side Drawer by default; use `placement="right"` / `side="right"` and do not use bottom sheets unless explicitly requested
-- create/edit/detail use the platform desktop two-column field grid by default; only wide fields such as `TextArea`, URL/link, file, lookup/relation, long text, attachments, or rich controls span the full row
-- route pages only on explicit user request
-- table area fills remaining content height
+- desktop/tablet create/edit/detail as right-side Drawer by default; use `placement="right"` / `side="right"` and do not use bottom sheets unless explicitly requested
+- phone create/edit/detail as package-backed full-screen task routes by default; follow `mobile-defaults.md` rather than shrinking the desktop Drawer
+- desktop/tablet create/edit/detail use the platform two-column field grid by default; phone task pages use one content column with ordinary labels and right-aligned values in the same-row field pattern from `mobile-form-controls.md`, not a collapsed desktop vertical-label form; only wide fields such as `TextArea`, URL/link, file, lookup/relation, long text, attachments, or rich controls span the full desktop row
+- route pages only on explicit user request, except for the default phone CRUD task routes defined in `mobile-defaults.md`
+- desktop/tablet table or phone card-list area fills remaining content height
 
-For generated object-list UI, the shell structure is:
+For generated desktop/tablet object-list UI, the shell structure is:
 
 1. left full-height sidebar for module/object navigation
 2. right fixed header with selected object/module name on the left

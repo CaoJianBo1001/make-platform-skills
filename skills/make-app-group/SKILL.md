@@ -2,7 +2,7 @@
 name: make-app-group
 description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. When make-app-actions is present, a successfully applied group must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
 metadata:
-  version: 0.1.5
+  version: 0.1.6
 ---
 
 # make-app-group
@@ -13,6 +13,8 @@ CanvasTable grouped rendering as one integrated capability.
 
 This Skill owns the consumer contract and grouping semantics. Related Skills own
 their implementation surfaces.
+
+This capability is a desktop/tablet presentation. The standard 手机／phone card list does not render a 分组 trigger, `GroupTableComponent`, grouped CanvasTable, or grouped leaf navigation. If a desktop Preset already has an applied group, keep that saved/draft state intact while the phone View requests ordinary ungrouped records; do not clear the Preset merely because the width changed.
 
 ## Workflow
 
@@ -83,9 +85,10 @@ their implementation surfaces.
 
 ## Non-negotiable invariants
 
-- Grouping is optional until requested or already present. Once in scope, deliver
+- Grouping is optional until requested or already present. On desktop/tablet, once in scope, deliver
   toolbar grouping, Preset persistence, Service contracts, grouped CanvasTable
   rendering, and grouped leaf pagination together.
+- 手机／phone standard lists hide and do not render 分组/group controls or grouped CanvasTable/`GroupTableComponent`. The phone records query uses ordinary records mode and omits `group`/`groupFilter` without mutating the saved desktop/tablet group Preset.
 - Use only ordered `{ fieldKey, order }[]`. Reject legacy `groupFieldKey`,
   `field`, `sort`, direction aliases, map objects, duplicates, unknown properties,
   and more than three entries.
@@ -142,8 +145,7 @@ their implementation surfaces.
 
 ## Handoffs
 
-- With `makeui`: place the optional group trigger after filter and before sort;
-  this Skill owns group behavior and state.
+- With `makeui`: place the optional group trigger after filter and before sort on desktop/tablet; the standard phone View hides it and uses ordinary record cards. This Skill owns group behavior and state.
 - With `canvas-table-integration`: it owns `GroupTableComponent` construction and
   CanvasTable public API mechanics; this Skill owns when and what to request and
   how to translate grouping results into the table.

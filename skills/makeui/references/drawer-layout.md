@@ -11,25 +11,25 @@
 
 ## Default mode
 
-Create, edit, and detail UIs use a right-side Drawer by default. For generated Make App object create/edit/detail, this is a hard layout rule unless the user explicitly requests a different surface.
+Desktop and tablet create, edit, and detail UIs use a right-side Drawer by default. For generated Make App object create/edit/detail on those presentation modes, this is a hard layout rule unless the user explicitly requests a different surface. Phone CRUD uses the package-backed full-screen task route from `mobile-defaults.md`; it is not a resized Drawer.
 
 - placement: right; use `placement="right"` for Drawer components and `side="right"` for shadcn/ui Sheet
 - default width: `60%`
-- small screens: may use `100%`, but the surface still enters from the right
+- narrow tablet containers: may use `100%`, but the surface still enters from the right
 - mask closable: enabled by default; clicking the mask or blank area closes the current Drawer
 - header action area contains close and primary/secondary actions
 - no fixed footer by default
 - body scrolls inside the Drawer shell
 
-Do not use bottom Drawer/Sheet, mobile bottom sheet, centered Modal/Dialog, or page-level replacement for object create/edit/detail unless the user explicitly requests that different presentation.
+Do not use bottom Drawer/Sheet, mobile bottom sheet, or centered Modal/Dialog for object create/edit/detail unless the user explicitly requests that different presentation. The standard phone full-screen task route is the deliberate page-level exception defined in `mobile-defaults.md`.
 
 Mask click uses the same close path as the header close control. If a form has an explicit unsaved-change guard, apply that same guard to mask close instead of silently ignoring the mask click.
 
-Treat these as Make UI defaults. For Make object create/edit/detail, right-side placement is not overridden by a generic existing bottom-sheet pattern; use a different surface only when the user explicitly asks for it or the task is not an object CRUD Drawer.
+Treat these as desktop/tablet Make UI defaults. For Make object create/edit/detail in those modes, right-side placement is not overridden by a generic existing bottom-sheet pattern; use a different surface only when the user explicitly asks for it or the task is not an object CRUD Drawer.
 
-Use route pages only when the user explicitly asks for an independent page, route, navigation, page jump, or standalone screen.
+Use route pages on desktop/tablet only when the user explicitly asks for an independent page, route, navigation, page jump, or standalone screen. Phones use full-screen route task pages by default according to `mobile-defaults.md`.
 
-Drawer presentation can still be driven by dynamic child routes when URL-addressable create/edit/detail state is required. In that case, keep the Drawer UI and use route params for object and record identity.
+On desktop/tablet, Drawer presentation can still be driven by dynamic child routes when URL-addressable create/edit/detail state is required. In that case, keep the Drawer UI and use route params for object and record identity. Phone task routes remain full-screen even when they are URL-addressable.
 
 ## Header actions
 

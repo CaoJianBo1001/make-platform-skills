@@ -2,7 +2,7 @@
 name: make-app-sort
 description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list sorting with @qfei-design/make-app-sort. Triggered by 排序, 高级排序, 多字段排序, 排序优先级, 升序/降序, 排序条件拖拽, 表格/表头/列头排序, openWithField, sortable capabilities, Entity Preset sort save/load/echo, records sort payloads, or sorting tests. Covers one integrated toolbar, CanvasTable header, Entity Preset, and Service sorting flow. When make-app-actions is present, a successfully applied sort must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, npm package internals, or grouping."
 metadata:
-  version: 0.1.4
+  version: 0.1.5
 ---
 
 # make-app-sort
@@ -11,6 +11,8 @@ Treat toolbar sorting, CanvasTable header sorting, Entity Preset persistence, an
 Service records `sort` requests as one integrated capability. This Skill owns the
 consumer contract and sorting semantics; related Skills own their implementation
 surfaces.
+
+This capability exposes controls only on desktop/tablet. The standard 手机／phone card list does not render a 排序 trigger or CanvasTable 表头/header actions. An already-applied sort may continue to order the shared ordinary-record query so width switching does not reorder data unexpectedly, but phone users cannot edit sort state unless the user explicitly requests a custom mobile sorting experience.
 
 ## Workflow
 
@@ -60,9 +62,10 @@ surfaces.
 
 ## Non-negotiable invariants
 
-- Sorting is optional until requested or already present. Once in scope, deliver
+- Sorting is optional until requested or already present. On desktop/tablet, once in scope, deliver
   toolbar sorting, CanvasTable header linkage, Preset persistence, and records sort
   together.
+- 手机／phone standard lists hide and do not render 排序/sort controls or CanvasTable 表头/header actions. Do not stack the desktop sort button into the phone toolbar.
 - Use only `{ fieldKey, order }[]`. Reject legacy `{ field, order }`, unknown keys,
   invalid directions, duplicates, and more than five entries.
 - Treat array order as priority: index 0 is the highest-priority sort.
@@ -101,8 +104,7 @@ Preset `group` writes. Sparse sort updates preserve the existing group dimension
 
 ## Handoffs
 
-- With `makeui`: place the optional sort trigger after filter and before refresh;
-  this Skill owns sort behavior and state.
+- With `makeui`: place the optional sort trigger after filter and before refresh on desktop/tablet; the standard phone View hides it. This Skill owns sort behavior and state.
 - With `canvas-table-integration`: it owns header/menu mechanics; this Skill owns
   the call to the shared sort panel.
 - With `make-app-service`: this Skill defines the contract; Service owns strict
