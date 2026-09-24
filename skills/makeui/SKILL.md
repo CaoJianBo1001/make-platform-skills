@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, refactoring, or reviewing Make App frontend UI and `apps/ui` React code: app shell, desktop/mobile responsive presentation, `@qfei-design/make-app-mobile`, dynamic object routes, list pages, drawers, task pages, forms, selectors, field metadata, and UI states. New Make Apps receive package-backed mobile adaptation by default unless the user explicitly opts out or requests a custom mobile design. AI助手、MakeAiTheme、maxDrawerWidth 或 assistant SSE must use `make-ai-assistant`; the package owns assistant-internal UI/styles and this skill owns only surrounding layout and placement. Use `canvas-table-integration` for Make record tables, `make-app-actions` for writable actions, `make-app-filter`/`make-app-group`/`make-app-sort` for list behavior, and `make-app-permission` for permission gates. Does not own auth, build/publish, Service runtime, business APIs, permission logic, persistence, DSL, CanvasTable internals, or Make AI assistant package behavior."
 metadata:
-  version: 0.4.15
+  version: 0.4.18
 ---
 
 # makeui
@@ -16,7 +16,7 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 1. Inspect the existing UI stack, routes, shell, component library, styling system, and page layout conventions.
 2. Preserve the host project's data and auth behavior. Do not design login, tokens, business API routes, Service orchestration, deployment, or build output in this skill.
 3. Use host-provided object/field metadata to render UI. Do not invent business fields or API contracts.
-4. Mobile support is a default delivery requirement for every new Make App, not an opt-in enhancement. Read the frozen product contract in `references/mobile-product-baseline.md`, then `references/mobile-defaults.md`, `references/mobile-visual-standard.md`, and `references/mobile-form-controls.md`; use `@qfei-design/make-app-mobile` unless the user explicitly opts out of mobile support or requests a custom mobile design. On phones, ordinary create/edit/detail fields use a same-row left label and right-aligned value; identity and attachment fields use the package `/fields` components instead of host-built visual replicas; detail tabs share the detail content's horizontal gutter. Do not derive phone field layout by collapsing a desktop grid. Create/edit save uses the right-aligned iconless form footer; preserve desktop/tablet behavior. For existing Apps, also read these references whenever mobile or responsive behavior is in scope. Keep one shared business Controller above desktop/mobile Views.
+4. Mobile support is a default delivery requirement for every new Make App, not an opt-in enhancement. Read the frozen product contract in `references/mobile-product-baseline.md`, then `references/mobile-defaults.md`, `references/mobile-visual-standard.md`, and `references/mobile-form-controls.md`; use `@qfei-design/make-app-mobile` unless the user explicitly opts out of mobile support or requests a custom mobile design. On phones, create/edit/detail fields except File keep a same-row left label slot and right-aligned value slot; TextArea starts at two rows and grows, multi-values wrap within the right slot, and Number/Currency/Percent use plain controlled text inputs without steppers while retaining shared precision validation. File alone may use a full-width stacked field layout. Identity and attachment fields use the package `/fields` components instead of host-built visual replicas; detail tabs share the detail content's horizontal gutter. Do not derive phone field layout by collapsing a desktop grid. Create/edit save uses the right-aligned iconless form footer; preserve desktop/tablet behavior. For existing Apps, also read these references whenever mobile or responsive behavior is in scope. Keep one shared business Controller above desktop/mobile Views.
 5. Use the dense object-management desktop layout by default: left navigation, flat workspace header, local toolbar directly above the table, and no extra list-title card. Sidebar color follows the project theme. Use the package-backed mobile shell and task-page defaults from `mobile-defaults.md` on phones.
 6. Wrap object routes with visible UI states: loading, empty, error, forbidden, expired-session, not-found, retry, and render-error fallback.
 7. Normalize the auth/current-context identity before either presentation, including responses such as `{ userId, avatar, name }`. On desktop, put the current logged-in user entry in the top header right as a strict 32px avatar plus plain display name. On mobile, show only the avatar at top left and open the package account drawer; read `mobile-defaults.md` for tenant name and logout visibility.
@@ -35,6 +35,8 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 20. Treat missing componentization as a readiness blocker for new Make App UI and non-trivial UI changes. Before reporting ready or complete, verify that `App.tsx` and route/page files only orchestrate and that implementation logic is split into page, shell, feature components, hooks, `lib/service-api`, field display/config adapters, table host, toolbar, and Drawer modules.
 21. Read only the needed reference files from the map below.
 
+For mobile delivery, verify the actually installed package with [`scripts/verify-mobile-package-surface.mjs`](scripts/verify-mobile-package-surface.mjs) after installation. An API-compatible `0.1.7` package alone does not prove the current iOS input and attachment surface; a failed verifier is a package blocker, not permission to override package-internal styles in the host. Follow `references/mobile-defaults.md` for the install and verification boundary.
+
 ## Topic reference map
 
 | Task / topic | Read |
@@ -43,6 +45,7 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 | Frozen phone product standard and precedence over superseded proposals | `references/mobile-product-baseline.md` |
 | Mobile defaults, smooth desktop/mobile switching, mobile shell/navigation/workbench/task pages/pickers/list end state | `references/mobile-defaults.md` |
 | Phone create/edit/detail field adapters, date/time/select/lookup/file controls, task footer, overlay fit | `references/mobile-form-controls.md` |
+| Installed mobile package iOS input, pinch zoom, and attachment rendering | `scripts/verify-mobile-package-surface.mjs` |
 | Component structure, module boundaries, page decomposition | `references/component-structure.md` |
 | App shell, sidebar, top header, viewport height chain | `references/app-shell-layout.md` |
 | Object list page, toolbar placement, default actions | `references/list-page-layout.md` |

@@ -55,7 +55,7 @@ Codex 判断优先级：
 - 做 UI 需要的 Service 接口：`make-app-service` + `makeui`
 - 做 Make 项目默认权限体系：`make-app-permission` + `make-app-service` + `make-app-auth` + `makeui`，涉及表格编辑时加 `canvas-table-integration`
 - 做一个登录后的页面：`makeui` + `make-app-auth`
-- 做新 Make App 的桌面/移动双端 UI：`makeui` + `make-app-permission` + `make-app-auth`；移动端不是可选项，除非用户明确退出或指定特殊定制，否则默认接入 `@qfei-design/make-app-mobile@^0.1.7` 并遵循冻结的 Make App 手机视觉与交互基线。手机对象列表默认卡片化，不显示 CanvasTable、分组、排序、记录多选或批量操作；表格、操作、筛选、AI 助手再按对应 Skill 组合
+- 做新 Make App 的桌面/移动双端 UI：`makeui` + `make-app-permission` + `make-app-auth`；移动端不是可选项，除非用户明确退出或指定特殊定制，否则默认接入 `@qfei-design/make-app-mobile@^0.1.7` 并遵循冻结的 Make App 手机视觉与交互基线。`0.1.7` 只是最低 API 版本，已安装包还必须通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs` 的 iOS 输入与附件视觉校验，失败时报告包依赖阻断。手机对象列表默认卡片化，不显示 CanvasTable、分组、排序、记录多选或批量操作；表格、操作、筛选、AI 助手再按对应 Skill 组合
 - 做 Service-fronted 登录后接口：`make-app-service` + `make-app-auth`
 - 打包发布失败或 Service 启动失败：`make-app-runtime`
 - 新增对象字段并部署：`makedsl` + `makecli`
@@ -153,7 +153,7 @@ npx skills update makeui
 
 **使用场景**
 - 生成或调整 Make App 前端页面
-- 所有新 Make App 默认交付移动端；只有用户明确退出或指定特殊定制时才覆盖该默认。新建或改造移动端时接入 `@qfei-design/make-app-mobile@^0.1.7`，遵循冻结的 Make App 手机视觉与交互基线，只切换 View 并复用同一个业务 Controller
+- 所有新 Make App 默认交付移动端；只有用户明确退出或指定特殊定制时才覆盖该默认。新建或改造移动端时接入 `@qfei-design/make-app-mobile@^0.1.7`，并验证目标 App 实际安装产物通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs`；旧 `0.1.7` 若不满足 iOS 输入和附件视觉合同，应报告包依赖阻断。遵循冻结的 Make App 手机视觉与交互基线，只切换 View 并复用同一个业务 Controller
 - 手机业务记录列表无论只读或可写都使用独立卡片 View，不渲染 CanvasTable；可写卡片复用 `make-app-actions` headless core、单条权限、预检和最终写接口合同
 - 手机工具栏默认提供中号搜索；筛选能力已启用或本次明确请求时，才同排显示中号筛选入口。仅搜索若使用 `filter.expression`，复用 `make-app-filter` 编译器，但不读取／回显／写入筛选 Preset，也不挂载高级筛选面板。不展示分组、排序、记录多选或批量操作，也不得直接复用桌面 `listToolbar`/`listContent` 后仅靠 CSS 改样式
 - 手机新建／编辑／详情不仅切换为全屏任务页，还必须使用移动字段适配器：桌面 DatePicker／RangePicker／Select 等弹层不能原样复用；日期时间、候选选择、Lookup、附件、详情值和安全区底部保存栏按 `mobile-form-controls.md` 验收

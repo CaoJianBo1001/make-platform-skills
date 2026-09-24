@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { verifyMobilePackageSurface } from '../skills/makeui/scripts/verify-mobile-package-surface.mjs';
 
 const packageRootArgument = process.argv[2];
 assert.ok(
@@ -87,5 +88,7 @@ const navigation = shellModule.composeMobileBottomNavigationItems({
   workbench: { icon: null, key: 'workbench', label: '工作台' },
 });
 assert.deepEqual(navigation.map(({ key }) => key), ['one', 'two', 'three', 'assistant', 'workbench']);
+
+await verifyMobilePackageSurface(packageRoot);
 
 console.log(`makeui mobile package API verified: ${packageJson.version}`);

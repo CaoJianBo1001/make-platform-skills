@@ -69,7 +69,23 @@ for (const [fieldType, property] of [
     ),
     `MakeUI forms must map ${fieldType}.${property} to the numeric input decimal limit and user guidance`,
   );
+  assert.match(
+    makeuiComponentUsage,
+    new RegExp(`${fieldType.replaceAll('.', '\\.')}(?:.|\\n){0,360}${property}(?:.|\\n){0,180}Desktop/tablet[^\\n]*InputNumber`, 'i'),
+    `${fieldType} must scope InputNumber guidance to desktop/tablet`,
+  );
 }
+
+assert.match(
+  makeuiComponentUsage,
+  /phone[\s\S]{0,200}mobile-form-controls\.md[\s\S]{0,180}(plain|普通文本)[^\n]*(input|输入)[^\n]*(stepper|步幅|调节)/i,
+  'phone numeric controls must defer to the mobile plain-text, no-stepper contract',
+);
+assert.match(
+  makeuiComponentUsage,
+  /For Ant Design on desktop\/tablet, the default form-control mapping is:/,
+  'the Ant Design control mapping must not be mistaken for phone defaults',
+);
 
 assert.match(
   makeuiComponentUsage,

@@ -310,7 +310,7 @@ test('mobile defaults delegate precedence to the normative baseline without a co
 test('phone detail values stay right-aligned and tabs use the detail content gutter', () => {
   const detail = section(read('makeui/references/mobile-form-controls.md'), '详情展示');
   const visual = read('makeui/references/mobile-visual-standard.md');
-  assert.match(detail, /左侧标签[，,、 ]*右侧[^\n]*(靠右|尾端对齐)/);
+  assert.match(detail, /左侧标签槽位[^\n]*右侧槽位[^\n]*尾端对齐/);
   assert.match(detail, /(Tab|标签页)[\s\S]{0,220}(左右页面留白|页面 gutter|content gutter)/i);
   assert.match(visual, /(Tab|标签页)[\s\S]{0,220}(左右页面留白|页面 gutter|content gutter)/i);
 });

@@ -137,7 +137,7 @@ Use type-appropriate controls:
 | --- | --- |
 | `ID`, generated fields | read-only text |
 | `Text`, `TextArea`, `URL` | text, textarea, or URL input |
-| `Number`, `Currency`, `Percent` | numeric input with display formatting kept out of submit values; submit values are finite numbers or pure numeric strings |
+| `Number`, `Currency`, `Percent` | desktop/tablet numeric control; phone plain controlled text input per `mobile-form-controls.md`; display formatting stays out of submit values, which are finite numbers or pure numeric strings |
 | `Date`, `DateTime`, `DateRange` | date, date-time, or range picker |
 | `SingleSelect`, `MultiSelect` | single or multiple select from schema options |
 | `SingleUser`, `MultiUser` | searchable user selector using the host-provided candidate source |
@@ -162,14 +162,16 @@ Generated Make UI must treat schema `field.properties` as behavior input, not pa
 | `Make.Field.Date` | `format` | Use the schema format for DatePicker display, typed input parsing, detail text, and table handoff. If absent, use the host date default consistently instead of mixing formats per surface. |
 | `Make.Field.DateTime` | `format` | Use the schema format for date-time picker display, parsing, detail text, and table handoff. Keep submit values in the backend-agreed date-time shape. |
 | `Make.Field.DateRange` | `begin`, `end` | Treat `begin` and `end` as the selectable range. Date range controls must disable dates before `begin` or after `end`; with only one boundary present, apply a one-sided disabled-date rule. Submit a structured range such as `{ begin, end }`, not display text. |
-| `Make.Field.Number` | `precision` | Configure InputNumber / NumberInput / 数字输入控件 with `precision` as the maximum decimal-place limit. When the user exceeds it, show `最多保留 N 位小数`, keep the field invalid, and block the submit persistence request. Do not submit formatted display strings. |
-| `Make.Field.Currency` | `symbol`, `decimalPlaces`, `useGrouping` | Configure InputNumber / NumberInput / 数字输入控件 with `decimalPlaces` as the maximum decimal-place limit and show `最多保留 N 位小数` on overflow. Use `symbol` and `useGrouping` only for input/display formatting. Block the submit persistence request while invalid; store and submit only finite numbers or pure numeric strings. |
-| `Make.Field.Percent` | `decimalPlaces` | Configure InputNumber / NumberInput / 数字输入控件 with `decimalPlaces` as the maximum decimal-place limit and show `最多保留 N 位小数` on overflow. Block the submit persistence request while invalid; add `%` only in formatter/renderers and do not multiply or divide values by 100 unless the host metadata or backend contract explicitly says so. |
+| `Make.Field.Number` | `precision` | Desktop/tablet: configure InputNumber / NumberInput / 数字输入控件 with `precision` as the maximum decimal-place limit. When the user exceeds it, show `最多保留 N 位小数`, keep the field invalid, and block the submit persistence request. Do not submit formatted display strings. |
+| `Make.Field.Currency` | `symbol`, `decimalPlaces`, `useGrouping` | Desktop/tablet: configure InputNumber / NumberInput / 数字输入控件 with `decimalPlaces` as the maximum decimal-place limit and show `最多保留 N 位小数` on overflow. Use `symbol` and `useGrouping` only for input/display formatting. Block the submit persistence request while invalid; store and submit only finite numbers or pure numeric strings. |
+| `Make.Field.Percent` | `decimalPlaces` | Desktop/tablet: configure InputNumber / NumberInput / 数字输入控件 with `decimalPlaces` as the maximum decimal-place limit and show `最多保留 N 位小数` on overflow. Block the submit persistence request while invalid; add `%` only in formatter/renderers and do not multiply or divide values by 100 unless the host metadata or backend contract explicitly says so. |
 | `Make.Field.File` | `maxCount` | Use `maxCount` as the attachment selection/upload limit. Disable or block extra choose, drag/drop, paste, and add actions after the limit; show the host validation/error state instead of silently dropping files. Default to the DSL default of `1` when the property is absent. |
 | `Make.Field.MultiUser` | `maxCount` | Use `maxCount` as the maximum selected user count. Once reached, disable further candidate selection or prevent the next commit while preserving clear/remove actions. Default to the DSL default when absent. |
 | `Make.Field.MultiDepartment` | `maxCount` | Use `maxCount` as the maximum selected department count. Once reached, disable further candidate selection or prevent the next commit while preserving clear/remove actions. Default to the DSL default when absent. |
 
-For Ant Design, this usually maps to `DatePicker` / `RangePicker` `format` and `disabledDate`, `InputNumber` `precision` / formatter / parser, `Upload` or project attachment controls with `maxCount`, and multiple `Select` controls that block extra selections after `maxCount`. Other component libraries should implement equivalent controlled behavior.
+On phones, follow `mobile-form-controls.md`: use a plain controlled text input without steppers for Number, Currency, and Percent, while keeping the same raw-text decimal-limit validation and submit values. The desktop/tablet numeric-control mapping above does not select the phone View's control.
+
+For Ant Design on desktop/tablet, this usually maps to `DatePicker` / `RangePicker` `format` and `disabledDate`, `InputNumber` `precision` / formatter / parser, `Upload` or project attachment controls with `maxCount`, and multiple `Select` controls that block extra selections after `maxCount`. Other component libraries should implement equivalent controlled behavior.
 
 Do not hide these rules inside business field-name checks. A field named `amount` is not enough to infer currency behavior; use `type: Make.Field.Currency` plus `field.properties.symbol` and `field.properties.decimalPlaces`.
 
@@ -188,7 +190,7 @@ Form validation owns decimal-limit failures before persistence. Do not treat a D
 - The default policy forbids silent rounding. Automatic rounding is allowed only when the host project has an explicit product/backend contract for it; the normalized value must be written back and shown to the user before submit.
 - Empty/null handling remains owned by required/optional validation. Skip decimal-place counting for an empty raw input; for every non-empty value, validate raw syntax and decimal places before parsing.
 
-For Ant Design, `InputNumber.precision` can constrain the control, but the adapter still needs a raw-text buffer and field-level validation because formatter/parser behavior may normalize input before submit. Arco, shadcn, and project-owned NumberInput components must provide equivalent behavior.
+For desktop/tablet Ant Design, `InputNumber.precision` can constrain the control, but the adapter still needs a raw-text buffer and field-level validation because formatter/parser behavior may normalize input before submit. Desktop/tablet Arco, shadcn, and project-owned NumberInput components must provide equivalent behavior. Phone text inputs reuse the same validation helper, not the desktop numeric control.
 
 ## Host form controlled field contract
 
@@ -276,10 +278,10 @@ When the candidate source is missing and the user confirms a placeholder, use a 
 - avoids fake global demo candidates
 - shows loading, empty, error, and retry states
 
-For Ant Design, the default form-control mapping is:
+For Ant Design on desktop/tablet, the default form-control mapping is:
 
 - text: `Input`, long text: `Input.TextArea`
-- number/currency/percent: `InputNumber`
+- number/currency/percent: desktop/tablet `InputNumber`; phone plain controlled text input without steppers per `mobile-form-controls.md`
 - date/date-time/date-range: `DatePicker` / `DatePicker.RangePicker`
 - select/user/department/lookup candidates: `Select` with `showSearch` and `mode="multiple"` for multi-value fields
 - file: no create upload when a saved record identity is required; edit/detail attachment UI after persistence
