@@ -1,17 +1,20 @@
 # makecli CLI Reference
 
-> Verify locally with `makecli version` before relying on command output.
+> Verify locally with `makecli version` and command `--help` before relying on flags. Current publishing uses `app deploy` for Beta, `app promote` for Prod, and `--context` for the backend platform.
 
 ## Global Flags (all commands)
 
 | Flag | Description | Default |
 |------|-------------|---------|
-| `--env` | Backend environment `dev\|test\|production` (overrides `[settings] environment`) | `production` |
+| `--context` | Backend context `dev\|test\|production` — resolved as `--context` > `$MAKE_CLI_CONTEXT` > profile `context` > `[settings] context` | `production` |
 | `--profile` | Credentials profile | `default` |
-| `--meta-server-url` | Meta Server **host** override for the current profile (gateway prefix `/api/make` auto-added) | environment preset |
-| `--repo-server-url` | Code Repository Server host override for the current profile | environment preset |
+| `--access-token` / `-t` | Access token (overrides `$MAKE_ACCESS_TOKEN` and the profile credentials) | profile |
+| `--meta-server-url` | Meta Server **host** override (overrides `$MAKE_META_SERVER_URL` and the profile config; gateway prefix `/api/make` auto-added) | context preset |
 
-Environment presets: `production` → `qfei.cn` hosts, `dev`/`test` → `qtech.cn` hosts.
+Code Repository Server host has no flag: `$MAKE_REPO_SERVER_URL` > profile `repo-server-url` > context preset.
+Context presets: `production` → `qfei.cn` hosts, `dev`/`test` → `qtech.cn` hosts (`makecli context list` prints them).
+
+**context ≠ environment.** `--context` (global) picks the Make backend; `--env` (local to `app delete`) picks the app's deployment environment `beta|production`. `app deploy` has no `--env` (beta-only); `app promote` moves beta → production.
 
 ---
 
@@ -38,23 +41,24 @@ Manages `~/.make/credentials` (tokens) and `~/.make/config` (INI, `[settings]` +
 | `configure set <key> <value>` | Non-interactive single-value write |
 | `configure get <key>` | Read a single value |
 | `configure verify [--output table\|json]` | Check the current profile has a valid token |
-| `configure resolve [--target local-preview]` | Token-free, offline; prints JSON (`make_api_origin`, `tenant_id`, `operator_id`) for wiring a local preview backend |
+| `configure resolve [--target local-preview]` | Token-free, offline; prints JSON (`profile`, `context`, `make_api_origin`, `tenant_id`, `operator_id`) for wiring a local preview backend |
 | `configure --sample` | Print a commented INI reference template |
 
-**Keys for set/get** — profile keys: `meta-server-url`, `repo-server-url`, `auth-server-url`, `X-Tenant-ID`, `X-Operator-ID`. Special key `environment` (values `dev|test|production`) writes the global `[settings]` section shared by every profile.
+**Keys for set/get** — profile keys: `context`, `meta-server-url`, `repo-server-url`, `auth-server-url`, `X-Tenant-ID`, `X-Operator-ID`. Profile `context` (`dev|test|production`) is this profile's backend default and beats the global `[settings] context`. Other global keys (`channel`, `role`, `check-for-updates`) are refused with a pointer to `makecli settings`.
 
 `X-Tenant-ID` / `X-Operator-ID` are injected as HTTP headers on every request. Server URLs are host-only (no path).
 
 ```bash
-makecli configure set environment test        # global [settings], affects every profile
+makecli configure set context test            # current profile backend default
 makecli configure set meta-server-url <host>
-makecli configure get environment
+makecli --profile staging configure set X-Tenant-ID 1024
+makecli configure get context
 ```
 
 ### configure resolve
 
 ```
-makecli configure resolve --target local-preview --output=json [--profile <name>] [--env dev|test|production]
+makecli configure resolve --target local-preview --output=json [--profile <name>] [--context dev|test|production]
 ```
 
 Resolve the current MakeCLI configuration for local-preview tooling without online token validation.
@@ -64,14 +68,47 @@ Minimal JSON contract:
 ```json
 {
   "profile": "default",
-  "environment": "production",
+  "context": "production",
   "make_api_origin": "https://make.qfei.cn",
   "tenant_id": "",
   "operator_id": ""
 }
 ```
 
-Use `make_api_origin` as a bare public gateway origin. Local-preview Services add `/api/make` when constructing upstream Make Meta/Data/Auth URLs. The command resolves `--env` first, then `[settings].environment`, then the default environment; profile `meta-server-url` and global `--meta-server-url` overrides are normalized to a bare origin.
+Use `make_api_origin` as a bare public gateway origin. Local-preview Services add `/api/make` when constructing upstream Make Meta/Data/Auth URLs. Backend selection follows the same context chain as every command (`--context` > `$MAKE_CLI_CONTEXT` > profile `context` > `[settings] context` > `production`); profile `meta-server-url` and global `--meta-server-url` overrides are normalized to a bare origin.
+
+---
+
+## context
+
+```
+makecli context list [--output table|json]   # built-in contexts (dev, test, production) + which is current
+makecli context use <name>                   # = makecli settings set context <name> (global default)
+makecli context show                         # the context this invocation resolves to
+```
+
+Contexts are built-in presets (docker-context style, no create/rm). `list --output json` includes each preset's `meta_server_url`, `repo_server_url`, `auth_server_url`, `agent_gateway_url`, `trace_server_url`. `context use` changes only the global default — a profile `context` still wins for that profile (`context show` prints the effective one). One-off override without switching: `makecli app list --context dev`.
+
+---
+
+## settings
+
+```
+makecli settings set <key> <value>
+makecli settings get <key>
+makecli settings list [--output table|json]   # KEY / VALUE / SOURCE (config|default)
+```
+
+Manages the global `[settings]` section of `~/.make/config` (shared by every profile):
+
+| Key | Values | Default | Meaning |
+|-----|--------|---------|---------|
+| `context` | `dev\|test\|production` | `production` | Global default backend context (see `context` command); a profile `context` overrides it |
+| `channel` | `stable\|beta` | `stable` | Release channel `makecli update` tracks |
+| `role` | `user` | unset | Skill set `makecli update` syncs (`user` = only the makecli skill); set by `skills install --role`, cleared by `skills install --all` |
+| `check-for-updates` | `true\|false` | `true` | Update-notifier switch (`$MAKE_CLI_UPDATE_NOTIFIER` overrides) |
+
+Profile-only keys (`meta-server-url`, `repo-server-url`, `auth-server-url`, `X-Tenant-ID`, `X-Operator-ID`) are refused with a pointer to `makecli configure`.
 
 ---
 
@@ -108,22 +145,29 @@ Filter: comma = OR; `key` exact match, `name`/`description` fuzzy. Table columns
 ### app delete
 
 ```
-makecli app delete [key] [-f app.yaml] [--yes|-y]
+makecli app delete [key] --env production|beta|ALL [-f app.yaml] [--yes| -y]
 ```
+
+Every app is a **prod/beta pair** on the server; `--env` (required, case-insensitive) picks which half:
+
+| `--env` | Deletes |
+|---------|---------|
+| `production` | `<key>` itself (server refuses with 409 while its beta pair still exists) |
+| `beta` | the paired beta app (looked up from `<key>`; pass the prod key, not the beta key) |
+| `ALL` | beta first, then production (ordered steps, each confirmed) |
 
 Confirms by typing the app key (gh-style). Non-interactive shells are refused unless `--yes`.
 
 ### app deploy
 
 ```
-makecli app deploy [--env preview|production] [--force] [--yes|-y]
-                   [--wait] [--timeout 5m] [--status] [--output table|json]
+makecli app deploy [--force] [--wait] [--timeout 5m] [--status] [--output table|json]
 ```
 
 - Runs from the project directory; app key comes from `apps/dsl/app.yaml` (no `--app` flag)
 - Pushes the **committed HEAD as-is** — errors if worktree dirty, no commits, or no git repo (commit first)
 - Refuses apps never registered via `app create` (guides to `makecli app create -f apps/dsl/app.yaml`)
-- `--env` defaults to `preview`; `production` prompts continue/abort confirmation (`--yes` skips; non-interactive shells refused without it)
+- Target is always the App's **beta** environment — there is no `--env` and no confirmation prompt. Production is reached only through `app promote` (below); `--context` chooses the backend only
 
 **Progress & waiting** (build task located by local HEAD commit sha — no task ID needed, re-runs re-attach idempotently):
 
@@ -138,13 +182,30 @@ makecli app deploy [--env preview|production] [--force] [--yes|-y]
 - On SUCCESS the environment URL is shown (`URL:` row; same source as `app info`)
 - `--output json` (requires `--status`): stdout is a single BuildTask object (`status`, `phase`, `errorCode`, `errorMessage`, `url` on success, …); with `--wait`, progress goes to stderr so stdout stays parseable
 
+### app promote
+
+```bash
+makecli app promote [--context dev|test|production] [--profile <name>]
+                    [--yes|-y] [--wait] [--timeout 10m] [--output table|json]
+makecli app promote --status --id <promoteId> [--wait] [--timeout 10m]
+                    [--context dev|test|production] [--profile <name>] [--output table|json]
+```
+
+- Run in the App project directory; app key comes from `apps/dsl/app.yaml`; refuses unregistered apps and apps without a beta pair. The source is Beta's Console configuration and last successful deployment commit, not local HEAD. Nothing is pushed from the local repository.
+- Publishes to the paired Prod App in the **same backend context and profile**. Preserve both explicitly when continuing a Beta deployment task.
+- Starting a promotion prompts for confirmation. `--yes` is allowed after an explicit user request to publish to Prod, including a submitted deployment follow-up action. Rendering the action alone is not consent.
+- `--wait` waits for a terminal result: **0 = succeeded / 2 = failed / 124 = timeout**. The default wait timeout is `10m`.
+- Save the returned promote ID. `--status` requires `--id`; after a timeout, use `--status --id <promoteId> --wait` to resume waiting on that run without starting another promotion.
+- Progress prints one line per state/step transition. `--output json`: stdout is a single receipt/status object; with `--wait`, progress goes to stderr
+- Results include the promotion state/step, source and product build IDs, and URL on success. Confirm Prod `Ready` and the expected commit with `app info`, then verify the returned URL.
+
 ### app info
 
 ```
 makecli app info <appKey> [--output table|json]
 ```
 
-App metadata (key/name/description/version) + per-environment deployment table: ENVIRONMENT / STATUS (`Ready`, `Pending`, `Failed`, `Not deployed`) / COMMIT / URL for `preview` and `production`. JSON output: `{app, deployment}` (deployment `null` if never deployed).
+App metadata (key/name/description/version) + per-environment deployment table: ENVIRONMENT / STATUS (`Ready`, `Pending`, `Failed`, `Not deployed`) / COMMIT / URL for `beta` and `production`. JSON output: `{app, deployment}` (deployment `null` if never deployed).
 
 ---
 
@@ -218,10 +279,13 @@ All subcommands require `--app <appKey> --entity <entityKey>`.
 ```
 makecli record create --app <app> --entity <entity> --json data.json [--dry-run]
 makecli record get    <record-id> [--output table|json]
-makecli record list   [--filter <CEL>] [--fields a,b] [--sort createdAt:desc] [--page] [--size] [--output table|json]
+makecli record list   [--filter <CEL>] [--fields a,b] [--sort-json <JSON>] [--page] [--size] [--output table|json]
 makecli record update <record-id> [record-id...] --json data.json
 makecli record delete <record-id> [record-id...]
+makecli record aggregate --aggregates-json <JSON> [--group-json <JSON>] [--filter <CEL>] [--aggregate-filter <CEL>] [--sort-json <JSON>] [--page] [--size 10] [--output table|json]
 ```
+
+JSON flags (`--*-json`) take inline JSON, `@file`, or `-` for stdin (stdin at most once per call). Keys are checked locally (unknown key = error); values are validated server-side.
 
 - Record JSON is a flat field map: `{"title": "Test Record", "status": "active"}`
 - `update` with one ID → record API; multiple IDs → batch field API (same field values applied to all)
@@ -232,6 +296,22 @@ makecli record delete <record-id> [record-id...]
 makecli record list --app crm --entity order --filter "amount >= 100 && status in ['todo','doing']"
 makecli record list --app crm --entity order --filter "title.contains('升级') && owner != null"
 makecli record list --app crm --entity order --filter "owner == _currentUser"   # Make system variable
+makecli record list --app crm --entity order --sort-json '[{"fieldKey":"createdAt","order":"desc"}]'
+```
+
+- `aggregate` is a server-side GROUP BY over one entity; `--group-json` (dimensions) + `--aggregates-json` (metrics, required) decide the columns. Omit `--group-json` for a single global row.
+  - group element: `{"fieldKey","granularity"?,"alias"?}` — `granularity` only on Date fields: `day|week|month|quarter|year`; same field twice needs distinct `alias`; at most 3 dimensions
+  - aggregates element: `{"fieldKey"?,"aggregate","alias"}` — `count` (no fieldKey) | `countDistinct` | `sum`/`avg` (Number/Currency/Percent) | `min`/`max` (numeric or Date/DateTime); `alias` required, unique across all columns; at most 10 metrics
+  - `--filter` runs before aggregation (WHERE, same CEL as `list`); `--aggregate-filter` runs after (HAVING) and may only reference metric aliases
+  - sort element: `{"alias":..}` or `{"fieldKey":..}` + `"order":"asc|desc"`; default is all dimensions ascending
+  - rows: dimension columns are `{value,label}` (null group → `label: "未填写"`), metric columns are raw JSON numbers; `pagination.total` counts groups, not records
+
+```bash
+makecli record aggregate --app crm --entity order \
+  --group-json '[{"fieldKey":"status"},{"fieldKey":"orderDate","granularity":"month","alias":"month"}]' \
+  --aggregates-json '[{"aggregate":"count","alias":"orderCount"},{"fieldKey":"amount","aggregate":"sum","alias":"totalAmount"}]' \
+  --filter "status != 'draft'" --aggregate-filter "totalAmount > 10000" \
+  --sort-json '[{"alias":"totalAmount","order":"desc"}]'
 ```
 
 ---
@@ -309,7 +389,7 @@ Recognize bills from a PDF/OFD/PNG/JPG file. See `--help` for crop/coordinate fl
 makecli whoami [--output table|json]
 ```
 
-Shows the current token's identity (user/tenant + profile/environment). Triggers browser login automatically when the token is missing or expired — at most one login per call.
+Shows the current token's identity (user/tenant + profile/context). Triggers browser login automatically when the token is missing or expired — at most one login per call.
 
 ---
 
@@ -317,12 +397,16 @@ Shows the current token's identity (user/tenant + profile/environment). Triggers
 
 ```
 makecli skills list [--all] [--output table|json]
-makecli skills install <name>... | --all [--yes|-y]
+makecli skills install <name>... | --all | --role user [--yes|-y]
 makecli skills update
 makecli skills uninstall <name>... | --all [--yes|-y]
+makecli skills read <skill>[/<path>]
 ```
 
 Manages Make platform skills (installed via npx under the hood). `list` shows installed skills by default (`--all` includes the remote catalog); `install`/`uninstall` prompt for confirmation (`--yes` skips; non-interactive shells refused without it).
+
+- `install --role user`: installs only the makecli skill (manage resources, no app development) and records `[settings] role = user`, so `makecli update` keeps syncing just that set. `--all` installs everything and clears the role; explicit names leave the role untouched. `--role` is mutually exclusive with `--all` / names
+- `read`: prints the SKILL.md (or a file under `references/`) embedded in the binary — always matches the CLI version, works offline; a directory target lists its entries
 
 ---
 
@@ -334,6 +418,7 @@ makecli version
 makecli version list [--limit <n>] [--output table|json]
 ```
 
-- `update` self-updates the binary, then syncs Make platform skills (`npx -y skills add qfeius/make-platform-skills --all -y`); `--skip-skills` for binary only
+- `update` self-updates the binary, then syncs Make platform skills (`npx -y skills add qfeius/make-platform-skills --all -y`, or `-s makecli` when `[settings] role = user`); `--skip-skills` for binary only
 - `--check`: report availability without installing; `--force`: allow downgrade
+- Channel: `makecli settings set channel beta` makes bare `update` track pre-releases (default `stable`)
 - `version list`: historical GitHub releases

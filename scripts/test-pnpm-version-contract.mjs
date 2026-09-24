@@ -79,6 +79,27 @@ assert.match(
   /corepack pnpm run verify:publish/,
   'make-app-runtime must run the publish gate with the declared pnpm version',
 );
+assert.doesNotMatch(
+  runtime,
+  /makecli app deploy --env (?:preview|production)/,
+  'runtime guidance must not send code directly to preview or production through a retired deploy flag',
+);
+assert.doesNotMatch(runtime, /Preview deployment/, 'runtime migration verification must use the Beta deployment flow');
+assert.match(
+  runtime,
+  /makecli app deploy --context <context> --profile <profile> --wait/,
+  'runtime publish guidance must deploy the verified build to Beta in the selected backend context',
+);
+assert.match(
+  runtime,
+  /makecli app promote --context <context> --profile <profile> --yes --wait/,
+  'runtime guidance must reserve Prod publication for an explicitly authorized Beta promotion',
+);
+assert.match(
+  runtime,
+  /explicit user authorization[\s\S]{0,180}makecli app promote/,
+  'runtime guidance must require user authorization before publishing Beta to Prod',
+);
 assert.match(
   environment,
   /corepack install -g pnpm@10\.20\.0/,

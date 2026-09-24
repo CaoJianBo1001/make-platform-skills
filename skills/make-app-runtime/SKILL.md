@@ -2,7 +2,7 @@
 name: make-app-runtime
 description: Use when generating, refactoring, reviewing, or debugging Make App project runtime structure, workspace manifests, Service runtime, local/dev scripts, build outputs, Docker/K8s image entrypoints, publish readiness, or packaging errors such as missing `apps/service/dist/server.js`. Covers `apps/` workspace contracts, `apps/ui/dist`, `apps/service` port/build/start contracts, runtime config file location, runtime artifact tests, forwarded host/proto header preservation, and publish gates that include auth plus applicable permission audits. Does not cover UI layout, authentication implementation, permission logic, Make adapter env semantics, DSL modeling, Make CLI resource deployment, or canvas-table internals.
 metadata:
-  version: 0.1.4
+  version: 0.1.5
 ---
 
 # make-app-runtime
@@ -67,7 +67,7 @@ Each executable workspace package, including `apps/ui/package.json` and `apps/se
 
 The repository must also contain a `.nvmrc` with exactly `22.20.0`, and CI or the Make build image must select exactly Node.js `22.20.0`. `engines` is a compatibility guard; it does not select the Node binary used by a build environment.
 
-Existing Make Apps retain their declared Node and package-manager versions during UI, auth, filtering, Service, or DSL work. That includes compatible npm and Yarn projects: preserve their existing `package-lock.json` or `yarn.lock`, workspace install target, and CI workflow. Do not rewrite `packageManager`, `engines`, lockfiles, or Node-selection files unless the user explicitly requests an explicit runtime migration. Perform that migration in a dedicated change with the project's tests and a Preview deployment. If the manager declaration, lockfile, workspace/CI workflow, or target platform build requirement conflicts, stop and report the compatibility blocker under `make-app-runtime`; do not generate a second lockfile or silently convert the App to pnpm.
+Existing Make Apps retain their declared Node and package-manager versions during UI, auth, filtering, Service, or DSL work. That includes compatible npm and Yarn projects: preserve their existing `package-lock.json` or `yarn.lock`, workspace install target, and CI workflow. Do not rewrite `packageManager`, `engines`, lockfiles, or Node-selection files unless the user explicitly requests an explicit runtime migration. Perform that migration in a dedicated change with the project's tests and a Beta deployment. If the manager declaration, lockfile, workspace/CI workflow, or target platform build requirement conflicts, stop and report the compatibility blocker under `make-app-runtime`; do not generate a second lockfile or silently convert the App to pnpm.
 
 For new or explicitly migrated pnpm Apps, enable Corepack before project work and run installation, tests, builds, package additions, and publish gates as `corepack pnpm ...`. Corepack reads the project declaration; a globally installed `pnpm`, including a newer major version, must not be used for these Apps. For an existing compatible pnpm App, use its declared pnpm version through Corepack. For an existing npm or Yarn App without migration, use the repository's established commands and lockfile; do not introduce Corepack or pnpm solely for an unrelated change. Child workspace manifests must not declare a conflicting package-manager version.
 
@@ -108,7 +108,7 @@ For an App with single-app permission enforcement, add `"permission:audit": "nod
 
 Do not describe `verify:publish` as a universal makecli hook unless the target makecli version supports it. It is a project-local quality gate to run before `makecli app deploy`.
 
-For the new/migrated pnpm script above, do not pass deploy-environment flags through `verify:publish`. Run the gate as `corepack pnpm run verify:publish`; choose the publish target on the follow-up deploy command, for example `makecli app deploy --env preview` or `makecli app deploy --env production`. If a project-local Node wrapper must accept flags through `corepack pnpm run`, normalize argv by dropping a standalone `--` before parsing because `corepack pnpm run <script> -- --flag` can expose that separator to the script.
+Do not pass backend-context flags through `verify:publish`. For a new or explicitly migrated pnpm App, run the gate as `corepack pnpm run verify:publish`; a compatible legacy App uses its established equivalent gate and package manager. Then deploy code to Beta with `makecli app deploy --context <context> --profile <profile> --wait`. Follow the `makecli` skill for the Beta completion guide and, after explicit user authorization, publish that Beta version to Prod with `makecli app promote --context <context> --profile <profile> --yes --wait`. Keep the same backend context/profile throughout; promotion uses the deployed Beta version and does not push local code. If a project-local Node wrapper must accept flags through `corepack pnpm run`, normalize argv by dropping a standalone `--` before parsing because `corepack pnpm run <script> -- --flag` can expose that separator to the script.
 
 For Service-fronted Apps, the Service test suite (run via the project's declared package manager; `corepack pnpm run test` for a new/migrated pnpm App) must include the gateway-mode contract:
 
