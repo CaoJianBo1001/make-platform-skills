@@ -2,7 +2,7 @@
 
 本规范冻结 Make App 手机端的通用视觉与交互基线，规定后续 Make App 必须复用组件包的默认实现并通过真实页面验证；不得只完成“能响应窄屏”就视为符合标准。这里约束 phone View 和移动 Sheet，不改变 desktop/tablet 的 Drawer、字段控件或表单布局。
 
-安装包的公开 API 存在不等于默认视觉已满足本规范；iOS 搜索输入、缩放手势和附件状态须通过 `mobile-defaults.md` 指向的安装产物校验。不满足时报告组件包依赖阻断，不让宿主覆盖包内部样式来制造表面一致。
+安装包的公开 API 存在不等于默认视觉已满足本规范；iOS 搜索输入、缩放手势、附件状态和上传入口高度须通过 `mobile-defaults.md` 指向的安装产物校验。不满足时报告组件包依赖阻断，不让宿主覆盖包内部样式来制造表面一致。
 
 ## 新建、编辑与详情表单
 
@@ -30,7 +30,7 @@
 手机端人员／部门与附件优先从 `@qfei-design/make-app-mobile/fields` 使用 `MobileIdentityField`、`MobileAttachmentField`；普通选项和日期从 `@qfei-design/make-app-mobile/pickers` 使用 `MobileOptionPickerSheet`、`MobileDateField` 和 `MobileDateRangeField`，并只在 UI 入口导入一次包样式。`MobileSearchPickerSheet` 是身份字段内部与特殊字段组合可用的底层原语，不是标准人员／部门字段的宿主拼装入口。组件包负责本标准的字段触发器、身份标签与标识、附件卡片、Sheet 几何、选项行、滚轮和范围日历；宿主负责字段 Schema 适配、候选与附件请求、校验、业务值归一化及提交。
 
 - 人员／部门使用 `MobileIdentityField`：单选立即确认；多选以“确定”为唯一提交入口。多选已提交值在新建／编辑触发器内以可换行、右对齐标签展示；人员显示头像或首字回退，部门显示圆形简称。选择 Sheet 顶部已选项可横向滚动且隐藏滚动条，候选勾选不得因内容宽度被推出视口。
-- 附件使用 `MobileAttachmentField`：图片缩略图／文件图标、文件名、状态、圆形删除入口、删除确认和全宽虚线上传区属于标准视觉，不允许宿主改为裸文件名列表或通用 Upload 默认列表。包不执行上传、重试、删除或持久化请求。
+- 附件使用 `MobileAttachmentField`：图片缩略图／文件图标、文件名、状态、圆形删除入口、删除确认和全宽虚线上传区属于标准视觉；上传入口固定高度为 48px，不允许宿主改为裸文件名列表或通用 Upload 默认列表。包不执行上传、重试、删除或持久化请求。
 - 普通 `SingleSelect` 使用无搜索的 `MobileOptionPickerSheet`，选择或清除后立即确认；普通 `MultiSelect` 使用同一组件的多选模式，以“确定”提交草稿。
 - Date／DateTime／DateRange 使用对应日期组件。若当前包版本未公开所需组件或属性，不得伪造深层导入；先升级受支持包或报告依赖缺口。
 - 新建／编辑底部保存／提交使用 `MobileFormActionBar`，单个按钮无图标、靠右并保留安全区；详情记录操作（编辑、删除）使用 `MobileBottomActionBar`。两种操作栏不能互换。

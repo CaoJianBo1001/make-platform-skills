@@ -18,6 +18,14 @@ const iosCss = `
   touch-action: pan-x pinch-zoom;
 }
 `;
+const attachmentCss = `
+.make-app-mobile-attachment-field__upload {
+  box-sizing: border-box;
+  width: 100%;
+  height: 48px;
+  border: 1px dashed;
+}
+`;
 
 test('iOS package gate accepts an editable search input of at least 16px and pinch zoom', () => {
   assert.doesNotThrow(() => assertIosPackageCss(iosCss));
@@ -171,7 +179,7 @@ test('attachment package gate rejects a retry action without the standard access
   );
 });
 
-test('surface verifier follows public exports when package build paths move', async (t) => {
+test('surface verifier follows public exports and requires the 0.1.9 attachment surface', async (t) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'makeui-mobile-surface-'));
   t.after(() => fs.rmSync(root, { recursive: true, force: true }));
   for (const relativePath of ['assets', 'esm', 'node_modules/react', 'node_modules/react-dom']) {
@@ -179,13 +187,13 @@ test('surface verifier follows public exports when package build paths move', as
   }
   fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
     name: '@qfei-design/make-app-mobile',
-    version: '0.1.8',
+    version: '0.1.9',
     exports: {
       './styles.css': { default: './assets/mobile.css' },
       './fields': { import: './esm/fields.mjs' },
     },
   }));
-  fs.writeFileSync(path.join(root, 'assets/mobile.css'), iosCss);
+  fs.writeFileSync(path.join(root, 'assets/mobile.css'), iosCss + attachmentCss);
   fs.writeFileSync(path.join(root, 'node_modules/react/index.js'), 'exports.createElement = (type, props) => ({ type, props });');
   fs.writeFileSync(path.join(root, 'node_modules/react-dom/server.js'), 'exports.renderToStaticMarkup = (element) => element.type(element.props);');
   fs.writeFileSync(path.join(root, 'esm/fields.mjs'), `
@@ -198,5 +206,22 @@ export const MobileAttachmentField = ({ items, onRetry }) => {
 };
 `);
 
-  assert.equal(await verifyMobilePackageSurface(root), '0.1.8');
+  assert.equal(await verifyMobilePackageSurface(root), '0.1.9');
+
+  fs.writeFileSync(path.join(root, 'assets/mobile.css'), iosCss + attachmentCss.replace('height: 48px;', 'min-height: 56px;'));
+  await assert.rejects(verifyMobilePackageSurface(root), /missing height/);
+
+  fs.writeFileSync(path.join(root, 'assets/mobile.css'), iosCss + attachmentCss.replace('height: 48px;', 'height: 56px;'));
+  await assert.rejects(verifyMobilePackageSurface(root), /48px/);
+
+  fs.writeFileSync(path.join(root, 'assets/mobile.css'), iosCss + attachmentCss);
+  fs.writeFileSync(path.join(root, 'package.json'), JSON.stringify({
+    name: '@qfei-design/make-app-mobile',
+    version: '0.1.8',
+    exports: {
+      './styles.css': { default: './assets/mobile.css' },
+      './fields': { import: './esm/fields.mjs' },
+    },
+  }));
+  await assert.rejects(verifyMobilePackageSurface(root), /0\.1\.9/);
 });

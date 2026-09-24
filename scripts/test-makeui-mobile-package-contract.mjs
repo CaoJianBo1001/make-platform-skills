@@ -106,6 +106,7 @@ assert.deepEqual(
 );
 
 assert.match(skill, /references\/mobile-defaults\.md/);
+assert.match(skill, /metadata:\s*\n\s*version:\s*0\.4\.19/);
 assert.match(skill, /references\/mobile-form-controls\.md/);
 assert.match(skill, /references\/mobile-product-baseline\.md/);
 assert.match(skill, /references\/mobile-visual-standard\.md/);
@@ -122,9 +123,11 @@ assert.match(
 );
 assert.match(
   mobileDefaults,
-  /corepack pnpm add @qfei-design\/make-app-mobile@\^0\.1\.7/,
-  'mobile defaults must install the required 0.1.7 baseline',
+  /corepack pnpm add @qfei-design\/make-app-mobile@\^0\.1\.9/,
+  'mobile defaults must install the current 0.1.9 visual baseline',
 );
+assert.match(mobileDefaults, /最低 API 基线为 `0\.1\.7`/);
+assert.match(mobileDefaults, /0\.1\.9[^\n]*视觉/);
 assert.match(mobileDefaults, /package\.ai\.json/);
 assert.match(mobileDefaults, /PUBLIC_API\.md/);
 assert.match(
@@ -227,10 +230,11 @@ assert.match(mobileVisualStandard, /所有字段值内容靠右对齐/);
 assert.match(mobileVisualStandard, /calc\(100%\s*-\s*8px\)[\s\S]{0,100}(4px|4 px)/i);
 assert.match(mobileVisualStandard, /(清除|clear)[^\n]*(左侧|left)[^\n]*(确定|confirm)[^\n]*(右侧|right)/i);
 assert.match(mobileVisualStandard, /MobileFormActionBar[^\n]*(无图标)[^\n]*(靠右)/);
+assert.match(mobileVisualStandard, /MobileAttachmentField[^\n]*48px/);
 assert.match(mobileVisualStandard, /滚轮[^\n]*五行、每行 48px[^\n]*中线/);
 assert.match(mobileVisualStandard, /不使用浏览器原生 `select`/);
 assert.match(mobileVisualStandard, /MobileOptionPickerSheet[\s\S]{0,80}MobileDateField[\s\S]{0,40}MobileDateRangeField/);
-assert.match(readme, /@qfei-design\/make-app-mobile@\^0\.1\.7/);
+assert.match(readme, /@qfei-design\/make-app-mobile@\^0\.1\.9/);
 assert.doesNotMatch(readme, /@qfei-design\/make-app-mobile@\^0\.1\.[56]/);
 const filterRoutingRow = readme.split(/\r?\n/).find((line) => line.startsWith('| 筛选'));
 assert.ok(filterRoutingRow, 'README must keep a filter routing row');
@@ -619,12 +623,12 @@ assert.match(
 );
 assert.match(
   readme,
-  /@qfei-design\/make-app-mobile@\^0\.1\.7/,
+  /@qfei-design\/make-app-mobile@\^0\.1\.9/,
   'repository routing docs must expose the same mobile package baseline',
 );
 assert.doesNotMatch(
   `${mobileDefaults}\n${readme}`,
-  /@qfei-design\/make-app-mobile@\^0\.1\.[256]/,
+  /@qfei-design\/make-app-mobile@\^0\.1\.[25678]/,
   'active installation guidance must not retain the old mobile baseline',
 );
 

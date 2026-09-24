@@ -10,10 +10,10 @@
 
 ## 包接入与边界
 
-新项目和本次移动端改造的最低 API 基线为 `0.1.7`：它提供普通选项、日期控件、人员／部门字段、附件字段和专用表单提交栏 `MobileFormActionBar`。`0.1.7` 的 API 兼容不等于当前 iOS 输入与附件视觉合同已经满足；以实际安装产物的校验结果为准。只有 registry 能解析该版本时才执行安装；不可用时不得改装 Git URL、本地目录或复制源码，应报告 package release blocker。新 Make App 或已明确进行运行时迁移的项目先满足 `make-app-runtime` 的固定基线；再在已解析的 UI package 工作目录中通过项目声明的包管理器安装。标准 pnpm 工作区例如：
+新项目和本次移动端改造的最低 API 基线为 `0.1.7`：它提供普通选项、日期控件、人员／部门字段、附件字段和专用表单提交栏 `MobileFormActionBar`。当前视觉交付基线为 `0.1.9`，其中附件上传入口固定为 48px；API 兼容不等于 iOS 输入与附件视觉合同已经满足，以实际安装产物的校验结果为准。只有 registry 能解析 `0.1.9` 时才执行安装；不可用时不得改装 Git URL、本地目录或复制源码，应报告 package release blocker。新 Make App 或已明确进行运行时迁移的项目先满足 `make-app-runtime` 的固定基线；再在已解析的 UI package 工作目录中通过项目声明的包管理器安装。标准 pnpm 工作区例如：
 
 ```bash
-corepack pnpm add @qfei-design/make-app-mobile@^0.1.7
+corepack pnpm add @qfei-design/make-app-mobile@^0.1.9
 ```
 
 仅当宿主源码直接从 `lucide-react` 导入图标，且 UI package 尚未声明可复用的兼容直接依赖时，才单独安装：
@@ -29,13 +29,13 @@ corepack pnpm add lucide-react@^1.28.0
 存量 App 在安装或升级前必须先完成兼容性门禁，不得为了通过门禁改写运行时声明、包管理器或锁文件类型：
 
 1. 定位实际安装目标（通常是 `apps/ui/package.json` 或宿主 UI package），读取 workspace 根的 `packageManager`、Node `engines`、React/React DOM 版本及现有 lockfile。
-2. 以当前解析到的 `@qfei-design/make-app-mobile` `package.json` 为准，验证 Node、React 和 React DOM 满足其 `engines` 与 peer dependencies；`0.1.7` 基线要求 Node `>=22.12.0`，React/React DOM 为 `^18.2.0 || ^19.0.0`。
+2. 以当前解析到的 `@qfei-design/make-app-mobile` `package.json` 为准，验证 Node、React 和 React DOM 满足其 `engines` 与 peer dependencies；当前 `0.1.9` 包要求 Node `>=22.12.0`，React/React DOM 为 `^18.2.0 || ^19.0.0`。
 3. 使用现有 workspace/package-manager 流程在该 UI package 安装；不要在 pnpm 项目生成 `package-lock.json`，也不要在 npm/yarn 项目引入 Corepack 或 pnpm。宿主直接导入图标时才声明直接依赖 `lucide-react`；保留已有兼容版本，不做无关图标迁移。
 4. 若 Node/peer 版本、workspace 位置、包管理器或 lockfile 不满足，停止安装并报告兼容性 blocker；运行时或 package-manager 迁移必须交给 `make-app-runtime`，只有用户明确要求迁移时才能进行。
 
-已有项目若版本低于 `0.1.7`，仅在以上门禁通过后升级，并复跑宿主测试、类型检查和构建。下述字段、选择、日期控件及表单提交栏合同以 `0.1.7` 为最低版本；包内通用安装示例若仍使用更低版本范围，不得据此降低本 Skill 的基线。
+已有项目若实际安装版本低于 `0.1.9`，仅在以上门禁通过后升级，并复跑宿主测试、类型检查和构建。下述字段、选择、日期控件及表单提交栏合同仍以 `0.1.7` 为最低 API 版本，但移动视觉交付须满足 `0.1.9` 基线及安装产物校验；包内通用安装示例若仍使用更低版本范围，不得据此降低本 Skill 的视觉基线。
 
-在目标 UI package 工作目录运行 `node -p "require('node:path').dirname(require('node:path').dirname(require.resolve('@qfei-design/make-app-mobile')))"`，定位该 App 实际安装的包根目录；再在本 Skill 安装目录运行 `node scripts/verify-mobile-package-surface.mjs <已安装包根目录>`。该脚本检查安装产物中可编辑输入的字号声明及聚焦覆盖、已选区 `pinch-zoom`，并用包公开组件渲染无状态、待上传和失败附件。静态校验不能替代聚焦状态的实际计算字号检查；真实 iOS Safari 与飞书 WebView 页面验收仍是交付条件。不要用组件包源码工作树或另一个 App 的 `node_modules` 代替目标 App 的安装产物。校验失败是 package 依赖阻断，不得声称移动端适配完成或符合当前 iOS 输入要求；也不得通过覆盖包内部 class、禁用 viewport 缩放或复制组件来绕过。等待符合合同的包版本发布并在目标 App 安装后重跑校验，再继续真实 iOS Safari、飞书 WebView、Android 与桌面回归。
+在目标 UI package 工作目录运行 `node -p "require('node:path').dirname(require('node:path').dirname(require.resolve('@qfei-design/make-app-mobile')))"`，定位该 App 实际安装的包根目录；再在本 Skill 安装目录运行 `node scripts/verify-mobile-package-surface.mjs <已安装包根目录>`。该脚本检查安装版本不低于 `0.1.9`、可编辑输入的字号声明及聚焦覆盖、已选区 `pinch-zoom`、附件上传入口的 48px 固定高度，并用包公开组件渲染无状态、待上传和失败附件。静态校验不能替代聚焦状态的实际计算字号检查；真实 iOS Safari 与飞书 WebView 页面验收仍是交付条件。不要用组件包源码工作树或另一个 App 的 `node_modules` 代替目标 App 的安装产物。校验失败是 package 依赖阻断，不得声称移动端适配完成或符合当前 iOS 输入要求；也不得通过覆盖包内部 class、禁用 viewport 缩放或复制组件来绕过。等待符合合同的包版本发布并在目标 App 安装后重跑校验，再继续真实 iOS Safari、飞书 WebView、Android 与桌面回归。
 
 安装后先读取包内 `package.ai.json`、`PUBLIC_API.md` 和 `package.ai.json.readOrder` 指向的所需文档，并在 UI 入口只导入一次：
 
@@ -160,7 +160,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 
 升级移动组件包后，在宿主项目完成以下检查：
 
-1. 检查实际 UI package 的依赖声明、lockfile 和解析到的包版本，确认至少满足 `0.1.7` API 基线；再针对该安装产物运行 `scripts/verify-mobile-package-surface.mjs`，确认 iOS 输入、缩放手势和附件状态实际满足当前视觉合同。任一检查失败，停止并报告 package blocker，不以本地组件包源码工作树或静态文档测试替代。
+1. 检查实际 UI package 的依赖声明、lockfile 和解析到的包版本，确认至少满足 `0.1.9` 视觉交付基线；再针对该安装产物运行 `scripts/verify-mobile-package-surface.mjs`，确认 iOS 输入、缩放手势、附件状态和 48px 上传入口实际满足当前视觉合同。任一检查失败，停止并报告 package blocker，不以本地组件包源码工作树或静态文档测试替代。
 2. 对使用 Vite 的宿主，重启当前 UI package 的 Vite 开发服务，并向 Vite 传入 `--force` 强制重新预构建依赖。沿用原包管理器、配置、端口和启动流程；若 pnpm 的 UI `dev` 脚本直接运行 Vite，可用 `corepack pnpm run dev --force`。编排脚本必须将参数传到 Vite，不能只重启外层进程或依赖 HMR。
 3. 浏览器开发者工具中临时禁用缓存并重新加载真实页面，确认新依赖已加载；检查结束后恢复缓存设置。Vite 的处理依据见[依赖预构建与缓存说明](https://vite.dev/guide/dep-pre-bundling#caching)。
 4. 在真实页面分别验证人员和部门的单选、多选：单选无“确定”，选择后立即写回并关闭，从有值状态移除或清除后提交空值并关闭；多选操作只改组件临时草稿，取消不提交，只有“确定”提交快照。核对人员头像／回退首字、部门圆形简称、顶部已选横向滚动、勾选标记不溢出，以及编辑触发器中的多值换行标签；同时核对每次提交的 `onChange`/`onBlur` 调用次数及最终表单值。

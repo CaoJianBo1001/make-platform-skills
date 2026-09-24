@@ -98,6 +98,13 @@ export const assertIosPackageCss = (css) => {
   }
 };
 
+export const assertAttachmentUploadCss = (css) => {
+  const rules = parseCssRules(css);
+  const selector = '.make-app-mobile-attachment-field__upload';
+  assert.equal(declarationFor(rules, selector, 'box-sizing'), 'border-box', 'attachment upload height must include its padding and border');
+  assert.equal(declarationFor(rules, selector, 'height'), '48px', 'attachment upload entry must have a fixed 48px height');
+};
+
 export const assertAttachmentHtml = ({ saved, pending, retry, failed }) => {
   assert.doesNotMatch(
     saved,
@@ -136,10 +143,11 @@ export const verifyMobilePackageSurface = async (packageRootArgument) => {
     const major = Number(versionMatch[1]);
     const minor = Number(versionMatch[2]);
     const patch = Number(versionMatch[3]);
-    assert.ok(major > 0 || minor > 1 || (minor === 1 && patch >= 7), `expected mobile package >= 0.1.7, received ${version}`);
+    assert.ok(major > 0 || minor > 1 || (minor === 1 && patch >= 9), `expected mobile package >= 0.1.9 for the current visual baseline, received ${version}`);
 
     const css = fs.readFileSync(packageExportPath(packageRoot, packageJson, './styles.css'), 'utf8');
     assertIosPackageCss(css);
+    assertAttachmentUploadCss(css);
 
     const requireFromPackage = createRequire(path.join(packageRoot, 'package.json'));
     const React = requireFromPackage('react');

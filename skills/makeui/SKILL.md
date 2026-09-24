@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, refactoring, or reviewing Make App frontend UI and `apps/ui` React code: app shell, desktop/mobile responsive presentation, `@qfei-design/make-app-mobile`, dynamic object routes, list pages, drawers, task pages, forms, selectors, field metadata, and UI states. New Make Apps receive package-backed mobile adaptation by default unless the user explicitly opts out or requests a custom mobile design. AI助手、MakeAiTheme、maxDrawerWidth 或 assistant SSE must use `make-ai-assistant`; the package owns assistant-internal UI/styles and this skill owns only surrounding layout and placement. Use `canvas-table-integration` for Make record tables, `make-app-actions` for writable actions, `make-app-filter`/`make-app-group`/`make-app-sort` for list behavior, and `make-app-permission` for permission gates. Does not own auth, build/publish, Service runtime, business APIs, permission logic, persistence, DSL, CanvasTable internals, or Make AI assistant package behavior."
 metadata:
-  version: 0.4.18
+  version: 0.4.19
 ---
 
 # makeui
@@ -35,7 +35,7 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 20. Treat missing componentization as a readiness blocker for new Make App UI and non-trivial UI changes. Before reporting ready or complete, verify that `App.tsx` and route/page files only orchestrate and that implementation logic is split into page, shell, feature components, hooks, `lib/service-api`, field display/config adapters, table host, toolbar, and Drawer modules.
 21. Read only the needed reference files from the map below.
 
-For mobile delivery, verify the actually installed package with [`scripts/verify-mobile-package-surface.mjs`](scripts/verify-mobile-package-surface.mjs) after installation. An API-compatible `0.1.7` package alone does not prove the current iOS input and attachment surface; a failed verifier is a package blocker, not permission to override package-internal styles in the host. Follow `references/mobile-defaults.md` for the install and verification boundary.
+For mobile delivery, verify the actually installed package with [`scripts/verify-mobile-package-surface.mjs`](scripts/verify-mobile-package-surface.mjs) after installation. The minimum public API is `0.1.7`, but the current visual delivery baseline is `0.1.9`, including the fixed 48px attachment upload entry; a failed verifier is a package blocker, not permission to override package-internal styles in the host. Follow `references/mobile-defaults.md` for the install and verification boundary.
 
 ## Topic reference map
 
@@ -45,7 +45,7 @@ For mobile delivery, verify the actually installed package with [`scripts/verify
 | Frozen phone product standard and precedence over superseded proposals | `references/mobile-product-baseline.md` |
 | Mobile defaults, smooth desktop/mobile switching, mobile shell/navigation/workbench/task pages/pickers/list end state | `references/mobile-defaults.md` |
 | Phone create/edit/detail field adapters, date/time/select/lookup/file controls, task footer, overlay fit | `references/mobile-form-controls.md` |
-| Installed mobile package iOS input, pinch zoom, and attachment rendering | `scripts/verify-mobile-package-surface.mjs` |
+| Installed mobile package iOS input, pinch zoom, attachment rendering, and 48px upload entry | `scripts/verify-mobile-package-surface.mjs` |
 | Component structure, module boundaries, page decomposition | `references/component-structure.md` |
 | App shell, sidebar, top header, viewport height chain | `references/app-shell-layout.md` |
 | Object list page, toolbar placement, default actions | `references/list-page-layout.md` |
