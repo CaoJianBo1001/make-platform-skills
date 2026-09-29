@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make App Observability"
+  short_description: "Default Trace ID chain and error notices"
+  default_prompt: "Use $make-app-observability to implement and verify the default Trace ID chain for this Make App."

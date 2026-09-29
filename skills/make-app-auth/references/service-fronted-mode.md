@@ -12,9 +12,15 @@ UI -> auth.api('/app/**') -> App Service -> make-gateway -> Make Platform
 
 UI business code calls Service-owned paths such as:
 
+`requestWithTrace` below denotes the App-owned shared adapter described in
+`request-adapter.md`; it adds the default Trace headers without changing the
+`auth.api` route contract.
+
 ```js
-await auth.api.get('/app/schema');
-await auth.api.post('/app/records/customer', payload);
+await requestWithTrace((traceHeaders) =>
+  auth.api.get('/app/schema', { headers: traceHeaders }));
+await requestWithTrace((traceHeaders) =>
+  auth.api.post('/app/records/customer', payload, { headers: traceHeaders }));
 ```
 
 UI must not bypass Service by calling `/data/**`, `/meta/**`, meta/data service domains, or k8s-internal service names directly.

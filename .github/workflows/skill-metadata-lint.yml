@@ -31,3 +31,4 @@ jobs:
             node "$file"
           done
           node skills/make-ai-assistant/scripts/test-audit-make-ai-assistant-project.mjs
+          node skills/make-app-observability/scripts/test-audit-trace-contract.mjs

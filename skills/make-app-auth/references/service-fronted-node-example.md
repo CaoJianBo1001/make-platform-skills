@@ -15,7 +15,9 @@ apps/service/src/makecliPreview.ts  # local-preview adapter only
 ```
 
 Keep all browser business calls behind `auth.api` and the Service-owned
-`/api/make/app/**` namespace:
+`/api/make/app/**` namespace. `requestWithTrace` is the App-owned shared adapter
+from `request-adapter.md`, not an auth SDK export; it creates the request Trace
+headers before calling `auth.api`:
 
 ```ts
 export const auth = createMakeAppAuth({
@@ -24,15 +26,18 @@ export const auth = createMakeAppAuth({
   apiAuthRedirect: true,
 });
 
-export const loadSchema = () => auth.api.get('/app/schema', {
-  credentials: 'include',
-});
+export const loadSchema = () => requestWithTrace((traceHeaders) =>
+  auth.api.get('/app/schema', {
+    credentials: 'include',
+    headers: traceHeaders,
+  }));
 
 export const listRecords = (entityKey: string, payload: unknown) =>
-  auth.api.post(`/app/records/${entityKey}`, payload, {
-    credentials: 'include',
-    headers: { 'X-Make-Target': 'MakeService.ListResources' },
-  });
+  requestWithTrace((traceHeaders) =>
+    auth.api.post(`/app/records/${entityKey}`, payload, {
+      credentials: 'include',
+      headers: { 'X-Make-Target': 'MakeService.ListResources', ...traceHeaders },
+    }));
 ```
 
 ## Route ownership

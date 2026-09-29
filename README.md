@@ -5,10 +5,11 @@ make 平台的 skill
 ```
   npx skills add qfeius/make-platform-skills --all -g
 ```
-# 升级
+# 升级已安装的 skill
 ```
-  npx skills update  qfeius/make-platform-skills
+  npx skills update -g
 ```
+`update` 只更新已安装的 skill；仓库新增加的 skill 需要按对应小节执行 `add`。
 
 ## Skill 路由总览
 
@@ -34,6 +35,7 @@ Codex 判断优先级：
 | Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema `fields/createFields`、records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排、Schema 集合无损传输和按主体隔离缓存，不负责 UI、认证、权限算法、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
 | 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、对象导航、路由权限、按钮权限、字段可新建、可见、可编辑、`creatable`、`createFields`、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、`meta.entity.read` 对象导航、`meta.field.read` 表头和 `data.record.read` 数据行的独立权限，以及 `createFields` 与字段 `creatable/readable/editable` 独立权限、创建提交白名单、路由和按钮权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
 | 登录、认证、Token、统一登录、OAuth、Cookie、Session、logout、401/403、current-context 身份、`tenantName`、飞书容器退出可见性、`/api/make/**` 鉴权请求 | `make-app-auth` | 负责认证、身份上下文与宿主环境信号，不负责账户抽屉布局和打包发布 |
+| Trace ID、`traceparent`、`X-Log-ID`、请求关联日志、网络/HTTP 错误卡片、`@qfei-design/make-app-observability` | `make-app-observability` | 所有新建 Make App 默认接入；负责 UI 到 Gateway 的 Trace ID 链路和公共错误展示，不负责认证、Service 路由、AI 协议或 Trace 后端部署 |
 | 打包、发布、镜像入口、K8s、Service 启动失败、`apps/ui/dist`、`apps/service/dist/server.js`、Service 端口 `3000`、workspace/package.json、`X-Forwarded-Host` | `make-app-runtime` | 只负责运行态和打包发布契约，不负责 Service API、认证实现或 Make adapter 配置语义 |
 | App/Entity/Relation/Field 建模、DSL YAML、对象、字段、关系、选项 | `makedsl` | 只负责 DSL 设计和生成，不负责远端 apply |
 | `makecli` 命令、diff、apply、部署、查看应用/实体/关系/记录、配置 token/server-url | `makecli` | 只负责 Make CLI 操作，不负责 UI/认证实现 |
@@ -51,15 +53,15 @@ Codex 判断优先级：
 - 同时做高级筛选和排序：`make-app-filter` + `make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，共享一次权限感知的 Entity Preset 加载与并发请求协调器，但按维度独立保存；仅关键词搜索不读取或应用 Preset 的筛选维度
 - 做多级分组、拖拽分组或分组表格：`make-app-group` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，必须同时完成权限感知的 Preset 保存/回显、record-groups、groupFilter、CanvasTable 分组和叶子明细分页
 - 同时做高级筛选、分组和排序：`make-app-filter` + `make-app-group` + `make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，共享一次权限感知的 Entity Preset 加载与并发请求协调器，但按维度独立保存；仅关键词搜索不读取或应用 Preset 的筛选维度
-- 做 Make App AI 助手或 AI 对话框：`make-ai-assistant` + `makeui` + `make-app-service` + `make-app-auth` + `make-app-permission`，需要发布或接口域名注入时加 `make-app-runtime`；`make-ai-assistant` 主责公开包接入、Make App v1 契约、多会话、SSE、文件图片上传与包内 UI
+- 做 Make App AI 助手或 AI 对话框：`make-ai-assistant` + `makeui` + `make-app-service` + `make-app-auth` + `make-app-permission` + `make-app-observability`，需要发布或接口域名注入时加 `make-app-runtime`；`make-ai-assistant` 主责公开包接入、Make App v1 契约、多会话、SSE、文件图片上传与包内 UI，JSON/SSE/二进制请求沿用默认 Trace 链路
 - 做 UI 需要的 Service 接口：`make-app-service` + `makeui`
 - 做 Make 项目默认权限体系：`make-app-permission` + `make-app-service` + `make-app-auth` + `makeui`，涉及表格编辑时加 `canvas-table-integration`
 - 做一个登录后的页面：`makeui` + `make-app-auth`
-- 做新 Make App 的桌面/移动双端 UI：`makeui` + `make-app-permission` + `make-app-auth`；移动端不是可选项，除非用户明确退出或指定特殊定制，否则默认接入 `@qfei-design/make-app-mobile@^0.1.9` 并遵循冻结的 Make App 手机视觉与交互基线。`0.1.7` 只是最低 API 版本，当前视觉交付至少需要 `0.1.9`，已安装包还必须通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs` 的 iOS 输入与附件视觉校验，失败时报告包依赖阻断。手机对象列表默认卡片化，不显示 CanvasTable、分组、排序、记录多选或批量操作；表格、操作、筛选、AI 助手再按对应 Skill 组合
+- 做新 Make App 的桌面/移动双端 UI：`makeui` + `make-app-permission` + `make-app-auth` + `make-app-observability`；移动端不是可选项，除非用户明确退出或指定特殊定制，否则默认接入 `@qfei-design/make-app-mobile@^0.1.9` 并遵循冻结的 Make App 手机视觉与交互基线。`0.1.7` 只是最低 API 版本，当前视觉交付至少需要 `0.1.9`，已安装包还必须通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs` 的 iOS 输入与附件视觉校验，失败时报告包依赖阻断。手机对象列表默认卡片化，不显示 CanvasTable、分组、排序、记录多选或批量操作；表格、操作、筛选、AI 助手再按对应 Skill 组合
 - 做 Service-fronted 登录后接口：`make-app-service` + `make-app-auth`
 - 打包发布失败或 Service 启动失败：`make-app-runtime`
 - 新增对象字段并部署：`makedsl` + `makecli`
-- 新建完整 Make App：默认包含 `make-app-permission` 和 `make-app-actions`，通常组合 `makedsl` + `makecli` + `make-app-auth` + `make-app-service` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-actions`
+- 新建完整 Make App：默认包含 `make-app-observability`、`make-app-permission` 和 `make-app-actions`，通常组合 `makedsl` + `makecli` + `make-app-auth` + `make-app-service` + `make-app-permission` + `make-app-observability` + `makeui` + `canvas-table-integration` + `make-app-actions`
 
 ## 可用 Skill 列表
 
@@ -317,6 +319,24 @@ npx skills update make-app-runtime
 - 约束 `apps/service/src/server.ts` 必须构建出 `apps/service/dist/server.js`
 - 约束 `apps/service/package.json` 的 `build/start` 和 `apps/service/tsconfig.json`
 - 约束 Service 固定端口 `3000` 在启动配置中的落实，以及发布前构建契约测试；Make adapter 环境变量/config 语义交给 `make-app-service`
+
+### make-app-observability
+所有新建 Make App 的默认 Trace ID 规范。覆盖 UI 业务请求的 `traceparent` / `X-Log-ID`、Service 校验与响应、Make Gateway 传递、安全关联日志，以及公共错误卡片的 Trace ID 展示。安装公共包不等于完成 Trace 链路；集中式 Trace 后端导出不在此 Skill 范围内。
+
+#### 首次安装新增 skill
+```bash
+npx skills add qfeius/make-platform-skills --skill make-app-observability -g
+```
+
+#### 后续升级
+```bash
+npx skills update make-app-observability -g
+```
+
+**使用场景**
+- 新建 Make App 时默认接入 Trace 链路；存量 App 在业务请求、AI transport、错误出口或发布门禁改造中核对相关链路
+- 使用 `@qfei-design/make-app-observability` 统一 HTTP、网络和业务错误展示
+- 运行 `scripts/audit-trace-contract.mjs`，并将项目本地 `trace:audit` 纳入发布前检查
 
 ### make-app-auth
 指导 Make App 前端接入 `@qfeius/make-app-auth`，只保留统一登录模式，覆盖 `/api/make/**` 鉴权请求、401/403、logout、current-context 身份、飞书容器退出可见性和 Cookie/Session/redirect 排障。

@@ -2,7 +2,7 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.3
+  version: 0.2.4
 ---
 
 # make-app-service
@@ -54,6 +54,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 ## Scope boundary
 
 - `make-app-service` defines Service-owned app APIs such as schema, records, candidates, lookup options, file proxy, and thin custom orchestration.
+- Every new Make App Service uses `make-app-observability` for the default request Trace ID: validate or create it at the boundary, return `X-Log-ID`, carry safe context into logs, and forward only validated trace headers to Make Gateway. This Skill owns the route and adapter implementation, while `make-app-observability` owns the cross-boundary invariant and audit.
 - It may document route names, query/body shapes, response envelopes, and adapter behavior.
 - It may define Service-side Make adapter config semantics and environment variable names used by Service source, such as `MAKE_APP_KEY` and `MAKE_API_BASE_URL`, while leaving deployment injection to runtime/operations.
 - It must not decide authentication implementation or OAuth/session mechanics; those belong to `make-app-auth`. It may still mount and document the App Service auth proxy path required by the host contract, normally `/api/make/auth/**` and `/api/make/oauth/**` for Make Deploy Service-fronted Apps that use `gatewayBaseUrl: "/api/make"`.
