@@ -2,7 +2,7 @@
 
 Use this reference when mounting the package `AdvancedFilterPanel` inside a host UI.
 
-Desktop/tablet uses the Popover defaults below. Phone uses a mobile-safe host sheet with `AdvancedFilterPanel layout="mobile"`, no CanvasTable and no header linkage; it retains the same controller and fixed header/body/footer. The mobile layout is a public package capability, not a host CSS variant. Check field popups, focus, keyboard and scroll containment at 390px/767px through public component APIs; unsupported panel behavior is an adaptation blocker, not permission to copy internals.
+Desktop/tablet uses the Popover defaults below. Phone uses `MobileFilterSheet` from `@qfei-design/make-app-mobile/primitives` with `AdvancedFilterPanel layout="mobile"`, no CanvasTable and no header linkage; it retains the same controller and fixed header/body/footer. The mobile layout is a public package capability, not a host CSS variant. Check field popups, focus, keyboard and scroll containment at 390px/767px through public component APIs; unsupported panel behavior is an adaptation blocker, not permission to copy internals.
 
 ## Placement
 
@@ -23,18 +23,23 @@ Default desktop/tablet trigger:
 
 ## Phone sheet
 
-When filtering is in scope because the user requested it or the project already has it, the phone filter trigger opens a host-owned mobile Sheet (bottom or full-screen according to available height). Otherwise the phone toolbar has search without a filter trigger or package panel. Do not use the desktop Popover, even if it is wrapped by a compact phone toolbar. The same package controller, candidate sources, draft/confirm/persist flow and Service expression remain shared with desktop/tablet, but the package panel receives `layout="mobile"`:
+When filtering is in scope because the user requested it or the project already has it, the phone filter trigger opens the public `MobileFilterSheet` from `@qfei-design/make-app-mobile/primitives`. Otherwise the phone toolbar has search without a filter trigger or package panel. Do not use the desktop Popover, even if it is wrapped by a compact phone toolbar. The same package controller, candidate sources, draft/confirm/persist flow and Service expression remain shared with desktop/tablet, but the package panel receives `layout="mobile"`:
 
 Keep the package's mobile defaults: the header title is `设置筛选条件` and the confirm action is `完成`. Do not override these merely to copy desktop `筛选` / `确认`, and do not force desktop connected inline condition rows onto the phone's grouped touch-friendly cards. Clear remains a draft action; the applied filter changes only after `完成` persists successfully. Keep the header and footer fixed while the condition body scrolls.
 
-Place the following inside a phone host using the `open`, `controller`, `handleOpenChange` and async `handleConfirm` lifecycle from [package-integration.md](package-integration.md). Wire the phone filter trigger to `handleOpenChange(true)`; closing the Sheet uses `handleOpenChange(false)` to discard the draft. The phone must not introduce a second save/apply handler.
+Use the `open`, `controller`, `handleOpenChange` and async `handleConfirm` lifecycle from [package-integration.md](package-integration.md). Wire the phone filter trigger to `handleOpenChange(true)`; closing the Sheet uses `handleOpenChange(false)` to discard the draft. The phone must not introduce a second save/apply handler. The package Sheet owns the `min(82dvh, 720px)` height cap, safe-area space, condition-body scroll boundary, close entry and nested picker stacking. Do not add a second Sheet header or another full-panel scroll wrapper.
 
 ```tsx
-<HostMobileSheet open={open} onClose={() => handleOpenChange(false)}>
+<MobileFilterSheet
+  ariaLabel="设置筛选条件"
+  open={open}
+  onClose={() => handleOpenChange(false)}
+>
   <AdvancedFilterPanel
     layout="mobile"
     candidateSources={candidateSources}
-    components={components}
+    components={mobileFilterComponents}
+    disabled={saving}
     fields={filterableFields}
     value={controller.draftValue}
     validationErrors={controller.validationErrors}
@@ -42,14 +47,27 @@ Place the following inside a phone host using the `open`, `controller`, `handleO
     onClear={controller.clearDraft}
     onConfirm={() => void handleConfirm()}
   />
-</HostMobileSheet>
+</MobileFilterSheet>
 ```
 
-`HostMobileSheet` above is a host-owned placeholder, not a filter-package export. Use an actual public Sheet primitive from the host's UI stack; the filter package does not render the Sheet, mask, close action or safe-area policy. Follow `makeui`'s mobile visual standard for phone-side gutters and safe-area space, constrain the height, and let only the condition body scroll so the header and footer actions stay visible. Verify no horizontal overflow or clipped field/operator/value controls at 390px and 767px, including with the keyboard, long labels and nested groups. The toolbar's medium search/trigger size and the package panel's `size="middle"` are separate contracts; custom field adapters must honor the latter. Before mounting, check that the resolved package React declaration supports `"mobile"`; versions 1.0.0–1.0.3 do not.
+`MobileFilterSheet` comes from the mobile package, not the filter package. The host owns `open`, callbacks, candidate requests, persistence and selection of desktop versus phone View. The Sheet is the sole height and scroll owner; only condition rows scroll while the header and footer remain visible. Verify no horizontal overflow or clipped field/operator/value controls at 390px and 767px, including with the keyboard, long labels and nested groups. The toolbar's medium search/trigger size and at least 44px touch target are separate from the panel's 32px `size="middle"` controls.
+
+Build `mobileFilterComponents` by replacing the phone `Select` adapter with `MobileFilterSelect` from `@qfei-design/make-app-mobile/pickers`; retain the existing UI-library Select on desktop/tablet. Its ordinary options open `MobileOptionPickerSheet`, while `searchable` options open `MobileSearchPickerSheet`. Single selection commits immediately; multiple selection commits only on picker confirmation. Pass through the filter control's `className`, `size`, `status`, `value`, `onChange`, `options` and remote `onSearch`; `MobileFilterSelect` keeps committed labels and previously seen option values during remote-search result replacement. Do not derive the mobile adapter from `size="middle"`, since filter 1.1.0 sends `middle` in every layout.
+
+Forward the `advanced-filter__mobile-control` class supplied only in mobile layout to each date trigger, and convert filter strings to/from the mobile picker's public Dayjs contract without changing the calendar day or time precision:
+
+| Filter adapter | Mobile presentation |
+| --- | --- |
+| `DatePicker` | `MobileDateField` |
+| `DateTimePicker` | `MobileDateTimeField`, preserving required seconds |
+| `DateRangePicker` with `showTime=false` | `MobileDateRangeField` |
+| `DateRangePicker` with `showTime=true` | Compose two public `MobileDateTimeField` controls in a mobile-safe range adapter. Keep both endpoints in a temporary draft and emit the complete string pair through `onChange` only after range confirmation. If the host cannot provide this adapter, report an integration blocker. |
+
+`MobileDateRangeField` has no time-range contract; never use it for `showTime=true`. In the filter Sheet, date triggers get the scoped 32px bordered style; ordinary mobile forms retain their 44px borderless date triggers. Check resolved mobile 0.1.11 and filter 1.1.0 public types before mounting.
 
 ## Host overlay
 
-The package does not render Popover, Modal, Drawer, or scroll containers. The host chooses the mounting surface. Default desktop/tablet Make object lists use a bottom-left Popover; phones use the sheet described above.
+The filter package does not render Popover, Modal, Drawer, or scroll containers. The host chooses the mounting surface. Default desktop/tablet Make object lists use a bottom-left Popover; phones use `MobileFilterSheet` as described above.
 
 Default desktop/tablet host Popover behavior:
 
@@ -72,7 +90,7 @@ Every Make advanced filter popover/panel must preserve the fixed three-region la
 - Desktop/tablet top fixed header: left title `筛选`, right action `清空所有`; the header is outside the scrollable condition area and uses a bottom divider
 - middle body / condition area: contains condition rows and nested condition groups only; it is the only vertical scroll region, and host CSS must set `.advanced-filter__body { overflow-y: auto; }`
 - Desktop/tablet bottom fixed footer: left actions `+ 添加条件` and `+ 添加条件组`, right primary action `确认`; the footer is outside the scrollable condition area and uses a top divider
-- Desktop/tablet container: the host Popover content wrapper clips overflow with `overflow: hidden`, then lets `.advanced-filter__body` scroll inside the max-height panel. Phone uses the host Sheet's own height/safe-area bounds and the package mobile panel layout.
+- Desktop/tablet container: the host Popover content wrapper clips overflow with `overflow: hidden`, then lets `.advanced-filter__body` scroll inside the max-height panel. Phone uses `MobileFilterSheet` height/safe-area bounds and the package mobile panel layout.
 
 Minimum desktop/tablet host CSS (do not apply these Popover dimensions to the phone Sheet):
 
@@ -108,6 +126,7 @@ to both desktop Popover and phone sheet; the example below is only panel wiring.
 <AdvancedFilterPanel
   candidateSources={candidateSources}
   components={components}
+  disabled={saving}
   fields={filterableFields}
   value={controller.draftValue}
   validationErrors={controller.validationErrors}

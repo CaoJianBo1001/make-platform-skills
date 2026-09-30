@@ -57,7 +57,7 @@ Codex 判断优先级：
 - 做 UI 需要的 Service 接口：`make-app-service` + `makeui`
 - 做 Make 项目默认权限体系：`make-app-permission` + `make-app-service` + `make-app-auth` + `makeui`，涉及表格编辑时加 `canvas-table-integration`
 - 做一个登录后的页面：`makeui` + `make-app-auth`
-- 做新 Make App 的桌面/移动双端 UI：`makeui` + `make-app-permission` + `make-app-auth` + `make-app-observability`；移动端不是可选项，除非用户明确退出或指定特殊定制，否则默认接入 `@qfei-design/make-app-mobile@^0.1.9` 并遵循冻结的 Make App 手机视觉与交互基线。`0.1.7` 只是最低 API 版本，当前视觉交付至少需要 `0.1.9`，已安装包还必须通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs` 的 iOS 输入与附件视觉校验，失败时报告包依赖阻断。手机对象列表默认卡片化，不显示 CanvasTable、分组、排序、记录多选或批量操作；表格、操作、筛选、AI 助手再按对应 Skill 组合
+- 做新 Make App 的桌面/移动双端 UI：`makeui` + `make-app-permission` + `make-app-auth` + `make-app-observability`；移动端不是可选项，除非用户明确退出或指定特殊定制，否则默认接入 `@qfei-design/make-app-mobile@^0.1.9` 并遵循冻结的 Make App 手机视觉与交互基线。`0.1.7` 只是最低 API 版本，通用视觉交付至少需要 `0.1.9`，手机高级筛选另需移动包 `0.1.11+` 和筛选包 `1.1.0+`；已安装移动包还必须通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs` 的 iOS 输入与附件视觉校验，失败时报告包依赖阻断。手机对象列表默认卡片化，不显示 CanvasTable、分组、排序、记录多选或批量操作；表格、操作、筛选、AI 助手再按对应 Skill 组合
 - 做 Service-fronted 登录后接口：`make-app-service` + `make-app-auth`
 - 打包发布失败或 Service 启动失败：`make-app-runtime`
 - 新增对象字段并部署：`makedsl` + `makecli`
@@ -183,7 +183,7 @@ npx skills update make-app-filter
 - 设计或修改完整筛选能力：高级筛选弹层、筛选条件组、`且 / 或` 关系和确认提交；desktop/tablet 增加 CanvasTable 表头“按该字段筛选”，手机不展示表头入口
 - 接入或升级 `@qfei-design/make-app-filter@^1.0.0`，先读取 `package.ai.json`，再动态按 `package.ai.json.readOrder` 读取实际发布的包文档，不硬编码 `docs/` 或 `examples/` 内部路径
 - `search-only` 只用包 core 的 `compileListFilter({ fields, searchText })`；不读取或写入筛选 Preset、不挂载 Controller／面板，也不要求移动面板布局 API
-- `advanced-filter` 使用包内 core、React panel、Controller、所需 adapter 和 `styles.css`；手机须先确认已安装包的公开 API 支持 `layout="mobile"`，否则升级或报告 blocker；禁止复制或手写本地筛选模型、操作符矩阵、校验器、CEL compiler/parser 或高级筛选面板
+- `advanced-filter` 使用包内 core、React panel、Controller、所需 adapter 和 `styles.css`；手机须确认筛选包 `1.1.0+` 与移动包 `0.1.11+` 的公开 API，使用 `MobileFilterSheet`、`MobileFilterSelect` 和 `layout="mobile"`，否则升级或报告 blocker；禁止复制或手写本地筛选模型、操作符矩阵、校验器、CEL compiler/parser 或高级筛选面板
 - 根据 Make 字段类型使用包内筛选操作符和值编辑器
 - 两种模式都通过包内 `compileListFilter` 生成 Service 可消费的 `filter.expression`；只有 `advanced-filter` 才合并已应用的高级筛选
 - 对齐后端 Record 列表筛选：新请求使用 `filter: { expression }`，无有效表达式时省略 `filter`，不生成 `[]`、`{}`、空表达式或旧对象 DSL

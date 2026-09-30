@@ -14,13 +14,17 @@ including hidden instances. Compiler, permission-aware Preset and draft/confirm
 tests apply to both desktop/tablet and phone presentations of advanced filtering; phone does not inherit desktop Popover placement or
 refresh-button expectations.
 
-At 390px and 767px on a real phone View, open the filter trigger and verify the package panel uses `layout="mobile"` inside a host Sheet, not a Popover. Confirm the sheet fits the viewport and safe area, field/operator/value controls do not overflow horizontally, the condition body scrolls without hiding header/footer actions, keyboard and nested groups remain usable, cancel discards draft, and confirm persists before applying. Also verify the phone toolbar has no separate refresh button/icon; pull-to-refresh preserves the applied filter and current search. Desktop/tablet Popover and toolbar refresh remain available.
+At 390px and 767px on a real phone View, open the filter trigger and verify the package panel uses `layout="mobile"` inside `MobileFilterSheet`, not a Popover. Confirm the Sheet fits the viewport and safe area, field/operator/value controls do not overflow horizontally, the condition body scrolls without hiding header/footer actions, keyboard and nested groups remain usable, nested option/date pickers appear above the filter Sheet, cancel discards draft, and confirm persists before applying. Also verify the phone toolbar has no separate refresh button/icon; pull-to-refresh preserves the applied filter and current search. Desktop/tablet Popover and toolbar refresh remain available.
+
+For mobile advanced filtering, confirm the resolved packages are filter `1.1.0+` and mobile `0.1.11+`, and that the installed public exports include `MobileFilterSheet`, `MobileFilterSelect` and the date trigger `className`. In the filter panel, inspect the actual 32px middle-height field/operator/value/Select/date controls and confirmation action; the toolbar still provides a separate at least 44px touch target. Exercise single Select immediate commit, multi Select cancel/confirm, clear, validation errors, and 远程搜索替换候选后已选值的可读回显与最终提交值。检查日期触发器与 Select 等高、边框完整，而普通移动表单日期触发器仍是 44px 的无边框样式。Search-only does not require these packages or checks.
+
+The filter `1.1.0` stylesheet also changes the desktop/tablet relation selector from 24px to 32px. After upgrading a shared host dependency for phone filtering, inspect the desktop/tablet connected relation row, nested group controls, keyboard focus, Popover scroll and confirmation flow. Retain the same controller, Preset and `filter.expression` behavior; a package version upgrade is not evidence that the historical desktop view still fits.
 
 ## Required tests or deterministic checks
 
 Package source:
 
-- `apps/ui/package.json` depends on `@qfei-design/make-app-filter@^1.0.0` or newer
+- `apps/ui/package.json` depends on `@qfei-design/make-app-filter@^1.0.0` or newer; phone advanced filtering resolves `@qfei-design/make-app-filter@^1.1.0` and `@qfei-design/make-app-mobile@^0.1.11`
 - advanced-filter UI entry imports `@qfei-design/make-app-filter/styles.css`; search-only compiler use does not require panel styles
 - local advanced-filter shim, if any, imports from `@qfei-design/make-app-filter`
 - host code does not contain copied Filter IR types, operator matrix, CEL compiler/parser, validator, or `AdvancedFilterPanel` clone
@@ -52,7 +56,9 @@ Compiler integration:
 UI behavior:
 
 - desktop/tablet toolbar buttons remain in order: search, `筛选`, `刷新`
-- phone `layout="mobile"` shows package defaults `设置筛选条件` and `完成` inside the host Sheet; its condition cards must not inherit the desktop connected-row CSS or Popover dimensions
+- phone `layout="mobile"` shows package defaults `设置筛选条件` and `完成` inside `MobileFilterSheet`; its condition cards must not inherit the desktop connected-row CSS or Popover dimensions
+- phone `MobileFilterSelect` opens the appropriate option/search picker above `MobileFilterSheet`; remote candidate replacement keeps selected business values and readable labels, and pending values remain clearable
+- phone custom adapters forward the mobile-scoped `className` instead of treating `size="middle"` as a mobile signal; filter panel controls and date triggers are 32px, while normal mobile form date controls remain 44px
 - opening with no conditions inserts one default draft condition through `beginDraft`
 - package panel renders inside a host-owned container
 - desktop/tablet host Popover uses max height rather than fixed initial height; phone Sheet uses viewport/safe-area bounds
@@ -114,6 +120,9 @@ Service and integration:
 - table scroll leaves a floating header menu in the wrong place
 - unsupported fields still show `按该字段筛选`
 - host CSS forks package internals and breaks future package fixes
+- a generic host Sheet adds a duplicate header, lets its entire content scroll, or places nested pickers under the filter mask instead of using `MobileFilterSheet`
+- a phone Select reuses the desktop popup, loses selected values during remote search, or commits multi-selection before confirmation
+- an adapter drops the mobile-scoped `className`, causing a 44px borderless form date trigger or inconsistent control heights inside the 32px filter panel
 - fixed value controls remain red after the user enters or selects a valid value
 - changing an operator to empty/not-empty leaves an old value error on the row
 - missing fixed top header and bottom footer, or placing header/footer actions inside the scrollable condition body, is a blocker/regression for advanced filter delivery
