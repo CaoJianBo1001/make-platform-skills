@@ -114,6 +114,9 @@ Recommended pattern:
 - decimal overflow rejects commit, keeps the editor active, and must not call the save API, create dirty state, or backfill canvas data. Surface the error through a tooltip or host external validation area because visible helper text does not belong inside the active cell
 - do not silently round or clamp extra decimal places. Rounding is allowed only when an explicit host project product/backend contract requires it, and the normalized value must be written back into the visible editor before commit
 - parser failures are invalid editor state. Do not commit, backfill, display, or submit `NaN`/`Infinity`; show validation or close/cancel according to the host edit flow.
+- keep the last committed digits and cell value intact while an IME composes invalid text, including when composition replaces selected digits. Do not strip invalid draft text and save the shortened remainder. An invalid final candidate must not create a dirty cell or call the save API; accept a changed numeric candidate that passes the existing raw-text and precision rules exactly once in the editor, then apply the normal unchanged-value save check
+- when Enter selects an unfinished IME candidate, do not treat that key press as a cell commit. After composition ends, ordinary Enter commit, Backspace/Delete, numeric entry, and supported formatting or paste must still work
+- test invalid composition over selected digits, valid numeric composition, trailing browser input events, and Enter candidate selection in the host editor. If the issue was reported for a specific browser and IME, verify that environment before claiming it fixed; synthetic events do not prove the browser's event order
 
 Typical concerns:
 
@@ -125,7 +128,7 @@ Typical concerns:
 
 Good defaults:
 
-- `Enter` may commit for simple number editors, similar to text fields.
+- `Enter` may commit for simple number editors after IME composition has finished, similar to text fields.
 - `Escape` should cancel without writing the candidate value.
 - Do not pre-format the row data into a display string before it reaches the editor; that often makes initial values and submit payloads brittle.
 - Do not submit formatted values such as `¥3.005`, `3.005%`, or `85%`. If the field allows only two decimals, `3.005` is invalid by default: keep editing, show `最多保留 2 位小数`, and do not call the save API. Only an explicitly documented rounding contract may convert it to `3.01`, and that visible value must be confirmed in the editor before commit.

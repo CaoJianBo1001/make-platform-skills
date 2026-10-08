@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, refactoring, or reviewing Make App frontend UI and `apps/ui` React code: app shell, desktop/mobile responsive presentation, `@qfei-design/make-app-mobile`, dynamic object routes, list pages, drawers, task pages, forms, selectors, field metadata, and UI states. New Make Apps receive package-backed mobile adaptation by default unless the user explicitly opts out or requests a custom mobile design. AI助手、MakeAiTheme、maxDrawerWidth 或 assistant SSE must use `make-ai-assistant`; the package owns assistant-internal UI/styles and this skill owns only surrounding layout and placement. Use `canvas-table-integration` for Make record tables, `make-app-actions` for writable actions, `make-app-filter`/`make-app-group`/`make-app-sort` for list behavior, and `make-app-permission` for permission gates. Does not own auth, build/publish, Service runtime, business APIs, permission logic, persistence, DSL, CanvasTable internals, or Make AI assistant package behavior."
 metadata:
-  version: 0.4.21
+  version: 0.4.22
 ---
 
 # makeui
@@ -91,6 +91,7 @@ For mobile delivery, verify the actually installed package with [`scripts/verify
 - If object/field metadata is missing or inconsistent, show a visible UI dependency/error state and report the missing dependency. Do not invent business API paths, parse local DSL, or create fake user/department/business fallback data in `makeui`.
 - Schema, data, route, and render failures must resolve to visible object-shell states: loading, empty, error, forbidden, expired-session, retry, not-found, or render-error. Do not let exceptions become a blank page.
 - `Make.Field.Number`, `Make.Field.Currency`, and `Make.Field.Percent` form adapters must enforce schema decimal limits before submit: `Number.precision`, `Currency.decimalPlaces`, and `Percent.decimalPlaces`. Preserve the raw plain-decimal input text and validate its decimal places before parsing; only then produce a finite number or backend-approved pure numeric string. Decimal overflow must produce a field-level `最多保留 N 位小数` error and block that invalid submit plus its persistence request; unrelated read-only metadata and candidate requests remain available. Do not silently round unless the host project explicitly documents that rounding policy.
+- Numeric form controls must preserve the last committed digits when an IME composition inserts invalid text; a temporary composition draft must not be parsed into a shorter value. Follow the behavior and verification guidance in `references/component-usage.md` under “Numeric input and IME composition” for desktop/tablet controls and phone text inputs.
 
 ### Form field controlled contract
 

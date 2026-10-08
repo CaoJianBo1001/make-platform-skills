@@ -72,7 +72,7 @@ For popup editors, do not implement a separate host global outside-click listene
 Common keyboard semantics:
 
 - `Escape` -> cancel-style exit
-- `Enter` -> commit-style exit, often then move to another cell
+- `Enter` -> commit-style exit after any IME composition finishes, often then move to another cell. Enter used to select an IME candidate must not close or save the cell
 - `Tab` -> commit-style exit, often then move horizontally
 
 These rules should stay consistent across field editors.
