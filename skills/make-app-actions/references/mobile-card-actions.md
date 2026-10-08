@@ -40,7 +40,7 @@ const state = resolveRecordSelectionActionState({
 
 ## 单条编辑
 
-1. 从点击的卡片记录冻结不可变目标：对象 key、记录 ID、权限 `data.record.update`、`selectAllMode=false`、`recordIDList=[recordID]` 以及当前权限 generation。不要从任何桌面选择快照读取目标。
+1. 在发起异步预检前，从点击的卡片记录冻结不可变目标：对象 key、记录 ID、权限 `data.record.update`、`selectAllMode=false`、`recordIDList=[recordID]` 以及当前操作与权限 generation。不要从任何桌面选择快照读取目标。
 2. 使用包 core 校验当前缓存的 App 权限和本地记录权限。
 3. 对冻结目标调用一次 `record-write-permission` Service 预检；拒绝或响应过期时不打开编辑页。
 4. 预检允许且 generation 仍匹配时，进入该记录的编辑全屏任务路由。
@@ -50,7 +50,7 @@ const state = resolveRecordSelectionActionState({
 
 1. 从点击的卡片记录冻结与编辑相同形状的单条目标，权限改为 `data.record.delete`。
 2. 用包 core 校验当前缓存权限和本地记录权限，然后打开手机确认框；确认框由 `makeui` 使用 `MobileConfirmDialog` 承载。
-3. 用户确认后，对冻结目标调用一次 `record-write-permission` 预检，再调用宿主删除 Service 接口。删除接口保留最终权威鉴权；不得只依赖预检。
+3. 用户确认后，对冻结目标调用一次 `record-write-permission` 预检；仅当结果允许且目标仍有效时，才调用宿主删除 Service 接口。最终删除记录 ID 必须与预检的冻结记录 ID 相同。删除接口保留最终权威鉴权；不得只依赖预检。
 4. 异步期间锁定重复确认。失败时保留可恢复反馈，不做逐记录诊断；成功后关闭确认框并刷新当前列表。
 
 手机卡片没有 CanvasTable 行颜色可用。权限拒绝使用安全的 toast/消息并保持当前卡片列表；不要为了“爆红”而引入 CanvasTable 或自造持久选择状态。
@@ -78,10 +78,12 @@ const state = resolveRecordSelectionActionState({
 | `stale-precheck` | 任意 | 任意 | 丢弃结果，不打开任务页且不删除记录 |
 
 这个矩阵同时适用于缓存 App 权限、记录权限和异步预检的最终合并结果。任何拒绝都不能通过隐藏按钮之外的入口绕过，任何迟到允许也不能重新激活已经失效的目标。
+另用同对象连续点击 A→B、A→B→A 验证目标切换：B 先返回或 A 后返回时，只有最后点击的目标可继续；旧允许、拒绝、报错都不得打开页面、弹旧提示或覆盖当前状态。
 
 ## 并发与模式切换
 
-- 操作快照在任何异步预检前冻结；对象、身份、租户、权限 generation 或目标记录变化时使结果失效。
+- 操作快照在任何异步预检前冻结，每次有效的单记录点击使用新的操作 generation；对象、身份、租户、权限 generation、展示模式或目标记录变化时使结果失效。同一记录重复确认可锁定；点击另一条记录时须立即使前一目标的待处理预检失效，不能因旧预检仍在进行就保留旧目标为当前目标。即使目标从 A→B→A 回到同一记录，第一次 A 的结果仍已失效。
+- 预检允许仅对冻结的目标有效。进入编辑路由或执行最终删除前，再核对当前目标及其 generation；最终写接口的对象和记录 ID 必须与有效的冻结目标一致。
 - 从手机切到 desktop/tablet 不得让迟到的预检打开错误 Drawer；从 desktop/tablet 切到手机也不得把已选多条记录转成手机操作目标。
 - 成功更新或删除后按宿主既有缓存失效策略刷新；失败不应清空无关筛选、搜索或表单草稿。
 - Service 入口、失败和关键分支日志遵循 `make-app-service`，只记录安全上下文和数量，不记录完整业务数据或凭证。
@@ -93,4 +95,5 @@ const state = resolveRecordSelectionActionState({
 - 从手机详情点击编辑时，允许结果直接进入当前记录的编辑路由；列表不得在中间渲染或成为必经路由，预检拒绝时仍停留在详情。
 - 点击卡片主体只打开详情，不产生记录选择；桌面→手机→桌面后没有残留的表格选择、批量目标或迟到预检结果。
 - 快速切换对象、身份、权限 generation 或宽度时，迟到预检不会打开或删除错误记录。
+- 用人为延迟的预检覆盖同对象 A→B、A→B→A、逆序返回，以及旧允许／拒绝／报错；断言只对当前目标导航、提示或写入，且最终写入 ID 与预检 ID 一致。任一项失败，单记录操作不得标为验收通过。
 - desktop/tablet 原 CanvasTable 多选、批量编辑、行级反馈和选择生命周期保持不变。

@@ -106,7 +106,7 @@ assert.deepEqual(
 );
 
 assert.match(skill, /references\/mobile-defaults\.md/);
-assert.match(skill, /metadata:\s*\n\s*version:\s*0\.4\.20/);
+assert.match(skill, /metadata:\s*\n\s*version:\s*0\.4\.21/);
 assert.match(skill, /references\/mobile-form-controls\.md/);
 assert.match(skill, /references\/mobile-product-baseline\.md/);
 assert.match(skill, /references\/mobile-visual-standard\.md/);
@@ -558,8 +558,8 @@ assert.match(
 );
 assert.match(
   pageRouteLayout,
-  /(任务路由|task route)[^\n]*(隐藏|hide)[^\n]*(底部 Tab|bottom tabs)[^\n]*(FAB|悬浮新建)[^\n]*(AI)/i,
-  'root navigation and floating entries must be hidden on phone task routes',
+  /(任务路由|task route)[^\n]*(同一渲染周期|same render cycle)[^\n]*(卸载|unmount)[^\n]*(底部 Tab|bottom tabs)[^\n]*(FAB|悬浮新建)[^\n]*(AI)[^\n]*(公开|public)[^\n]*(可交互|interactive)/i,
+  'root entries must unmount and the public AI launcher must be noninteractive on phone task routes',
 );
 assert.match(
   pageRouteLayout,
