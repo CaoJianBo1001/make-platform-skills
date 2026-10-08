@@ -265,7 +265,7 @@ Post-edit scroll preservation:
 
 Recommended `autoClose` split:
 
-- single-line text and number: `{ outsideClick: "commit", escape: "cancel", enter: "commit", tab: "commitAndMove" }`
+- single-line text and number: `{ outsideClick: "commit", escape: "cancel", enter: "commit", tab: "commitAndMove" }`. The Enter commit applies only after IME composition finishes. Enter used to select an IME candidate must not close or save the cell; use the installed public keyboard/close contract to preserve this exception instead of unconditional Enter commit. If that public contract cannot distinguish a composing Enter, report an integration blocker rather than patching CanvasTable internals.
 - textarea / multiline text: outside click commits, Escape cancels, Tab commits and moves; Enter should stay inside the editor when multiline input is enabled
 - popup editors: `{ outsideClick: "commit", escape: "cancel", enter: "ignore", tab: "commitAndMove" }`
 

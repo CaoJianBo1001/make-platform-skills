@@ -3,6 +3,10 @@
 CanvasTable selection, scheme-two, row-color and batch tests below apply to
 desktop/tablet. Phone card/detail tests follow `mobile-card-actions.md`; shared
 permission independence and final Service authorization remain required.
+For phone single-record actions, also run its delayed-precheck A→B and A→B→A
+cases, including reversed completion and stale allow/deny/error; check the
+final write target against the frozen precheck target. Do not apply these
+single-record cases to CanvasTable batch-selection behavior.
 
 ## TDD order
 

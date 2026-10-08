@@ -7,6 +7,7 @@
 - [Default candidate mapping](#default-candidate-mapping)
 - [Make field-metadata-driven components](#make-field-metadata-driven-components)
 - [Make field properties contract](#make-field-properties-contract)
+- [Numeric input and IME composition](#numeric-input-and-ime-composition)
 - [Host form controlled field contract](#host-form-controlled-field-contract)
 - [Detail value display](#detail-value-display)
 - [Table component rule](#table-component-rule)
@@ -191,6 +192,17 @@ Form validation owns decimal-limit failures before persistence. Do not treat a D
 - Empty/null handling remains owned by required/optional validation. Skip decimal-place counting for an empty raw input; for every non-empty value, validate raw syntax and decimal places before parsing.
 
 For desktop/tablet Ant Design, `InputNumber.precision` can constrain the control, but the adapter still needs a raw-text buffer and field-level validation because formatter/parser behavior may normalize input before submit. Desktop/tablet Arco, shadcn, and project-owned NumberInput components must provide equivalent behavior. Phone text inputs reuse the same validation helper, not the desktop numeric control.
+
+### Numeric input and IME composition
+
+Apply this behavior to `Number`, `Currency`, and `Percent` form controls on desktop/tablet and phone, including project-owned controlled numeric inputs. Keep it at the control/adapter boundary; the raw-text precision and submit-value rules above still apply.
+
+- While an IME is composing, do not commit its interim text as a numeric value. If composition temporarily replaces selected digits with Pinyin, Chinese characters, or other invalid text, the last committed number must remain intact. Stripping invalid characters and parsing the remainder must not turn that temporary draft into a shorter committed number.
+- When composition finishes, an invalid candidate leaves the committed value and displayed digits unchanged, with the user's caret or selection restored where practical. Accept a changed numeric candidate that passes the host field contract exactly once; a following browser input event for the same composition must not submit it twice or discard an independent subsequent edit.
+- Keep ordinary digit entry, explicit Backspace/Delete, and supported numeric formatting or paste behavior working after either outcome. Invalid text entered without an IME must also leave the existing digits intact rather than silently deleting them.
+- Cover invalid composition over selected digits, a valid numeric composition, any trailing input event, and normal deletion afterward in controlled-component tests. When the defect is reported for a particular browser and IME, reproduce those steps there before claiming the browser-specific defect resolved; synthetic DOM events alone do not establish its actual event order.
+
+These are observable requirements, not a mandated `compositionend` or `inputType` event sequence. Follow the installed control library's public API and the host's existing value contract.
 
 ## Host form controlled field contract
 
