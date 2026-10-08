@@ -10,7 +10,7 @@ established; sibling sort/group Preset work remains owned by their Skills.
 
 ## Package version baseline
 
-Use `@qfei-design/make-app-filter@^1.0.0` for new Make advanced-filter integrations. This is the validated baseline for Lookup filtering with source-field CEL expressions and the package `AdvancedFilterPanel` fixed header/body/footer structure. If the host has an older package version, upgrade before implementing the advanced filter instead of relying on older package behavior.
+Use `@qfei-design/make-app-filter@^1.0.0` for compiler-only and desktop/tablet advanced-filter integrations. This baseline covers Lookup filtering with source-field CEL expressions and the fixed panel structure. Phone advanced filtering uses `@qfei-design/make-app-filter@^1.1.0` and `@qfei-design/make-app-mobile@^0.1.11` together. The mobile package adds the filter Sheet and Select in 0.1.10, then the 32px Select/date-trigger fit and direct date-trigger `className` in 0.1.11. Filter 1.1.0 makes all injected `middle` controls 32px and marks controls in `layout="mobile"` with a mobile-scoped class. Verify the resolved public exports and types before integrating; declared ranges alone are insufficient.
 
 ## Public package surface
 
@@ -63,7 +63,7 @@ On desktop/tablet Make record-list pages, an advanced-filtering request is one i
 
 On desktop/tablet, do not ship only the toolbar package panel or only the table header filter menu.
 
-When advanced filtering is enabled, phone uses the same package panel/controller, Preset and Service `filter.expression`, but only a toolbar entry plus `AdvancedFilterPanel layout="mobile"` inside a mobile-safe host sheet: no CanvasTable or header linkage, including hidden instances. Verify the installed public React declaration includes the `"mobile"` layout; 1.0.0–1.0.3 do not. The Popover/header examples below are desktop/tablet examples; use `ui-style.md` for the phone container without copying panel internals. Search-only phone lists use no filter panel or mobile-layout gate.
+When advanced filtering is enabled, phone uses the same package panel/controller, Preset and Service `filter.expression`, but only a toolbar entry plus `AdvancedFilterPanel layout="mobile"` inside `MobileFilterSheet`: no CanvasTable or header linkage, including hidden instances. Use `MobileFilterSelect` for the phone panel's Select adapter, including remote candidate fields; keep the desktop/tablet adapter unchanged. The Sheet provides one height/scroll boundary, safe-area spacing and nested picker stacking. Verify both packages' actual public declarations. The Popover/header examples below are desktop/tablet examples; use `ui-style.md` for phone composition. Search-only phone lists do not require `MobileFilterSheet`, `MobileFilterSelect`, a panel, or a mobile-layout gate.
 
 ## Lookup schema handoff
 
@@ -121,6 +121,8 @@ import "@qfei-design/make-app-filter/styles.css";
 ```
 
 Use `createAntdFilterComponents` only when the host uses Ant Design. For other component libraries, implement `AdvancedFilterComponents` with host controls instead of adding Ant Design.
+
+Phone advanced-filter composition additionally imports `MobileFilterSheet` from `@qfei-design/make-app-mobile/primitives` and `MobileFilterSelect` from `@qfei-design/make-app-mobile/pickers`, plus the mobile package stylesheet once at the UI entry. Create a separate phone `AdvancedFilterComponents` adapter that replaces `Select` with `MobileFilterSelect`; retain the existing desktop/tablet adapter. Forward `className`, `size`, `status`, `disabled`, candidate options, remote `onSearch`, `value` and `onChange` unchanged. Do not infer mobile presentation from `size="middle"`: filter 1.1.0 uses that size in every layout, while its mobile-scoped class indicates the phone panel. For date/date-time/range adapters, use mobile-safe public pickers rather than a viewport-unsafe desktop popup, forwarding the filter-provided `className` to the trigger and converting the filter's string value to/from the picker's public Dayjs contract at the adapter boundary. The filter `DateRangePicker` also receives `showTime`; `MobileDateRangeField` is date-only, so it cannot stand in for a `showTime=true` range. Compose a mobile-safe time-range adapter from public date-time controls while preserving both endpoints and their precision, or report an integration blocker. Keep the filter IR and CEL compiler package-owned.
 
 ## Minimal host wrapper
 
@@ -227,6 +229,7 @@ function AdvancedFilterPopover({
           <AdvancedFilterPanel
             candidateSources={candidateSources}
             components={components}
+            disabled={saving}
             fields={filterableFields}
             value={controller.draftValue}
             validationErrors={controller.validationErrors}

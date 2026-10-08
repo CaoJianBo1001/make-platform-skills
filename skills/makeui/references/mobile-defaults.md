@@ -10,11 +10,13 @@
 
 ## 包接入与边界
 
-新项目和本次移动端改造的最低 API 基线为 `0.1.7`：它提供普通选项、日期控件、人员／部门字段、附件字段和专用表单提交栏 `MobileFormActionBar`。当前视觉交付基线为 `0.1.9`，其中附件上传入口固定为 48px；API 兼容不等于 iOS 输入与附件视觉合同已经满足，以实际安装产物的校验结果为准。只有 registry 能解析 `0.1.9` 时才执行安装；不可用时不得改装 Git URL、本地目录或复制源码，应报告 package release blocker。新 Make App 或已明确进行运行时迁移的项目先满足 `make-app-runtime` 的固定基线；再在已解析的 UI package 工作目录中通过项目声明的包管理器安装。标准 pnpm 工作区例如：
+新项目和本次移动端改造的最低 API 基线为 `0.1.7`：它提供普通选项、日期控件、人员／部门字段、附件字段和专用表单提交栏 `MobileFormActionBar`。通用视觉交付基线为 `0.1.9`，其中附件上传入口固定为 48px；手机高级筛选另需移动组件包 `0.1.11+` 与筛选包 `1.1.0+`。API 兼容不等于 iOS 输入与附件视觉合同已经满足，以实际安装产物的校验结果为准。只有 registry 能解析所需版本时才执行安装；不可用时不得改装 Git URL、本地目录或复制源码，应报告 package release blocker。新 Make App 或已明确进行运行时迁移的项目先满足 `make-app-runtime` 的固定基线；再在已解析的 UI package 工作目录中通过项目声明的包管理器安装。标准 pnpm 工作区例如：
 
 ```bash
 corepack pnpm add @qfei-design/make-app-mobile@^0.1.9
 ```
+
+若同时交付手机高级筛选，在通过同一兼容性门禁后，按 [`make-app-filter`](../../make-app-filter/) 的要求安装 `@qfei-design/make-app-mobile@^0.1.11` 与 `@qfei-design/make-app-filter@^1.1.0`；不要沿用上述通用版本示例作为该能力的验收门槛。
 
 仅当宿主源码直接从 `lucide-react` 导入图标，且 UI package 尚未声明可复用的兼容直接依赖时，才单独安装：
 
@@ -33,7 +35,7 @@ corepack pnpm add lucide-react@^1.28.0
 3. 使用现有 workspace/package-manager 流程在该 UI package 安装；不要在 pnpm 项目生成 `package-lock.json`，也不要在 npm/yarn 项目引入 Corepack 或 pnpm。宿主直接导入图标时才声明直接依赖 `lucide-react`；保留已有兼容版本，不做无关图标迁移。
 4. 若 Node/peer 版本、workspace 位置、包管理器或 lockfile 不满足，停止安装并报告兼容性 blocker；运行时或 package-manager 迁移必须交给 `make-app-runtime`，只有用户明确要求迁移时才能进行。
 
-已有项目若实际安装版本低于 `0.1.9`，仅在以上门禁通过后升级，并复跑宿主测试、类型检查和构建。下述字段、选择、日期控件及表单提交栏合同仍以 `0.1.7` 为最低 API 版本，但移动视觉交付须满足 `0.1.9` 基线及安装产物校验；包内通用安装示例若仍使用更低版本范围，不得据此降低本 Skill 的视觉基线。
+已有项目若实际安装版本低于通用视觉基线 `0.1.9`，仅在以上门禁通过后升级，并复跑宿主测试、类型检查和构建。手机高级筛选应单独核对实际安装版本是否达到移动包 `0.1.11` 与筛选包 `1.1.0`。下述字段、选择、日期控件及表单提交栏合同仍以 `0.1.7` 为最低 API 版本，但移动视觉交付须满足 `0.1.9` 基线及安装产物校验；包内通用安装示例若仍使用更低版本范围，不得据此降低本 Skill 的视觉基线。
 
 在目标 UI package 工作目录运行 `node -p "require('node:path').dirname(require('node:path').dirname(require.resolve('@qfei-design/make-app-mobile')))"`，定位该 App 实际安装的包根目录；再在本 Skill 安装目录运行 `node scripts/verify-mobile-package-surface.mjs <已安装包根目录>`。该脚本检查安装版本不低于 `0.1.9`、可编辑输入的字号声明及聚焦覆盖、已选区 `pinch-zoom`、附件上传入口的 48px 固定高度，并用包公开组件渲染无状态、待上传和失败附件。静态校验不能替代聚焦状态的实际计算字号检查；真实 iOS Safari 与飞书 WebView 页面验收仍是交付条件。不要用组件包源码工作树或另一个 App 的 `node_modules` 代替目标 App 的安装产物。校验失败是 package 依赖阻断，不得声称移动端适配完成或符合当前 iOS 输入要求；也不得通过覆盖包内部 class、禁用 viewport 缩放或复制组件来绕过。等待符合合同的包版本发布并在目标 App 安装后重跑校验，再继续真实 iOS Safari、飞书 WebView、Android 与桌面回归。
 
@@ -51,6 +53,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 - `/primitives`：底部弹层、任务页头、确认框、表单提交栏 `MobileFormActionBar`、详情操作栏 `MobileBottomActionBar`、悬浮新建和列表结束状态。
 - `/fields`：默认字段级适配器 `MobileIdentityField` 与 `MobileAttachmentField`；宿主传入受控值、候选或附件状态和业务回调，不复制其标签、头像／部门简称、附件卡片、确认框和上传入口。
 - `/pickers`：`MobileSearchPickerSheet`、`MobileOptionPickerSheet`、`MobileDateField`、`MobileDateRangeField`。其中搜索 Sheet 是供特殊字段组合使用的底层原语；标准人员／部门字段优先使用 `/fields` 的 `MobileIdentityField`。
+- 手机高级筛选额外使用 `/primitives` 的 `MobileFilterSheet` 与 `/pickers` 的 `MobileFilterSelect`；它们只负责筛选容器和选择器展示，筛选 Controller、候选数据及表达式由 `make-app-filter` 和宿主负责。
 
 组件包只负责展示与交互。以下内容必须留在宿主：
 
@@ -100,7 +103,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 - 点击卡片主体进入详情全屏任务路由，不表示选中记录。可写卡片的单条编辑、单条删除必须加载 [`make-app-actions`](../../make-app-actions/) 并读取其中的 `mobile-card-actions.md` reference：通过 `make-app-actions` headless core 解析点击记录的独立权限，并沿用冻结目标、Service 预检和最终写接口鉴权；不得复制权限算法或从桌面选择快照推导目标。
 - 搜索入口位于手机独立 toolbar 顶部，使用中号视觉控件（宿主组件库的 `size="middle"`、默认中号或等效样式）。筛选能力已启用或本次明确请求时，才在同排加入中号筛选按钮；两者可视高度保持一致，并为搜索框留可伸缩宽度。不要使用小号或大号规格，也不要用 CSS 强行拉伸小号控件冒充中号。触控目标仍须达到至少 44px，可由外围点击区域提供。
 - 手机列表在自身滚动容器的顶部下拉刷新，复用当前搜索、已应用筛选和权限上下文，防止重复并发请求；不显示右侧或任何独立刷新按钮、刷新图标。桌面／平板的工具栏刷新入口保持原样。手机端默认不展示分组和排序；即使 desktop/tablet 已接入 `make-app-group` 或 `make-app-sort`，也不得把其按钮直接搬进手机 toolbar。
-- 筛选能力已启用或本次明确请求时，手机筛选入口必须按 [`make-app-filter`](../../make-app-filter/) 的手机合同挂载包面板：在宿主移动 Sheet 中传 `layout="mobile"`，不得把桌面 Popover 组件直接作为手机 toolbar 的筛选节点。包内条件卡片与宿主 Sheet 各司其职；缺少公开移动布局 API 时先按其兼容门禁升级或报告 blocker。未启用高级筛选时不显示空入口或挂载面板；关键词搜索是否需要包的编译器按下节查询合同判断。
+- 筛选能力已启用或本次明确请求时，手机筛选入口必须按 [`make-app-filter`](../../make-app-filter/) 的手机合同挂载包面板：以 `MobileFilterSheet` 承载 `AdvancedFilterPanel layout="mobile"`，以 `MobileFilterSelect` 适配手机选择控件。筛选 Sheet 负责高度上限、关闭入口、安全区和第二层 Picker 浮层顺序；不要再套通用 Sheet 或复制包内样式。面板内 `middle` 控件为 32px，手机 toolbar 的中号控件与至少 44px 触控目标是另一层合同。缺少所需公开 API 时按兼容门禁升级或报告 blocker。未启用高级筛选时不显示空入口或挂载面板，也不要求这两个新组件；关键词搜索是否需要包的编译器按下节查询合同判断。
 - 新建使用 `MobileFloatingAction`，由缓存的 create 权限和授权 `createFields` 控制可见性，点击后进入全屏新建任务路由，并为底部导航和安全区预留空间。
 - 单条编辑使用卡片紧凑操作入口：通过 `make-app-actions` 本地校验后冻结单条目标，调用一次 `record-write-permission` 预检，允许后才进入编辑全屏任务路由；正常单条更新接口继续执行最终鉴权。
 - 单条删除先冻结点击记录并完成本地权限判断，使用 `MobileConfirmDialog` 确认；确认后执行一次删除权限预检，再调用宿主删除 Service 接口，由最终删除接口执行权威鉴权。异步期间阻止重复确认，失败时保留可恢复反馈。
@@ -160,12 +163,12 @@ import "@qfei-design/make-app-mobile/styles.css";
 
 升级移动组件包后，在宿主项目完成以下检查：
 
-1. 检查实际 UI package 的依赖声明、lockfile 和解析到的包版本，确认至少满足 `0.1.9` 视觉交付基线；再针对该安装产物运行 `scripts/verify-mobile-package-surface.mjs`，确认 iOS 输入、缩放手势、附件状态和 48px 上传入口实际满足当前视觉合同。任一检查失败，停止并报告 package blocker，不以本地组件包源码工作树或静态文档测试替代。
+1. 检查实际 UI package 的依赖声明、lockfile 和解析到的包版本，确认至少满足 `0.1.9` 通用视觉交付基线；手机高级筛选额外确认移动包 `0.1.11+`、筛选包 `1.1.0+` 及对应公开组件／类型。再针对移动包实际安装产物运行 `scripts/verify-mobile-package-surface.mjs`，确认 iOS 输入、缩放手势、附件状态和 48px 上传入口实际满足当前视觉合同。任一检查失败，停止并报告 package blocker，不以本地组件包源码工作树或静态文档测试替代。
 2. 对使用 Vite 的宿主，重启当前 UI package 的 Vite 开发服务，并向 Vite 传入 `--force` 强制重新预构建依赖。沿用原包管理器、配置、端口和启动流程；若 pnpm 的 UI `dev` 脚本直接运行 Vite，可用 `corepack pnpm run dev --force`。编排脚本必须将参数传到 Vite，不能只重启外层进程或依赖 HMR。
 3. 浏览器开发者工具中临时禁用缓存并重新加载真实页面，确认新依赖已加载；检查结束后恢复缓存设置。Vite 的处理依据见[依赖预构建与缓存说明](https://vite.dev/guide/dep-pre-bundling#caching)。
 4. 在真实页面分别验证人员和部门的单选、多选：单选无“确定”，选择后立即写回并关闭，从有值状态移除或清除后提交空值并关闭；多选操作只改组件临时草稿，取消不提交，只有“确定”提交快照。核对人员头像／回退首字、部门圆形简称、顶部已选横向滚动、勾选标记不溢出，以及编辑触发器中的多值换行标签；同时核对每次提交的 `onChange`/`onBlur` 调用次数及最终表单值。
 5. 在真实编辑页验证 `MobileAttachmentField`：图片显示缩略图，其他文件显示文件图标，文件名、上传状态、失败重试、圆形删除入口和全宽虚线上传区完整；删除确认后才调用宿主删除，上传、重试、删除和持久化请求仍由宿主处理。
-6. 在真实业务页面以 390px、767px 宽度检查对象列表：应为卡片和手机独立 toolbar，中号搜索框的触控目标至少 44px；筛选能力已启用或本次明确请求时，中号筛选按钮与搜索框等高同排，打开带 `layout="mobile"` 的宿主 Sheet，字段／操作区不横向溢出；未启用时不显示筛选入口。顶部下拉刷新可用且没有独立刷新图标。DOM 中没有 CanvasTable、分组、排序、记录复选框、选择操作栏或批量编辑；新建、详情、单条编辑和单条删除按权限正常工作，列表和空状态不被裁切。
+6. 在真实业务页面以 390px、767px 宽度检查对象列表：应为卡片和手机独立 toolbar，中号搜索框的触控目标至少 44px；筛选能力已启用或本次明确请求时，中号筛选按钮与搜索框等高同排，打开带 `layout="mobile"` 的 `MobileFilterSheet`，字段／操作区不横向溢出，32px 筛选控件和日期触发器等高，第二层 Picker 位于筛选 Sheet 之上；未启用时不显示筛选入口。顶部下拉刷新可用且没有独立刷新图标。DOM 中没有 CanvasTable、分组、排序、记录复选框、选择操作栏或批量编辑；新建、详情、单条编辑和单条删除按权限正常工作，列表和空状态不被裁切。
 7. 切回桌面验证 CanvasTable、原人员/部门控件与右侧 Drawer，并复跑宿主测试、类型检查和构建。记录真实页面验证结果；仅更新 lockfile、静态合同测试或构建成功不足以声明宿主升级验收完成。无法进入真实业务页面或视觉走查被阻断时，不得宣称移动端适配完成或验收通过，应明确记录 blocker。
 
 ## 交付检查
@@ -181,7 +184,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 - 已选标签可横向滚动且不显示滚动条；列表滚动后固定区有分隔层次。
 - 任意抽屉／弹窗打开时底层列表不可滚动；叠加弹层关闭一层不会提前解锁。
 - 列表结束状态只在滚动末尾和确认无更多数据后出现。
-- 390px 与 767px 的真实业务列表使用卡片和手机独立中号搜索 toolbar；筛选能力已启用或本次明确请求时再显示中号筛选入口，两控件等高且触控目标至少 44px，筛选使用包的 `layout="mobile"` 与宿主 Sheet，取消保留原已应用筛选，确认才提交并刷新列表。未启用筛选时不显示空入口。列表顶部下拉刷新，不显示独立刷新按钮／图标、CanvasTable、分组、排序、记录多选或批量操作。
+- 390px 与 767px 的真实业务列表使用卡片和手机独立中号搜索 toolbar；筛选能力已启用或本次明确请求时再显示中号筛选入口，两控件等高且触控目标至少 44px，筛选使用包的 `layout="mobile"` 与 `MobileFilterSheet`，取消保留原已应用筛选，确认才提交并刷新列表。未启用筛选时不显示空入口。列表顶部下拉刷新，不显示独立刷新按钮／图标、CanvasTable、分组、排序、记录多选或批量操作。
 - 手机卡片的新建、详情、单条编辑和单条删除分别经过创建权限、独立更新/删除权限、必要预检和最终接口鉴权；点击卡片主体不产生选择态。
 - 在 390px 与 767px 真实业务页面分别打开新建、编辑、详情以及实际日期／时间／范围／选择／Lookup／附件控件；不得出现桌面弹层横向溢出、裁切或底部栏遮挡。未完成这项视觉走查不得宣称移动端适配完成。
 - 运行组件包和宿主项目的测试、类型检查、构建及相应运行时契约检查。

@@ -25,7 +25,7 @@ for (const [name, content] of Object.entries({host, protocol, stream, testing, a
   assert.doesNotMatch(content, /eventSourceFactory/i, `${name} still requires the Console EventSource callback for Make App`);
 }
 
-assert.match(skill, /metadata:\s*\n\s*version:\s*0\.3\.0/);
+assert.match(skill, /metadata:\s*\n\s*version:\s*0\.3\.1/);
 assert.match(skill, /targeted.*(?:references|tasks)|(?:references|tasks).*targeted/is);
 assert.match(skill, /Make App host.*raw-byte/is);
 assert.match(skill, /`AuthenticatedTransport\.request`/);

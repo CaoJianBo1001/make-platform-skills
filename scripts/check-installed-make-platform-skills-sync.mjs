@@ -14,6 +14,7 @@ const skillNames = [
   'make-app-group',
   'make-ai-assistant',
   'make-app-runtime',
+  'make-app-observability',
   'make-env-setup',
   'canvas-table-integration',
 ];

@@ -37,7 +37,7 @@ const section = (content, heading) => {
 
 const phoneStyle = section(uiStyle, 'Phone sheet');
 assert.match(phoneStyle, /layout="mobile"/);
-assert.match(phoneStyle, /(host-owned|宿主)[^\n]*(sheet|Sheet)/i);
+assert.match(phoneStyle, /MobileFilterSheet/);
 assert.match(phoneStyle, /(不使用|不得|not|never)[^\n]*(Popover|桌面弹层)/i);
 assert.match(phoneStyle, /(横向溢出|horizontal overflow)[\s\S]*(390px|767px)/i);
 assert.match(skill, /(1\.0\.0.*1\.0\.3|1\.0\.0[–-]1\.0\.3)[^\n]*(mobile|移动)/i);

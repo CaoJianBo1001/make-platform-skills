@@ -43,7 +43,7 @@ assert.doesNotMatch(service, /Make Console|make-console|console\/v1/i);
 assert.doesNotMatch(readme.match(/### make-ai-assistant[\s\S]*?(?=\n### |$)/)?.[0] ?? '', /Make Console|make-console|console\/v1/i);
 assert.doesNotMatch(readme, /按协议族选 adapter|协议族选择/);
 
-assert.match(frontmatter, /version:\s*0\.3\.0/);
+assert.match(frontmatter, /version:\s*0\.3\.1/);
 assert.match(frontmatter, /Make App[\s\S]*Agent discovery/i);
 assert.doesNotMatch(bundle, /\b[A-Za-z][A-Za-z0-9]*(?:Poc|Workbench)\b|\/(?:Users|home|var\/folders)(?:\/|$)/i);
 assert.doesNotMatch(bundle, /Expense|报销|销售订单|项目进度|PRJ\d+|session_01/i);

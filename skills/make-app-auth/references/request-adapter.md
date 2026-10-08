@@ -25,19 +25,23 @@ exception. Read `make-ai-assistant` for versioned routes and Service scope.
 
 Business code should pass relative paths to `auth.api`. If an absolute URL is unavoidable, it must be under the same origin and path scope as `gatewayBaseUrl`; otherwise the SDK rejects it.
 
-The SDK defaults Make backend requests to `credentials: 'include'`. Generated adapters may still keep a shared request init so cookie behavior is auditable in one place; do not repeat credential handling in UI components.
+The SDK defaults Make backend requests to `credentials: 'include'`. Generated adapters may still keep a shared request init so cookie behavior is auditable in one place; do not repeat credential handling in UI components. The following `requestWithTrace` is an App-owned shared-adapter placeholder, not an SDK export: it creates a fresh Trace context per network attempt, supplies matching headers, and ends the span on success or failure as specified by `make-app-observability`. Business pages call the shared adapter, not this callback directly.
 
 ```ts
-const makeRequestInit = {
-  credentials: 'include' as const
-};
+type TraceHeaders = { traceparent: string; 'X-Log-Id': string };
+
+const makeRequestInit = (traceHeaders: TraceHeaders, extraHeaders = {}) => ({
+  credentials: 'include' as const,
+  headers: { ...extraHeaders, ...traceHeaders }
+});
 ```
 
 Direct gateway mode example:
 
 ```ts
 export async function listRecords(payload: unknown) {
-  return auth.api.post('/data/v1/record', payload, makeRequestInit);
+  return requestWithTrace((traceHeaders: TraceHeaders) =>
+    auth.api.post('/data/v1/record', payload, makeRequestInit(traceHeaders)));
 }
 ```
 
@@ -47,11 +51,13 @@ Service-fronted mode example. Use this only after `service-fronted-mode.md` conf
 // With createMakeAppAuth({ gatewayBaseUrl: '/api/make', ... }),
 // this reaches browser path /api/make/app/schema.
 export async function loadSchema() {
-  return auth.api.get('/app/schema', makeRequestInit);
+  return requestWithTrace((traceHeaders: TraceHeaders) =>
+    auth.api.get('/app/schema', makeRequestInit(traceHeaders)));
 }
 
 export async function listRecords(entityKey: string, payload: unknown) {
-  return auth.api.post(`/app/records/${entityKey}`, payload, makeRequestInit);
+  return requestWithTrace((traceHeaders: TraceHeaders) =>
+    auth.api.post(`/app/records/${entityKey}`, payload, makeRequestInit(traceHeaders)));
 }
 ```
 
@@ -61,16 +67,12 @@ Do not use `/app/**` in direct gateway mode. Do not use `/data/**` or `/meta/**`
 
 For passive browser resource loading, `auth.api` cannot wrap `<img src>`, `<object data>`, or a plain file link. In Service-fronted apps, normalize Make file values to the Service-owned download proxy URL `/api/make/app/files/download/**` before rendering them. Do not render raw `/data/v1/download/**`, `/make/data/v1/download/**`, or `/api/make/data/v1/download/**` values.
 
-Custom headers are allowed through the SDK request options:
+Custom headers are allowed through the SDK request options. Keep the Trace pair when adding them:
 
 ```js
-const result = await auth.api.post('/data/v1/record', body, {
-  credentials: 'include',
-  headers: {
-    'X-Make-Target': 'MakeService.ListResources',
-    'X-Trace-Id': traceId
-  }
-});
+const result = await requestWithTrace((traceHeaders) =>
+  auth.api.post('/data/v1/record', body,
+    makeRequestInit(traceHeaders, { 'X-Make-Target': 'MakeService.ListResources' })));
 ```
 
 If a list request has no real filters, omit `filter`. Do not send `filter: []`.
@@ -102,10 +104,9 @@ async function handleMakeRequestError(error) {
 
 export async function listRecords(payload) {
   try {
-    return await auth.api.post('/data/v1/record', payload, {
-      credentials: 'include',
-      headers: { 'X-Make-Target': 'MakeService.ListResources' }
-    });
+    return await requestWithTrace((traceHeaders) =>
+      auth.api.post('/data/v1/record', payload,
+        makeRequestInit(traceHeaders, { 'X-Make-Target': 'MakeService.ListResources' })));
   } catch (error) {
     return handleMakeRequestError(error);
   }
@@ -127,3 +128,4 @@ When touching request code, add or update tests for:
 - Service-fronted proxy calls use k8s-internal make-gateway paths without the external `/api` prefix, for example `http://make-gateway/make/auth/**`, `/make/meta/**`, and `/make/data/**`
 - no raw `window.fetch('/api/make/...')` outside the fixed AI v1 `AuthenticatedTransport` bridge
 - no scattered unhandled `auth.api` calls in UI components
+- ordinary and AI business requests preserve matching `traceparent` and `X-Log-Id` through the shared adapter, including failed network attempts

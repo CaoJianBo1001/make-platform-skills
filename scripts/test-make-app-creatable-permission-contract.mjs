@@ -147,8 +147,8 @@ assert.match(
 );
 assert.match(
   serviceSkill,
-  /metadata:\s*\n\s*version:\s*0\.2\.3/,
-  'make-app-service must retain the assistant protocol-family revision',
+  /metadata:\s*\n\s*version:\s*0\.2\.4/,
+  'make-app-service must include the default Trace ID handoff',
 );
 assert.match(
   serviceContracts,
@@ -177,8 +177,8 @@ assert.match(
 );
 assert.match(
   authSkill,
-  /metadata:\s*\n\s*version:\s*0\.1\.11/,
-  'make-app-auth must retain the account-context, default-permission, native SSE exception, and mobile-container wording revision',
+  /metadata:\s*\n\s*version:\s*0\.1\.12/,
+  'make-app-auth must include the default Trace ID handoff',
 );
 assert.match(
   authRequestAdapter,

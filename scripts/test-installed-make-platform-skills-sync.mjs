@@ -22,6 +22,7 @@ const skillNames = [
   'make-app-group',
   'make-ai-assistant',
   'make-app-runtime',
+  'make-app-observability',
   'make-env-setup',
   'canvas-table-integration',
 ];
@@ -45,6 +46,12 @@ try {
   assert.match(mismatchOutput, /make-app-auth/);
   assert.match(mismatchOutput, /content_mismatch/);
   writeSkill(installedRoot, 'make-app-auth', 'source');
+
+  fs.rmSync(path.join(installedRoot, 'make-app-observability'), { recursive: true });
+  const missingTraceOutput = runChecker({ expectFailure: true });
+  assert.match(missingTraceOutput, /make-app-observability/);
+  assert.match(missingTraceOutput, /(?:not a directory|missing|ENOENT)/i);
+  writeSkill(installedRoot, 'make-app-observability', 'source');
 
   writeSkill(installedRoot, 'make-app-filter', 'stale');
   const filterMismatchOutput = runChecker({ expectFailure: true });

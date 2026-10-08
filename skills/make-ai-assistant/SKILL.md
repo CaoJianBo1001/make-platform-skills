@@ -2,7 +2,7 @@
 name: make-ai-assistant
 description: "Use when integrating, upgrading, debugging, or reviewing @qfei-design/make-ai-assistant in a Make App: Agent discovery, multi-session chat, streaming, file/image input, Service gateway routes, and package-owned UI. Does not own generic dialogs, model behavior, authentication or permission policy, DSL, or publishing."
 metadata:
-  version: 0.3.0
+  version: 0.3.1
 ---
 
 # Make AI Assistant
@@ -43,6 +43,9 @@ are independent; verify the actual installed version before implementation.
    the unique current-App `app_internal` Agent across complete pagination, then
    `await createMakeAppAssistantTransport({ client, agentId, signal })`. The SDK
    owns v1 DTOs, decoding, retries, uploads, SSE and UI transport mapping.
+   For every new Make App, apply `make-app-observability` to this authenticated
+   transport: JSON, SSE and binary requests send `traceparent` and matching
+   `X-Log-Id` headers; never place tracing context in a query parameter.
 6. Expose only the 18 documented Make App v1 Service operations. Validate App
    scope, method/path/query/body, a single same-origin HTTP(S) Origin for every
    non-GET/HEAD request, sizes and upstream target before forwarding.

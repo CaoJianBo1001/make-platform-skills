@@ -106,7 +106,7 @@ assert.deepEqual(
 );
 
 assert.match(skill, /references\/mobile-defaults\.md/);
-assert.match(skill, /metadata:\s*\n\s*version:\s*0\.4\.19/);
+assert.match(skill, /metadata:\s*\n\s*version:\s*0\.4\.20/);
 assert.match(skill, /references\/mobile-form-controls\.md/);
 assert.match(skill, /references\/mobile-product-baseline\.md/);
 assert.match(skill, /references\/mobile-visual-standard\.md/);
