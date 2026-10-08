@@ -119,7 +119,7 @@ if (!/@qfei-design\/make-app-observability\/react/.test(uiText)
 }
 if (!uiFiles.some((file) => writesHeader(file.text, 'traceparent')
     && writesHeader(file.text, 'x-log-id'))) {
-  failures.push('ui_trace_headers_missing: the shared request adapter must write traceparent and X-Log-ID together');
+  failures.push('ui_trace_headers_missing: the shared request adapter must write traceparent and X-Log-Id together');
 }
 if (/__traceparent/i.test(uiText)) {
   failures.push('query_trace_present: carry Trace ID in headers, not a URL query parameter');
@@ -140,7 +140,7 @@ if (resolvedMode === 'service-fronted') {
       failures.push('service_trace_validation_missing: validate or generate a request Trace ID');
     }
     if (!serviceFiles.some((file) => writesResponseTrace(file.text))) {
-      failures.push('service_response_trace_missing: return X-Log-ID in Service responses');
+      failures.push('service_response_trace_missing: return X-Log-Id in Service responses');
     }
     if (!serviceFiles.some((file) => hasBothHeaders(file.text)
       && writesHeader(file.text, 'x-log-id')

@@ -21,7 +21,7 @@ const uiRequest = `
     const traceId = crypto.randomUUID().replaceAll('-', '');
     const traceparent = '00-' + traceId + '-0123456789abcdef-01';
     const headers = new Headers();
-    headers.set('X-Log-ID', traceId);
+    headers.set('X-Log-Id', traceId);
     headers.set('traceparent', traceparent);
     return auth.api.request(path, { headers: Object.fromEntries(headers) });
   }
@@ -30,8 +30,8 @@ const serviceTrace = `
   export function handle(req, res, gatewayHeaders) {
     const trace = resolveRequestTrace(req.headers);
     const traceId = trace.traceId;
-    res.setHeader('X-Log-ID', traceId);
-    gatewayHeaders.set('X-Log-ID', traceId);
+    res.setHeader('X-Log-Id', traceId);
+    gatewayHeaders.set('X-Log-Id', traceId);
     gatewayHeaders.set('traceparent', trace.traceparent);
     logger.info('request', { traceId });
   }
@@ -76,7 +76,7 @@ try {
     service: false,
     uiRequest: `
       export function request(auth, path) {
-        const headers = { traceparent: trace.traceparent, 'X-Log-ID': trace.traceId };
+        const headers = { traceparent: trace.traceparent, 'X-Log-Id': trace.traceId };
         return auth.api.request(path, { headers });
       }
     `,
@@ -84,20 +84,20 @@ try {
   assert.equal(run(objectHeaders, 'direct').code, 0);
 
   const expressHeader = fixture('express-header', {
-    serviceTrace: serviceTrace.replace("res.setHeader('X-Log-ID', traceId);", "res.header('X-Log-ID', traceId);"),
+    serviceTrace: serviceTrace.replace("res.setHeader('X-Log-Id', traceId);", "res.header('X-Log-Id', traceId);"),
   });
   assert.equal(run(expressHeader, 'service-fronted').code, 0);
 
   const responseAlias = fixture('response-alias', {
     serviceTrace: serviceTrace.replace(
-      "res.setHeader('X-Log-ID', traceId);",
-      "const outboundResponse = res; outboundResponse.header('X-Log-ID', traceId);",
+      "res.setHeader('X-Log-Id', traceId);",
+      "const outboundResponse = res; outboundResponse.header('X-Log-Id', traceId);",
     ),
   });
   assert.equal(run(responseAlias, 'service-fronted').code, 0);
 
   const frameworkReply = fixture('framework-reply', {
-    serviceTrace: serviceTrace.replace("res.setHeader('X-Log-ID', traceId);", "reply.header('X-Log-ID', traceId);"),
+    serviceTrace: serviceTrace.replace("res.setHeader('X-Log-Id', traceId);", "reply.header('X-Log-Id', traceId);"),
   });
   assert.equal(run(frameworkReply, 'service-fronted').code, 0);
 
@@ -107,7 +107,7 @@ try {
   assert.match(run(missingHeaders, 'direct').output, /ui_trace_headers_missing/);
 
   const missingResponse = fixture('missing-response', {
-    serviceTrace: serviceTrace.replace("res.setHeader('X-Log-ID', traceId);", ''),
+    serviceTrace: serviceTrace.replace("res.setHeader('X-Log-Id', traceId);", ''),
   });
   assert.match(run(missingResponse, 'service-fronted').output, /service_response_trace_missing/);
 
@@ -122,7 +122,7 @@ try {
   assert.match(run(rawForward, 'service-fronted').output, /service_raw_traceparent_forwarding/);
 
   const missingForwarding = fixture('missing-forwarding', {
-    serviceTrace: serviceTrace.replace("gatewayHeaders.set('X-Log-ID', traceId);", '')
+    serviceTrace: serviceTrace.replace("gatewayHeaders.set('X-Log-Id', traceId);", '')
       .replace("gatewayHeaders.set('traceparent', trace.traceparent);", ''),
   });
   assert.match(run(missingForwarding, 'service-fronted').output, /service_gateway_trace_missing/);
@@ -153,7 +153,7 @@ try {
   const aiGood = fixture('ai-good', {
     ai: `
       export const stream = (headers) => {
-        headers.set('X-Log-ID', trace.traceId);
+        headers.set('X-Log-Id', trace.traceId);
         headers.set('traceparent', trace.traceparent);
         return fetch('/api/make/app/ai/v1/chats/1/events', { headers });
       };
@@ -166,7 +166,7 @@ try {
       export function request(operation) {
         const traceId = crypto.randomUUID().replaceAll('-', '');
         const headers = new Headers(operation.headers);
-        headers.set('X-Log-ID', traceId);
+        headers.set('X-Log-Id', traceId);
         headers.set('traceparent', '00-' + traceId + '-0123456789abcdef-01');
         return fetch(operation.path, { ...operation, credentials: 'include', headers });
       }

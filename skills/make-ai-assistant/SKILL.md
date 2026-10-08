@@ -45,7 +45,7 @@ are independent; verify the actual installed version before implementation.
    owns v1 DTOs, decoding, retries, uploads, SSE and UI transport mapping.
    For every new Make App, apply `make-app-observability` to this authenticated
    transport: JSON, SSE and binary requests send `traceparent` and matching
-   `X-Log-ID` headers; never place tracing context in a query parameter.
+   `X-Log-Id` headers; never place tracing context in a query parameter.
 6. Expose only the 18 documented Make App v1 Service operations. Validate App
    scope, method/path/query/body, a single same-origin HTTP(S) Origin for every
    non-GET/HEAD request, sizes and upstream target before forwarding.

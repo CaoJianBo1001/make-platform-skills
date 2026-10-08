@@ -28,7 +28,7 @@ Business code should pass relative paths to `auth.api`. If an absolute URL is un
 The SDK defaults Make backend requests to `credentials: 'include'`. Generated adapters may still keep a shared request init so cookie behavior is auditable in one place; do not repeat credential handling in UI components. The following `requestWithTrace` is an App-owned shared-adapter placeholder, not an SDK export: it creates a fresh Trace context per network attempt, supplies matching headers, and ends the span on success or failure as specified by `make-app-observability`. Business pages call the shared adapter, not this callback directly.
 
 ```ts
-type TraceHeaders = { traceparent: string; 'X-Log-ID': string };
+type TraceHeaders = { traceparent: string; 'X-Log-Id': string };
 
 const makeRequestInit = (traceHeaders: TraceHeaders, extraHeaders = {}) => ({
   credentials: 'include' as const,
@@ -128,4 +128,4 @@ When touching request code, add or update tests for:
 - Service-fronted proxy calls use k8s-internal make-gateway paths without the external `/api` prefix, for example `http://make-gateway/make/auth/**`, `/make/meta/**`, and `/make/data/**`
 - no raw `window.fetch('/api/make/...')` outside the fixed AI v1 `AuthenticatedTransport` bridge
 - no scattered unhandled `auth.api` calls in UI components
-- ordinary and AI business requests preserve matching `traceparent` and `X-Log-ID` through the shared adapter, including failed network attempts
+- ordinary and AI business requests preserve matching `traceparent` and `X-Log-Id` through the shared adapter, including failed network attempts

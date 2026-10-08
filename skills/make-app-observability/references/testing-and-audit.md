@@ -2,10 +2,10 @@
 
 先用行为测试固定请求合同，再实现接线。至少验证：
 
-1. UI 普通业务请求同时发送 `traceparent` 和 `X-Log-ID`，且两个 trace-id 相等、非零。HTTP 成功及业务码失败都结束本次 Span。
+1. UI 普通业务请求同时发送 `traceparent` 和 `X-Log-Id`，且两个 trace-id 相等、非零。HTTP 成功及业务码失败都结束本次 Span，并记录实际 HTTP 状态码；使用只返回业务数据的认证 SDK 时覆盖非 200 的 2xx 响应。网络异常不虚构状态码。
 2. HTTP 非 2xx、网络异常和 HTTP 2xx 业务码异常的分类与卡片展示。网络异常保留本地生成的 ID；业务码异常不展示 ID。全局出口、页面内嵌出口和关闭/复制行为按实际使用方式验证。
-3. Service-fronted App 校验非法、全零、冲突 Header，缺失时生成 ID；成功与失败响应都返回 `X-Log-ID`；Make Gateway 收到相同的安全 ID；日志包含该 ID 且没有敏感上下文。
-4. 启用 AI 时，JSON、SSE、文件和二进制 transport 使用 Header。异常断流、取消及重连按 `make-ai-assistant` 语义收束，不用 URL query 传追踪信息。
+3. Service-fronted App 校验非法、全零、冲突 Header，缺失时生成 ID；成功与失败响应都返回 `X-Log-Id`；Make Gateway 收到相同的安全 ID 和匹配的有效 `traceparent`，冲突或缺失时重新生成下游 parent span；日志包含该 ID 且没有敏感上下文。
+4. 启用 AI 时，JSON、SSE、文件和二进制 transport 使用 Header。AI HTTP 非 2xx 在有响应体和无响应体时都把 Span 标记为错误并记录状态码；异常断流、取消及重连按 `make-ai-assistant` 语义收束，不用 URL query 传追踪信息。
 
 静态审计可运行：
 

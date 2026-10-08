@@ -35,7 +35,7 @@ Codex 判断优先级：
 | Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema `fields/createFields`、records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排、Schema 集合无损传输和按主体隔离缓存，不负责 UI、认证、权限算法、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
 | 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、对象导航、路由权限、按钮权限、字段可新建、可见、可编辑、`creatable`、`createFields`、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、`meta.entity.read` 对象导航、`meta.field.read` 表头和 `data.record.read` 数据行的独立权限，以及 `createFields` 与字段 `creatable/readable/editable` 独立权限、创建提交白名单、路由和按钮权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
 | 登录、认证、Token、统一登录、OAuth、Cookie、Session、logout、401/403、current-context 身份、`tenantName`、飞书容器退出可见性、`/api/make/**` 鉴权请求 | `make-app-auth` | 负责认证、身份上下文与宿主环境信号，不负责账户抽屉布局和打包发布 |
-| Trace ID、`traceparent`、`X-Log-ID`、请求关联日志、网络/HTTP 错误卡片、`@qfei-design/make-app-observability` | `make-app-observability` | 所有新建 Make App 默认接入；负责 UI 到 Gateway 的 Trace ID 链路和公共错误展示，不负责认证、Service 路由、AI 协议或 Trace 后端部署 |
+| Trace ID、`traceparent`、`X-Log-Id`、请求关联日志、网络/HTTP 错误卡片、`@qfei-design/make-app-observability` | `make-app-observability` | 所有新建 Make App 默认接入；负责 UI 到 Gateway 的 Trace ID 链路和公共错误展示，不负责认证、Service 路由、AI 协议或 Trace 后端部署 |
 | 打包、发布、镜像入口、K8s、Service 启动失败、`apps/ui/dist`、`apps/service/dist/server.js`、Service 端口 `3000`、workspace/package.json、`X-Forwarded-Host` | `make-app-runtime` | 只负责运行态和打包发布契约，不负责 Service API、认证实现或 Make adapter 配置语义 |
 | App/Entity/Relation/Field 建模、DSL YAML、对象、字段、关系、选项 | `makedsl` | 只负责 DSL 设计和生成，不负责远端 apply |
 | `makecli` 命令、diff、apply、部署、查看应用/实体/关系/记录、配置 token/server-url | `makecli` | 只负责 Make CLI 操作，不负责 UI/认证实现 |
@@ -321,7 +321,7 @@ npx skills update make-app-runtime
 - 约束 Service 固定端口 `3000` 在启动配置中的落实，以及发布前构建契约测试；Make adapter 环境变量/config 语义交给 `make-app-service`
 
 ### make-app-observability
-所有新建 Make App 的默认 Trace ID 规范。覆盖 UI 业务请求的 `traceparent` / `X-Log-ID`、Service 校验与响应、Make Gateway 传递、安全关联日志，以及公共错误卡片的 Trace ID 展示。安装公共包不等于完成 Trace 链路；集中式 Trace 后端导出不在此 Skill 范围内。
+所有新建 Make App 的默认 Trace ID 规范。覆盖 UI 业务请求的 `traceparent` / `X-Log-Id`、Service 校验与响应、Make Gateway 传递、安全关联日志，以及公共错误卡片的 Trace ID 展示。安装公共包不等于完成 Trace 链路；集中式 Trace 后端导出不在此 Skill 范围内。
 
 #### 首次安装新增 skill
 ```bash
