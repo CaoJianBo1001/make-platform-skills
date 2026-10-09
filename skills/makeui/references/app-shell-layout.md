@@ -7,6 +7,7 @@ This reference defines the desktop/tablet shell unless a section explicitly says
 ## Contents
 
 - [Structure](#structure)
+- [Global error outlet](#global-error-outlet)
 - [Header](#header)
 - [Current user menu](#current-user-menu)
 - [Sidebar](#sidebar)
@@ -45,6 +46,12 @@ When no project-specific shell already exists, use the platform dense object-man
 - workspace header is flat, compact, and only shows the current title plus global right-side current-user menu/actions
 - content area starts with the local toolbar, then the table region
 - sidebar background color follows the existing project theme or design system; do not default to a dark sidebar unless the project or user asks for it
+
+## Global error outlet
+
+When the App uses `make-app-observability`, reserve a visible place for its one global error outlet in the persistent app root or Shell layer. Keep the outlet mounted even before permission, Schema, or router branches have mounted; those branches may fail before the page Shell appears. `MakeAppErrorNoticeViewport` portals its queue to `document.body` only at `640px` and below; on desktop it stays in normal host layout. A Shell using `100vh + overflow: hidden` can clip a viewport appended after the fixed-height content. Place the outlet in a visible Shell region when that region is persistent, or give it host-owned positioning that keeps the entire card within the viewport and above relevant overlays. Do not depend on the mobile portal or a larger `z-index` to repair desktop clipping. Page-local errors may use `MakeAppErrorNotice` without the global viewport.
+
+In a browser test of the real App Shell, trigger a request error while the Shell is mounted and check that the card, Trace ID when present, close action, and copy action are visible and operable on desktop. Test initial permission loading failure before route content mounts as well as a page request failure; the global card must still appear in the first case. Error classification, safe text, and Trace ID propagation remain owned by `make-app-observability`; permission loading behavior remains owned by `make-app-permission`.
 
 ## Header
 

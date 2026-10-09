@@ -106,7 +106,16 @@ assert.deepEqual(
 );
 
 assert.match(skill, /references\/mobile-defaults\.md/);
-assert.match(skill, /metadata:\s*\n\s*version:\s*0\.4\.22/);
+const skillVersion = skill.match(/metadata:\s*\n\s*version:\s*(\d+)\.(\d+)\.(\d+)/);
+assert.ok(skillVersion, 'makeui must declare a version');
+const [, skillMajorText, skillMinorText, skillPatchText] = skillVersion;
+const [skillMajor, skillMinor, skillPatch] = [
+  skillMajorText, skillMinorText, skillPatchText,
+].map(Number);
+assert.ok(
+  skillMajor > 0 || skillMinor > 4 || (skillMinor === 4 && skillPatch >= 22),
+  'makeui must retain the 0.4.22+ mobile baseline',
+);
 assert.match(skill, /references\/mobile-form-controls\.md/);
 assert.match(skill, /references\/mobile-product-baseline\.md/);
 assert.match(skill, /references\/mobile-visual-standard\.md/);

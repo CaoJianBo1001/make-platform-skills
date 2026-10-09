@@ -57,6 +57,7 @@ Required field cases:
 - `field.validations.isRequired` and type validation apply only to rendered authorized fields; `required` is a derived UI-control prop, not an alternate Schema metadata key.
 - Submit recomputes the current allowlist and removes DevTools-injected/stale/unauthorized values.
 - Permission or Schema failure fails closed.
+- Permission and permission-aware Schema request failures, including permission 首次加载失败, keep safe `kind/status/title/description/traceId` in Provider state and render the shared error card with a visible valid Trace ID when one exists; the failed load never exposes protected data. Follow `make-app-observability` for the real AppShell visibility test.
 
 ## Refresh tests
 

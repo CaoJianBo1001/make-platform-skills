@@ -2,7 +2,7 @@
 name: make-app-observability
 description: Use when creating, integrating, reviewing, or debugging a Make App's default Trace ID chain, traceparent and X-Log-Id propagation, safe correlated logs, or @qfei-design/make-app-observability error notices. Every new Make App includes this baseline even when the user does not mention observability. Covers direct-gateway and Service-fronted Apps and AI transports when present. Does not own authentication, Service route design, AI protocol, tracing backend/exporter deployment, runtime packaging, or page layout.
 metadata:
-  version: 0.1.1
+  version: 0.1.2
 ---
 
 # make-app-observability
@@ -17,22 +17,22 @@ metadata:
 - Service 路由、UI-Service 业务合同和 Make adapter 交给 `make-app-service`；本 Skill 定义跨这些边界的 Trace 不变量。
 - AI 路由、流式事件和取消语义交给 `make-ai-assistant`；其已认证 JSON、SSE、二进制传输沿用同一追踪合同。
 - 发布脚本和交付门禁交给 `make-app-runtime`；该 Skill 调用本 Skill 的审计器。
-- 页面布局与错误出口的位置交给 `makeui`；错误卡片和 Trace ID 展示规则由公共包负责。
+- 页面布局与错误出口的可见位置交给 `makeui`；本 Skill 负责把安全的结构化请求错误交给该出口，错误卡片和 Trace ID 展示规则由公共包负责。
 
 ## 默认接入流程
 
 1. 判定 App 的请求拓扑：UI 直连 Make Gateway，或 `UI -> Service -> Make Gateway`。两种拓扑都必须经过一个共享、已认证的 UI 请求适配器。
 2. 在 UI 的每次业务请求开始时创建有效的 W3C Trace 上下文，保存本次 128-bit 非零 Trace ID。请求 Header 同时写入 `traceparent` 和等于其中 trace-id 的 `X-Log-Id`；同一次请求的成功或失败使用创建时保存的 ID，重试作为新的网络尝试重新创建并保留对应 ID。不要通过 URL query 传 Trace 信息。
 3. Service-fronted App 在请求入口校验入站 Header，缺失或非法时生成安全 Trace ID；所有响应返回 `X-Log-Id`。向 Make Gateway 转发时只使用已校验且一致的追踪 Header，Service 安全日志带同一个 `traceId`。直连模式则由共享 UI 适配器把 Header 送到 Gateway。
-4. 统一错误出口区分 HTTP 非 2xx、网络异常和 HTTP 2xx 业务码异常。收到响应时在 Span 记录实际 HTTP 状态码；业务码失败和 HTTP 非 2xx 标记为错误，网络异常不虚构状态码。使用公共包的 `MakeAppErrorNotice`；只有 HTTP 和网络错误显示可复制的 Trace ID。失败时优先保留本次请求创建的 ID，避免无响应的网络错误丢失关联信息。
+4. 统一错误出口区分 HTTP 非 2xx、网络异常和 HTTP 2xx 业务码异常。收到响应时在 Span 记录实际 HTTP 状态码；业务码失败和 HTTP 非 2xx 标记为错误，网络异常不虚构状态码。请求层及权限、Schema 等 Provider 到错误出口之间保留安全的 `kind/status/title/description/traceId`，不得降级成只有文案的字符串。使用公共包的 `MakeAppErrorNotice`；三类真实请求失败只要携带合法 Trace ID 都显示可复制的 ID。失败时优先保留本次请求创建的 ID，避免无响应的网络错误丢失关联信息。
 5. 当 App 使用 AI transport 时，JSON、SSE、文件和二进制请求也发送这两个 Header；HTTP 非 2xx 即使有响应体也要标记 Span 为错误。不能恢复通过 `__traceparent` 等 query 参数传递 Trace 的旧做法。
-6. 先补行为测试，再运行 `scripts/audit-trace-contract.mjs` 和 App 原有测试。审计是源代码接线检查，不能代替真实请求的端到端断言。
+6. 先补行为测试，再运行 `scripts/audit-trace-contract.mjs` 和 App 原有测试。审计是源代码接线检查，不能代替真实请求及真实 AppShell 下错误卡片可见性的断言。
 
 ## 按需阅读
 
 | 工作 | 读取 |
 | --- | --- |
-| 安装公共包、公开入口、错误卡片与移动端全局出口 | `references/package-integration.md` |
+| 安装公共包、公开入口、错误状态与桌面/移动全局出口 | `references/package-integration.md` |
 | UI、Service、Gateway 和 AI 的 Trace 链路及安全边界 | `references/trace-chain.md` |
 | 行为测试、静态审计、发布检查和排障 | `references/testing-and-audit.md` |
 

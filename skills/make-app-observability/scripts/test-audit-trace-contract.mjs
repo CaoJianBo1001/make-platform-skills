@@ -40,7 +40,7 @@ const serviceTrace = `
 const fixture = (name, options = {}) => {
   const root = path.join(temporary, name);
   write(root, 'apps/ui/package.json', JSON.stringify({
-    dependencies: { '@qfei-design/make-app-observability': options.version ?? '^0.1.4' },
+    dependencies: { '@qfei-design/make-app-observability': options.version ?? '^0.1.5' },
   }));
   write(root, 'apps/ui/src/main.tsx', `import '@qfei-design/make-app-observability/styles.css';`);
   write(root, 'apps/ui/src/error.tsx', `
@@ -68,6 +68,7 @@ try {
   const serviceRoot = fixture('service-fronted');
   assert.equal(run(serviceRoot, 'service-fronted').code, 0);
   assert.match(run(serviceRoot, 'service-fronted').output, /status: PASS/);
+  assert.match(run(serviceRoot, 'service-fronted').output, /scope: trace wiring only; verify error notice visibility in a real AppShell test/);
 
   const directRoot = fixture('direct', { service: false });
   assert.equal(run(directRoot, 'direct').code, 0);
@@ -127,12 +128,14 @@ try {
   });
   assert.match(run(missingForwarding, 'service-fronted').output, /service_gateway_trace_missing/);
 
-  const oldVersion = fixture('old-version', { version: '^0.1.3' });
-  assert.match(run(oldVersion, 'direct').output, /observability_version_too_old/);
+  for (const version of ['^0.1.3', '^0.1.4', '>0.1.3']) {
+    const oldVersion = fixture(`old-version-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version });
+    assert.match(run(oldVersion, 'direct').output, /observability_version_too_old/);
+  }
 
-  for (const version of ['>0.1.3', '>=0.1.4 <0.2.0']) {
+  for (const version of ['^0.1.5', '>0.1.4', '>=0.1.5 <0.2.0']) {
     const validRange = fixture(`valid-range-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version, service: false });
-    assert.equal(run(validRange, 'direct').code, 0, `expected ${version} to allow version 0.1.4`);
+    assert.equal(run(validRange, 'direct').code, 0, `expected ${version} to allow version 0.1.5`);
   }
 
   const queryTrace = fixture('query-trace', {

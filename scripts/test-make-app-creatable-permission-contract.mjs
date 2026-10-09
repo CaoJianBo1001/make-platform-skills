@@ -95,10 +95,15 @@ assert.match(
   /(字段可新建|可新建)[^"\n]*(creatable|createFields)|(creatable|createFields)[^"\n]*(字段可新建|可新建)/i,
   'make-app-permission trigger metadata must cover creatable/createFields requests',
 );
-assert.match(
-  permissionSkill,
-  /metadata:\s*\n\s*version:\s*0\.3\.1/,
-  'make-app-permission must use the 0.3.1 default-enforcement and passthrough release revision',
+const permissionVersion = permissionSkill.match(/metadata:\s*\n\s*version:\s*(\d+)\.(\d+)\.(\d+)/);
+assert.ok(permissionVersion, 'make-app-permission must declare a version');
+const [, permissionMajorText, permissionMinorText, permissionPatchText] = permissionVersion;
+const [permissionMajor, permissionMinor, permissionPatch] = [
+  permissionMajorText, permissionMinorText, permissionPatchText,
+].map(Number);
+assert.ok(
+  permissionMajor > 0 || permissionMinor > 3 || (permissionMinor === 3 && permissionPatch >= 1),
+  'make-app-permission must retain the 0.3.1+ default-enforcement and passthrough release baseline',
 );
 assert.match(
   permissionSkill,

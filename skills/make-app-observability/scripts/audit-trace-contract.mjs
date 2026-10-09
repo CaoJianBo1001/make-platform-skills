@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const usage = `Usage: node audit-trace-contract.mjs <project-root> [--mode auto|direct|service-fronted]
-Checks the default Make App Trace ID wiring. Run behavior tests as well; source inspection cannot prove runtime correlation.`;
+Checks the default Make App Trace ID wiring. Run behavior and real AppShell visibility tests as well; source inspection cannot prove runtime correlation or card visibility.`;
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
   console.log(usage);
@@ -105,8 +105,8 @@ if (!version) {
     const major = Number(rawMajor);
     const minor = Number(rawMinor);
     const patch = Number(rawPatch) + (operator === '>' ? 1 : 0);
-    if (major === 0 && (minor < 1 || (minor === 1 && patch < 4))) {
-      failures.push('observability_version_too_old: require @qfei-design/make-app-observability >= 0.1.4');
+    if (major === 0 && (minor < 1 || (minor === 1 && patch < 5))) {
+      failures.push('observability_version_too_old: require @qfei-design/make-app-observability >= 0.1.5');
     }
   }
 }
@@ -157,6 +157,7 @@ if (resolvedMode === 'service-fronted') {
 }
 
 console.log(`mode: ${resolvedMode}`);
+console.log('scope: trace wiring only; verify error notice visibility in a real AppShell test');
 for (const failure of failures) console.error(`FAIL ${failure}`);
 console.log(`status: ${failures.length ? 'FAIL' : 'PASS'}`);
 process.exitCode = failures.length ? 1 : 0;

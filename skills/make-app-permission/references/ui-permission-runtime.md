@@ -27,7 +27,11 @@ Mount identity, permission, permission-aware Schema, then router/pages:
 </AuthGate>
 ```
 
+The global error outlet must remain mounted outside conditional `PermissionProvider` and `SchemaProvider` success branches, under its shared error-state owner. It must still receive the first permission request failure when `AppRouter` and the page Shell have not mounted. Keep the provider order above for authorization and Schema loading; placing the outlet in a persistent app-root layer does not change that order.
+
 Use the host API adapter for `/app/principal/permission`; never raw-fetch IAM from UI.
+
+When permission or permission-aware Schema loading fails, keep a safe structured request error in Provider state through the error outlet: `kind/status/title/description/traceId`. The status is optional when no HTTP response exists, and description may be absent. Preserve the request Trace ID even on the first load, when the page route has not mounted yet. The error title and description must already be safe user text; do not pass a raw Error, upstream response body, or stack to the UI. Continue to fail closed for authorization, but render the failure through the shared `make-app-observability` card. Ordinary permission denial stays a forbidden state and does not acquire a synthetic Trace ID. If nearby copy tells users to provide a Trace ID, confirm the card actually receives and displays a valid one.
 
 Normalize each entity's permission-trimmed Schema collections independently:
 
