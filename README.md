@@ -159,7 +159,7 @@ npx skills update makeui
 - 手机业务记录列表无论只读或可写都使用独立卡片 View，不渲染 CanvasTable；可写卡片复用 `make-app-actions` headless core、单条权限、预检和最终写接口合同
 - 手机工具栏默认提供中号搜索；筛选能力已启用或本次明确请求时，才同排显示中号筛选入口。仅搜索若使用 `filter.expression`，复用 `make-app-filter` 编译器，但不读取／回显／写入筛选 Preset，也不挂载高级筛选面板。不展示分组、排序、记录多选或批量操作，也不得直接复用桌面 `listToolbar`/`listContent` 后仅靠 CSS 改样式
 - 手机新建／编辑／详情不仅切换为全屏任务页，还必须使用移动字段适配器：桌面 DatePicker／RangePicker／Select 等弹层不能原样复用；日期时间、候选选择、Lookup、附件、详情值和安全区底部保存栏按 `mobile-form-controls.md` 验收
-- 移动端默认使用头像账户抽屉、最多五项底部导航、独立工作台、全屏任务页，以及 `/fields` 的标准人员／部门与附件字段组件；底层搜索抽屉只用于特殊定制
+- 移动端默认使用头像账户抽屉、最多五项底部导航、全屏任务页，以及 `/fields` 的标准人员／部门与附件字段组件；当前可展示业务对象达到 5 个时，底部导航才显示工作台 Tab，工作台直达路由始终保留；底层搜索抽屉只用于特殊定制
 - 人员/部门多选中的勾选、删除标签和清除只更新 `MobileIdentityField` 当前打开周期的临时草稿；关闭放弃草稿，只有“确定”提交真实表单值。只有特殊字段直接使用底层 Sheet 时，宿主才自行持有这份草稿
 - 手机人员/部门单选默认使用 `MobileIdentityField` 和 `selectionMode="single"`，不显示“确定”；选择、移除和清除由字段组件通过一次 `onChange` 提交并关闭。只有直接使用底层 `MobileSearchPickerSheet` 的特殊组合，宿主才处理 `onConfirm` 快照，不得两层重复写表单。升级移动包后重启 Vite 并传入 `--force`，重新加载真实页面验证单选、多选和桌面回归
 - 设计 App Shell、侧边栏、顶部栏、列表页、创建/编辑/详情抽屉

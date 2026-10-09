@@ -106,6 +106,24 @@ assert.deepEqual(
 );
 
 assert.match(skill, /references\/mobile-defaults\.md/);
+assert.match(skill, /show the workbench tab only when their count reaches five/);
+const navigationSection = mobileDefaults.split('## 底部导航与工作台\n')[1]?.split('\n## ')[0];
+assert.ok(navigationSection, 'mobile defaults must define the bottom navigation rules');
+assert.match(navigationSection, /当前可展示[^\n]*业务对象[^\n]*数量/);
+assert.match(navigationSection, /少于 5 个[^\n]*不展示工作台 Tab/);
+assert.match(navigationSection, /大于等于 5 个[^\n]*工作台/);
+assert.match(navigationSection, /4 个[^\n]*前四个业务对象[^\n]*AI 助手/);
+assert.match(navigationSection, /5 个[^\n]*前三个业务对象[^\n]*AI 助手[^\n]*工作台/);
+assert.match(navigationSection, /AI 助手不可用[^\n]*第四个业务对象[^\n]*工作台/);
+assert.match(navigationSection, /composeMobileBottomNavigationItems[^\n]*只[^\n]*大于等于 5 个/);
+assert.match(navigationSection, /对象列表[^\n]*(变化|更新)[^\n]*重新计算/);
+assert.match(navigationSection, /元数据[^\n]*`meta\.entity\.read`[^\n]*就绪/);
+assert.match(navigationSection, /加载中[^\n]*不[^\n]*0 个对象[^\n]*隐藏工作台/);
+assert.match(navigationSection, /少于 5 个[^\n]*只隐藏[^\n]*工作台 Tab[^\n]*直达页面/);
+assert.match(navigationSection, /当前停留在工作台[^\n]*数量变化[^\n]*保持页面/);
+assert.match(navigationSection, /`MobileWorkbenchGrid`[^\n]*完整的当前可展示业务对象列表/);
+assert.doesNotMatch(navigationSection, /工作台[^\n]*(跳转|重定向)至首个/);
+assert.doesNotMatch(navigationSection, /最右侧固定为“工作台”/);
 const skillVersion = skill.match(/metadata:\s*\n\s*version:\s*(\d+)\.(\d+)\.(\d+)/);
 assert.ok(skillVersion, 'makeui must declare a version');
 const [, skillMajorText, skillMinorText, skillPatchText] = skillVersion;
