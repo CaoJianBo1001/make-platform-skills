@@ -85,6 +85,7 @@ The object shell should have visible states for:
 - render-error fallback through a route or object-shell ErrorBoundary
 
 Keep the app shell visible when possible. A failed object view should render an inline alert/result/retry surface or a scoped error fallback, not unmount the whole page into blank white.
+Use the host's existing component library button for a page retry action, or its established styled button component when no library is present. When a global Trace error card already contains the failure details, keep the retry button centered on both axes of the content region; a button-only page error state is valid. If the Shell has not mounted, center the retry button in the persistent app root fallback instead. Give the button visible focus and pending/disabled states. Do not leave a bare browser-default retry button beside or below the global card. The retry handler remains owned by the host's data or permission flow.
 
 ## Decision order
 
