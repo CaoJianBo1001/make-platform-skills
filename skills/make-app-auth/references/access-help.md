@@ -1,6 +1,6 @@
 # Administrator Contact Help
 
-Use one host-owned feedback component for startup denial, frontend permission guards and known business permission denials. It displays directly assigned user administrators only, not departments or Agents, and does not decide or grant permissions.
+Use one host-owned adapter for startup denial, frontend permission guards and known business permission denials. React Apps render `PermissionFeedback` from `@qfei-design/make-app-feedback`; read `makeui/references/permission-feedback.md` for the public props, CSS, installed-package verification and release gate. Display directly assigned user administrators only, not departments or Agents. Neither the component nor contact lookup decides or grants permissions.
 
 ## Capability and release gate
 
@@ -22,22 +22,18 @@ The SDK method returns `Promise<Array<{ userId, name, avatarUrl? }>>`. It is a d
 
 ## UI integration
 
-Adapt the auth SDK Vibe template's `templates/vibe-app/src/forbidden.js` into the host shared feedback module. `showForbidden` is a template/helper function, NOT an npm SDK export. Reuse it for all denied surfaces; keep auth logic in the SDK.
+For React Apps, use the package-backed host adapter from `makeui/references/permission-feedback.md` instead of copying the DOM renderer or its styles. The package has no automatic 403 listener, contact-query hook or `showForbidden` export. The host supplies scope, contact and retry state plus existing navigation/auth callbacks; keep auth logic in the SDK.
 
-```js
-// Local route guard: do not send a denied business request just to obtain a 403.
-await showForbidden(objectFeedbackElement, { auth, scope: 'resource' });
-// A known permission-denied operation: preserve the payload and the user's input.
-await showForbidden(formFeedbackElement, { auth, payload: error.payload, scope: 'operation' });
-```
+Existing non-React Apps may retain the Vibe template's `templates/vibe-app/src/forbidden.js` as a compatibility helper. Its `showForbidden` is a local DOM function, not an SDK/npm export; do not force a framework migration merely for this package. Scope and safe contact rules still apply.
 
 - Startup/no authorized App entry uses App-scope feedback; object access uses resource scope; create/update/delete use operation scope. Only App-scope denial replaces the App entry. Keep navigation and unaffected forms for local denial.
+- Do not wire every SDK/business 403 to an App-wide renderer. Pass the request owner's resource/operation context to the host feedback sink; App-entry denial remains separate. Preserve the existing login and Trace lifecycle.
 - Render existing `payload.data.appAdministrators` immediately. An explicit empty array is authoritative: keep the generic message without a redundant query. If the field is absent, use `auth.getAppAdministrators()` when available, even if no business request occurred.
-- Show `无权限，请联系应用管理员授权` immediately while loading or when no contacts are available. Query timeout/failure keeps this fallback; never call the global denial handler again for the help query.
-- Preserve backend order; deduplicate by userId; escape names/use text nodes; filter avatar URL protocols; use the first name character for missing, unsafe or failed images. Separate contacts with `、`.
+- Keep generic authorization guidance visible while contacts load or are unavailable. React uses the package's default `请联系应用管理员为你开通权限。` plus a separate administrator row; legacy DOM copy may remain unchanged. Query timeout/failure keeps generic help; never call the global denial handler again for the help query.
+- Preserve backend order and pass validated user contacts. React delegates deduplication, safe text/avatar rendering, failed-image initials and contact wrapping to the package; do not add another handwritten avatar/name renderer or force inline `、` separators into its layout. Non-React compatibility helpers retain their own safe rendering.
 - Discard query results after the target unmounts or a newer render replaces it. Never persist contacts across users/tenants/Apps.
 - HTTP 403 alone does not prove permission denial. Branch on the backend's documented permission code/reason; keep unknown or infrastructure failures as request errors. Do not infer a full-App denial from a record request. Tenant mismatch should offer the correct organization path, not cross-tenant contacts.
 
 ## Verification
 
-Test embedded contacts, empty/missing lists, frontend-only guards with zero protected requests, resource/operation feedback preserving shell/input, request failures without recursive login, concurrent lookups, session/navigation changes, name escaping and failed images. Verify both direct-gateway and Service-fronted paths against the deployed App before claiming release readiness.
+Test embedded contacts, empty/missing lists, frontend-only guards with zero protected requests, resource/operation feedback preserving shell/input, request failures without recursive login, concurrent lookups, session/navigation changes, name escaping and failed images. Also verify the installed React component/CSS and package gate from `makeui/references/permission-feedback.md`. A locally approved tarball test does not prove npm publication, SDK release or gateway deployment. Verify both direct-gateway and Service-fronted paths against the deployed App before claiming release readiness.

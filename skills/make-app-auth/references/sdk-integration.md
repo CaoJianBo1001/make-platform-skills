@@ -86,7 +86,7 @@ if (boot.status === 'authenticated') {
 
 ## Business Requests
 
-`renderForbidden(payload)` is the host App-scope wrapper. Preserve the payload and follow `access-help.md`; object/operation denials use local feedback, not this whole-App wrapper.
+`renderForbidden(payload)` is the host App-scope wrapper, not an SDK/npm renderer. In React it updates the host state that mounts the shared adapter from `makeui/references/permission-feedback.md` with App scope. Preserve the payload and follow `access-help.md`; object/operation denials use local feedback, not this whole-App wrapper. A presentation package does not change login or establish authorization.
 
 Use `auth.api` for ordinary Make backend calls. The fixed Make App AI v1 raw-byte bridge is the only exception described in `request-adapter.md`; it preserves the same unified-login session while returning HTTP status, headers and bytes to the public AI Client. In direct gateway mode, the auth SDK handles `/api/make`, cookies, JSON request bodies, and unified auth errors for ordinary calls.
 

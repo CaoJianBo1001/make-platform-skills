@@ -1,6 +1,6 @@
 # Scoped route feedback
 
-Read this when generating or changing App/object/fixed-page guards. This is a layout and permission boundary, not a new npm component API. Reuse the host's feedback component; frontend owns its eventual package and styling.
+Read this when generating or changing App/object/fixed-page guards. This owns layout and permission boundaries, not npm UI semantics. React uses the verified `PermissionFeedback` package through the shared host adapter in `makeui/references/permission-feedback.md`; that reference owns install/CSS/props and release readiness. Keep existing non-React feedback helpers compatible.
 
 ## Mounting boundary
 
@@ -14,29 +14,29 @@ Read this when generating or changing App/object/fixed-page guards. This is a la
 
 ## React composition example
 
-The names below are host-owned slots, not SDK/npm exports. `route` comes from the host's tested resolver; only explicit permission denial yields `forbidden`. Metadata allowed but Schema missing yields `unavailable`, not permission denial.
+`AppPermissionFeedback` below is the App-owned adapter example from `makeui/references/permission-feedback.md`, not an npm/SDK export. Its `feedbackProps` carry established auth/context, contact payload, controlled retry status and the host refresh callback. `route` comes from the host's tested resolver; only explicit permission denial yields `forbidden`. Metadata allowed but Schema missing yields `unavailable`, not permission denial.
 
 ```jsx
-function AppRouter({ accessReady, hasAuthorizedEntry, route, refreshAccess, navigate }) {
+function AppRouter({ accessReady, hasAuthorizedEntry, route, feedbackProps, navigate }) {
   if (!accessReady) return <AccessLoadingOrError />;
   if (!hasAuthorizedEntry) {
-    return <ForbiddenPanel scope="app" onRetry={refreshAccess} />;
+    return <AppPermissionFeedback {...feedbackProps} scope="app" />;
   }
   return (
     <AppShell>
-      <ObjectRouteGuard route={route} refreshAccess={refreshAccess} navigate={navigate} />
+      <ObjectRouteGuard route={route} feedbackProps={feedbackProps} navigate={navigate} />
     </AppShell>
   );
 }
 
-function ObjectRouteGuard({ route, refreshAccess, navigate }) {
+function ObjectRouteGuard({ route, feedbackProps, navigate }) {
   if (route.kind === "forbidden") {
-    return <ResourceFeedback onReturn={navigate}>
-      <ForbiddenPanel scope="resource" onRetry={refreshAccess} />
+    return <ResourceFeedback>
+      <AppPermissionFeedback {...feedbackProps} scope="resource" onReturn={navigate} />
     </ResourceFeedback>;
   }
   if (route.kind === "unavailable" || route.kind === "not-found") {
-    return <PageUnavailable onRetry={refreshAccess} />;
+    return <PageUnavailable onRetry={feedbackProps.onRetry} />;
   }
   return <ObjectPage entity={route.entity} />;
 }
@@ -45,6 +45,8 @@ function ObjectRouteGuard({ route, refreshAccess, navigate }) {
 `AppShell` receives the host's authorized navigation and current identity, not the denied object's data hook. `ResourceFeedback` is an existing or thin host content wrapper, not a new permission engine; its return action navigates only to an authorized target. The feedback wrapper fills its content region, never `100vw/100vh` or another full-viewport overlay that hides the shell. `ObjectPage` separately gates record reads and mutations.
 
 Refresh reloads permission and permission-trimmed Schema in one generation before resolving the same URL again. Invalidate stale target requests/data; do not reuse an old allow after refresh fails. Do not auto-redirect an explicitly denied URL without displaying its scoped feedback.
+
+The host sets `retryStatus="checking"` while that generation is loading, `denied` only for an explicit refusal and `error` for a failed check. Set `restored` only after permission and Schema have completed successfully for the same identity/App generation. Operation recovery enables a user action; it never replays the rejected mutation. Known permission denial belongs in its scoped feedback, not a duplicate generic network-error card; unrelated structured request errors keep the independent error outlet.
 
 ## Required behavioral acceptance
 

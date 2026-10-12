@@ -85,7 +85,8 @@ When `apiAuthRedirect: true` is available, the SDK owns the normal unified-login
 - fallback UI for errors that cannot redirect
 
 ```js
-async function handleMakeRequestError(error, feedbackTarget) {
+// onPermissionDenied is a host event sink wired to its shared feedback adapter.
+async function handleMakeRequestError(error, { scope, onPermissionDenied }) {
   if (error instanceof MakeAppUnauthorizedError) {
     showNeutralLoading();
     if (!makeAuthConfig.apiAuthRedirect) {
@@ -95,20 +96,20 @@ async function handleMakeRequestError(error, feedbackTarget) {
   }
 
   if (error instanceof MakeAppForbiddenError && error.payload?.reason === 'permission_denied') {
-    await showForbidden(feedbackTarget, { auth, payload: error.payload, scope: 'resource' });
+    onPermissionDenied({ scope, payload: error.payload });
     return;
   }
 
   throw error;
 }
 
-export async function listRecords(payload) {
+export async function listRecords(payload, onPermissionDenied) {
   try {
     return await requestWithTrace((traceHeaders) =>
       auth.api.post('/data/v1/record', payload,
         makeRequestInit(traceHeaders, { 'X-Make-Target': 'MakeService.ListResources' })));
   } catch (error) {
-    await handleMakeRequestError(error, resourceFeedback);
+    await handleMakeRequestError(error, { scope: 'resource', onPermissionDenied });
     throw error; // A denied request must not resolve as successful undefined data.
   }
 }
@@ -118,7 +119,7 @@ Do not call `auth.logout({ redirect: false })` as the default 401 path when `api
 
 ## Tests
 
-`showForbidden` and `resourceFeedback` are host-owned feedback slots, not SDK exports. This example uses the structured permission-denial reason; for legacy responses without reason, reuse the host's tested, documented permission classifier rather than treating every code/HTTP 403 as denied permission. Follow `access-help.md`; operations keep their form/input and use operation scope. Preserve the existing requestWithTrace contract.
+`onPermissionDenied` is an App-owned state/event callback, not an SDK/npm export. React routes it to the shared package-backed adapter from `makeui/references/permission-feedback.md`; the adapter does not consume auth internals. The read example passes resource scope; create/update/delete handlers pass operation scope and retain permitted input. Bootstrap/App-entry denial is not the default for all requests. This example uses the structured permission-denial reason; for legacy responses without reason, reuse the host's tested, documented permission classifier rather than treating every code/HTTP 403 as denied permission. Follow `access-help.md` and preserve the existing requestWithTrace contract. Route a known permission denial once instead of also presenting a generic network-failure card; unrelated request errors keep the independent error outlet.
 
 When touching request code, add or update tests for:
 

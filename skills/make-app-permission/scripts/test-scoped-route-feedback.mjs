@@ -3,6 +3,15 @@ import assert from 'node:assert/strict';
 import { auditScopedRouteFeedback } from './scoped-route-feedback-audit.mjs';
 
 const route = { file: 'router/AppRouter.jsx', source: 'function AppRouter() { return <ForbiddenPanel scope="resource" />; }' };
+for (const component of ['PermissionFeedback', 'AppPermissionFeedback']) {
+  test(`${component} cannot replace the root shell for resource denial`, () => {
+    const source = `import { PermissionFeedback } from '@qfei-design/make-app-feedback'; function AppRouter() { return <${component} scope="resource" />; }`;
+    assert.match(auditScopedRouteFeedback([{ ...route, source }])[0], /resource_route_shell_unverified/u);
+  });
+  test(`${component} inside the shell is accepted as a static signal only`, () => {
+    assert.deepEqual(auditScopedRouteFeedback([{ ...route, source: `<AppShell><${component} scope="resource" /></AppShell>` }]), []);
+  });
+}
 test('resource feedback before shell mounting is unverified', () => {
   assert.match(auditScopedRouteFeedback([route])[0], /resource_route_shell_unverified/u);
 });
