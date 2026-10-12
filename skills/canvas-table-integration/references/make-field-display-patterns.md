@@ -24,6 +24,7 @@ Default structure:
 - normalize remote schema variants before the table layer consumes them; handle shapes such as `entity.properties.fields`, `entity.fields`, or the host documented equivalent in a boundary adapter
 - derive `IColumn[]` from normalized runtime schema fields, not from a hand-maintained static column list
 - keep `fieldType`, `fieldSchema`, and `renderKind` or equivalent metadata on each generated column
+- add the default desktop/tablet field-type icon before each field header through the public `prefixRender` API, using [makeui's canonical mapping](../../makeui/references/field-type-icons.md); ordinary and grouped Make tables share this column rule
 - derive `displayGroup`, `renderKind`, default `width`, `align`, multiplicity, host-owned display/editor hints, and normalized `field.properties` from the shared registry; do not duplicate field-type string lists inside table display modules. Advanced-filter capability remains owned by `make-app-filter` and `@qfei-design/make-app-filter`
 - keep business ordering or primary-link roles as a thin config layer; generic rendering still branches by field type
 - normalize each raw cell value once through a pure field-display adapter before rendering

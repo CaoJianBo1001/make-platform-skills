@@ -113,7 +113,7 @@ Exception: for Make schema-driven business tables, use a render registry by disp
 
 ## 7. Header-level customization
 
-Use these only when the page truly needs them:
+For non-Make tables, use these only when the page truly needs them:
 
 - `headerRender`
 - `prefixRender`
@@ -126,6 +126,8 @@ Good first-pass uses:
 - a lightweight header badge
 
 Do not turn headers into mini-apps in first-pass integrations.
+
+For desktop/tablet **Make schema-driven field columns**, `prefixRender` is the default field-type icon placement, not an optional header embellishment. Use the field-type mapping and phone exclusion in [makeui's field-type icon contract](../../makeui/references/field-type-icons.md). Return an SVG data URL as the documented `{ icon: svgDataUrl }` prefix result, using Lucide by default or the user's explicitly selected alternative icon library. The validated baseline generates a 16px SVG that CanvasTable 1.3.1 displays at 14px with its built-in 8px gap before the header name; set the SVG stroke to the header text color and cache by type and color. Do not add another gap in the host. Apply the same schema-to-column adapter to ordinary and grouped tables. Keep `suffixRender` free for existing filter/sort menus; selection, sequence, and action columns have no field-type icon.
 
 When `suffixRender` opens a host popup such as a sort/filter menu:
 

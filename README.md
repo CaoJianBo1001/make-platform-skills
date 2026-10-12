@@ -25,7 +25,7 @@ Codex 判断优先级：
 | 用户问题 / 关键词 | 使用 skill | 边界 |
 | --- | --- | --- |
 | Make 环境安装、更新 Make 环境、makecli 登录校验、Node/pnpm/git/makecli 版本检查 | `make-env-setup` | 只负责本地开发环境准备、工具链更新、Make skills 更新、环境选择和登录校验；不负责 PRD、DSL、Service、UI、apply、deploy 或 git 提交 |
-| 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、移动端卡片列表、工作台、底部导航、人员/部门选择抽屉、响应式、UI 状态、`@qfei-design/make-app-mobile` | `makeui` | desktop/tablet 使用表格布局，手机使用独立卡片 View，并保留共享业务 Controller；不负责认证、打包、Service、业务 API 设计和发布 |
+| 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、字段类型图标、移动端卡片列表、工作台、底部导航、人员/部门选择抽屉、响应式、UI 状态、`@qfei-design/make-app-mobile` | `makeui` | 新 App 图标默认用 Lucide，用户明确指定其他图标库时遵从其要求；React UI 组件库由用户选择。桌面／平板字段类型图标默认覆盖表头、字段标签及字段选择列表；手机使用独立卡片 View 和纯文本字段名；不负责认证、打包、Service、业务 API 设计和发布 |
 | CanvasTable、表格渲染、字段类型展示、表格编辑、序号列、行头详情图标、`showSN`、`bodyRowHeadSuffixOptions`、`GroupTableComponent` 底层接入 | `canvas-table-integration` | 只负责 `@qfei-design/canvas-table` 消费侧接入，不负责页面 Shell 和业务 API；Make 记录分组完整能力交给 `make-app-group` |
 | 操作按钮、行操作、手机卡片单条编辑/删除、复选框选择、批量编辑、暂无可用操作、行级写权限预检、`selectAllMode`、`@qfei-design/make-app-actions` | `make-app-actions` | 手机卡片复用 headless 单条操作；desktop/tablet CanvasTable 使用选择操作栏和批量能力。负责独立操作权限、预检、选择意图和批量写入编排，不负责 CanvasTable 内部、IAM 权限策略或 Service 分层实现 |
 | 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | `search-only` 仅用包 core 编译关键词为 `filter.expression`，不读写筛选 Preset、不挂载 Controller／面板；`advanced-filter` 才共用 Controller、Preset 与表达式，desktop/tablet 配套 CanvasTable 表头联动，手机使用顶部筛选入口和移动安全面板、不挂载 CanvasTable；不负责页面 Shell、Service 实现、认证或发布 |
@@ -62,6 +62,8 @@ Codex 判断优先级：
 - 打包发布失败或 Service 启动失败：`make-app-runtime`
 - 新增对象字段并部署：`makedsl` + `makecli`
 - 新建完整 Make App：默认包含 `make-app-observability`、`make-app-permission` 和 `make-app-actions`，通常组合 `makedsl` + `makecli` + `make-app-auth` + `make-app-service` + `make-app-permission` + `make-app-observability` + `makeui` + `canvas-table-integration` + `make-app-actions`
+- 新项目没有既定组件库时，组件库选择弹窗提供 Ant Design、Arco Design、shadcn/ui 三个建议选项，并允许用户自行指定其他兼容的 React 组件库；用户未选择时默认 Ant Design。已有项目沿用现有组件库。
+- 用户明确指定其他图标库时遵从其要求；否则新建 Make App 的图标默认统一使用 [Lucide](https://lucide.dev/icons/)。React UI 组件库由用户选择或沿用项目现有约定，不限于 Ant Design、Arco Design、shadcn/ui。桌面／平板字段类型图标按 [`makeui` 默认映射](skills/makeui/references/field-type-icons.md) 覆盖 CanvasTable 表头、新建／编辑／详情字段标签及已有字段选择列表，手机字段名保持纯文本，不需用户再次提示。
 
 ## 可用 Skill 列表
 
@@ -139,7 +141,7 @@ npx skills update make-app-actions
 - 全选时将搜索、状态、快捷筛选和高级筛选统一为最后一次成功列表查询的 `effectiveFilter`，预检和批量写入复用同一目标
 - 预检前冻结不可变操作快照，Service 对完整目标只调用一次 `/data/v1/permission`，批量更新只调用一次 `/data/v1/field`
 - 批量弹窗按字段类型使用宿主控件，不降级复杂字段，不包含自动化流程选项
-- Ant Design 宿主使用包适配器并转发 `0.3.1` 的 `control.disabled`；非 AntD React 宿主使用通用 `RecordBatchEditModal` 并注入自身设计系统组件，不得混入 AntD 或复制弹窗
+- 新应用的桌面操作栏使用通用 `RecordSelectionActionBar` 并注入所选组件库的按钮和默认 Lucide 图标；批量编辑使用通用 `RecordBatchEditModal`，注入所选组件库的字段选择器以展示字段类型图标，并转发 `0.3.1` 的 `control.disabled`。存量 Ant Design 适配器接入可保留，不得为使用弹窗而混入 AntD 或复制弹窗
 - 弹层按已安装组件库的公开 portal/overlay API 处理裁剪、焦点和关闭顺序，不把 AntD 的 prop 约定写成通用标准
 - CanvasTable 1.3.1 分组表格不支持 Shift 区间选择，宿主不得自行模拟
 - 只有准确无权限行 ID 才触发行标红；后端仅返回布尔拒绝时只显示 toast
@@ -155,6 +157,7 @@ npx skills update makeui
 
 **使用场景**
 - 生成或调整 Make App 前端页面
+- 新应用的图标默认使用 Lucide，用户明确指定其他图标库时遵从其要求；桌面／平板字段类型图标按 [`field-type-icons.md`](skills/makeui/references/field-type-icons.md) 自动添加到表头、字段标签和字段选项；手机字段名不加类型图标
 - 所有新 Make App 默认交付移动端；只有用户明确退出或指定特殊定制时才覆盖该默认。新建或改造移动端时接入 `@qfei-design/make-app-mobile@^0.1.9`，并验证目标 App 实际安装产物通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs`；低于 `0.1.9` 的已安装包或不满足 iOS 输入、附件视觉合同的包，应报告包依赖阻断。遵循冻结的 Make App 手机视觉与交互基线，只切换 View 并复用同一个业务 Controller
 - 手机业务记录列表无论只读或可写都使用独立卡片 View，不渲染 CanvasTable；可写卡片复用 `make-app-actions` headless core、单条权限、预检和最终写接口合同
 - 手机工具栏默认提供中号搜索；筛选能力已启用或本次明确请求时，才同排显示中号筛选入口。仅搜索若使用 `filter.expression`，复用 `make-app-filter` 编译器，但不读取／回显／写入筛选 Preset，也不挂载高级筛选面板。不展示分组、排序、记录多选或批量操作，也不得直接复用桌面 `listToolbar`/`listContent` 后仅靠 CSS 改样式

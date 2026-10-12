@@ -98,7 +98,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 - AI 助手行为由 `make-ai-assistant` 提供；底部导航只触发宿主打开动作。
 - 工作台是独立路由页面，标题为“工作台”。内容区只显示“业务入口”，不显示“全部对象”或“选择对象进入对应业务页面”等副标题。
 - 使用 `MobileWorkbenchGrid` 展示两列对象入口，传入完整的当前可展示业务对象列表，而非仅未进入底部 Tab 的剩余对象，并严格保留其顺序。点击后由宿主跳转动态对象路由。
-- 新生成的 Make App 图标默认使用 `lucide-react`。对象图标按语义选择；无法匹配时使用统一保底图标，不为每个项目自造 SVG 或混用图标库。
+- 新生成的 Make App 图标默认使用 `lucide-react`，用户明确指定其他图标库时遵从其要求。对象图标按语义选择；无法匹配时使用统一保底图标，不为每个项目自造 SVG 或混用图标库。
 
 ## 移动列表
 
@@ -159,7 +159,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 
 ## 图标、主题与可访问性
 
-- 新生成的 Make App 和新增 Make App 图标默认使用 `lucide-react`；现有项目除非用户要求，不进行无关的全量图标迁移。
+- 新生成的 Make App 和新增 Make App 图标默认使用 `lucide-react`，用户明确指定其他图标库时遵从其要求；现有项目除非用户要求，不进行无关的全量图标迁移。字段类型图标按 [桌面／平板字段图标规范](field-type-icons.md) 接入，手机字段标签、字段选项和卡片不显示字段类型图标。
 - 颜色、分隔线、安全区和尺寸通过 `--make-app-*` / `--make-mobile-*` 变量覆盖，不复制组件内部 class 后重写结构。
 - 图标按钮必须有中文 `aria-label`；当前底部入口使用 `aria-current="page"`。
 - 弹层必须有 dialog 语义、焦点约束、关闭后焦点恢复和可预测的 Escape 顺序。
