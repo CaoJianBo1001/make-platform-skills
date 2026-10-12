@@ -50,7 +50,7 @@ Use a compact header layout:
 - close should be icon-only by default, with accessible name/title `关闭`; avoid visible `关闭` text unless an existing project pattern explicitly requires text buttons
 - title text must be readable within the available header space. Give the title container `min-width: 0` plus a flexible width, and only apply ellipsis after real overflow; keep the full title available through `title`/tooltip. Do not shrink the title slot so otherwise displayable titles are truncated.
 
-When Ant Design is used, prefer `FullscreenOutlined` and `FullscreenExitOutlined` for fullscreen controls, and the project-standard close control for closing.
+For newly generated fullscreen controls, choose semantically appropriate Lucide icons by default, including in Ant Design hosts; follow an explicit user choice of another icon library. In an existing project, keep an established close control unless changing it is part of the requested work.
 
 If fullscreen is not implemented or not useful for a simple Drawer, keep a normal close control in the header.
 

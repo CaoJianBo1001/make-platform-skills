@@ -2,7 +2,7 @@
 name: make-app-actions
 description: "Use when generating, integrating, refactoring, reviewing, or debugging Make record-list actions: CanvasTable actions are the default desktop/tablet selection and batch workflow, while 手机/phone 卡片/card and mobile detail pages reuse single edit/delete actions. Triggered by 复选框, 行操作, 选择操作栏, 编辑, 删除, 批量编辑, 暂无可用的操作, selectAll, Shift selection, selectionIntent, 手机卡片操作, 手机详情操作栏, 行级写权限预检, noPermissionRecordIds, record-write-permission, records/bulk, @qfei-design/make-app-actions, or action tests. Covers headless single-record action reuse, independent update/delete/bulkUpdate permissions, Canvas selection intent, immutable snapshots, Service precheck/bulk contracts, denial feedback, stale safety, and tests. Does not own CanvasTable internals, principal IAM policy, general Service layering, page shell, field editor internals, auth, runtime packaging, DSL, Make CLI, or filter/sort/group semantics."
 metadata:
-  version: 0.1.15
+  version: 0.1.16
 ---
 
 # make-app-actions
@@ -51,6 +51,11 @@ requests, query context, field controls, business feedback, and list refresh.
    `GroupTableComponent` does not support Shift range selection; do not emulate
    Shift ranges in the host unless the installed grouped-table public contract
    explicitly adds that capability.
+   For a new App, render the package's generic `RecordSelectionActionBar` with
+   host `ActionButton`/`IconButton` wrappers and default Lucide icons through
+   `MakeAppActionComponents`, including Ant Design hosts. The published AntD
+   action-bar adapter embeds Ant Design icons; retain it only in existing
+   integrations outside the requested icon work.
 5. Build single edit, single delete, and desktop/tablet multiple batch-edit actions from the
    current cached principal snapshot. Keep `data.record.update`,
    `data.record.delete`, and `data.record.bulkUpdate` independent.
@@ -66,13 +71,18 @@ requests, query context, field controls, business feedback, and list refresh.
    denial to exact whole-row error-red feedback. Select-all denial has no row IDs
    and remains toast-only.
 8. For batch edit, filter fields by runtime read/update permissions and package
-   capability. Ant Design hosts render package `AntdRecordBatchEditModal` with
-   host field controls. Other React hosts render package `RecordBatchEditModal`,
-   inject their design-system shell/select/mode controls, and provide Make field
-   controls through `renderValueControl`; never mix in AntD or copy the modal.
+   capability. New Make App hosts use the package's public generic
+   `RecordBatchEditModal` with the selected design system's injected `Modal`,
+   `FieldSelect`, and `ModeControl` to meet the default field-icon contract.
+   This includes Ant Design hosts: `AntdRecordBatchEditModal` in `0.3.1` does
+   not provide a public `FieldSelect` customization entry. Never mix AntD into
+   another design system or copy the package modal.
    The host must use its installed design system's public overlay API to keep
    injected popups outside clipping ancestors and above the owning dialog while
    preserving focus, Escape, and outside-click behavior.
+   Desktop/tablet batch-edit **field choices** show the default
+   [Make field-type icon](../makeui/references/field-type-icons.md) before each
+   field name; value, mode and candidate options do not receive field icons.
    Reuse the frozen operation snapshot on submit.
 9. Send one host Service batch request. Service sends one Make
    `/data/v1/field` request; do not loop single-record updates and do not use

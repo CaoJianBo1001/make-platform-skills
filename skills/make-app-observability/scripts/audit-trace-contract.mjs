@@ -64,6 +64,21 @@ const uiText = uiFiles.map((file) => file.text).join('\n');
 const serviceText = serviceFiles.map((file) => file.text).join('\n');
 const failures = [];
 const hasBothHeaders = (text) => /traceparent/i.test(text) && /x-log-id/i.test(text);
+const rendersErrorViewport = (text) => {
+  const viewportNames = ['MakeAppErrorNoticeViewport'];
+  const publicReactEntry = String.raw`@qfei-design/make-app-observability/react`;
+  const namedImport = new RegExp(String.raw`\bimport\s*\{([^}]+)\}\s*from\s*['"]${publicReactEntry}['"]`, 'g');
+  for (const [, imports] of text.matchAll(namedImport)) {
+    for (const [, alias] of imports.matchAll(/\bMakeAppErrorNoticeViewport\s+as\s+([A-Za-z_$][\w$]*)\b/g)) {
+      viewportNames.push(alias);
+    }
+  }
+  const namespaceImport = new RegExp(String.raw`\bimport\s+\*\s+as\s+([A-Za-z_$][\w$]*)\s+from\s*['"]${publicReactEntry}['"]`, 'g');
+  for (const [, namespace] of text.matchAll(namespaceImport)) {
+    viewportNames.push(`${namespace}.MakeAppErrorNoticeViewport`);
+  }
+  return viewportNames.some((name) => new RegExp(String.raw`(?:<\s*|\b(?:React\.)?createElement\s*\(\s*)${name.replace('.', String.raw`\.`)}\b`).test(text));
+};
 const writesHeader = (text, name) => new RegExp(`(?:\\.set|\\.setHeader|\\.append|\\.header)\\s*\\(\\s*['\"\\x60]${name}['\"\\x60]`, 'i').test(text)
   || new RegExp(`(?:\\{|,)\\s*['\"\\x60]?${name}['\"\\x60]?\\s*:`, 'i').test(text);
 const writesResponseTrace = (text) => {
@@ -105,8 +120,8 @@ if (!version) {
     const major = Number(rawMajor);
     const minor = Number(rawMinor);
     const patch = Number(rawPatch) + (operator === '>' ? 1 : 0);
-    if (major === 0 && (minor < 1 || (minor === 1 && patch < 5))) {
-      failures.push('observability_version_too_old: require @qfei-design/make-app-observability >= 0.1.5');
+    if (major === 0 && (minor < 1 || (minor === 1 && patch < 8))) {
+      failures.push('observability_version_too_old: require @qfei-design/make-app-observability >= 0.1.8 for the desktop and mobile viewport contract');
     }
   }
 }
@@ -116,6 +131,9 @@ if (!/@qfei-design\/make-app-observability\/styles\.css/.test(uiText)) {
 if (!/@qfei-design\/make-app-observability\/react/.test(uiText)
     || !/MakeAppErrorNotice\b/.test(uiText)) {
   failures.push('observability_notice_missing: use the public React error notice');
+}
+if (!uiFiles.some((file) => rendersErrorViewport(file.text))) {
+  failures.push('observability_viewport_missing: render one global MakeAppErrorNoticeViewport for the top error queue');
 }
 if (!uiFiles.some((file) => writesHeader(file.text, 'traceparent')
     && writesHeader(file.text, 'x-log-id'))) {
@@ -157,7 +175,7 @@ if (resolvedMode === 'service-fronted') {
 }
 
 console.log(`mode: ${resolvedMode}`);
-console.log('scope: trace wiring only; verify error notice visibility in a real AppShell test');
+console.log('scope: static trace wiring and declared package version; verify error notice visibility in a real AppShell test');
 for (const failure of failures) console.error(`FAIL ${failure}`);
 console.log(`status: ${failures.length ? 'FAIL' : 'PASS'}`);
 process.exitCode = failures.length ? 1 : 0;

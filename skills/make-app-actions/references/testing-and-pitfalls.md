@@ -20,8 +20,10 @@ Package integration:
 - public package entries and one `styles.css` import
 - no copied action reducer, permission matcher, Canvas adapter, or modal
 - no package network calls or deep imports
-- AntD host uses the published adapter; Arco/shadcn/non-AntD React host uses the
-  generic action bar/modal, injects its own components, and does not import AntD
+- new AntD, Arco, shadcn, and other React hosts use the generic action bar with
+  injected design-system buttons and Lucide icons by default, plus the generic
+  batch modal with an injected `FieldSelect` showing field-type icons; non-AntD
+  hosts do not import AntD, and an unchanged legacy AntD adapter may remain
 - AntD `renderValueControl(field, control)` forwards `control.disabled`; generic
   controls forward the complete controlled-value contract
 
@@ -170,9 +172,12 @@ the resulting plan/diff or a compact evaluation record; do not reveal the desire
 implementation in the prompt.
 
 1. `为一个 Ant Design Make CanvasTable 可写记录列表接入默认编辑、删除和批量编辑。`
-   Accept only when the agent uses package AntD adapters, independent permissions,
-   the `0.3.1` two-argument value-control callback with `disabled`, the canonical
-   `批量编辑` title, one precheck, and one bulk request.
+   Accept only when the agent uses the package generic action bar with injected
+   AntD buttons and Lucide icons, plus the generic batch modal with an injected
+   AntD `FieldSelect` that adds the default
+   field icons, independent permissions, the `0.3.1` two-argument value-control
+   callback with `disabled`, the canonical `批量编辑` title, one precheck, and one
+   bulk request.
 2. `在有搜索条件的列表中点击表头全选后批量编辑。`
    Accept only when the agent forms one canonical effective filter containing the
    search condition and reuses it for list, precheck, and mutation.

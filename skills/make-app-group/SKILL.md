@@ -2,7 +2,7 @@
 name: make-app-group
 description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. When make-app-actions is present, a successfully applied group must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
 metadata:
-  version: 0.1.6
+  version: 0.1.7
 ---
 
 # make-app-group
@@ -31,7 +31,9 @@ This capability is a desktop/tablet presentation. The standard 手机／phone ca
    `markGroupPageLoadFailed` are public.
 4. Build grouping candidates from normalized runtime fields with a non-empty key
    and `capabilities.groupable === true`. Do not use visible columns, sample rows,
-   local DSL, or field-type allowlists as the source of truth.
+   local DSL, or field-type allowlists as the source of truth. In the desktop/tablet
+   host component adapter, show the default [Make field-type icon](../makeui/references/field-type-icons.md)
+   before each grouping field option; do not decorate sort direction or other options.
 5. Use ordered `{ fieldKey, order }[]` as the only grouped-list value. Persist it
    in Entity Preset `group`; use at most three unique fields.
 6. Establish a permission-aware object context. Load schema and Entity Preset,

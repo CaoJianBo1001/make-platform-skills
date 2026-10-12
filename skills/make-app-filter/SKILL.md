@@ -2,7 +2,7 @@
 name: make-app-filter
 description: "Use when generating, integrating, reviewing, or debugging Make App record-list keyword search through Service filter.expression or advanced/conditional/table/header filtering with @qfei-design/make-app-filter. Triggered by 列表搜索, 关键词搜索, 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, CEL/DNF, field-type operators, candidate values, and filter Preset save/echo. In search-only mode, use the package compiler without a filter panel or Preset lifecycle. In advanced-filter mode, use the package panel, permission-aware Entity Preset, and desktop/tablet CanvasTable header linkage; phone uses the mobile panel layout. Consume make-app-permission list access. When make-app-actions is present, a successfully applied filter must clear its selection and invalidate pending work; drafts and failures preserve selection. Does not own page layout, CanvasTable internals, Service route implementation, sorting, grouping, auth, runtime, DSL, Make CLI, or table cell editing."
 metadata:
-  version: 0.1.19
+  version: 0.1.20
 ---
 
 # make-app-filter
@@ -40,7 +40,7 @@ Choose the mode before following the workflow. Panel, controller, filter Preset 
 4. Read package docs before designing code. Prefer installed package docs; if the host is working in the package repo, read source docs.
 5. In advanced-filter mode, import `@qfei-design/make-app-filter/styles.css` once in the host UI entry; search-only compiler use does not need panel styles.
 6. Both modes use the package core compiler. Advanced-filter mode additionally uses package panel, controller, adapter, validation, and CEL parse APIs. Do not copy or hand-write these capabilities in the host.
-7. In advanced-filter mode, keep presentation-specific toolbar trigger, desktop Popover or phone `MobileFilterSheet`, applied state, candidate APIs, Service request adapter, and desktop/tablet CanvasTable header filter UI/menu in the host. The phone panel passes `layout="mobile"` and receives a mobile-only component adapter using `MobileFilterSelect`; the package Sheet owns the height and scroll boundary. Search-only has no panel surface.
+7. In advanced-filter mode, keep presentation-specific toolbar trigger, desktop Popover or phone `MobileFilterSheet`, applied state, candidate APIs, Service request adapter, and desktop/tablet CanvasTable header filter UI/menu in the host. The phone panel passes `layout="mobile"` and receives a mobile-only component adapter using `MobileFilterSelect`; the package Sheet owns the height and scroll boundary. Search-only has no panel surface. In the desktop/tablet component adapter, decorate only the actual “选择字段” options with the default [Make field-type icons](../makeui/references/field-type-icons.md); operator, value and candidate options remain unchanged. Phone field options remain plain text.
 8. On desktop/tablet, wire header "按该字段筛选" to the same package controller/panel; do not create separate header-only state or a local filter implementation. Phone has no header entry.
 9. Align with the backend Record list filter contract: Service sends `filter: { expression }`, blank expressions mean no filter, and field support must match runtime metadata plus package public APIs. Submit `compileListFilter` output unchanged; never rewrite CEL/DNF in the host.
 10. For entity object lists, consume the list-access gate from `make-app-permission`. Only when advanced filtering is enabled and list access is allowed, load the current Entity Preset before the first records query and hydrate the saved filter through package public APIs using a permission-aware `{ enabled, entityKey, generation }` context. Search-only does not load or hydrate the filter Preset, and toolbar search remains session-only.
@@ -86,6 +86,7 @@ Required read procedure for installed `1.0.0+` packages:
 | Filter IR, controller draft/confirm semantics, search merge, URL echo | `references/filter-model.md` |
 | Runtime field capability, operator/value-editor APIs, and candidate values | `references/operator-matrix.md` |
 | Host Popover/container, trigger, panel sizing, validation visuals | `references/ui-style.md` |
+| Default desktop/tablet field-choice icons in the filter panel | [makeui field-type icon contract](../makeui/references/field-type-icons.md) |
 | CanvasTable header more menu and advanced filter linkage | `references/header-table-linkage.md` |
 | Service filter contract and CEL expression payload | `references/service-translation.md` |
 | Advanced-filter Entity Preset load, hydration, save barrier, clear, stale requests | `references/preset-integration.md` |

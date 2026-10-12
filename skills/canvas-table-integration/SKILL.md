@@ -2,7 +2,7 @@
 name: canvas-table-integration
 description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, Shift 200 条上限, row colors, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Make record lists use make-app-actions for the default selectable record-action workflow. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
 metadata:
-  version: 0.1.18
+  version: 0.1.20
 ---
 
 # canvas-table-integration
@@ -24,7 +24,7 @@ Hard Track B rule: every CanvasTable cell edit / 单元格编辑 implementation 
 1. Confirm this is a consumer-side table integration, not table-library maintenance.
 2. Check package installation and read the package AI docs in the required order below. Integrations that combine business row colors with selection or hover require the published `@qfei-design/canvas-table@^1.3.1` contract.
 3. Choose base Track A or Track C. Add Track B as an editing enhancement when required; for editable Make schema tables use Track C plus Track B.
-4. For Make schema tables, load and normalize schema fields before initializing the table; build `IColumn[]` plus renderers from the normalized field types, schema `field.properties`, and the shared field type registry.
+4. For Make schema tables, load and normalize schema fields before initializing the table; build `IColumn[]` plus renderers from the normalized field types, schema `field.properties`, and the shared field type registry. Desktop/tablet field headers also get the default Lucide type icon through the public `prefixRender` API; use [makeui's field-type icon contract](../makeui/references/field-type-icons.md) for the exact mapping.
 5. Read only the base-track references and, when editing is in scope, the Track B references from the topic map.
 6. Start from the package recipe/example when available, then adapt with the smallest project-local diff.
 7. Enable table row defaults unless the user explicitly opts out: `showSN` sequence numbers plus a hover-revealed open-detail action through `bodyRowHeadSuffixOptions`.
@@ -91,6 +91,7 @@ If an existing Make record list uses another table component, the expected integ
 | Make record-list default selection and edit/delete/batch-edit actions | Use `make-app-actions` |
 | Virtual loading, paginated backend integration, large-data fast scrolling, or scrollbar dragging | `references/virtual-table-patterns.md` |
 | Schema/meta to `IColumn[]` | `references/column-patterns.md` |
+| Default Make field-type icon before ordinary and grouped table headers | [makeui field-type icon contract](../makeui/references/field-type-icons.md) plus `references/column-patterns.md` |
 | Custom clickable cell shapes | `references/shape-render-patterns.md` |
 | Track A pitfalls | `references/common-pitfalls.md` |
 | Cell-edit contract | `references/edit-contract.md` |
