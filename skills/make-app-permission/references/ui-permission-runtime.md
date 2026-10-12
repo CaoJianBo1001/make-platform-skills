@@ -185,3 +185,7 @@ Fail closed when either permission or Schema refresh fails.
 - Create-only Lookup reads an invisible target field.
 - Permission refresh does not invalidate/reload Schema or accepts stale results.
 - Direct URL/handler access bypasses operation checks.
+
+## Scoped route feedback
+
+Read `scoped-route-feedback.md` for App guard -> shell -> object/fixed-route guard composition. Administrator contacts must work without a business request: follow `make-app-auth/references/access-help.md` and use the host helper, for example `showForbidden(target, { auth, scope: 'resource' })`. If embedded contacts are absent and the installed SDK supports it, use `auth.getAppAdministrators()` independently. For a local denial, do not fetch data merely to obtain a 403; preserve authorized navigation and headers. Record-read-only denial remains distinct from metadata/App entry denial.

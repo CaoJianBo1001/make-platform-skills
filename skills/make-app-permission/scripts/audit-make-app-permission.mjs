@@ -2,6 +2,7 @@
 // make-app-permission contract version: 0.2.9
 import fs from 'node:fs';
 import path from 'node:path';
+import { auditScopedRouteFeedback } from './scoped-route-feedback-audit.mjs';
 
 const USAGE = `Usage:
   node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
@@ -39,6 +40,9 @@ const warnings = [];
 checkSourceRoots();
 checkServiceContract();
 checkUiContract();
+warnings.push(...auditScopedRouteFeedback(uiRuntimeFiles.map(file => ({
+  file: path.relative(root, file), source: fs.readFileSync(file, 'utf8'),
+}))));
 
 printResult();
 process.exit(failures.length > 0 ? 1 : 0);

@@ -78,13 +78,15 @@ if (boot.status === 'authenticated') {
     onRelogin: () => auth.login({ redirect: true })
   });
 } else if (boot.status === 'forbidden') {
-  renderForbidden();
+  renderForbidden(boot.payload);
 } else {
   renderLoading();
 }
 ```
 
 ## Business Requests
+
+`renderForbidden(payload)` is the host App-scope wrapper. Preserve the payload and follow `access-help.md`; object/operation denials use local feedback, not this whole-App wrapper.
 
 Use `auth.api` for ordinary Make backend calls. The fixed Make App AI v1 raw-byte bridge is the only exception described in `request-adapter.md`; it preserves the same unified-login session while returning HTTP status, headers and bytes to the public AI Client. In direct gateway mode, the auth SDK handles `/api/make`, cookies, JSON request bodies, and unified auth errors for ordinary calls.
 

@@ -85,7 +85,7 @@ When `apiAuthRedirect: true` is available, the SDK owns the normal unified-login
 - fallback UI for errors that cannot redirect
 
 ```js
-async function handleMakeRequestError(error) {
+async function handleMakeRequestError(error, feedbackTarget) {
   if (error instanceof MakeAppUnauthorizedError) {
     showNeutralLoading();
     if (!makeAuthConfig.apiAuthRedirect) {
@@ -94,8 +94,8 @@ async function handleMakeRequestError(error) {
     return;
   }
 
-  if (error instanceof MakeAppForbiddenError) {
-    renderForbidden();
+  if (error instanceof MakeAppForbiddenError && error.payload?.reason === 'permission_denied') {
+    await showForbidden(feedbackTarget, { auth, payload: error.payload, scope: 'resource' });
     return;
   }
 
@@ -108,7 +108,8 @@ export async function listRecords(payload) {
       auth.api.post('/data/v1/record', payload,
         makeRequestInit(traceHeaders, { 'X-Make-Target': 'MakeService.ListResources' })));
   } catch (error) {
-    return handleMakeRequestError(error);
+    await handleMakeRequestError(error, resourceFeedback);
+    throw error; // A denied request must not resolve as successful undefined data.
   }
 }
 ```
@@ -116,6 +117,8 @@ export async function listRecords(payload) {
 Do not call `auth.logout({ redirect: false })` as the default 401 path when `apiAuthRedirect` is enabled. Use logout-before-login only for a diagnosed stale or corrupted App session, not as the normal request adapter behavior.
 
 ## Tests
+
+`showForbidden` and `resourceFeedback` are host-owned feedback slots, not SDK exports. This example uses the structured permission-denial reason; for legacy responses without reason, reuse the host's tested, documented permission classifier rather than treating every code/HTTP 403 as denied permission. Follow `access-help.md`; operations keep their form/input and use operation scope. Preserve the existing requestWithTrace contract.
 
 When touching request code, add or update tests for:
 

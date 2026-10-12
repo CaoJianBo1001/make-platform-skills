@@ -269,3 +269,7 @@ These checks belong to the agent, generated tests, CI, or publish pipeline. Do n
 - Service derives `X-Forwarded-Host` from inbound `Host`, does not pass through client-supplied `X-Forwarded-Host`, and adds `X-Forwarded-Proto`; auth and business requests share this helper.
 - `session/complete` reaches the browser as `302 + Set-Cookie + Location`.
 - At least one authenticated schema/meta request and one record-list request pass through the same Service/auth adapter path before reporting publish success.
+
+## Administrator contact help
+
+Reuse the existing `/api/make/auth/**` namespace proxy for `/api/make/auth/app-administrators`, preserving Cookie and trusted forwarded host/proto. Contact help must remain available when the current App business request or current-context is denied. It does not authorize business access and does not require a broad `/api/make/**` proxy; follow `access-help.md`.

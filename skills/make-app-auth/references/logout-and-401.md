@@ -48,3 +48,7 @@ Handle 401/403 in one Make API adapter or data-source layer. Every frontend requ
 - Hard-coding Org, unified-login, or account-center environment domains in App code.
 - Clearing `zs_session` or `make_app_session` from App code.
 - Treating every 403 as a login-expired state after SDK login check confirms the user is already authenticated.
+
+## Administrator contact feedback
+
+Follow `access-help.md`: preserve `error.payload`, distinguish App/resource/operation denial, and retain navigation/unaffected input for local denial. Neither HTTP 403 alone nor a service failure proves missing permission.

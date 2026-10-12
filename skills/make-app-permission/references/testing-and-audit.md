@@ -132,3 +132,7 @@ Do not report complete until:
 - a real reference project passes the audit without changing that project;
 - source and installed Skill copies are synchronized;
 - complex revisions have fresh-agent forward-test evidence when available.
+
+## Scoped feedback acceptance
+
+Read `scoped-route-feedback.md` and wire its direct URL, recovery, refresh and revocation assertions into host tests. Assert visible navigation/header, feedback inside the content region and zero denied requests. A scope/text-only assertion or static audit pass is insufficient. `resource_route_shell_unverified` is a bounded JSX signal; dynamic nesting/aliases require rendered-tree evidence, not a comment or an unrelated business-page shell.

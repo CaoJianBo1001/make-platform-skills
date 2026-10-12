@@ -144,3 +144,7 @@ The content region owns page-local layout:
 - sidebar navigation: no page-level scroll; sidebar nav area scrolls
 - drawer forms/details: drawer body scrolls
 - route forms/details: route content may scroll inside the content region
+
+## Scoped route states
+
+With an authorized App entry, retain the shell for direct URL object/fixed-page denial and replace only its content slot. Read `make-app-permission/references/scoped-route-feedback.md`. Do not use a full-viewport feedback overlay that hides navigation; keep the existing mobile navigation and independent global error outlet contract. No authorized object or fixed page permits full-page App denial.
