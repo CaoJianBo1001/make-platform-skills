@@ -1,6 +1,6 @@
 # Administrator Contact Help
 
-Use one host-owned adapter for startup denial, frontend permission guards and known business permission denials. React Apps render `PermissionFeedback` from `@qfei-design/make-app-feedback`; read `makeui/references/permission-feedback.md` for the public props, CSS, installed-package verification and release gate. Display directly assigned user administrators only, not departments or Agents. Neither the component nor contact lookup decides or grants permissions.
+Use one host-owned adapter for startup denial, frontend permission guards and known business permission denials. React Apps render `PermissionFeedback` from `@qfeius/make-app-feedback`; read `makeui/references/permission-feedback.md` for the public props, CSS, installed-package verification and release gate. Display directly assigned user administrators only, not departments or Agents. Neither the component nor contact lookup decides or grants permissions.
 
 ## Capability and release gate
 

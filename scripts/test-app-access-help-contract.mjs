@@ -32,8 +32,8 @@ test('React feedback integration has one owner and real package/CSS entries', as
   const guide = await read('makeui/references/permission-feedback.md');
   assert.match(ui, /references\/permission-feedback\.md/u);
   for (const source of [auth, permission]) assert.match(source, /makeui\/references\/permission-feedback\.md/u);
-  assert.match(guide, /import \{ PermissionFeedback \} from '@qfei-design\/make-app-feedback'/u);
-  assert.match(guide, /import '@qfei-design\/make-app-feedback\/styles\.css'/u);
+  assert.match(guide, /import \{ PermissionFeedback \} from '@qfeius\/make-app-feedback'/u);
+  assert.match(guide, /import '@qfeius\/make-app-feedback\/styles\.css'/u);
   assert.match(guide, /verify-feedback-package-surface\.mjs/u);
   assert.match(guide, /not proof of registry publication/u);
   assert.doesNotMatch(auth, /await showForbidden\(/u);

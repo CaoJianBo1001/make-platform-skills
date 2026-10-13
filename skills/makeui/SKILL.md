@@ -2,12 +2,12 @@
 name: makeui
 description: "Use when designing, generating, refactoring, or reviewing Make App frontend UI and `apps/ui` React code: app shell, desktop/mobile responsive presentation, `@qfei-design/make-app-mobile`, dynamic object routes, list pages, drawers, task pages, forms, selectors, field metadata, and UI states. New Make Apps receive package-backed mobile adaptation by default unless the user explicitly opts out or requests a custom mobile design. AI助手、MakeAiTheme、maxDrawerWidth 或 assistant SSE must use `make-ai-assistant`; the package owns assistant-internal UI/styles and this skill owns only surrounding layout and placement. Use `canvas-table-integration` for Make record tables, `make-app-actions` for writable actions, `make-app-filter`/`make-app-group`/`make-app-sort` for list behavior, and `make-app-permission` for permission gates. Does not own auth, build/publish, Service runtime, business APIs, permission logic, persistence, DSL, CanvasTable internals, or Make AI assistant package behavior."
 metadata:
-  version: 0.4.26
+  version: 0.4.27
 ---
 
 # makeui
 
-For React permission denial presentation, read `references/permission-feedback.md` and use the verified `@qfei-design/make-app-feedback` public component and CSS through one host adapter; do not recreate its UI. Respect its registry/local-prerelease gate. For object/fixed-page denial, preserve authorized navigation and the user header and replace only the content slot. Read `make-app-permission/references/scoped-route-feedback.md`; only no authorized App entry permits full-page App denial. Keep the host's existing desktop/mobile and global error outlet contracts.
+For React permission denial presentation, read `references/permission-feedback.md` and use the verified `@qfeius/make-app-feedback` public component and CSS through one host adapter; do not recreate its UI. Respect its registry/local-prerelease gate. For object/fixed-page denial, preserve authorized navigation and the user header and replace only the content slot. Read `make-app-permission/references/scoped-route-feedback.md`; only no authorized App entry permits full-page App denial. Keep the host's existing desktop/mobile and global error outlet contracts.
 
 Use this skill for Make App frontend UI work in `apps/ui`. The default stack is React + Vite + React Router, but `makeui` only owns UI structure and presentation decisions.
 

@@ -4,7 +4,7 @@ Read this for React App startup, route/data or operation denial presentation. Pe
 
 ## Install and release gate
 
-- Use `@qfei-design/make-app-feedback` and its actual `PermissionFeedback` export. Install an exact version verified in the intended registry, using the host UI package's existing package manager. Do not change the host runtime or introduce a second lockfile.
+- Use `@qfeius/make-app-feedback` and its actual `PermissionFeedback` export. Install an exact version verified in the intended registry, using the host UI package's existing package manager. Do not change the host runtime or introduce a second lockfile.
 - The locally verified API candidate is `0.1.0-alpha.0`; that fact is **not proof of registry publication**. Without a registry-resolvable version, report a package release blocker. Only an explicitly approved local test may install a supplied tarball; do not commit a developer-specific tarball path or use Git/source copying as a release fallback.
 - Verify the actual installed artifact, including public JS, TypeScript and CSS entries, rather than trusting a version string or template. Use the script below; `--allow-prerelease` is reserved for that explicit local-test opt-in and never proves publication.
 
@@ -17,8 +17,8 @@ node skills/makeui/scripts/verify-feedback-package-surface.mjs <installed-packag
 The verifier uses the host's installed React and `react-dom/server`. It checks exports and representative rendered states, not route authorization, mounted layout, browser interaction or live IAM. Keep portable host verification project-local or versioned; do not reference a developer's global Skill directory in CI.
 
 ```tsx
-import { PermissionFeedback } from '@qfei-design/make-app-feedback';
-import '@qfei-design/make-app-feedback/styles.css';
+import { PermissionFeedback } from '@qfeius/make-app-feedback';
+import '@qfeius/make-app-feedback/styles.css';
 ```
 
 Import the CSS once in the host UI entry. Do not recreate the package's administrator/avatar/buttons/styles in each page or globally override its internals. Theme through the documented `--maf-*` variables scoped to `.maf-feedback` or its `style`; keep host desktop/mobile navigation and error outlets outside this component. It never supplies the App brand, sidebar, account area, business table or form.
@@ -44,7 +44,7 @@ The following `AppPermissionFeedback` is **App-owned example code**, not another
 
 ```tsx
 import { useEffect, useState } from 'react';
-import { PermissionFeedback, type AdministratorContact, type AdministratorStatus, type PermissionFeedbackProps } from '@qfei-design/make-app-feedback';
+import { PermissionFeedback, type AdministratorContact, type AdministratorStatus, type PermissionFeedbackProps } from '@qfeius/make-app-feedback';
 
 type AdministratorApi = { getAppAdministrators?: () => Promise<AdministratorContact[]> };
 type DenialPayload = { data?: { appAdministrators?: AdministratorContact[] } };

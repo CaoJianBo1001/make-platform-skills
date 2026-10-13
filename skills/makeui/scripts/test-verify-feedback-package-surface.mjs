@@ -10,7 +10,7 @@ const script = fileURLToPath(new URL('./verify-feedback-package-surface.mjs', im
 const run = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' });
 const withPackage = (changes, check) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'feedback-surface-test-'));
-  fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({ name: '@qfei-design/make-app-feedback', version: '0.1.0', ...changes }));
+  fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({ name: '@qfeius/make-app-feedback', version: '0.1.0', ...changes }));
   try { check(directory); } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 };
 

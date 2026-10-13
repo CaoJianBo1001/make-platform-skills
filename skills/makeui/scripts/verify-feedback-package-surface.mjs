@@ -20,7 +20,7 @@ export async function verifyFeedbackPackageSurface(directory, { allowPrerelease 
   assert.ok(fs.existsSync(path.join(directory, 'package.json')), 'feedback_package_unavailable');
   const root = fs.realpathSync(directory);
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(manifest.name, '@qfei-design/make-app-feedback', 'feedback_package_name_mismatch');
+  assert.equal(manifest.name, '@qfeius/make-app-feedback', 'feedback_package_name_mismatch');
   const version = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?$/u.exec(manifest.version ?? '');
   assert.ok(version && (Number(version[1]) > 0 || Number(version[2]) >= 1), 'feedback_version_unsupported');
   assert.ok(!version[4] || allowPrerelease, 'feedback_prerelease_requires_opt_in');
