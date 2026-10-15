@@ -4,6 +4,12 @@ import { readFile } from 'node:fs/promises';
 
 const read = file => readFile(new URL(`../skills/${file}`, import.meta.url), 'utf8');
 
+test('permission package and route regression tests are continuous CI gates', async () => {
+  const workflow = await readFile(new URL('../.github/workflows/skill-metadata-lint.yml', import.meta.url), 'utf8');
+  assert.match(workflow, /node --test skills\/makeui\/scripts\/test-verify-feedback-package-surface\.mjs/u);
+  assert.match(workflow, /node --test skills\/make-app-permission\/scripts\/test-scoped-route-feedback\.mjs/u);
+});
+
 test('auth startup and adapter preserve denial payload and scope', async () => {
   const startup = await read('make-app-auth/references/sdk-integration.md');
   const adapter = await read('make-app-auth/references/request-adapter.md');
@@ -32,8 +38,16 @@ test('React feedback integration has one owner and real package/CSS entries', as
   const guide = await read('makeui/references/permission-feedback.md');
   assert.match(ui, /references\/permission-feedback\.md/u);
   for (const source of [auth, permission]) assert.match(source, /makeui\/references\/permission-feedback\.md/u);
-  assert.match(guide, /import \{ PermissionFeedback \} from '@qfeius\/make-app-feedback'/u);
-  assert.match(guide, /import '@qfeius\/make-app-feedback\/styles\.css'/u);
+  assert.match(guide, /import \{ MakeAppPermissionNotice \} from '@qfei-design\/make-app-observability\/react'/u);
+  assert.match(guide, /import '@qfei-design\/make-app-observability\/styles\.css'/u);
+  assert.match(guide, /variant="page"[^\n]*scope="app"/u);
+  assert.match(guide, /variant="inline"[^\n]*scope="resource"/u);
+  assert.match(guide, /variant="toast"[^\n]*scope="operation"/u);
+  assert.match(guide, /MakeAppErrorNoticeViewport/u);
+  assert.match(guide, /onReturn.*host|host.*onReturn/iu);
+  for (const source of [ui, auth, permission, guide]) {
+    assert.doesNotMatch(source, /@qfeius\/make-app-feedback/u);
+  }
   assert.match(guide, /verify-feedback-package-surface\.mjs/u);
   assert.match(guide, /not proof of registry publication/u);
   assert.doesNotMatch(auth, /await showForbidden\(/u);

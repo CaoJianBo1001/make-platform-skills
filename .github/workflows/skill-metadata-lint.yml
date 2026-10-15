@@ -32,3 +32,5 @@ jobs:
           done
           node skills/make-ai-assistant/scripts/test-audit-make-ai-assistant-project.mjs
           node skills/make-app-observability/scripts/test-audit-trace-contract.mjs
+          node --test skills/makeui/scripts/test-verify-feedback-package-surface.mjs
+          node --test skills/make-app-permission/scripts/test-scoped-route-feedback.mjs

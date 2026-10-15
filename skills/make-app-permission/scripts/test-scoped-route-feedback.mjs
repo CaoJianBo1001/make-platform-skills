@@ -3,9 +3,9 @@ import assert from 'node:assert/strict';
 import { auditScopedRouteFeedback } from './scoped-route-feedback-audit.mjs';
 
 const route = { file: 'router/AppRouter.jsx', source: 'function AppRouter() { return <ForbiddenPanel scope="resource" />; }' };
-for (const component of ['PermissionFeedback', 'AppPermissionFeedback']) {
+for (const component of ['MakeAppPermissionNotice', 'AppPermissionFeedback']) {
   test(`${component} cannot replace the root shell for resource denial`, () => {
-    const source = `import { PermissionFeedback } from '@qfeius/make-app-feedback'; function AppRouter() { return <${component} scope="resource" />; }`;
+    const source = `import { MakeAppPermissionNotice } from '@qfei-design/make-app-observability/react'; function AppRouter() { return <${component} variant="inline" scope="resource" />; }`;
     assert.match(auditScopedRouteFeedback([{ ...route, source }])[0], /resource_route_shell_unverified/u);
   });
   test(`${component} inside the shell is accepted as a static signal only`, () => {

@@ -20,28 +20,41 @@ export async function verifyFeedbackPackageSurface(directory, { allowPrerelease 
   assert.ok(fs.existsSync(path.join(directory, 'package.json')), 'feedback_package_unavailable');
   const root = fs.realpathSync(directory);
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
-  assert.equal(manifest.name, '@qfeius/make-app-feedback', 'feedback_package_name_mismatch');
+  assert.equal(manifest.name, '@qfei-design/make-app-observability', 'feedback_package_name_mismatch');
   const version = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?$/u.exec(manifest.version ?? '');
   assert.ok(version && (Number(version[1]) > 0 || Number(version[2]) >= 1), 'feedback_version_unsupported');
   assert.ok(!version[4] || allowPrerelease, 'feedback_prerelease_requires_opt_in');
-  const entry = manifest.exports?.['.'];
+  const entry = manifest.exports?.['./react'];
   const esm = exportFile(root, entry, 'import', 'feedback_public_export_missing');
   const cjs = exportFile(root, entry, 'require', 'feedback_public_export_missing');
   exportFile(root, entry, 'types', 'feedback_public_types_missing');
   const css = exportFile(root, manifest.exports?.['./styles.css'], 'default', 'feedback_css_export_missing');
   exportFile(root, manifest.exports?.['./styles.css'], 'types', 'feedback_css_types_missing');
-  assert.ok(fs.readFileSync(css, 'utf8').trim(), 'feedback_css_empty');
+  const styles = fs.readFileSync(css, 'utf8');
+  assert.ok(styles.trim(), 'feedback_css_empty');
+  assert.ok(styles.includes('.make-app-error-notice.make-app-error-notice--permission'), 'feedback_permission_css_missing');
+  const coreEntry = manifest.exports?.['.'];
+  const coreEsm = exportFile(root, coreEntry, 'import', 'feedback_core_export_missing');
+  exportFile(root, coreEntry, 'types', 'feedback_core_types_missing');
 
   const require = createRequire(path.join(root, 'package.json'));
   const React = require('react');
   const { renderToStaticMarkup } = require('react-dom/server');
-  const { PermissionFeedback } = await import(pathToFileURL(esm).href);
-  assert.equal(typeof PermissionFeedback, 'function', 'feedback_component_missing');
-  assert.equal(typeof require(cjs).PermissionFeedback, 'function', 'feedback_cjs_component_missing');
-  const render = props => renderToStaticMarkup(React.createElement(PermissionFeedback, props));
-  for (const scope of ['app', 'resource', 'operation']) {
-    const html = render({ scope, administrators: [{ userId: '1', name: '<script>name</script>' }] });
+  const { MakeAppPermissionNotice, MakeAppErrorNotice, MakeAppErrorNoticeViewport } = await import(pathToFileURL(esm).href);
+  assert.equal(typeof MakeAppPermissionNotice, 'function', 'feedback_component_missing');
+  assert.equal(typeof require(cjs).MakeAppPermissionNotice, 'function', 'feedback_cjs_component_missing');
+  const core = await import(pathToFileURL(coreEsm).href);
+  assert.equal(typeof core.normalizeMakeAppPermissionNotice, 'function', 'feedback_normalizer_missing');
+  assert.equal(typeof MakeAppErrorNotice, 'function', 'feedback_existing_error_component_missing');
+  assert.equal(typeof MakeAppErrorNoticeViewport, 'function', 'feedback_existing_viewport_missing');
+  const traceId = '1234567890abcdef1234567890abcdef';
+  const oldError = renderToStaticMarkup(React.createElement(MakeAppErrorNotice, { kind: 'network', title: '请求失败', traceId }));
+  assert.ok(oldError.includes(traceId), 'feedback_existing_trace_display_missing');
+  const render = props => renderToStaticMarkup(React.createElement(MakeAppPermissionNotice, props));
+  for (const [variant, scope] of [['page', 'app'], ['inline', 'resource'], ['inline', 'operation'], ['toast', 'operation']]) {
+    const html = render({ variant, scope, administrators: [{ userId: '1', name: '<script>name</script>' }] });
     assert.ok(html.includes(`data-scope="${scope}"`), `feedback_scope_missing: ${scope}`);
+    assert.ok(html.includes(`data-variant="${variant}"`), `feedback_variant_missing: ${variant}`);
     assert.ok(html.includes('&lt;script&gt;name&lt;/script&gt;'), 'feedback_name_not_escaped');
     assert.ok(!html.includes('<script>'), 'feedback_unsafe_name_html');
   }
@@ -56,6 +69,10 @@ export async function verifyFeedbackPackageSurface(directory, { allowPrerelease 
   assert.ok(error.includes('暂时无法检查权限'), 'feedback_retry_error_missing');
   const restored = render({ scope: 'operation', retryStatus: 'restored', onRetry: () => callbacks++ });
   assert.ok(restored.includes('权限已恢复'), 'feedback_restored_state_missing');
+  assert.ok(!/<button\b/u.test(restored), 'feedback_restored_action_not_removed');
+  const toast = render({ variant: 'toast', scope: 'operation', operationName: '导出', onClose: () => callbacks++ });
+  assert.ok(toast.includes('暂无导出权限'), 'feedback_operation_name_missing');
+  assert.ok(toast.includes('关闭权限提示'), 'feedback_toast_close_missing');
   assert.equal(callbacks, 0, 'feedback_automatic_host_action');
   return manifest.version;
 }

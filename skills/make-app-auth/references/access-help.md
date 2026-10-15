@@ -1,6 +1,6 @@
 # Administrator Contact Help
 
-Use one host-owned adapter for startup denial, frontend permission guards and known business permission denials. React Apps render `PermissionFeedback` from `@qfeius/make-app-feedback`; read `makeui/references/permission-feedback.md` for the public props, CSS, installed-package verification and release gate. Display directly assigned user administrators only, not departments or Agents. Neither the component nor contact lookup decides or grants permissions.
+Use one host-owned adapter for startup denial, frontend permission guards and known business permission denials. React Apps render `MakeAppPermissionNotice` from `@qfei-design/make-app-observability/react`; read `makeui/references/permission-feedback.md` for the public props, CSS, variants, installed-package verification and release gate. Display directly assigned user administrators only, not departments or Agents. Neither the component nor contact lookup decides or grants permissions.
 
 ## Capability and release gate
 
@@ -29,8 +29,8 @@ Existing non-React Apps may retain the Vibe template's `templates/vibe-app/src/f
 - Startup/no authorized App entry uses App-scope feedback; object access uses resource scope; create/update/delete use operation scope. Only App-scope denial replaces the App entry. Keep navigation and unaffected forms for local denial.
 - Do not wire every SDK/business 403 to an App-wide renderer. Pass the request owner's resource/operation context to the host feedback sink; App-entry denial remains separate. Preserve the existing login and Trace lifecycle.
 - Render existing `payload.data.appAdministrators` immediately. An explicit empty array is authoritative: keep the generic message without a redundant query. If the field is absent, use `auth.getAppAdministrators()` when available, even if no business request occurred.
-- Keep generic authorization guidance visible while contacts load or are unavailable. React uses the package's default `请联系应用管理员为你开通权限。` plus a separate administrator row; legacy DOM copy may remain unchanged. Query timeout/failure keeps generic help; never call the global denial handler again for the help query.
-- Preserve backend order and pass validated user contacts. React delegates deduplication, safe text/avatar rendering, failed-image initials and contact wrapping to the package; do not add another handwritten avatar/name renderer or force inline `、` separators into its layout. Non-React compatibility helpers retain their own safe rendering.
+- Keep generic authorization guidance visible while contacts load or are unavailable. React uses the package's authorization guidance and loading/error state; legacy DOM copy may remain unchanged. Query timeout/failure keeps generic help; never call the global denial handler again for the help query.
+- Preserve backend order and pass validated user contacts. React delegates deduplication, safe text/avatar rendering, failed-image initials and contact wrapping to the package. Toast uses compact names separated by `、`; inline/page use avatar/name chips. Do not add another handwritten avatar/name renderer. Non-React compatibility helpers retain their own safe rendering.
 - Discard query results after the target unmounts or a newer render replaces it. Never persist contacts across users/tenants/Apps.
 - HTTP 403 alone does not prove permission denial. Branch on the backend's documented permission code/reason; keep unknown or infrastructure failures as request errors. Do not infer a full-App denial from a record request. Tenant mismatch should offer the correct organization path, not cross-tenant contacts.
 

@@ -2,7 +2,7 @@
 name: make-app-observability
 description: Use when creating, integrating, reviewing, or debugging a Make App's default Trace ID chain, traceparent and X-Log-Id propagation, safe correlated logs, or @qfei-design/make-app-observability error notices. Every new Make App includes this baseline even when the user does not mention observability. Covers direct-gateway and Service-fronted Apps and AI transports when present. Does not own authentication, Service route design, AI protocol, tracing backend/exporter deployment, runtime packaging, or page layout.
 metadata:
-  version: 0.1.2
+  version: 0.1.3
 ---
 
 # make-app-observability
@@ -18,6 +18,7 @@ metadata:
 - AI 路由、流式事件和取消语义交给 `make-ai-assistant`；其已认证 JSON、SSE、二进制传输沿用同一追踪合同。
 - 发布脚本和交付门禁交给 `make-app-runtime`；该 Skill 调用本 Skill 的审计器。
 - 页面布局与错误出口的可见位置交给 `makeui`；本 Skill 负责把安全的结构化请求错误交给该出口，错误卡片和 Trace ID 展示规则由公共包负责。
+- 权限提示也复用此包的 React 入口；按 `makeui/references/permission-feedback.md` 验证实际安装版的 `MakeAppPermissionNotice`、CSS 和发布状态。权限范围与联系人仍分别归 `make-app-permission`、`make-app-auth`；不要把已知权限拒绝重复送入普通错误卡。
 
 ## 默认接入流程
 

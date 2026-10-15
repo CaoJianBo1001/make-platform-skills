@@ -1,6 +1,6 @@
 # Scoped route feedback
 
-Read this when generating or changing App/object/fixed-page guards. This owns layout and permission boundaries, not npm UI semantics. React uses the verified `PermissionFeedback` package through the shared host adapter in `makeui/references/permission-feedback.md`; that reference owns install/CSS/props and release readiness. Keep existing non-React feedback helpers compatible.
+Read this when generating or changing App/object/fixed-page guards. This owns layout and permission boundaries, not npm UI semantics. React uses verified `MakeAppPermissionNotice` through the shared host adapter in `makeui/references/permission-feedback.md`; that reference owns install/CSS/props and release readiness. Keep existing non-React feedback helpers compatible.
 
 ## Mounting boundary
 
@@ -20,7 +20,7 @@ Read this when generating or changing App/object/fixed-page guards. This owns la
 function AppRouter({ accessReady, hasAuthorizedEntry, route, feedbackProps, navigate }) {
   if (!accessReady) return <AccessLoadingOrError />;
   if (!hasAuthorizedEntry) {
-    return <AppPermissionFeedback {...feedbackProps} scope="app" />;
+    return <AppPermissionFeedback {...feedbackProps} variant="page" scope="app" />;
   }
   return (
     <AppShell>
@@ -32,7 +32,8 @@ function AppRouter({ accessReady, hasAuthorizedEntry, route, feedbackProps, navi
 function ObjectRouteGuard({ route, feedbackProps, navigate }) {
   if (route.kind === "forbidden") {
     return <ResourceFeedback>
-      <AppPermissionFeedback {...feedbackProps} scope="resource" onReturn={navigate} />
+      <AppPermissionFeedback {...feedbackProps} variant="inline" scope="resource" />
+      <button type="button" onClick={navigate}>返回可访问页面</button>
     </ResourceFeedback>;
   }
   if (route.kind === "unavailable" || route.kind === "not-found") {
@@ -42,7 +43,7 @@ function ObjectRouteGuard({ route, feedbackProps, navigate }) {
 }
 ```
 
-`AppShell` receives the host's authorized navigation and current identity, not the denied object's data hook. `ResourceFeedback` is an existing or thin host content wrapper, not a new permission engine; its return action navigates only to an authorized target. The feedback wrapper fills its content region, never `100vw/100vh` or another full-viewport overlay that hides the shell. `ObjectPage` separately gates record reads and mutations.
+`AppShell` receives the host's authorized navigation and current identity, not the denied object's data hook. `ResourceFeedback` is an existing or thin host content wrapper, not a new permission engine; its host-owned return action navigates only to an authorized target. Return/account actions are not npm component props. The feedback wrapper fills its content region, never `100vw/100vh` or another full-viewport overlay that hides the shell. `ObjectPage` separately gates record reads and mutations.
 
 Refresh reloads permission and permission-trimmed Schema in one generation before resolving the same URL again. Invalidate stale target requests/data; do not reuse an old allow after refresh fails. Do not auto-redirect an explicitly denied URL without displaying its scoped feedback.
 
