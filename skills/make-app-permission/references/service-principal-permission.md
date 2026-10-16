@@ -51,6 +51,8 @@ Resolve `appKey` from trusted runtime config such as `MAKE_APP_KEY`, never from 
 
 Resolve `tenantId` from trusted config, trusted request context, or an authenticated current-context request using the same login context. Parse known tenant/org fields or a trusted Make scope.
 
+If consuming current-context, follow `make-app-auth/references/service-fronted-mode.md#current-context-consumption`: published HTTP 200 is a bare identity, not `{code,data}`. Validate the authenticated identity/App before constructing IAM scope; preserve actual auth failures and stop before IAM, while malformed successful identity is a safe 502. Do not return the auth identity HTTP 200 from this principal route. Its coarse `roles`/string `permissions` cannot replace the subsequent IAM request or authorize objects.
+
 Forward the established login context:
 
 - Cookie for cookie sessions;
@@ -63,7 +65,7 @@ Never log Cookie, Authorization, token, API key, or full signed URL values.
 
 ## Response and field access
 
-Preserve the stable IAM response envelope and select/normalize App permission rows at the UI boundary. A representative response is:
+Preserve the actual IAM response and select/normalize App permission rows at the UI boundary. A representative response is:
 
 ```json
 {

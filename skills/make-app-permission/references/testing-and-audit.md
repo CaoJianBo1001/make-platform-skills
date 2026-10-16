@@ -5,6 +5,7 @@ Use this reference before implementation and before reporting permission work co
 ## Service and Schema tests
 
 - Principal permission route, App scope, IAM `/api/make/iam/**`, target header, login forwarding, tenant resolution, errors, and runtime-mode scopes.
+- If tenant resolution calls current-context, exercise the production Service route with a published bare identity (not only a `{code,data}` mock); run the auth Skill's `current-context-conformance-suite.mjs` through a thin host adapter. Prove that valid auth continues to the actual IAM request, completed auth failures stop unchanged, and malformed success returns 502 rather than an identity masquerading as IAM. Add the frontend startup sequence auth → IAM → Schema, including zero Schema calls on invalid IAM and no object grant from auth `app_admin` plus empty IAM rows.
 - Principal permission route preserves every completed IAM response's HTTP status, Content-Type, and body unchanged, including 2xx success plus 4xx/5xx errors; only a no-response transport failure may use a documented Service-generated error.
 - Preserve and normalize `fields` and `createFields` independently across Service, shared types, and UI adapters.
 - Missing/null/invalid `createFields` becomes empty and never falls back to `fields`.

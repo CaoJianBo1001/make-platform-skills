@@ -2,7 +2,7 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.3.6
+  version: 0.3.7
 ---
 
 # make-app-permission
@@ -28,6 +28,7 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 ## Required contract
 
 - Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. This is a direct Make proxy: return every completed IAM response unchanged, including 2xx/4xx/5xx status, Content-Type, and body. Do not request tenant-root scope or upstream platform permission filters. Before strict normalization, classify rows with `references/permission-boundaries.md`: ignore only clearly unrelated rows, and fail closed for every selected or unclassifiable row.
+- When tenant resolution consumes auth current-context, use the bare-identity contract from `make-app-auth`, not a business envelope parser. Prove the real route continues to IAM and returns IAM rows; auth `roles`/string `permissions` and an auth HTTP 200 are not a principal-permission result.
 - Match exact, wildcard, parent, App, entity, IAM namespace-wildcard App resources, and deny correctly. Use the most-specific allow field range; deny wins.
 - Keep create, visibility, and editability as separate field-set decisions:
   - create form: `createFields ∩ meta.field.read fieldAccess(creatable|readonly|editable|partialMask|fullMask|*)`;
