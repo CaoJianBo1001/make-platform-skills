@@ -36,7 +36,7 @@ const state = resolveRecordSelectionActionState({
 
 ## 新建
 
-新建不属于选择 action。由 `makeui` 与 `make-app-permission` 使用当前缓存的实体 create 权限和授权 `createFields` 决定 `MobileFloatingAction` 是否可见。点击后进入 `/objects/:objectKey/new` 全屏任务路由；最终创建接口继续执行权威鉴权和提交字段白名单过滤。
+新建不属于选择 action。由 `makeui` 与 `make-app-permission` 根据当前缓存的应用/对象访问资格和 `data.record.create` 操作权限决定 `MobileFloatingAction` 是否可见；不能因普通 `createFields` 为空隐藏入口。点击后进入 `/objects/:objectKey/new` 全屏任务路由：普通新建使用授权 `createFields`，有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 使用启动配置授权字段。表单空态和提交能力按当前新建分支判断；最终创建接口继续执行权威鉴权和提交字段白名单过滤。
 
 ## 单条编辑
 

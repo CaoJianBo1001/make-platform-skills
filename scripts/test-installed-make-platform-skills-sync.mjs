@@ -17,6 +17,8 @@ const skillNames = [
   'make-app-service',
   'make-app-auth',
   'make-app-actions',
+  'make-app-approval',
+  'makedsl',
   'make-app-filter',
   'make-app-sort',
   'make-app-group',
@@ -34,6 +36,18 @@ try {
   }
 
   assert.match(runChecker(), /installed Make platform skills sync: PASS/);
+
+  for (const skillName of ['make-app-approval', 'makedsl']) {
+    fs.rmSync(path.join(installedRoot, skillName), { recursive: true });
+    const missingOutput = runChecker({ expectFailure: true });
+    assert.match(missingOutput, new RegExp(skillName));
+    assert.match(missingOutput, /(?:not a directory|missing|ENOENT)/i);
+    writeSkill(installedRoot, skillName, 'stale');
+    const staleOutput = runChecker({ expectFailure: true });
+    assert.match(staleOutput, new RegExp(skillName));
+    assert.match(staleOutput, /content_mismatch/);
+    writeSkill(installedRoot, skillName, 'source');
+  }
 
   writeSkill(installedRoot, 'makeui', 'stale');
   const makeuiMismatchOutput = runChecker({ expectFailure: true });
@@ -85,10 +99,11 @@ function runChecker(options = {}) {
   });
   const output = `${result.stdout ?? ''}${result.stderr ?? ''}`;
 
-  if (result.status === 0) {
+  if (options.expectFailure) {
+    assert.notEqual(result.status, 0, '缺失或过期的技能必须导致同步检查失败');
     return output;
   }
-  if (options.expectFailure) {
+  if (result.status === 0) {
     return output;
   }
   throw new Error(output);
