@@ -152,6 +152,8 @@ makecli logs deploy --app <appKey> --commit-sha <fullSHA> --output json
 
 App and commit default to `apps/dsl/app.yaml` and Git HEAD; `--appRole` defaults to `beta`. For a specific deployment, use its full commit SHA and preserve its backend context/profile. A follow reads until the selected stage completes or the total timeout expires; after a timeout, keep the same SHA and app role when retrying.
 
+JSON snapshots report the selected `beta` or `prod` role in `appRole`.
+
 Exit 0 means the logs were read successfully, including logs of failed deployments. Use `app deploy --status` or `app promote --status --id <promoteId>` to determine the deployment result.
 
 See [logs deploy reference](references/cli-reference.md#logs-deploy) for stages, tail, cursors, output, and exit codes.

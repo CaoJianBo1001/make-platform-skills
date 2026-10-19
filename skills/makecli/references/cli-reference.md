@@ -16,7 +16,7 @@ Context presets: `production` → `qfei.cn` hosts, `dev`/`test` → `qtech.cn` h
 
 **context ≠ environment.** `--context` (global) picks the Make backend; `--env` (local to `app delete`) picks the app's deployment environment `beta|production`. `app deploy` has no `--env` (beta-only); `app promote` moves beta → production.
 
-`logs deploy --appRole beta|prod` selects which app role to read logs from within that backend context. It defaults to `beta`; the JSON snapshot reports the selection in `env`.
+`logs deploy --appRole beta|prod` selects which app role to read logs from within that backend context. It defaults to `beta`; the JSON snapshot reports the selection in `appRole`.
 
 ---
 
@@ -243,7 +243,7 @@ Reads build output and deployment lifecycle events for a commit. Check `makecli 
 - Build tail is truncated by the build service; deployment events are paged and truncated by the CLI. If the build service reports that tail is unsupported, use `--tail=-1`.
 
 **Output and completion:**
-- Snapshot `auto` prints log text on a terminal and JSON in a pipe/agent. JSON contains `appKey`, `env`, `commitSha`, `stage`, `content`, `nextCursor`, and `completed`; `env` is the selected `beta` or `prod` value.
+- Snapshot `auto` prints log text on a terminal and JSON in a pipe/agent. JSON contains `appKey`, `appRole`, `commitSha`, `stage`, `content`, `nextCursor`, and `completed`; `appRole` is the selected `beta` or `prod` value.
 - Follow prints log text to stdout; diagnostics go to stderr. Its total timeout covers task lookup, requests, polling, and process output, without restarting between stages. Timeout stops local reading; the remote task continues.
 - `completed` concerns the selected log stages, not deployment success. A build failure before deployment gives an empty, completed deploy stage. For status, use `app deploy --status` for Beta or `app promote --status --id <promoteId>` for a production publication.
 
