@@ -1,14 +1,14 @@
 ---
 name: makecli
-description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, entities, relations, records, inspect resources, switch backend context, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"发布到 production\", \"promote\", \"部署进度\", \"构建状态\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", \"切换环境\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
+description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, read build/deployment logs, entities, relations, records, inspect resources, switch backend context, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"发布到 production\", \"promote\", \"部署进度\", \"构建状态\", \"构建日志\", \"部署日志\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", \"切换环境\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.6.1
+  version: 0.7.0
 ---
 
 # makecli — Make Platform CLI
 
 makecli is the CLI for the Make agentic development platform.
-It manages Apps, Entities, Relations, Records, and code deployment.
+It manages Apps, Entities, Relations, Records, code deployment, and build/deployment logs.
 
 ## Installation
 
@@ -33,11 +33,12 @@ Backend context defaults to `production`. Switch the global default with `makecl
 
 ## Vocabulary: context vs environment
 
-Two different axes — never mix them up:
+Keep backend context separate from the app's role and deployment environment:
 
 | Word | Meaning | Values | Where |
 |------|---------|--------|-------|
 | **context** | which Make backend the CLI talks to | `dev` / `test` / `production` | global `--context`, profile `context`, `makecli context use` (`[settings] context`) |
+| **appRole** | which half of an app pair to read logs from | `beta` / `prod` | local `--appRole` on `logs deploy`, default `beta` |
 | **environment** | an app's deployment target | `beta` / `production` | local `--env` on `app delete`; `app deploy` is beta-only, `app promote` is beta → production |
 
 Every app is a **prod/beta pair** on the server, both living in the same backend context. `app deploy` only ever pushes to beta (no `--env`). Production is reached **only** by `app promote` (beta → production) — there is no direct production push. Preserve the current profile and backend context through deploy, promote, and verification; check local command help before relying on flags from an older CLI.
@@ -59,6 +60,8 @@ User request arrives
     +- Publish Beta to Prod / 发布到 prod 环境上? --> Promote Beta to Prod
     |
     +- Build/deploy progress? --> app deploy --status / --wait ; app promote --status --id <promoteId> / --wait
+    |
+    +- Build output / deployment lifecycle logs? --> Read Build and Deployment Logs
     |
     +- App overview + environment URLs? --> app info <appKey>
     |
@@ -136,6 +139,22 @@ makecli app promote --context <context> --profile <profile> --yes --wait
 4. Verify `app info <appKey>` reports Prod `Ready` and the expected commit, then check the Prod URL and applicable health/auth endpoints. Report the Prod URL, build/commit, backend context, and any unverified browser acceptance. On failure, report the failed step and error without claiming publication succeeded.
 
 See [CLI reference](references/cli-reference.md#app-promote) for promote status flags and exit codes.
+
+## Workflow: Read Build and Deployment Logs
+
+Use `logs deploy` for build output and deployment lifecycle events. Application runtime and audit logs are outside this command's scope. Check `makecli logs deploy --help` first; if the installed CLI lacks the command or required flags, report that limitation.
+
+```bash
+makecli logs deploy --stage all --tail 100 -f --timeout 3m
+makecli logs deploy --appRole prod --commit-sha <fullSHA> --stage deploy
+makecli logs deploy --app <appKey> --commit-sha <fullSHA> --output json
+```
+
+App and commit default to `apps/dsl/app.yaml` and Git HEAD; `--appRole` defaults to `beta`. For a specific deployment, use its full commit SHA and preserve its backend context/profile. A follow reads until the selected stage completes or the total timeout expires; after a timeout, keep the same SHA and app role when retrying.
+
+Exit 0 means the logs were read successfully, including logs of failed deployments. Use `app deploy --status` or `app promote --status --id <promoteId>` to determine the deployment result.
+
+See [logs deploy reference](references/cli-reference.md#logs-deploy) for stages, tail, cursors, output, and exit codes.
 
 ## Workflow: Imperative Operations
 

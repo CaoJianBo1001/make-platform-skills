@@ -16,6 +16,8 @@ Context presets: `production` → `qfei.cn` hosts, `dev`/`test` → `qtech.cn` h
 
 **context ≠ environment.** `--context` (global) picks the Make backend; `--env` (local to `app delete`) picks the app's deployment environment `beta|production`. `app deploy` has no `--env` (beta-only); `app promote` moves beta → production.
 
+`logs deploy --appRole beta|prod` selects which app role to read logs from within that backend context. It defaults to `beta`; the JSON snapshot reports the selection in `env`.
+
 ---
 
 ## login
@@ -206,6 +208,66 @@ makecli app info <appKey> [--output table|json]
 ```
 
 App metadata (key/name/description/version) + per-environment deployment table: ENVIRONMENT / STATUS (`Ready`, `Pending`, `Failed`, `Not deployed`) / COMMIT / URL for `beta` and `production`. JSON output: `{app, deployment}` (deployment `null` if never deployed).
+
+---
+
+## logs
+
+### logs deploy
+
+```text
+makecli logs deploy [--app <appKey>] [--commit-sha <fullSHA>]
+                   [--appRole beta|prod] [--stage build|deploy|all]
+                   [--tail <N> | --cursor <nextCursor>]
+                   [-f|--follow] [--timeout <duration>] [--output auto|table|json]
+```
+
+Reads build output and deployment lifecycle events for a commit. Check `makecli logs deploy --help` on the installed CLI before using it.
+
+| Flag | Behavior | Default |
+|------|----------|---------|
+| `--app` | App key; paired app keys are resolved for the selected role | `apps/dsl/app.yaml` |
+| `--commit-sha` | Full 40-character hexadecimal commit SHA | Git HEAD |
+| `--appRole` | App role `beta\|prod`; selects the environment used for task lookup | `beta` |
+| `--stage` | `build`: dependencies, compilation, image build/push; `deploy`: instance creation/update, startup and health checks; `all`: build followed by deploy | `build` |
+| `--tail` | Initial lines per selected stage; `0` skips existing content, `-1` reads all | `200` |
+| `--cursor` | Resume from the same stage's previous `nextCursor`; mutually exclusive with explicit `--tail` | unset |
+| `--follow` / `-f` | Wait for task creation, then follow new content until the selected stage completes | `false` |
+| `--timeout` | Total follow limit, such as `3m` or `120s`; positive duration with units, requires `--follow` | `3m` |
+| `--output` | `auto`, `table` (plain log text), or `json`; follow does not support explicit JSON output | `auto` |
+
+**Task and cursor selection:**
+- Task lookup uses the SHA and the environment selected by `--appRole`; the returned task must belong to the app or its matching pair. Once selected, the task ID stays fixed during that read/follow.
+- Build cursors are byte offsets; deploy cursors are event sequence numbers. `all` returns a combined cursor bound to the selected task. Use a cursor with the same SHA, role, and stage that produced it.
+- Explicit cursors bypass the default tail limit. Tail applies only to the first read of each stage; subsequent reads use its cursor. `all` keeps the last N lines of each stage separately.
+- Build tail is truncated by the build service; deployment events are paged and truncated by the CLI. If the build service reports that tail is unsupported, use `--tail=-1`.
+
+**Output and completion:**
+- Snapshot `auto` prints log text on a terminal and JSON in a pipe/agent. JSON contains `appKey`, `env`, `commitSha`, `stage`, `content`, `nextCursor`, and `completed`; `env` is the selected `beta` or `prod` value.
+- Follow prints log text to stdout; diagnostics go to stderr. Its total timeout covers task lookup, requests, polling, and process output, without restarting between stages. Timeout stops local reading; the remote task continues.
+- `completed` concerns the selected log stages, not deployment success. A build failure before deployment gives an empty, completed deploy stage. For status, use `app deploy --status` for Beta or `app promote --status --id <promoteId>` for a production publication.
+
+| Exit code | Meaning |
+|-----------|---------|
+| `0` | Logs read successfully, including logs from a failed/canceled task |
+| `1` | Invalid flags or an API/read error |
+| `124` | Total follow timeout |
+| `130` | Interrupted with Ctrl+C |
+
+```bash
+# Both stages, last 100 lines per stage, bounded follow
+makecli logs deploy --stage all --tail 100 -f --timeout 3m
+
+# Production deployment events for a specific commit
+makecli logs deploy --appRole prod --commit-sha <fullSHA> --stage deploy
+
+# JSON snapshot outside an App project
+makecli logs deploy --app <appKey> --commit-sha <fullSHA> --output json
+
+# Only new content, or resume a previous snapshot
+makecli logs deploy --tail 0 -f --timeout 120s
+makecli logs deploy --appRole prod --commit-sha <fullSHA> --stage all --cursor <nextCursor>
+```
 
 ---
 
