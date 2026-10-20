@@ -79,6 +79,8 @@ If a list request has no real filters, omit `filter`. Do not send `filter: []`.
 
 ## Error Handling
 
+This section handles business requests, not `auth.init()` results. Startup follows `sdk-integration.md#startup-shape`: the SDK's `forbidden` status does not require the business payload reason. Do not import this business classifier into the bootstrap gate. Conversely, a business `MakeAppForbiddenError` must not be promoted to App-entry denial merely because startup uses that SDK status.
+
 When `apiAuthRedirect: true` is available, the SDK owns the normal unified-login 401/403 redirect. The shared adapter still owns three things:
 
 - preventing scattered `auth.api` calls

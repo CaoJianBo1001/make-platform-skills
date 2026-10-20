@@ -53,6 +53,8 @@ New Make Apps and explicit runtime migrations run this command with the `make-ap
 
 Generated Apps use unified login. Direct App entry should call `auth.init({ redirect: true })` and go to the Org login page instead of showing an App-owned login page.
 
+For this SDK startup result, `status: 'forbidden'` is the App-entry denial signal. Do not additionally require `boot.payload.reason === 'permission_denied'` or reuse the business request's permission-payload predicate. Older gateways return refusal text; newer gateways may return `{code:403,msg,data:{appAdministrators}}` without a reason. Preserve either payload and mount App-scope feedback without requesting IAM/Schema/business data. SDK failure, unauthenticated and redirecting states are not permission denial, even if an incidental body contains a permission reason. This rule is specific to the documented SDK startup result, not arbitrary HTTP 403 or an object request.
+
 ```js
 import {
   createMakeAppAuth
@@ -118,6 +120,9 @@ For published/vibe Apps, auth integration is not complete until the agent or pla
 ## Tests To Add When Touching Auth
 
 - 403 forbidden response.
+- Startup `forbidden` with old text, new JSON without reason, embedded/empty/missing contacts and a future explicit reason; the original payload survives, optional help failure stays local, and no IAM/Schema/business request occurs. Keep the existing relogin behavior for SDK session-expiry states.
+- Old SDK with a new backend: embedded contacts still display; a missing query method makes no request and retains generic help even when the endpoint exists. Test both runtime decoding and TypeScript compatibility without requiring a new SDK.
+- Unknown business 403, including one with contacts but no documented permission reason, still follows the request-error path rather than App-entry feedback. Add the startup and business-negative cases to the host's default test/CI gate; the repository executes both guide examples in `scripts/test-startup-denial-contract.mjs`.
 - Unified-login API 401/403 with `apiAuthRedirect: true` redirects through SDK login once.
 - Unified-login unauthenticated state does not loop redirects.
 - Business-request 401 from schema/list/create/update/delete enters the shared expired-session handler.

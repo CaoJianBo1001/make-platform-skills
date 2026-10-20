@@ -51,7 +51,7 @@ Resolve `appKey` from trusted runtime config such as `MAKE_APP_KEY`, never from 
 
 Resolve `tenantId` from trusted config, trusted request context, or an authenticated current-context request using the same login context. Parse known tenant/org fields or a trusted Make scope.
 
-If consuming current-context, follow `make-app-auth/references/service-fronted-mode.md#current-context-consumption`: published HTTP 200 is a bare identity, not `{code,data}`. Validate the authenticated identity/App before constructing IAM scope; preserve actual auth failures and stop before IAM, while malformed successful identity is a safe 502. Do not return the auth identity HTTP 200 from this principal route. Its coarse `roles`/string `permissions` cannot replace the subsequent IAM request or authorize objects.
+If tenant resolution already consumes current-context, follow `make-app-auth/references/service-fronted-mode.md#current-context-consumption`. Its legacy Mock claims cannot replace IAM rows or authorize objects; this principal route returns the actual IAM result.
 
 Forward the established login context:
 
@@ -65,50 +65,58 @@ Never log Cookie, Authorization, token, API key, or full signed URL values.
 
 ## Response and field access
 
-Preserve the actual IAM response and select/normalize App permission rows at the UI boundary. A representative response is:
+Preserve the actual IAM response and select/normalize App permission rows at the UI boundary. The wire success is a `{code: 200, data: ...}` envelope, not the bare identity returned by auth `current-context`. A representative complete IAM response is:
 
 ```json
 {
-  "principal": "user:<principalId>",
-  "scope": "make://<tenantId>/meta/app/<appKey>",
-  "permissions": [
-    {
-      "permissionKey": "meta.entity.read",
-      "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
-      "effect": "allow",
-      "fieldAccess": {}
-    },
-    {
-      "permissionKey": "data.record.create",
-      "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
-      "effect": "allow",
-      "fieldAccess": {}
-    },
-    {
-      "permissionKey": "meta.field.read",
-      "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
-      "effect": "allow",
-      "fieldAccess": {
-        "create_only_field": "creatable",
-        "visible_field": "readonly"
+  "code": 200,
+  "msg": "ok",
+  "data": {
+    "principal": "user:<principalId>",
+    "scope": "make://<tenantId>/meta/app/<appKey>",
+    "permissions": [
+      {
+        "permissionKey": "meta.entity.read",
+        "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
+        "effect": "allow",
+        "fieldAccess": {}
+      },
+      {
+        "permissionKey": "data.record.create",
+        "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
+        "effect": "allow",
+        "fieldAccess": {}
+      },
+      {
+        "permissionKey": "meta.field.read",
+        "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
+        "effect": "allow",
+        "fieldAccess": {
+          "create_only_field": "creatable",
+          "visible_field": "readonly"
+        }
+      },
+      {
+        "permissionKey": "meta.field.update",
+        "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
+        "effect": "allow",
+        "fieldAccess": {
+          "editable_field": "editable"
+        }
       }
-    },
-    {
-      "permissionKey": "meta.field.update",
-      "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
-      "effect": "allow",
-      "fieldAccess": {
-        "editable_field": "editable"
-      }
-    }
-  ]
+    ]
+  }
 }
 ```
+
+Service forwards that envelope unchanged. At the UI request boundary, validate `code === 200`, unwrap `data` once, then validate/normalize the `{principal, scope, permissions}` DTO. SDK `auth.api` returns parsed JSON, not an automatically unwrapped business DTO. If the host's shared business API adapter already checks code and returns data, consume its DTO without a second `.data`. Do not apply either IAM parser to auth `current-context`.
+
+Malformed or non-success IAM responses must stop permission-to-Schema loading; never default them to a successful empty snapshot. A successful `permissions: []` is authoritative absence of grants, not a transport error. HTTP denial/error payloads, including administrator contacts, stay on the established request-error/permission path. The pure `normalizeAccess` behavior suite takes the decoded DTO; it cannot prove that the UI wire boundary unwraps correctly. Also run the production-loader contract from `testing-and-audit.md`.
 
 Consume `fieldAccess` by permission dimension:
 
 - `meta.entity.read`: entity metadata permission only; use it to include a Schema-present entity in navigation and allow its object route. It does not grant field visibility or record values.
-- `data.record.read`: record-data permission only; use it for list/detail/pagination requests and record rows. It must not remove `meta.field.read` headers when an entity remains metadata-readable.
+- `data.record.read`: record-data permission only; use it for list/detail/pagination requests and record values. Denial replaces the record-reading business content; it does not alter `meta.field.read` grants or remove metadata-authorized navigation. See `scoped-route-feedback.md` for mounting, not IAM interpretation.
 - `data.record.create`: operation permission only; use it for create route, entry, handler, and submit checks, never to choose fields.
 - `meta.field.read`: use `creatable|readonly|editable|partialMask|fullMask|*` to choose fields from Schema `createFields`, and use readable states to choose visible fields from Schema `fields`; `creatable` is create-only, not readable.
 - `meta.field.create` is not a platform permission point. Do not require it, synthesize it, or use it as a create-field fallback.

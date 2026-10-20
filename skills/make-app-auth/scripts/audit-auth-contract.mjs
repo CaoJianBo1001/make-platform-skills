@@ -136,7 +136,7 @@ if (inferredMode === 'service-fronted') {
   if (hasRawMakeDownloadLiteral(uiText) && !hasServiceDownloadProxyLiteral(uiText)) {
     warnings.push('service_fronted_download_proxy_not_obvious: UI mentions raw Make download paths but no Service download proxy path was found');
   }
-  if (hasServiceFrontedApiOnlyPrefix(projectText)) {
+  if (hasServiceFrontedApiOnlyPrefix(`${uiText}\n${serviceText}`)) {
     failures.push('service_fronted_missing_make_prefix: Service-fronted published Apps use /api/make/auth/** and normally /api/make/app/**, not /api/auth/** or /api/app/**');
   }
   if (!hasServiceFrontedGatewayBaseMakePrefix(uiText)) {

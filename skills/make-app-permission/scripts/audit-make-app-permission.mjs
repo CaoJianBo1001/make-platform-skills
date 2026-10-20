@@ -68,7 +68,10 @@ function checkServiceContract() {
   if (!/\/iam\/v1\/principal\/permission/.test(serviceText)) {
     failures.push('iam_upstream_path_missing: Service must call Make IAM /iam/v1/principal/permission through make-gateway');
   }
-  if (/\/make\/iam\/v1\/principal\/permission/.test(serviceText)) {
+  const iamUpstreamPaths = serviceText.matchAll(
+    /(?:https?:\/\/[^/\s'"`]+)?(\/(?:api\/)?make\/iam\/v1\/principal\/permission)/g,
+  );
+  if ([...iamUpstreamPaths].some(([, upstreamPath]) => upstreamPath.startsWith('/make/'))) {
     failures.push('iam_upstream_wrong_make_scope: IAM principal permission must use /api/make/iam/v1/principal/permission, not /make/iam/v1/principal/permission');
   }
   if (/(?:makeIamGatewayScope|iamGatewayScope|IAM_SCOPE)\s*=\s*[`'"]\/make[`'"]/.test(serviceText)) {
@@ -257,7 +260,7 @@ function checkUiContract() {
     failures.push('read_gate_missing: list/detail loading must be gated by data.record.read');
   }
   if (hasRecordReadGatedTableHeaders(uiRuntimeText)) {
-    failures.push('table_headers_tied_to_record_read: table headers must derive from meta.field.read visible fields even when data.record.read is denied');
+    failures.push('table_headers_tied_to_record_read: authorized columns must derive from meta.field.read; replace denied business content rather than emptying its columns');
   }
   if (!hasRecordRowsClearSignal(uiRuntimeText)) {
     failures.push('record_rows_not_cleared_on_read_revoke: denied data.record.read must render an empty row set and clear cached record values');
@@ -855,22 +858,11 @@ function hasEntityNavigationGateSignal(text) {
 }
 
 function hasRecordReadGatedTableHeaders(text) {
+  // Column authorization stays independent. Whole-content guards may unmount the table.
   const recordReadGate = String.raw`(?:can\w*(?:Read|View)\w*Record\w*|DATA_RECORD_READ|data\.record\.read)`;
   const visibleColumns = String.raw`(?:visible\w*(?:Fields|Columns|Headers)|fieldsFor(?:List|Table)|table\w*(?:Fields|Columns|Headers))`;
   const directColumnGate = new RegExp(
     `\\b(?:columns|fields|headers)\\s*=\\s*\\{[^}]{0,220}${recordReadGate}[^}]{0,220}${visibleColumns}|\\b(?:columns|fields|headers)\\s*=\\s*\\{[^}]{0,220}${visibleColumns}[^}]{0,220}${recordReadGate}`,
-    'is',
-  );
-  const conditionalTableMount = new RegExp(
-    `${recordReadGate}\\s*&&\\s*<[^>]*(?:Table|Grid|Canvas)[^>]*>|<[^>]*(?:Table|Grid|Canvas)[^>]*>[^<]{0,80}\\{\\s*${recordReadGate}\\s*&&`,
-    'is',
-  );
-  const ternaryTableMount = new RegExp(
-    `${recordReadGate}\\s*\\?\\s*<[^>]*(?:Table|Grid|Canvas)|<[^>]*(?:Table|Grid|Canvas)[^>]*>[^<]{0,80}\\{\\s*${recordReadGate}\\s*\\?`,
-    'is',
-  );
-  const earlyReturnWithoutTable = new RegExp(
-    `\\bif\\s*\\(\\s*!\\s*${recordReadGate}\\s*\\)\\s*(?:\\{\\s*)?return\\s+<(?:Empty|Result|Forbidden|NoData|AccessDenied|Placeholder)\\b`,
     'is',
   );
   const derivedColumnGate = new RegExp(
@@ -879,9 +871,6 @@ function hasRecordReadGatedTableHeaders(text) {
   );
 
   return directColumnGate.test(text)
-    || conditionalTableMount.test(text)
-    || ternaryTableMount.test(text)
-    || earlyReturnWithoutTable.test(text)
     || derivedColumnGate.test(text);
 }
 

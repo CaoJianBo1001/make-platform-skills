@@ -16,22 +16,25 @@ try {
     'the executable auth contract regression must remain a continuous CI gate');
   const correct = runHost('correct');
   assert.equal(correct.status, 0, correct.output);
-  assert.match(correct.output, /16\/16 passed/);
+  assert.match(correct.output, /18\/18 passed/);
   const compatible = runHost('legacy', ['--legacy-envelope']);
   assert.equal(compatible.status, 0, compatible.output);
-  assert.match(compatible.output, /17\/17 passed/);
+  assert.match(compatible.output, /19\/19 passed/);
   for (const [variant, failingCase] of [
     ['envelope-only', 'bare_current_context_reaches_iam'],
     ['return-auth-instead-of-iam', 'bare_current_context_reaches_iam'],
     ['auth-failure-becomes-502', 'auth_401_stops_before_iam'],
     ['invalid-success-passthrough', 'invalid_auth_invalid_json_is_502'],
     ['iam-path-rewritten', 'bare_current_context_reaches_iam'],
+    ['mock-claims-required', 'bare_current_context_reaches_iam'],
+    ['mock-admin-bypasses-iam', 'legacy_mock_claims_do_not_bypass_iam_denial'],
+    ['unwrap-iam-success', 'bare_current_context_reaches_iam'],
   ]) {
     const result = runHost(variant, ['--legacy-envelope']);
     assert.notEqual(result.status, 0, `${variant} must not pass`);
     assert.match(result.output, new RegExp(`FAIL ${failingCase}:`), result.output);
   }
-  console.log('current-context conformance suite tests: PASS (2 valid hosts, 5 regression hosts)');
+  console.log('current-context conformance suite tests: PASS (2 valid hosts, 8 regression hosts)');
 } finally {
   fs.rmSync(fixtureRoot, { recursive: true, force: true });
 }
@@ -59,10 +62,19 @@ function runHost(variant, flags = []) {
       const identity = parseMakeSuccess(payload);
       if (!identity || typeof identity.userId !== 'string' || !identity.userId.trim() ||
           typeof identity.tenantId !== 'string' || !identity.tenantId.trim() || identity.appId !== appKey) return invalid();
+      if (variant === 'mock-claims-required' && (!identity.roles?.includes('app_admin') ||
+          !identity.permissions?.includes(appKey + '.access'))) return invalid();
+      if (variant === 'mock-admin-bypasses-iam' && identity.roles?.includes('app_admin')) return send(auth);
       const iam = await fetchImpl(gatewayOrigin + (variant === 'iam-path-rewritten' ? '/make/iam' : '/api/make/iam') + '/v1/principal/permission', {
         method: 'POST', headers: { ...headers, 'x-make-target': 'MakeService.GetResource' },
         body: JSON.stringify({ scope: 'make://' + identity.tenantId + '/meta/app/' + appKey }),
       });
+      if (variant === 'unwrap-iam-success' && iam.status === 200) {
+        const payload = await iam.clone().json();
+        if (payload?.code === 200) return send(Response.json(payload.data, {
+          status: iam.status, headers: { 'content-type': iam.headers.get('content-type') },
+        }));
+      }
       return send(variant === 'return-auth-instead-of-iam' ? auth : iam);
     };
   `);

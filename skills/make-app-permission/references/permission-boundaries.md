@@ -76,12 +76,12 @@ The object, its visible columns, and its record values are three independent rea
 | Surface | Required permission | Behavior when denied |
 | --- | --- | --- |
 | Sidebar/navigation and object route | `meta.entity.read` | Hide the entity and reject its dynamic object route. |
-| Table shell and headers | `meta.entity.read` plus `fields ∩ meta.field.read` | Keep only the authorized field headers; an empty visible-field set uses the host's zero-column state. |
-| List rows, record details, pagination, and any record-backed header action | `data.record.read` | Do not issue a record request and do not render record values. |
+| Field structure when business content is rendered | `meta.entity.read` plus `fields ∩ meta.field.read` | Show only authorized fields; an empty visible-field set uses the host's zero-column state, not an invented object denial. |
+| Record-reading business content, including list/detail/pagination | `data.record.read` | Do not issue record requests; replace the entire business content with resource feedback. |
 
-Schema membership remains an upper bound: an entity must exist in the permission-aware Schema before it can be displayed in navigation or entered by route. Within that bound, do not let `data.record.read` decide entity navigation or table-header visibility, and do not let `meta.entity.read` or `meta.field.read` authorize a record request.
+Schema membership remains an upper bound: an entity must exist in the permission-aware Schema before it can be displayed in navigation or entered by route. Within that bound, do not let `data.record.read` decide entity navigation or field authorization, and do not let `meta.entity.read` or `meta.field.read` authorize a record request. Authorization dimensions are independent; this does not require keeping an authorized field's header mounted inside denied business content.
 
-For an entity that has `meta.entity.read` and readable fields but lacks `data.record.read`, mount the normal table shell with `visibleFieldsForEntity(...)` as its columns, provide an empty row array, and use a clear no-record-access state if the host has one. Derive the table rows as `canReadRecords ? sourceRows : []`, or clear the record store that actually supplies the table rows before render; disabling only the next request is insufficient because previously loaded rows may remain cached. Do not replace the table with a forbidden page or remove its headers. Record-backed controls such as load-more, detail opening, filtering, sorting, grouping, or selection remain disabled unless their own record-read contract is satisfied.
+For an entity that has `meta.entity.read` and readable fields but lacks `data.record.read`, keep its authorized navigation entry and replace the current record-reading business content as a whole. Do not retain its business title, search/toolbar, statistics, table/card/form structure, headers, records or dialogs. Follow `scoped-route-feedback.md`; mount the guard above arbitrary business descendants rather than guessing their DOM structure. Clear the record store/counts/selections and invalidate in-flight work; disabling only the next request is insufficient. If a still-allowed table remains elsewhere, its columns still come from `visibleFieldsForEntity(...)` and its row source must exclude denied records. Independent create-only routes keep their own create/field gates; a read denial is not a create-permission revoke.
 
 ## Independent field dimensions
 
@@ -150,7 +150,7 @@ In an expanded IAM runtime response, a wildcard field baseline may coexist with 
 ## Route and backend boundaries
 
 - Protect App, object, create, and fixed routes; require `meta.entity.read` inside the dynamic object route as well as navigation, because menu hiding is insufficient and direct URLs bypass the sidebar.
-- Do not load list/detail without `data.record.read`; this must stop record requests and rows without hiding an entity-authorized table shell or its `meta.field.read` headers.
+- Do not load list/detail without `data.record.read`; stop requests, invalidate rows and replace the denied business content, without removing metadata-authorized navigation.
 - Recheck create/update/delete/cell/batch handlers immediately before mutation.
 - Let backend record APIs enforce row-level `dataCondition` and final write authorization.
 - Do not cache permission-trimmed Schema across principals. Refresh permission and Schema together when access is refreshed.
@@ -158,8 +158,8 @@ In an expanded IAM runtime response, a wildcard field baseline may coexist with 
 ## Common mistakes
 
 - Using tenant-root scope or a platform filter for App permissions.
-- Using `data.record.read` as the left-navigation, object-route, table-shell, or table-header gate.
-- Removing authorized table headers when record read is denied instead of rendering the authorized columns with no rows.
+- Using `data.record.read` to remove metadata-authorized left-navigation entries or rewrite field grants.
+- Keeping the denied object's toolbar, table headers, form structure or stale data around a table-body-only feedback panel.
 - Rendering create forms from `fields` or `editableFields`.
 - Falling back from missing `createFields` to visible `fields`.
 - Treating `creatable` as readable because it appears in a matched `meta.field.read` row.

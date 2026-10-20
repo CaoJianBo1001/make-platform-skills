@@ -57,8 +57,8 @@ const fixture = (name, options = {}) => {
   return root;
 };
 
-const run = (root, mode) => {
-  const result = spawnSync(process.execPath, [audit, root, '--mode', mode], {
+const run = (root, mode, options = []) => {
+  const result = spawnSync(process.execPath, [audit, root, '--mode', mode, ...options], {
     encoding: 'utf8',
   });
   return { code: result.status, output: `${result.stdout}${result.stderr}` };
@@ -136,6 +136,18 @@ try {
   for (const version of ['^0.1.5', '>0.1.4', '>=0.1.5 <0.2.0']) {
     const validRange = fixture(`valid-range-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version, service: false });
     assert.equal(run(validRange, 'direct').code, 0, `expected ${version} to allow version 0.1.5`);
+  }
+
+  const alpha = fixture('published-alpha-local-test', { version: '0.1.8-alpha.1', service: false });
+  assert.notEqual(run(alpha, 'direct').code, 0, 'prerelease must remain opt-in');
+  assert.equal(run(alpha, 'direct', ['--allow-prerelease']).code, 0, 'an explicitly approved exact alpha must be auditable');
+  for (const version of ['^0.1.8-alpha.1', '0.1.8-alpha..1', '0.1.8-01', 'file:../observability', 'latest']) {
+    const invalid = fixture(`invalid-alpha-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version, service: false });
+    assert.match(run(invalid, 'direct', ['--allow-prerelease']).output, /observability_version_unverifiable/);
+  }
+  for (const version of ['0.1.4-alpha.1', '0.1.5-alpha.1']) {
+    const oldAlpha = fixture(`old-alpha-${version}`, { version, service: false });
+    assert.match(run(oldAlpha, 'direct', ['--allow-prerelease']).output, /observability_version_too_old/);
   }
 
   const queryTrace = fixture('query-trace', {

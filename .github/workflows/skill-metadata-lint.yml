@@ -33,5 +33,12 @@ jobs:
           node skills/make-ai-assistant/scripts/test-audit-make-ai-assistant-project.mjs
           node skills/make-app-observability/scripts/test-audit-trace-contract.mjs
           node skills/make-app-auth/scripts/test-current-context-conformance-suite.mjs
+          node skills/make-app-auth/scripts/test-audit-auth-contract.mjs
+          node skills/make-app-permission/scripts/test-audit-make-app-permission.mjs
           node --test skills/makeui/scripts/test-verify-feedback-package-surface.mjs
           node --test skills/make-app-permission/scripts/test-scoped-route-feedback.mjs
+
+      - name: Check feedback compatibility with old and new SDK types
+        run: >-
+          npm exec --yes --ignore-scripts --package=typescript@5.9.3 --
+          sh -c 'node skills/makeui/scripts/test-feedback-sdk-types.mjs "$(command -v tsc)"'

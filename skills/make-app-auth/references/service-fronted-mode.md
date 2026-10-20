@@ -135,42 +135,25 @@ Do not convert the gateway response into a JSON envelope for auth routes.
 
 ## Current-context consumption
 
-`GET /make/auth/current-context` in published Service returns HTTP 200 with a **bare** JSON identity:
+Published `GET /make/auth/current-context` succeeds with HTTP 200 and a **bare** JSON identity. Minimal example:
 
 ```json
-{"userId":"user-1","tenantId":"tenant-1","appId":"AppKey","roles":["app_admin"],"permissions":["AppKey.access"]}
+{"userId":"user-1","tenantId":"tenant-1","appId":"AppKey"}
 ```
 
-This differs from Meta/Data `{code:200,data:...}` and the administrator-contact envelope. The browser SDK may normalize auth responses, but a Service's own internal current-context call is a separate consumer. Do not pass it to an envelope-only business success parser or unconditionally read `.data`. Local-preview tests must not substitute an envelope for this published DTO.
+Apply this contract only when a Service already consumes current-context, such as an existing tenant-resolution or download prerequisite. Do not add another authentication request when trusted config/context already supplies the required identity. Keep SDK login, auth namespace proxies and gateway admission unchanged.
 
-For an authenticated prerequisite before the principal IAM route or a download:
+The Service consumer must not apply the Meta/Data `{code,data}` parser or unconditionally read `.data`; SDK normalization does not cover this separate consumer.
 
 | Current-context result | Service behavior |
 | --- | --- |
-| Valid bare identity | Validate non-empty string `userId`/`tenantId`, and `appId` against trusted `MAKE_APP_KEY`, then continue to the intended upstream request with the same session/host context |
-| Completed auth failure, such as 401/403/503 | Stop; preserve that failure's status, Content-Type and body, including the login challenge; do not call IAM or protected data |
-| Malformed successful body, absent identity, or conflicting App | Stop with a documented non-secret Service contract error (502); never return the successful identity response as the business result |
+| Valid bare identity | Validate non-empty string `userId`/`tenantId` and `appId` against trusted `MAKE_APP_KEY`; continue to the intended upstream with the same session/host context |
+| Completed auth failure, such as 401/403/503 | Stop and preserve its status, Content-Type and body, including the login challenge |
+| Malformed successful body or conflicting App | Stop with a safe Service contract error (502), not the successful identity response |
 
-An existing host may explicitly retain `{code:200,data:identity}` compatibility, but it is not the published default and must not replace the bare-object test. Do not broaden every business parser to accept arbitrary HTTP 200 JSON. HTTP/JSON checks belong to this prerequisite consumer; namespace-level auth proxy routes remain transparent.
+Older responses may include `roles`, string `permissions` and a `fallback:...` `grantVersion` from the pre-IAM Mock implementation. These are legacy compatibility fields, not evidence of real IAM roles, permissions or grant freshness. They may be absent or empty and must not be required for authentication or used instead of IAM. This guidance does not remove fields or change Mock admission in the gateway.
 
-Keep the identity boundary small, for example after parsing a successful JSON body and before the IAM request:
-
-```ts
-function requireCurrentContext(value: unknown, appKey: string) {
-  if (!value || typeof value !== 'object' || Array.isArray(value)) {
-    throw new Error('Invalid current-context'); // host maps to its safe 502 contract
-  }
-  const context = value as Record<string, unknown>;
-  if (typeof context.userId !== 'string' || !context.userId.trim() ||
-      typeof context.tenantId !== 'string' || !context.tenantId.trim() ||
-      context.appId !== appKey) {
-    throw new Error('Invalid current-context');
-  }
-  return { userId: context.userId, tenantId: context.tenantId, appId: context.appId };
-}
-```
-
-These auth `roles` and string `permissions` are coarse App-entry context, not IAM `{permissionKey,resource,effect,fieldAccess}` rows. They cannot populate the principal-permission response or grant entity/record access. Only after the prerequisite succeeds should the principal route call the documented IAM `/api/make/iam/**` path, returning **that IAM response**, not the earlier auth HTTP 200.
+After a valid prerequisite, the principal route must call IAM and return **that IAM response**, never the earlier identity HTTP 200. Permission/Schema startup acceptance belongs to `make-app-permission/references/testing-and-audit.md`.
 
 Run the executable HTTP contract against a thin host adapter:
 
@@ -178,7 +161,7 @@ Run the executable HTTP contract against a thin host adapter:
 node skills/make-app-auth/scripts/current-context-conformance-suite.mjs <host-adapter-module>
 ```
 
-The adapter exports `createPermissionContractHandler({appKey,gatewayOrigin,fetchImpl})`, returning the real production Node `RequestListener` with published-mode config and only external gateway I/O injected. Do not reimplement identity or permission logic in the adapter. The runner starts an ephemeral `127.0.0.1` server and validates the real `GET /api/make/app/principal/permission` route, bare DTO → IAM ordering, Cookie/host forwarding, App scope, failure passthrough and malformed-success 502. Add `--legacy-envelope` only for a host that explicitly supports that compatibility. Copy the runner into the host or consume a versioned dependency for CI; do not depend on a sibling checkout or developer-specific Skill path. This Service test does not prove frontend Schema loading; also run the complete startup test below.
+The adapter exports `createPermissionContractHandler({appKey,gatewayOrigin,fetchImpl})` and delegates to the production Node `RequestListener`, injecting only gateway I/O. The runner validates the existing identity → IAM route, session/host forwarding, App scope, failures and malformed success. It accepts missing/empty legacy fields and rejects Mock-based authorization shortcuts. Keep the runner project-local or versioned for CI, not dependent on a sibling checkout. Do not add envelope compatibility by default; `--legacy-envelope` is only for a host that explicitly retains it. Namespace proxies remain transparent.
 
 ## Attachment Download Proxy
 
@@ -315,7 +298,6 @@ These checks belong to the agent, generated tests, CI, or publish pipeline. Do n
 - Service forwards browser cookies on every auth and business request that depends on App session.
 - Service derives `X-Forwarded-Host` from inbound `Host`, does not pass through client-supplied `X-Forwarded-Host`, and adds `X-Forwarded-Proto`; auth and business requests share this helper.
 - `session/complete` reaches the browser as `302 + Set-Cookie + Location`.
-- Startup tests use the real published bare current-context fixture and assert the sequence auth → principal IAM → Schema, checking returned types, not just HTTP 200. A malformed auth success must stop before IAM/Schema; a malformed IAM result must stop before Schema. A `roles:["app_admin"]` context with empty IAM permissions cannot grant object access.
 - At least one authenticated schema/meta request and one record-list request pass through the same Service/auth adapter path before reporting publish success.
 
 ## Administrator contact help

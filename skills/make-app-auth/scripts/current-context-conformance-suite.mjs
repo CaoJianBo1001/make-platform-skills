@@ -19,15 +19,21 @@ const appKey = 'ContractApp';
 const gatewayOrigin = 'http://make-gateway.invalid';
 const cookie = 'make_app_session=contract-fixture';
 const host = 'contract-app.example.test';
-const identity = { userId: 'user-1', tenantId: 'tenant-1', appId: appKey,
-  roles: ['app_admin'], permissions: [`${appKey}.access`] };
-const iamBody = '{\n "principal":"user:user-1","scope":"make://tenant-1/meta/app/ContractApp","permissions":[]\n}';
+const identity = { userId: 'user-1', tenantId: 'tenant-1', appId: appKey };
+const iamBody = '{\n "code":200,"msg":"ok","data":{"principal":"user:user-1","scope":"make://tenant-1/meta/app/ContractApp","permissions":[]}\n}';
 const response = (status, body, contentType = 'application/json; charset=utf-8') => ({ status, body, contentType });
 const success = response(200, JSON.stringify(identity));
 const cases = [
   ['bare_current_context_reaches_iam', success, response(200, iamBody)],
   ['iam_denial_is_not_auth_context', success, response(403, '{"reason":"permission_denied","permissionKey":"meta.entity.read"}')],
   ['iam_failure_is_preserved', success, response(500, 'IAM unavailable', 'text/plain')],
+  ['empty_legacy_claims_reach_iam', response(200, JSON.stringify({
+    ...identity, roles: [], permissions: [], grantVersion: '',
+  })), response(200, iamBody)],
+  // Historical Mock claims are a negative fixture, never an authorization grant.
+  ['legacy_mock_claims_do_not_bypass_iam_denial', response(200, JSON.stringify({
+    ...identity, roles: ['app_admin'], permissions: [`${appKey}.access`], grantVersion: 'fallback:contract-fixture',
+  })), response(403, '{"reason":"permission_denied","permissionKey":"meta.entity.read"}')],
   ...[401, 403, 503].map((status) => [`auth_${status}_stops_before_iam`,
     response(status, JSON.stringify({ code: status, message: 'auth fixture' })), null]),
   ...[

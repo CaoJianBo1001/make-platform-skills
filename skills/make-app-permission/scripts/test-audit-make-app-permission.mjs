@@ -134,6 +134,42 @@ try {
 
   assert.match(runAudit(goodRoot), /status: PASS/);
 
+  const iamPathCases = [
+    { name: 'single-quoted-api-iam', expression: "new URL('/api/make/iam/v1/principal/permission', gatewayOrigin)" },
+    { name: 'double-quoted-api-iam', expression: 'new URL("/api/make/iam/v1/principal/permission", gatewayOrigin)' },
+    { name: 'template-api-iam', expression: '`${gatewayOrigin}/api/make/iam/v1/principal/permission`' },
+    { name: 'absolute-api-iam', expression: "'http://gateway.invalid/api/make/iam/v1/principal/permission'" },
+    { name: 'api-host-correct-iam', expression: "'http://api/api/make/iam/v1/principal/permission'" },
+    { name: 'query-api-iam', expression: "new URL('/api/make/iam/v1/principal/permission?diagnostic=1', gatewayOrigin)" },
+    { name: 'literal-wrong-iam', expression: "new URL('/make/iam/v1/principal/permission', gatewayOrigin)", expectFailure: true },
+    { name: 'template-wrong-iam', expression: '`${gatewayOrigin}/make/iam/v1/principal/permission`', expectFailure: true },
+    { name: 'absolute-wrong-iam', expression: "'http://gateway.invalid/make/iam/v1/principal/permission'", expectFailure: true },
+    { name: 'api-host-wrong-iam', expression: "'http://api/make/iam/v1/principal/permission'", expectFailure: true },
+    { name: 'correct-before-wrong-iam', expression: "new URL('/api/make/iam/v1/principal/permission', gatewayOrigin)",
+      after: "export function legacyPrincipalPermission() { return fetch(new URL('/make/iam/v1/principal/permission', gatewayOrigin)); }", expectFailure: true },
+    { name: 'wrong-before-correct-iam', expression: "new URL('/api/make/iam/v1/principal/permission', gatewayOrigin)",
+      before: "export function legacyPrincipalPermission() { return fetch(new URL('/make/iam/v1/principal/permission', gatewayOrigin)); }", expectFailure: true },
+  ];
+  for (const fixture of iamPathCases) {
+    const service = goodFiles.service.replace(
+      "'http://make-gateway.make-dev' + makeIamGatewayScope + PRINCIPAL_PERMISSION_PATH",
+      () => fixture.expression,
+    );
+    assert.notEqual(service, goodFiles.service, `${fixture.name} must change the actual IAM call`);
+    const fixtureRoot = createFixture(fixture.name, {
+      ...goodFiles,
+      service: `const gatewayOrigin = 'http://gateway.invalid';\n${fixture.before ?? ''}\n${service}\n${fixture.after ?? ''}`,
+    });
+    const output = runAudit(fixtureRoot, { expectFailure: fixture.expectFailure ?? false });
+    if (fixture.expectFailure) {
+      assert.match(output, /iam_upstream_wrong_make_scope/, `${fixture.name} must reject the wrong IAM scope`);
+    } else {
+      assert.match(output, /status: PASS/, `${fixture.name} must accept the correct IAM scope`);
+      assert.doesNotMatch(output, /iam_upstream_wrong_make_scope/);
+    }
+  }
+  console.log(`IAM upstream path regressions: PASS (${iamPathCases.length} cases)`);
+
   const platformResponseFilterRoot = createFixture('platform-response-filter', {
     app: goodFiles.app,
     permissionModel: goodFiles.permissionModel,
@@ -387,33 +423,39 @@ try {
     /table_headers_tied_to_record_read/,
   );
 
-  const tableHeadersHiddenByEarlyReturnRoot = createFixture('table-headers-hidden-by-early-return', {
-    app: goodFiles.app,
-    permissionModel: goodFiles.permissionModel,
-    router: goodFiles.router,
-    page: `${goodFiles.page}\nif (!canReadRecord) return <Empty />;`,
-    api: goodFiles.api,
-    service: goodFiles.service,
-  });
-  assert.match(
-    runAudit(tableHeadersHiddenByEarlyReturnRoot, { expectFailure: true }),
-    /table_headers_tied_to_record_read/,
-  );
-
-  const tableHeadersHiddenByTernaryRoot = createFixture('table-headers-hidden-by-ternary', {
+  const resourceContentReplacedByEarlyReturnRoot = createFixture('resource-content-replaced-by-early-return', {
     app: goodFiles.app,
     permissionModel: goodFiles.permissionModel,
     router: goodFiles.router,
     page: goodFiles.page.replace(
-      '<MasterDataCanvasTable columns={visibleFields} rows={tableRows} onDataLoad={canReadRecord ? recordState.loadPage : undefined} onCellEditCommit={canUpdateRecord ? commit : undefined} />',
-      '{canReadRecord ? <MasterDataCanvasTable columns={visibleFields} rows={tableRows} onDataLoad={recordState.loadPage} onCellEditCommit={canUpdateRecord ? commit : undefined} /> : <Empty />}',
+      '<MasterDataToolbar',
+      'if (!canReadRecord) return <Forbidden variant="inline" scope="resource" />;\n<MasterDataToolbar',
     ),
     api: goodFiles.api,
     service: goodFiles.service,
   });
   assert.match(
-    runAudit(tableHeadersHiddenByTernaryRoot, { expectFailure: true }),
-    /table_headers_tied_to_record_read/,
+    runAudit(resourceContentReplacedByEarlyReturnRoot),
+    /status: PASS/,
+    'a resource guard may unmount the entire business content before its toolbar/table/detail',
+  );
+
+  const resourceContentReplacedByTernaryRoot = createFixture('resource-content-replaced-by-ternary', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: `function OrderTablePage() { ${goodFiles.page} }
+      function ObjectContent() {
+        const canReadRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_READ);
+        return canReadRecord ? <OrderTablePage /> : <Forbidden variant="inline" scope="resource" />;
+      }`,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(resourceContentReplacedByTernaryRoot),
+    /status: PASS/,
+    'replacing the whole content component is not a column-authorization error',
   );
 
   const tableHeadersHiddenByDerivedColumnsRoot = createFixture('table-headers-hidden-by-derived-columns', {

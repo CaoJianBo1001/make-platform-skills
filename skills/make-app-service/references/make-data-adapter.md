@@ -47,7 +47,7 @@ Do not duplicate Make fetch logic in each route.
 
 ### Endpoint-specific success and prerequisites
 
-The raw request wrapper is not a universal `{code,data}` parser. Meta/Data normalization uses the documented business envelope only when that endpoint defines it; published auth `current-context` instead returns a bare identity. Follow `make-app-auth/references/service-fronted-mode.md#current-context-consumption` when consuming it before IAM or a download. Preserve a completed **failure** from the prerequisite, but never abort the business route by forwarding its successful identity HTTP 200. Invalid successful prerequisite data is a safe Service 502 contract error, not a completed IAM response. After valid authentication, preserve the actual IAM/data response according to that route's contract. Test this distinction through the production route, not only a mocked envelope helper.
+Meta/Data envelope parsing applies only to endpoints that define it. Existing auth current-context consumers follow the response, prerequisite and regression contract in `make-app-auth/references/service-fronted-mode.md#current-context-consumption`; do not extend business parsing rules to auth responses.
 
 ### HTTP-client implementation requirement
 

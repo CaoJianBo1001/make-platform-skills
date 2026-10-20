@@ -54,6 +54,11 @@ try {
 
   assert.match(runAudit(goodRoot), /status: PASS/);
 
+  // Project-local audit tools carry diagnostic route strings, not runtime routes.
+  write(path.join(goodRoot, 'scripts/audit-auth-contract.mjs'), fs.readFileSync(auditScript, 'utf8'));
+  write(path.join(goodRoot, 'scripts/legacy-route-check.mjs'), "console.error('Do not use /api/auth/** or /api/app/**');");
+  assert.match(runAudit(goodRoot), /status: PASS/, 'vendored audit diagnostics must not count as App routes');
+
   for (const version of ['^0.1.3', '0.1.3', '>0.1.2', '>=0.1.3 <0.2.0', '0.1.3 - 0.2.0', '^1.0.0']) {
     writeSdkDependency(goodRoot, version);
     assert.match(runAudit(goodRoot), /status: PASS/, `expected ${version} to pass`);

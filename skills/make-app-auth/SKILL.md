@@ -2,12 +2,16 @@
 name: make-app-auth
 description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user/account-drawer auth wiring, current-context identity, Feishu-container logout visibility, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. Preserve authenticated context for the default /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for account surfaces and make-app-permission for single-app permission enforcement.
 metadata:
-  version: 0.1.17
+  version: 0.1.21
 ---
 
 # make-app-auth
 
 Read `references/access-help.md` before changing any forbidden page or 403 handler. Preserve denial payloads and scope; independent current-App administrator help does not authorize business access. React feedback uses the verified package through `makeui/references/permission-feedback.md`; auth does not render or style the denial page.
+
+Administrator lookup is an optional enhancement across staggered releases: a missing SDK method or undeployed endpoint keeps generic authorization guidance, not a login or App-readiness failure. Existing auth/IAM requirements still apply.
+
+Keep startup and business denial classifiers separate. `auth.init()` returning `status: 'forbidden'` renders App-entry feedback without requiring `payload.reason`; the business request classifier in `request-adapter.md` must not be reused as an extra bootstrap gate. See `references/sdk-integration.md#startup-shape`.
 
 Use this skill for **Make App authentication and authenticated Make API access**.
 
@@ -64,7 +68,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - Do not generate browser-side `unifiedLogin: false`, `accessToken`, `token`, `tokenProvider`, local credential loading, `VITE_MAKE_AUTH_MODE=token`, or equivalent token-mode switches.
 - Service-only local preview may use makecli credentials only behind a temporary process-level `MAKE_APP_LOCAL_PREVIEW=true`; do not persist this flag in env files or generated docs. Local preview must use `makecli configure resolve --target local-preview --output=json`, call `make_api_origin + /api/make`, and published runtime must call the k8s-internal gateway with `/make`. current-context/runtime-view must be explicit preview responses, route matching must ignore query strings such as `return_url`, and business requests must attach the token only inside Service.
 - Local preview auth routes must not shadow published auth proxy routes. In published runtime, `/api/make/auth/current-context` and `/api/make/auth/runtime-view` must reach make-gateway through the auth namespace proxy and must not return `localPreview`, `local-preview-user`, `authMode: "token"`, or other preview context.
-- Auth `current-context` success is an HTTP 200 **bare identity object**, not a business `{code,data}` envelope. A Service that consumes it before IAM or a download must use the endpoint-specific contract in `references/service-fronted-mode.md#current-context-consumption`, not the Meta/Data success parser. Browser SDK parsing does not validate this separate Service consumer.
+- Service consumers of auth `current-context` follow `references/service-fronted-mode.md#current-context-consumption`, not the Meta/Data envelope parser. Auth namespace proxies remain transparent.
 - Do not silently downgrade generated Apps from unified login because local OAuth prerequisites are missing; report the blocker.
 - Before reporting publish/login readiness, verify the auth path with the agent or platform checks. Do not leave domain access, DevTools, k8s logs, or cookie inspection as user-only validation steps.
 - For Service-fronted Apps, `/api/make/auth/**` and `/api/make/oauth/**` are required namespace-level Service proxy contracts under the published App Service prefix, not optional convenience routes or endpoint-by-endpoint allowlists.
@@ -87,7 +91,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 4. Read `references/service-fronted-mode.md` when the App keeps a Service layer between UI and make-gateway.
 5. Read `references/request-adapter.md` whenever generating or reviewing Make backend requests.
 6. Keep auth bootstrap thin. Business features must consume the project Make API adapter and auth state, not auth internals.
-7. Before claiming publish/login readiness, verify the auth path: current-context route, unified redirect, session callback, cookie-preserving business requests, and Service-fronted auth proxy when applicable. For the default App startup, prove authenticated context → actual App-scoped IAM response → Schema; a 200 at each URL alone does not prove those response types or downstream calls.
+7. Before claiming publish/login readiness, verify the auth path: current-context route, unified redirect, session callback, cookie-preserving business requests, and Service-fronted auth proxy when applicable.
 8. Run `scripts/audit-auth-contract.mjs <project-root> --published` for generated Apps when a project tree is available; use `--mode service-fronted` when the App keeps a Service layer.
 9. When changing generated code, add or update tests for the touched auth path: unauthenticated session, expired session, 403, logout, unified-login redirect, callback proxy, business-request 401 handling, current-context identity normalization, or normal-browser/Feishu account visibility.
 
@@ -112,7 +116,7 @@ node skills/make-app-auth/scripts/audit-auth-contract.mjs <project-root> --mode 
 
 The audit is auth-scoped. It checks unified-login readiness, raw `/api/make` fetch usage, Service-fronted `/api/make/auth/**` and `/api/make/oauth/**` namespace proxy presence, local-preview auth shadowing, broad `/api/make/**` passthrough risk, and obvious direct-vs-Service route mismatches. It does not verify schema rendering or UI blank-page behavior.
 
-When Service consumes current-context before the principal route, also run `scripts/current-context-conformance-suite.mjs <host-adapter-module>` against the production Service handler; see `references/service-fronted-mode.md#current-context-consumption`. The static audit cannot prove that one endpoint's successful identity is not accidentally returned as another endpoint's IAM result.
+For a principal route that already consumes current-context, run `scripts/current-context-conformance-suite.mjs <host-adapter-module>` against its production handler; see `references/service-fronted-mode.md#current-context-consumption`. This does not require adding an auth request to other routes.
 
 Audit expectations:
 

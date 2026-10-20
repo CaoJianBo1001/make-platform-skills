@@ -151,8 +151,13 @@ assert.match(
   'the established action response contracts must not be changed by the direct-proxy rule',
 );
 assert.match(
+  serviceSkill.split('---')[1] ?? '',
+  /^metadata:[ \t]*\r?\n[ \t]+version:[ \t]+\d+\.\d+\.\d+[ \t]*$/m,
+  'make-app-service must declare a three-part metadata.version',
+);
+assert.match(
   serviceSkill,
-  /metadata:\s*\n\s*version:\s*0\.2\.4/,
+  /Every new Make App Service[^\n]*`make-app-observability`[^\n]*Trace ID[^\n]*validate or create[^\n]*boundary[^\n]*return `X-Log-Id`[^\n]*logs[^\n]*forward only validated trace headers/i,
   'make-app-service must include the default Trace ID handoff',
 );
 assert.match(
@@ -181,8 +186,13 @@ assert.match(
   'Service layering must require browser-safe upstream error bodies before transparent forwarding',
 );
 assert.match(
+  authSkill.split('---')[1] ?? '',
+  /^metadata:[ \t]*\r?\n[ \t]+version:[ \t]+\d+\.\d+\.\d+[ \t]*$/m,
+  'make-app-auth must declare a three-part metadata.version',
+);
+assert.match(
   authSkill,
-  /metadata:\s*\n\s*version:\s*0\.1\.12/,
+  /shared authenticated business-request adapter[^\n]*`make-app-observability`[^\n]*Trace ID[^\n]*`traceparent`[^\n]*matching `X-Log-Id`[^\n]*without exposing tokens or changing unified-login behavior/i,
   'make-app-auth must include the default Trace ID handoff',
 );
 assert.match(

@@ -8,6 +8,8 @@ test('permission package and route regression tests are continuous CI gates', as
   const workflow = await readFile(new URL('../.github/workflows/skill-metadata-lint.yml', import.meta.url), 'utf8');
   assert.match(workflow, /node --test skills\/makeui\/scripts\/test-verify-feedback-package-surface\.mjs/u);
   assert.match(workflow, /node --test skills\/make-app-permission\/scripts\/test-scoped-route-feedback\.mjs/u);
+  assert.match(workflow, /skills\/makeui\/scripts\/test-feedback-sdk-types\.mjs/u);
+  assert.match(workflow, /--package=typescript@5\.9\.3/u);
 });
 
 test('auth startup and adapter preserve denial payload and scope', async () => {
@@ -64,4 +66,12 @@ test('contact lookup and release boundary are discoverable from both skills', as
   assert.match(contract, /not.*published|unreleased/i);
   assert.match(contract, /tenant/i);
   assert.match(contract, /no-store/);
+});
+
+test('SDK nullable avatars are normalized without narrowing the SDK method to UI DTOs', async () => {
+  const guide = await read('makeui/references/permission-feedback.md');
+  const auth = await read('make-app-auth/references/access-help.md');
+  assert.match(guide, /avatarUrl\?: string \| null/u);
+  assert.match(guide, /avatarUrl: contact\.avatarUrl \?\? undefined/u);
+  assert.match(auth, /avatarUrl\?: string \| null/u);
 });

@@ -8,6 +8,8 @@ Read this for React App startup, route/data or operation denial presentation. Pe
 - The permission additions are an unreleased API candidate until an actual registry artifact has been verified; a source version or local tarball is **not proof of registry publication**. The Trace-only `0.1.5` baseline does not establish permission component availability. Without a registry-resolvable version exposing this API, report a package release blocker. Only an explicitly approved local test may install a supplied tarball; do not commit a developer-specific tarball path or use Git/source copying as a release fallback.
 - Verify the actual installed artifact, including public JS, TypeScript and CSS entries, rather than trusting a version string or template. Use the script below; `--allow-prerelease` is reserved for that explicit local-test opt-in and never proves publication.
 
+The package/Skill may be used before the administrator backend is deployed. Package availability is required; administrator-query availability is not. Render generic authorization guidance without blocking the App when the SDK method is missing or the endpoint is absent. Follow `make-app-auth/references/access-help.md#staggered-release-fallback` for lookup errors; this does not relax login, IAM or Schema checks.
+
 ```sh
 node skills/makeui/scripts/verify-feedback-package-surface.mjs <installed-package-root>
 # Explicitly approved local alpha test only:
@@ -43,7 +45,7 @@ There is no npm `showForbidden`, `useAppAdministrators` or automatic 403 interce
 ```tsx
 // No authorized App entry: outside the business shell.
 <AppPermissionFeedback {...help} variant="page" scope="app" onRetry={refreshAccess} />
-// Denied route/data: inside the authorized shell's content/data slot.
+// Denied route/read: replaces the authorized shell's entire business content slot.
 <AppPermissionFeedback {...help} variant="inline" scope="resource" onRetry={refreshAccess} />
 // Rejected save: inside the existing form, preserving permitted input.
 <AppPermissionFeedback {...help} variant="inline" scope="operation" onRetry={refreshAccess} />
@@ -63,7 +65,8 @@ The following `AppPermissionFeedback` is **App-owned example code**, not another
 import { useEffect, useState } from 'react';
 import { MakeAppPermissionNotice, type MakeAppAdministratorContact, type MakeAppAdministratorStatus, type MakeAppPermissionNoticeProps } from '@qfei-design/make-app-observability/react';
 
-type AdministratorApi = { getAppAdministrators?: () => Promise<MakeAppAdministratorContact[]> };
+type SDKAdministratorContact = Omit<MakeAppAdministratorContact, 'avatarUrl'> & { avatarUrl?: string | null };
+type AdministratorApi = { api: unknown; getAppAdministrators?: () => Promise<SDKAdministratorContact[]> };
 type DenialPayload = { data?: { appAdministrators?: MakeAppAdministratorContact[] } };
 type Props = Omit<MakeAppPermissionNoticeProps, 'administrators' | 'administratorStatus'> & {
   auth: AdministratorApi; contextKey: string; payload?: DenialPayload;
@@ -81,30 +84,45 @@ export function AppPermissionFeedback({ auth, contextKey, payload, ...view }: Pr
     const snapshot = { auth, contextKey, payload };
     setHelp({ ...snapshot, contacts: [], status: 'loading' });
     Promise.resolve().then(() => query.call(auth)).then(
-      contacts => { if (active) setHelp({ ...snapshot, contacts, status: 'ready' }); },
-      () => { if (active) setHelp({ ...snapshot, contacts: [], status: 'error' }); },
+      contacts => { if (active) setHelp({ ...snapshot, contacts: contacts.map(contact => ({ ...contact, avatarUrl: contact.avatarUrl ?? undefined })), status: 'ready' }); },
+      error => {
+        // An undeployed optional endpoint is a quiet generic-help fallback.
+        const endpointMissing = error !== null && typeof error === 'object' && 'status' in error && error.status === 404;
+        if (active) setHelp({ ...snapshot, contacts: [], status: endpointMissing ? 'ready' : 'error' });
+      },
     );
     return () => { active = false; };
   }, [auth, contextKey, payload, embedded]);
   const current = help?.auth === auth && help.contextKey === contextKey && help.payload === payload ? help : undefined;
   return <MakeAppPermissionNotice {...view}
+    retryStatus={view.retryStatus === 'denied' ? 'idle' : view.retryStatus}
     administrators={Array.isArray(embedded) ? embedded : current?.contacts ?? []}
     administratorStatus={Array.isArray(embedded) ? 'ready' : current?.status ?? (typeof auth.getAppAdministrators === 'function' ? 'loading' : 'ready')}
   />;
 }
 ```
 
-Embedded contacts render immediately; an explicit empty array is authoritative and triggers no query. Missing contacts use `auth.getAppAdministrators()` only when installed and available. SDK lookup has its own deadline and login/logout lifecycle; the host ignores stale responses on unmount or context changes. Missing capability keeps generic guidance but remains an independent-contact readiness gap. Never query protected records to obtain contacts, query IAM/Console from UI, or invent an SDK version supporting the method.
+Embedded contacts render immediately; an explicit empty array is authoritative and triggers no query. Missing contacts use `auth.getAppAdministrators()` only when installed and available. SDK lookup has its own deadline and login/logout lifecycle; the host ignores stale responses on unmount or context changes. Missing capability or endpoint keeps generic guidance and does not block App readiness; report independent contact lookup as degraded, not verified. No permanent unsupported-capability cache prevents a later entry from discovering backend rollout. Never query protected records to obtain contacts, query IAM/Console from UI, or invent an SDK version supporting the method.
+
+The `api` member is an existing SDK client member used only for structural type compatibility, never a contact-query fallback. Keep the helper optional so a client compiled against older SDK declarations can pass to this adapter. Verify both old/new SDK types as well as runtime behavior; a JavaScript `typeof` test alone does not prove TypeScript compatibility.
+
+The adapter maps only the displayed retry prop from `denied` to `idle`: keep the
+original denial, administrator list and refresh control without adding another
+“仍未获得权限，请联系应用管理员授权” below the button. This also works with published
+alpha artifacts that still render that duplicate footer. Do not mutate the
+actual host access/retry state or override package CSS; pass `checking`, `error`
+and `restored` through unchanged. No package upgrade is required for this host
+compatibility, and a local component fix is not proof of a new npm release.
 
 ## Mounting and recovery
 
 - No authorized App entry: App guard outside the business shell, `variant="page" scope="app"`; no business routes/loaders. A safe identity/brand header is host-owned.
-- Any authorized entry: shell outside the object/fixed-page guard; `variant="inline" scope="resource"` occupies only the denied content slot. Keep authorized desktop/mobile navigation and user area; no `100vh` overlay. A host return action targets an actually authorized page, not blind browser back.
-- Entity/field metadata allowed but record read denied: retain authorized navigation/headers and put `variant="inline" scope="resource"` in the data region. Clear cached rows/counts and disable denied reads; do not also show no-data artwork or a false zero count.
+- Any authorized entry: shell outside the object/fixed-page guard; `variant="inline" scope="resource"` replaces the entire business content slot, not a table-body or form-field slot. Keep authorized desktop/mobile navigation and the global identity header; clear object-specific title/breadcrumb/toolbar slots even when their container belongs to the shell. No `100vh` overlay. A host return action targets an actually authorized page, not blind browser back.
+- Entity/field metadata allowed but record read denied, including runtime read revocation or classified read 403: use that same whole-content replacement. Unmount the object's business title, toolbar/search, statistics, table/card/form structure, headers, rows and dialogs. Do not retain an empty table or disabled controls. Clear cached records/counts/selections, invalidate old requests and keep denial state above the unmounted page; the npm component must not query/remove arbitrary host DOM. Do not also show no-data artwork or a false zero count. This does not remove metadata-authorized navigation or revoke independent create-only routes.
 - Create/save/delete rejected: `variant="inline" scope="operation"` remains in the affected form/operation area, or use `variant="toast" scope="operation"` for a short action rejection. Host preserves permitted draft values and blocks the denied mutation. Read/field revocation still removes unauthorized server data. Toast uses compact administrator names separated by `、`; inline/page use avatar/name chips. Do not inject a hand-built avatar row into the Toast.
 - Retry: host sets `checking`, refreshes permission and permission-trimmed Schema in one generation, then resolves the original target. Set `restored` only after that access generation is ready; load data only when authorized. The package never performs this work or replays a mutation. `denied` means explicit permission refusal; network/service failure uses `error`, not a guessed denial.
 - Known `permission_denied` uses scoped feedback once while retaining diagnostic Trace handling. Do not duplicate it as a generic network failure card. Preserve the independent error outlet for 401/unknown403/503, permission/Schema load failures and other request errors.
 
 ## Required host evidence
 
-Assert mounted navigation/header, zero denied business requests, record/cache invalidation, preserved allowed input, no automatic mutation after recovery, meaningful retry failure, embedded/empty/missing contacts and context-race cancellation. Test the real package after installation and at desktop/mobile widths. A CSS import, SSR verifier or scope attribute alone is not a complete Make App permission acceptance.
+Assert mounted navigation/global identity header and the absence of every original business title/toolbar/header/card/form/dialog on resource denial; cover both table and non-table layouts, initial denial and post-load revocation. Also assert zero subsequent denied business requests, record/cache invalidation, ignored late responses without remount loops, preserved allowed input for operation-only refusal, no automatic mutation after recovery, meaningful retry failure, embedded/empty/missing contacts and context-race cancellation. Cover generic page/inline/Toast rendering with no SDK method, an undeployed endpoint and failed/timed-out contact lookup; no help failure may become a global auth/request error. Test the real package after installation and at desktop/mobile widths. A CSS import, SSR verifier or scope attribute alone is not a complete Make App permission acceptance.
