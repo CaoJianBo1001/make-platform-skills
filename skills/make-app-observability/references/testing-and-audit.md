@@ -14,6 +14,8 @@
 node skills/make-app-observability/scripts/audit-trace-contract.mjs <project-root> --mode auto
 ```
 
-`auto` 依据 Service 源码目录区分直连或 Service-fronted；拓扑已知时可显式传 `--mode direct` 或 `--mode service-fronted`。审计检查 UI 声明的包版本下界至少 `0.1.8`、样式与组件公开入口、全局 viewport 的基本渲染接线、UI 成对 Header、旧 query 做法、Service 响应与网关传递，以及 AI 字面量 URL 直写 `fetch` 时遗漏 Header 的明显问题。还须检查目标 App 锁文件及实际安装产物版本达到 `0.1.8+`；静态审计不解析实际安装包。Service 响应检查识别 `res`、`response`、`reply` 及它们明确赋值的别名；其他框架的响应写法应在项目本地扩展审计器并补正反向用例，不能只改业务代码迎合关键词。AI transport 若复用跨文件的共享适配器，不要求在每个调用文件重复写 Header；应以行为测试证明实际请求携带匹配的两个 Header。静态审计只检查 viewport 的源码存在，不能证明它常驻根层、卡片在真实 AppShell 中可见、Provider 保留结构化错误或页面文案与可见 Trace ID 一致；这些必须靠项目的浏览器与行为测试验证。其他动态分支、日志脱敏、真实 Gateway 行为及集中式导出也须通过项目测试和环境联调验证。
+经用户明确批准的本地 alpha 验证可加 `--allow-prerelease`，且依赖必须固定为精确预发布版本。默认仍拒绝预发布；该开关不接受 Git/file 来源、不证明 registry 发布或权限组件可用，仍须核对实际安装产物并运行 `makeui` 的包表面与宿主行为测试。预发布版本的基础版本须达到 `0.1.9`，并实际验证同一 viewport 合同；这不是正式发布门禁的豁免。
+
+`auto` 依据 Service 源码目录区分直连或 Service-fronted；拓扑已知时可显式传 `--mode direct` 或 `--mode service-fronted`。审计检查 UI 声明的包版本下界至少 `0.1.9`、样式与组件公开入口、全局 viewport 的基本渲染接线、UI 成对 Header、旧 query 做法、Service 响应与网关传递，以及 AI 字面量 URL 直写 `fetch` 时遗漏 Header 的明显问题。还须检查目标 App 锁文件及实际安装产物版本达到 `0.1.9+`；静态审计不解析实际安装包。Service 响应检查识别 `res`、`response`、`reply` 及它们明确赋值的别名；其他框架的响应写法应在项目本地扩展审计器并补正反向用例，不能只改业务代码迎合关键词。AI transport 若复用跨文件的共享适配器，不要求在每个调用文件重复写 Header；应以行为测试证明实际请求携带匹配的两个 Header。静态审计只检查 viewport 的源码存在，不能证明它常驻根层、卡片在真实 AppShell 中可见、Provider 保留结构化错误或页面文案与可见 Trace ID 一致；这些必须靠项目的浏览器与行为测试验证。其他动态分支、日志脱敏、真实 Gateway 行为及集中式导出也须通过项目测试和环境联调验证。
 
 新 App 将审计器复制或包装进项目本地 `scripts/`，以 `trace:audit` 接入项目 `verify:publish`。复制后保留审计测试，并在项目中增加真实请求及真实 AppShell 错误可见性的行为测试，将这些测试纳入发布门禁。存量 App 在本次接入 Trace 时使用既有包管理器和发布命令，纳入等价门禁；不要为 Trace 接入单独迁移运行时。审计失败时先修复接线，不能只添加关键词或空组件让检查通过。审计通过但缺少上述可见性测试，不得声称错误出口已验收。

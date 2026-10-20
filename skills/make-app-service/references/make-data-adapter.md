@@ -45,6 +45,10 @@ The wrapper should:
 
 Do not duplicate Make fetch logic in each route.
 
+### Endpoint-specific success and prerequisites
+
+Meta/Data envelope parsing applies only to endpoints that define it. Existing auth current-context consumers follow the response, prerequisite and regression contract in `make-app-auth/references/service-fronted-mode.md#current-context-consumption`; do not extend business parsing rules to auth responses.
+
 ### HTTP-client implementation requirement
 
 `fetch` resolves completed 4xx/5xx responses, so retain its status, selected

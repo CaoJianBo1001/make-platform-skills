@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const SDK_PACKAGE_NAME = '@qfeius/make-app-auth';
-const MINIMUM_SDK_VERSION = [0, 1, 3];
+const MINIMUM_SDK_VERSION = [0, 1, 5];
 
 const USAGE = `Usage:
   node skills/make-app-auth/scripts/audit-auth-contract.mjs <project-root> [--mode direct|service-fronted|auto] [--published]
@@ -97,26 +97,26 @@ if (hasTokenMode(uiText) || hasServiceTokenModeWithoutLocalPreview(serviceText))
 
 if (published) {
   if (sdkDependencyDeclarations.length === 0) {
-    failures.push('sdk_version_missing: published Apps must declare @qfeius/make-app-auth >= 0.1.3 in package.json');
+    failures.push('sdk_version_missing: published Apps must declare @qfeius/make-app-auth >= 0.1.5 in package.json');
   }
   for (const declaration of sdkDependencyDeclarations) {
     const status = classifySdkVersionRange(declaration.version, MINIMUM_SDK_VERSION);
     if (status === 'too-old') {
-      failures.push(`sdk_version_too_old: ${relative(declaration.file)} declares @qfeius/make-app-auth ${declaration.version}; published Apps require >= 0.1.3`);
+      failures.push(`sdk_version_too_old: ${relative(declaration.file)} declares @qfeius/make-app-auth ${declaration.version}; published Apps require >= 0.1.5`);
     } else if (status === 'unverifiable') {
-      failures.push(`sdk_version_unverifiable: ${relative(declaration.file)} declares unsupported @qfeius/make-app-auth source ${declaration.version}; published Apps require a verifiable registry range >= 0.1.3`);
+      failures.push(`sdk_version_unverifiable: ${relative(declaration.file)} declares unsupported @qfeius/make-app-auth source ${declaration.version}; published Apps require a verifiable registry range >= 0.1.5`);
     }
   }
   for (const override of sdkVersionOverrides) {
     const status = classifySdkVersionRange(override.version, MINIMUM_SDK_VERSION);
     if (status === 'too-old') {
-      failures.push(`sdk_version_override_too_old: ${relative(override.file)} ${override.source} forces @qfeius/make-app-auth ${override.version}; published Apps require >= 0.1.3`);
+      failures.push(`sdk_version_override_too_old: ${relative(override.file)} ${override.source} forces @qfeius/make-app-auth ${override.version}; published Apps require >= 0.1.5`);
     } else if (status === 'unverifiable') {
-      failures.push(`sdk_version_override_unverifiable: ${relative(override.file)} ${override.source} uses unsupported @qfeius/make-app-auth source ${override.version}; published Apps require a verifiable registry range >= 0.1.3`);
+      failures.push(`sdk_version_override_unverifiable: ${relative(override.file)} ${override.source} uses unsupported @qfeius/make-app-auth source ${override.version}; published Apps require a verifiable registry range >= 0.1.5`);
     }
   }
   if (!/apiAuthRedirect\s*:\s*true/.test(projectText)) {
-    warnings.push('published_api_auth_redirect_missing: generated unified-login Apps should set apiAuthRedirect:true with SDK >= 0.1.3');
+    warnings.push('published_api_auth_redirect_missing: generated unified-login Apps should set apiAuthRedirect:true with SDK >= 0.1.5');
   }
   if (hasUnsupportedSdkReadyStatus(uiText)) {
     failures.push('unsupported_sdk_ready_status: @qfeius/make-app-auth init returns authenticated/redirecting/unauthenticated/forbidden/failed, not ready');
@@ -136,7 +136,7 @@ if (inferredMode === 'service-fronted') {
   if (hasRawMakeDownloadLiteral(uiText) && !hasServiceDownloadProxyLiteral(uiText)) {
     warnings.push('service_fronted_download_proxy_not_obvious: UI mentions raw Make download paths but no Service download proxy path was found');
   }
-  if (hasServiceFrontedApiOnlyPrefix(projectText)) {
+  if (hasServiceFrontedApiOnlyPrefix(`${uiText}\n${serviceText}`)) {
     failures.push('service_fronted_missing_make_prefix: Service-fronted published Apps use /api/make/auth/** and normally /api/make/app/**, not /api/auth/** or /api/app/**');
   }
   if (!hasServiceFrontedGatewayBaseMakePrefix(uiText)) {

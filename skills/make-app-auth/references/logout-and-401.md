@@ -10,7 +10,7 @@ Behavior:
 - Use `auth.login({ redirect: true })` to enter the Org login page.
 - If the current App session is diagnosed as stale or broken, clear the App session with `auth.logout({ redirect: false })`, then call `auth.login({ redirect: true })`. Do not make logout-before-login the default 401 path.
 - Do not render an App-owned login page, login transition page, or signed-out completion page.
-- Prefer `createMakeAppAuth({ apiAuthRedirect: true })` for generated unified-login Apps with `@qfeius/make-app-auth >= 0.1.3`, so SDK handles API 401/403 redirect checks with built-in loop protection.
+- Prefer `createMakeAppAuth({ apiAuthRedirect: true })` for generated unified-login Apps with `@qfeius/make-app-auth >= 0.1.5`, so SDK handles API 401/403 redirect checks with built-in loop protection.
 - Do not leave business views in a schema/list/create/update/delete error state for 401. Route 401 through the shared expired-session handler.
 - If `auth.init({ redirect: true })` returns `reason="state_expired"` or `reason="challenge_expired"`, show `登录已过期，请重新登录` and wait for the user to click.
 - After the user clicks relogin, call `auth.login({ redirect: true })`. Do not implement multiple automatic retries.
@@ -48,3 +48,7 @@ Handle 401/403 in one Make API adapter or data-source layer. Every frontend requ
 - Hard-coding Org, unified-login, or account-center environment domains in App code.
 - Clearing `zs_session` or `make_app_session` from App code.
 - Treating every 403 as a login-expired state after SDK login check confirms the user is already authenticated.
+
+## Administrator contact feedback
+
+Follow `access-help.md`: preserve `error.payload`, distinguish App/resource/operation denial, and retain navigation/unaffected input for local denial. Neither HTTP 403 alone nor a service failure proves missing permission.

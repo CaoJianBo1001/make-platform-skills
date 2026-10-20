@@ -9,6 +9,9 @@ Use this reference before implementation and before reporting permission work co
 ## Service and Schema tests
 
 - Principal permission route, App scope, IAM `/api/make/iam/**`, target header, login forwarding, tenant resolution, errors, and runtime-mode scopes.
+- If tenant resolution already consumes current-context, run the auth Skill's `current-context-conformance-suite.mjs` against a thin adapter to the production Service handler; otherwise keep the established trusted-tenant path without adding an auth request.
+- Test frontend startup auth → actual IAM → Schema by response type, not HTTP 200 alone. Invalid IAM stops Schema; legacy Mock `app_admin` claims with empty IAM rows cannot grant object access.
+- Use a bare successful current-context fixture and a complete IAM `{code:200,data:{principal,scope,permissions}}` fixture. Keep Service passthrough assertions byte-for-byte; at the actual UI request adapter prove code validation and one-time unwrap, valid empty grants, malformed success failure, and retained 401/known403/503 errors with administrator contacts. A DTO-only helper test does not cover this boundary.
 - Principal permission route preserves every completed IAM response's HTTP status, Content-Type, and body unchanged, including 2xx success plus 4xx/5xx errors; only a no-response transport failure may use a documented Service-generated error.
 - Preserve and normalize `fields` and `createFields` independently across Service, shared types, and UI adapters.
 - Missing/null/invalid `createFields` becomes empty and never falls back to `fields`.
@@ -47,9 +50,9 @@ Required field cases:
 
 ## Page and payload tests
 
-- An entity with `meta.entity.read` and readable `meta.field.read` fields but without `data.record.read` appears in left navigation and renders its authorized table headers, with no rows and no records/detail/pagination request.
+- An entity with `meta.entity.read` and readable `meta.field.read` fields but without `data.record.read` remains in authorized navigation, but its whole record-reading business content is replaced with resource feedback. Assert that the business title, search/toolbar, statistics, table headers, forms and dialogs are absent, with no records/detail/pagination request. Cover a card/non-table layout as well.
 - A missing `meta.entity.read` hides the navigation item and blocks the dynamic object route even if `data.record.read` or `meta.field.read` is present.
-- A `data.record.read` revoke removes cached rows by supplying an empty table row source, and stops record-backed controls, but retains an entity-authorized table shell and `meta.field.read` headers. Prove that disabling only the records query cannot leave previously loaded rows visible.
+- A runtime classified read 403 or a `data.record.read` revoke removes the entire current business subtree and cached records/counts/selections. Keep authorized navigation and the global identity header, ignore late responses and verify that page unmount does not reset denial or restart requests. Disabling only the records query or emptying only table rows is insufficient. Unknown 403/401/service errors do not become permission denial.
 - A create-only invisible field renders and submits in create mode only.
 - A field outside `createFields`, or a `hidden` field in matched `meta.field.read`, is absent from create.
 - Create operation with zero fields keeps the entry, shows “暂无可新建字段”, and prevents unsupported empty submission.
@@ -68,7 +71,7 @@ Required field cases:
 - Refresh order is permission, Schema invalidation/reload, surface recomputation, then data if read remains allowed.
 - New permission is not published before its Schema succeeds; refresh failure does not restore the old authorization generation.
 - New create/read fields appear after page refresh without browser reload.
-- Revoked create/update/read closes only affected surfaces; a record-read revoke does not close a still-create-authorized create surface or hide entity-authorized headers, while an entity-metadata revoke closes navigation and its object route.
+- Revoked create/update closes the affected operation surfaces. Revoked record read replaces the current record-reading business content and its descendants, not authorized navigation or independently authorized create-only routes; an entity-metadata revoke also removes its navigation entry. Operation-only refusal preserves allowed draft inputs and recovery never replays a mutation.
 - Old permission/Schema/record/candidate/form responses cannot overwrite the current generation.
 - Submits are blocked while the access generation changes.
 
@@ -80,7 +83,7 @@ Run:
 node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 ```
 
-The audit should fail on outbound IAM request filters containing `make.platform.*`, including a platform-key array assigned to a local variable and then passed directly as `body`/`payload`/`request.permissionKeys`; missing `meta.entity.read` dynamic-route or navigation gates; table headers tied to `data.record.read` through direct props, early returns, ternaries, or derived column variables; missing empty/cleared rows after a record-read revoke; missing create permission helpers; create-field helpers tied to `data.record.create`, `meta.field.create`, or `meta.field.update` instead of `meta.field.read`; missing/overwritten `createFields`; `createFields ?? fields`; runtime `editableFields` use; create fields built from visible/editable sets; unfiltered create payloads; operation entries tied to field count; permission-only refresh without Schema refresh/invalidation; and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`. Response-side filtering of surplus platform rows is allowed. A positive navigation, route, or row-clear signal must be consumed by that same surface: a `ProtectedRoute` must be returned by the dynamic object route and use its resolved entity key, and an explicit empty row branch must occur on a Table/Grid/Canvas row prop or flow into it. Unrelated guards, entity filters, row props, store clears, or page components do not satisfy the gate.
+The audit should fail on outbound IAM request filters containing `make.platform.*`, including a platform-key array assigned to a local variable and then passed directly as `body`/`payload`/`request.permissionKeys`; missing `meta.entity.read` dynamic-route or navigation gates; field-column lists computed from `data.record.read` instead of `meta.field.read` through direct props or derived variables; missing empty/cleared rows after a record-read revoke; missing create permission helpers; create-field helpers tied to `data.record.create`, `meta.field.create`, or `meta.field.update` instead of `meta.field.read`; missing/overwritten `createFields`; `createFields ?? fields`; runtime `editableFields` use; create fields built from visible/editable sets; unfiltered create payloads; operation entries tied to field count; permission-only refresh without Schema refresh/invalidation; and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`. Whole-content early returns/conditional mounts are valid resource guards, not column-authorization failures. Response-side filtering of surplus platform rows is allowed. A positive navigation, route, or row-clear signal must be consumed by that same surface: a `ProtectedRoute` must be returned by the dynamic object route and use its resolved entity key, and an explicit empty row branch must occur on a Table/Grid/Canvas row prop or flow into it. Unrelated guards, entity filters, row props, store clears, or page components do not satisfy the gate.
 
 The audit is heuristic. Its stringification rule is a targeted defense against known bad shapes, not complete data-flow proof. It must reject coercion that affects a normalization result or permission branch, including direct `if`/`switch`/loop conditions. It must lexically ignore comments and string literals and must not fail on diagnostic-only logging inside a named normalization helper, including structured log arguments, `fieldAccess`-specific parameter names, and semicolonless code where an earlier return ends through automatic semicolon insertion. Parenthesized, bracketed, or operator-continued returns remain result-affecting and must still fail. Host tests must prove permission matching, actual form field sets, payloads, Lookup target visibility, generation safety, and server-side enforcement.
 
@@ -108,10 +111,28 @@ node skills/make-app-permission/scripts/permission-conformance-suite.mjs <adapte
 
 For TypeScript adapters, invoke the command with the project's existing TypeScript runner. The adapter must delegate to production code rather than duplicate permission logic. The suite proves missing operation denial, named-entity isolation, deterministic pre-validation row selection, rejection of non-string/blank/wildcard requested identifiers, the fixed `* < App < entity/* < entity/exact` resource order, malformed permission-envelope and explicit App-resource rejection, valid state-list preservation, deny-wins, independent create/read/update fields, permissionKey-specific access values, wildcard exceptions, and the canonical create/edit system-field exclusions.
 
+## UI wire-response conformance
+
+Copy `scripts/principal-response-conformance-suite.mjs` into project-local test tooling. Export `createPermissionLoader(request)` from a thin host adapter: `request` is an injected SDK-level request function returning parsed JSON (or throwing an HTTP error), and the export returns the actual production permission load function. Delegate to the existing API factory; do not duplicate its parser or model in the adapter. For a factory that accepts `auth.api.request`, this can be:
+
+```javascript
+import { createServiceApi } from '../../ui/src/lib/service-api/client';
+export const createPermissionLoader = (request) =>
+  createServiceApi({ api: { request } }).loadPermission;
+```
+
+Adapt the import/factory names to the host without adding a production test switch. Use its existing TypeScript runner when needed:
+
+```bash
+node scripts/principal-response-conformance-suite.mjs test/adapters/principal-response.mjs
+```
+
+The loader resolves a validated `{scope,permissions,...}` DTO for successful IAM responses and rejects completed failures/malformed success; adapt a different existing host error-state API through its actual failure signal, not a synthetic successful empty result. The suite injects SDK transport responses, not a fake normalized model: success and empty envelopes, business errors with valid-looking data, invalid data, identity claims, and HTTP 401/403/503 including structured denial contacts. Keep a host integration test for the subsequent permission-to-Schema ordering and zero protected requests after invalid IAM.
+
 ## Host gate integration
 
 - Keep the audit and conformance runner project-local, or consume them from a versioned build dependency. Do not make CI depend on a sibling checkout or an unversioned local Skill installation.
-- Make the host's default test, CI workflow, or publish verification invoke both checks. A change record stating that two projects passed once is acceptance evidence, not a continuing gate.
+- Make the host's default test, CI workflow, or publish verification invoke the audit, pure-model conformance and UI wire-response conformance. A change record stating that two projects passed once is acceptance evidence, not a continuing gate.
 - Add a host contract test that asserts the gate commands still exist and that the vendored/current runners contain the multi-state-array audit and behavior cases.
 - Treat source-to-installed-Skill comparison as a local install/release verification. Generic CI must not require a developer home-directory copy.
 
@@ -136,3 +157,13 @@ Do not report complete until:
 - a real reference project passes the audit without changing that project;
 - source and installed Skill copies are synchronized;
 - complex revisions have fresh-agent forward-test evidence when available.
+
+## Scoped feedback acceptance
+
+Read `scoped-route-feedback.md` and wire its direct URL, recovery, refresh and revocation assertions into host tests. Assert visible authorized navigation/global identity header, feedback replacing the whole business content, absence of original business titles/toolbars/headers/forms/dialogs, and zero subsequent denied requests. A scope/text-only assertion or static audit pass is insufficient: the heuristic cannot prove arbitrary business content was fully unmounted. `resource_route_shell_unverified` is a bounded JSX signal; dynamic nesting/aliases require rendered-tree evidence, not a comment or an unrelated business-page shell.
+
+React also follows the installed-package verifier in `makeui/references/permission-feedback.md`. Test the actual package-backed host adapter: embedded and explicit-empty contacts make no independent lookup; missing contacts use only a supported SDK helper; old contact responses cannot replace a new identity/tenant/App; retry failure stays fail-closed; recovery never auto-submits. Assert that `MakeAppPermissionNotice` and host wrapper aliases still sit inside the retained shell for resource denial. Cover `page/app`, `inline/resource`, `inline/operation` and `toast/operation` separately. Keep 401/unknown403/503 and permission/Schema transport failures on the existing request-error path, without duplicating a classified permission denial. SSR/package verification is not proof of host request gating or a deployed administrator endpoint.
+
+Include the staggered-release cases from `make-app-auth/references/access-help.md`: new Skill/npm with a missing SDK method or a 404 administrator endpoint must retain generic guidance and the original access/scope. Contact-only 401/403/503, timeout and invalid-response failures stay local; they must not trigger login, global request-error feedback, permission retries, protected reads or mutation replay. A later entry may discover a newly deployed endpoint. Keep these production-adapter checks in the host test/CI gate; degraded contact help is not an App-readiness blocker or a permission grant.
+
+Do not reuse business permission-reason matching as an additional auth bootstrap gate. Follow `make-app-auth/references/sdk-integration.md#startup-shape` for SDK startup `forbidden`; test old refusal text and new JSON without reason, including zero IAM/Schema/business calls. The unknown-403 request-error requirement above applies to business requests, not this separate SDK startup result. An old SDK must still render contacts already embedded by a new backend; a new query endpoint alone cannot supply a missing SDK method.

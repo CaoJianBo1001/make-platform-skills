@@ -49,7 +49,9 @@ When no project-specific shell already exists, use the platform dense object-man
 
 ## Global error outlet
 
-When the App uses `make-app-observability`, mount its one global error outlet in the persistent app root, outside branches gated by permission, Schema, or router success; those branches may fail before the page Shell appears. At the `0.1.8+` visual baseline, desktop and phone `MakeAppErrorNoticeViewport` portal the queue to `document.body` after mount, so a fixed `100vh + overflow: hidden` Shell does not clip it. The package places the desktop queue as a top-center Toast at least `24px` from the top, and the phone queue above the viewport center. Let the package own viewport `position`, `inset`, `padding`, safe-area spacing, and long queue scrolling; remove old host positioning overrides and full-screen wrappers. The outlet state and mounted React tree remain reachable before route content appears. Page-local errors may use `MakeAppErrorNotice` without the global viewport.
+When the App uses `make-app-observability`, mount its one global error outlet in the persistent app root, outside branches gated by permission, Schema, or router success; those branches may fail before the page Shell appears. At the `0.1.9+` visual baseline, desktop and phone `MakeAppErrorNoticeViewport` portal the queue to `document.body` after mount, so a fixed `100vh + overflow: hidden` Shell does not clip it. The package places the desktop queue as a top-center Toast at least `24px` from the top, and the phone queue above the viewport center. Let the package own viewport `position`, `inset`, `padding`, safe-area spacing, and long queue scrolling; remove old host positioning overrides and full-screen wrappers. The outlet state and mounted React tree remain reachable before route content appears. Page-local errors may use `MakeAppErrorNotice` without the global viewport.
+
+Resource denial uses inline `MakeAppPermissionNotice` to replace the entire denied business content slot, not the Shell or only its table rows. See the scoped route states below.
 
 The viewport defaults to `z-index: 2000`; if a host overlay can cover it, use the public `zIndex` prop to align layers. In a browser test of the real App Shell on desktop and phone, trigger a request error and check that the full title, description, Trace ID when present, close action, and copy action are visible and operable. Cover the fixed-height overflow Shell, an overlay, long content and a long queue that must scroll to its final card. Test initial permission loading failure before route content mounts as well as a page request failure; the global card must still appear in the first case. Error classification, safe text, and Trace ID propagation remain owned by `make-app-observability`; permission loading behavior remains owned by `make-app-permission`.
 
@@ -148,3 +150,7 @@ The content region owns page-local layout:
 - sidebar navigation: no page-level scroll; sidebar nav area scrolls
 - drawer forms/details: drawer body scrolls
 - route forms/details: route content may scroll inside the content region
+
+## Scoped route states
+
+With an authorized App entry, retain the shell for direct URL object/fixed-page denial and replace only its content slot. Read `make-app-permission/references/scoped-route-feedback.md`. Do not use a full-viewport feedback overlay that hides navigation; keep the existing mobile navigation and independent global error outlet contract. No authorized object or fixed page permits full-page App denial.
