@@ -1,15 +1,64 @@
 # make-platform-skills
 make 平台的 skill
 
-# 安装
+## 安装、更新与发布通道
+
+| 通道 | 分支 | 用途 |
+| --- | --- | --- |
+| stable（默认） | `main` | 已验证的正式 Skill |
+| beta | `beta` | 候选 Skill，先试用验证，再合入 main |
+
+### 通过 makecli 切换
+
+支持 Skill 通道的 makecli 与 CLI 二进制共用 `[settings] channel`，无需额外的 Skill 通道配置：
+
+```bash
+# 切到 beta，安装缺少的 Skill，并覆盖已有同名 Skill
+makecli settings set channel beta
+makecli skills update
+
+# 切回 stable，用 main 内容覆盖已有同名 Skill
+makecli settings set channel stable
+makecli skills update
 ```
-  npx skills add qfeius/make-platform-skills --all -g
+
+`settings set` 只保存选择，运行安装或更新后才替换本地内容。`skills install`、`skills update`、`makecli update` 后的自动同步以及 `skills list` 的远端检查都沿用所选通道；已有的角色选择继续决定安装范围。`skills list` 展示的是目标通道与分支。
+
+`makecli skills read` 读取二进制构建时内嵌的快照；要使用切换后的全局 Skill，应让 Agent 加载已安装的 Skill 文件。
+
+### 直接使用 npx
+
+下面将全部 Skill 全局安装到 Codex 和 Claude Code；其他工具可替换 `--agent` 后的标识：
+
+```bash
+# stable / main
+npx -y skills add https://github.com/qfeius/make-platform-skills/tree/main \
+  --skill '*' --agent codex claude-code -y --global
+
+# beta
+npx -y skills add https://github.com/qfeius/make-platform-skills/tree/beta \
+  --skill '*' --agent codex claude-code -y --global
 ```
-# 升级已安装的 skill
+
+分支写在 `/tree/<分支>` 中；`owner/repo@名称` 的 `@名称` 是 Skill 筛选，不是分支。直接运行 npx 不修改 makecli 的通道配置，之后使用 makecli 更新时仍按 `[settings] channel` 选择分支。
+
+`--all` 表示全部 Skill、全部 Agent 并跳过确认。与 `--global` 共用时，Eve 和 PromptScript 因只支持项目级安装而单独报错；其他目标继续安装，以各自的成功回执为准。限定 Agent 时使用上面的 `--skill '*' --agent ...`，不要再加 `--all`。
+
+### 覆盖与清理
+
+同名 Skill 会在原安装位置被目标分支内容覆盖，不保留两份通道副本，也不按 `metadata.version` 的大小阻止切换。目标分支没有的已安装 Skill 会保留，可用 `makecli skills uninstall <name> --yes` 显式清理；其他仓库的 Skill 不受影响。
+
+不切换来源、只升级已安装的 Skill，也可执行：
+
+```bash
+npx skills update -g
 ```
-  npx skills update -g
-```
-`update` 只更新已安装的 skill；仓库新增加的 skill 需要按对应小节执行 `add`。
+
+`npx skills update` 只更新已安装的 Skill；安装仓库新增的 Skill 或切换分支时，使用 `makecli skills update` 或上述 `npx skills add`。
+
+### 维护流程
+
+候选修改进入 `beta`，通过仓库的 metadata lint、契约测试及实际 Agent 任务验证后，再将已验证内容合入 `main`。两个分支遵循相同的 Skill 命名与目录约定，beta 可先加入候选 Skill。
 
 ## Skill 路由总览
 
