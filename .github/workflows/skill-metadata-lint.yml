@@ -35,10 +35,13 @@ jobs:
           node skills/make-app-auth/scripts/test-current-context-conformance-suite.mjs
           node skills/make-app-auth/scripts/test-audit-auth-contract.mjs
           node skills/make-app-permission/scripts/test-audit-make-app-permission.mjs
-          node --test skills/makeui/scripts/test-verify-feedback-package-surface.mjs
           node --test skills/make-app-permission/scripts/test-scoped-route-feedback.mjs
 
-      - name: Check feedback compatibility with old and new SDK types
-        run: >-
-          npm exec --yes --ignore-scripts --package=typescript@5.9.3 --
-          sh -c 'node skills/makeui/scripts/test-feedback-sdk-types.mjs "$(command -v tsc)"'
+      - name: Check feedback package and SDK compatibility
+        run: |
+          npm exec --yes --ignore-scripts --package=typescript@5.9.3 \
+            --package=react@19.2.8 --package=react-dom@19.2.8 -- sh -ec '
+            export MAKE_FEEDBACK_TEST_DEPENDENCIES="$(dirname "$(dirname "$(command -v tsc)")")"
+            node --test skills/makeui/scripts/test-verify-feedback-package-surface.mjs
+            node skills/makeui/scripts/test-feedback-sdk-types.mjs "$(command -v tsc)"
+          '

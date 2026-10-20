@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { hasDirectCiNodeCommand } from '../../../scripts/lib/ci-node-test-command.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const suite = path.join(scriptDir, 'current-context-conformance-suite.mjs');
@@ -12,7 +13,7 @@ const fixtureRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'make-current-context-
 
 try {
   const workflow = fs.readFileSync(path.resolve(scriptDir, '../../../.github/workflows/skill-metadata-lint.yml'), 'utf8');
-  assert.match(workflow, /node skills\/make-app-auth\/scripts\/test-current-context-conformance-suite\.mjs/u,
+  assert.ok(hasDirectCiNodeCommand(workflow, 'skills/make-app-auth/scripts/test-current-context-conformance-suite.mjs'),
     'the executable auth contract regression must remain a continuous CI gate');
   const correct = runHost('correct');
   assert.equal(correct.status, 0, correct.output);

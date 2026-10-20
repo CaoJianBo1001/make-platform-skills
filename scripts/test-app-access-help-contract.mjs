@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { hasDirectCiNodeCommand } from './lib/ci-node-test-command.mjs';
 
 const read = file => readFile(new URL(`../skills/${file}`, import.meta.url), 'utf8');
 
@@ -17,9 +18,11 @@ test('new App dependency guidance uses feedback 0.1.9 and auth SDK 0.1.5', async
 
 test('permission package and route regression tests are continuous CI gates', async () => {
   const workflow = await readFile(new URL('../.github/workflows/skill-metadata-lint.yml', import.meta.url), 'utf8');
-  assert.match(workflow, /node --test skills\/makeui\/scripts\/test-verify-feedback-package-surface\.mjs/u);
-  assert.match(workflow, /node --test skills\/make-app-permission\/scripts\/test-scoped-route-feedback\.mjs/u);
-  assert.match(workflow, /skills\/makeui\/scripts\/test-feedback-sdk-types\.mjs/u);
+  for (const script of [
+    'skills/makeui/scripts/test-verify-feedback-package-surface.mjs',
+    'skills/make-app-permission/scripts/test-scoped-route-feedback.mjs',
+    'skills/makeui/scripts/test-feedback-sdk-types.mjs',
+  ]) assert.ok(hasDirectCiNodeCommand(workflow, script), `${script} must remain a CI gate`);
   assert.match(workflow, /--package=typescript@5\.9\.3/u);
 });
 
