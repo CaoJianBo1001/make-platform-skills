@@ -85,6 +85,8 @@ For an entity that has `meta.entity.read` and readable fields but lacks `data.re
 
 ## Independent field dimensions
 
+以下新建字段维度与交集描述普通无有效审批配置的场景。审批新建按 [审批发起合同](../../make-app-approval/references/initiation-contract.md) 使用启动配置的 `readable/editable`；不再与这里的 `createFields`/IAM 字段集合求交。对象与操作权限、普通列表/详情字段和已有记录编辑仍遵守本文件。
+
 Creation, visibility, and editability are separate field-set decisions:
 
 | Surface | Schema upper bound | permissionKey | Allowed access states |

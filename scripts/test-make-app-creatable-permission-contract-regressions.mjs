@@ -37,6 +37,9 @@ try {
       ['missing Trace handoff', original.replace(traceLine, ''), false, `${skillName} must include the default Trace ID handoff`],
       ['missing Trace header', original.replace(traceLine, traceLine.replace('X-Log-Id', 'unrelated-header')), false, `${skillName} must include the default Trace ID handoff`],
     ];
+    if (skillName === 'make-app-service') {
+      mutations.push(['below release baseline', original.replace(versionLine, '  version: 0.2.3'), false, 'make-app-service 必须保留 0.2.4+ 的发布基线']);
+    }
 
     for (const [name, mutated, expectedSuccess, failureMessage] of mutations) {
       assert.notEqual(mutated, original, `${skillName}: ${name} must change the fixture`);

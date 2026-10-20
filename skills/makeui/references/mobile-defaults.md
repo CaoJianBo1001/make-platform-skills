@@ -98,7 +98,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 - AI 助手行为由 `make-ai-assistant` 提供；底部导航只触发宿主打开动作。
 - 工作台是独立路由页面，标题为“工作台”。内容区只显示“业务入口”，不显示“全部对象”或“选择对象进入对应业务页面”等副标题。
 - 使用 `MobileWorkbenchGrid` 展示两列对象入口，传入完整的当前可展示业务对象列表，而非仅未进入底部 Tab 的剩余对象，并严格保留其顺序。点击后由宿主跳转动态对象路由。
-- 新生成的 Make App 图标默认使用 `lucide-react`。对象图标按语义选择；无法匹配时使用统一保底图标，不为每个项目自造 SVG 或混用图标库。
+- 新生成的 Make App 图标默认使用 `lucide-react`，用户明确指定其他图标库时遵从其要求。对象图标按语义选择；无法匹配时使用统一保底图标，不为每个项目自造 SVG 或混用图标库。
 
 ## 移动列表
 
@@ -110,7 +110,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 - 手机列表在自身滚动容器的顶部下拉刷新，复用当前搜索、已应用筛选和权限上下文，防止重复并发请求；不显示右侧或任何独立刷新按钮、刷新图标。桌面／平板的工具栏刷新入口保持原样。手机端默认不展示分组和排序；即使 desktop/tablet 已接入 `make-app-group` 或 `make-app-sort`，也不得把其按钮直接搬进手机 toolbar。
 - 下拉刷新只由列表自身在滚动到顶后的纵向手势触发，一次手势最多发起一次刷新；未到顶部、横向手势、软键盘操作或弹层打开时不得误触发。刷新继续使用已应用查询和当前权限，不提交筛选草稿。不要为了实现手机手势改变 desktop/tablet 的刷新入口。
 - 筛选能力已启用或本次明确请求时，手机筛选入口必须按 [`make-app-filter`](../../make-app-filter/) 的手机合同挂载包面板：以 `MobileFilterSheet` 承载 `AdvancedFilterPanel layout="mobile"`，以 `MobileFilterSelect` 适配手机选择控件。筛选 Sheet 负责高度上限、关闭入口、安全区和第二层 Picker 浮层顺序；不要再套通用 Sheet 或复制包内样式。面板内 `middle` 控件为 32px，手机 toolbar 的中号控件与至少 44px 触控目标是另一层合同。缺少所需公开 API 时按兼容门禁升级或报告 blocker。未启用高级筛选时不显示空入口或挂载面板，也不要求这两个新组件；关键词搜索是否需要包的编译器按下节查询合同判断。
-- 新建使用 `MobileFloatingAction`，由缓存的 create 权限和授权 `createFields` 控制可见性，点击后进入全屏新建任务路由，并为底部导航和安全区预留空间。
+- 新建使用 `MobileFloatingAction`，由缓存的 `data.record.create` 操作资格控制可见性，点击后进入全屏新建任务路由，并为底部导航和安全区预留空间。普通 `createFields` 和审批启动字段分别控制对应表单内容，不以普通字段集合为空隐藏审批新建入口；无可填写字段时沿用对应表单空态及提交能力规则。
 - 单条编辑使用卡片紧凑操作入口：通过 `make-app-actions` 本地校验后冻结单条目标，调用一次 `record-write-permission` 预检，允许后才进入编辑全屏任务路由；正常单条更新接口继续执行最终鉴权。
 - 单条删除先冻结点击记录并完成本地权限判断，使用 `MobileConfirmDialog` 确认；确认后执行一次删除权限预检，再调用宿主删除 Service 接口，由最终删除接口执行权威鉴权。异步期间阻止重复确认，失败时保留可恢复反馈。
 - 列表自身滚动，弹层打开时根滚动锁必须阻止底层列表跟随手势晃动。
@@ -137,6 +137,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 - 严格只读记录不展示写操作。可写卡片提供 `make-app-actions` 支持的单条编辑、删除；手机端不使用选择操作栏或批量编辑。
 - 手机详情默认使用 `MobileBottomActionBar` 展示编辑和删除；两者读取独立权限并分别复用与卡片相同的单记录 action、冻结目标、预检、确认和最终接口鉴权。详情点击编辑时，预检通过后直接进入当前记录的编辑路由，不经过对象列表；具体单记录生命周期见 `make-app-actions` 的 `mobile-card-actions.md`。卡片已有操作不能替代或取消详情操作；只有编辑与删除都不可用时才移除整条底部操作栏。
 - 删除等破坏性操作使用 `MobileConfirmDialog`，异步确认期间禁止重复提交，失败时保持弹窗并允许重试。
+- 上述单按钮规则只适用于普通单动作表单。[make-app-approval](../../make-app-approval/SKILL.md) 的有效审批新建保留“保存 / 保存并提交”双按钮，按 [手机表单双按钮例外](mobile-form-controls.md#审批新建的双按钮例外) 复用宿主控件；不删掉任一动作，不虚构移动包 API。
 
 ## 搜索选择抽屉
 
@@ -159,7 +160,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 
 ## 图标、主题与可访问性
 
-- 新生成的 Make App 和新增 Make App 图标默认使用 `lucide-react`；现有项目除非用户要求，不进行无关的全量图标迁移。
+- 新生成的 Make App 和新增 Make App 图标默认使用 `lucide-react`，用户明确指定其他图标库时遵从其要求；现有项目除非用户要求，不进行无关的全量图标迁移。字段类型图标按 [桌面／平板字段图标规范](field-type-icons.md) 接入，手机字段标签、字段选项和卡片不显示字段类型图标。
 - 颜色、分隔线、安全区和尺寸通过 `--make-app-*` / `--make-mobile-*` 变量覆盖，不复制组件内部 class 后重写结构。
 - 图标按钮必须有中文 `aria-label`；当前底部入口使用 `aria-current="page"`。
 - 弹层必须有 dialog 语义、焦点约束、关闭后焦点恢复和可预测的 Escape 顺序。

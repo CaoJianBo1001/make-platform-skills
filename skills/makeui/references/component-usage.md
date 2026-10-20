@@ -6,6 +6,7 @@
 - [Overlay portal contract](#overlay-portal-contract)
 - [Default candidate mapping](#default-candidate-mapping)
 - [Make field-metadata-driven components](#make-field-metadata-driven-components)
+- [Field-type icons](#field-type-icons)
 - [Make field properties contract](#make-field-properties-contract)
 - [Numeric input and IME composition](#numeric-input-and-ime-composition)
 - [Host form controlled field contract](#host-form-controlled-field-contract)
@@ -20,11 +21,21 @@ Use this priority:
 
 1. User-specified component library.
 2. Existing project component library.
-3. New-project selection among Ant Design, Arco Design, and shadcn/ui when no library exists.
+3. For a new project with no library, show the three suggested choices below with free-text input for another compatible React library; use Ant Design if the user makes no selection.
 
 Do not add a new component library to an existing project unless the user asks.
 
-Use this same rule for styling tools. For new Make Apps and newly added Make App icons, default to `lucide-react` as specified in `mobile-defaults.md`; do not bulk-migrate unrelated existing icons unless the user asks.
+Use this same rule for styling tools. The icon-library default is independent of the selected UI component library: use `lucide-react` for newly generated Make App icons unless the user explicitly requests another icon library. For the default desktop/tablet Make field-type icons, follow [field-type-icons.md](field-type-icons.md). Existing unrelated icons need no bulk migration during a focused field change.
+
+For new projects without an established or user-specified component library, show a structured choice UI when available (`request_user_input_async` or `request_user_input`). Present exactly these three suggested options in order, with Ant Design marked as the recommended default:
+
+1. Ant Design (recommended default)
+2. Arco Design
+3. shadcn/ui
+
+Allow the UI's free-text/custom answer so the user can specify another compatible React component library; the three suggestions are not a restriction. If structured input is unavailable, ask the same concise question in chat and allow a custom answer. Honor an explicit selection. If the user delegates the choice or makes no selection after a reasonable opportunity to respond, use Ant Design; state this default when proceeding. Do not wait indefinitely for an unanswered optional choice. For an existing project, keep its component library unless the user asks to change it. This choice does not change the default Lucide icon library.
+
+Do not mix multiple component libraries in the same app unless the existing project already does so and the user asks to keep it. The Lucide field-type icon mapping applies regardless of the chosen library.
 
 ## Presentation priority
 
@@ -60,25 +71,6 @@ containment and return, keyboard navigation, Escape ordering, and outside-click
 behavior with the chosen Modal/Drawer and popup library. A document-level root
 that looks correct but escapes the library's focus or dismiss layer is invalid.
 
-For new projects, component-library selection is a blocking decision. Actively ask the user to choose one of these ordered options:
-
-1. Ant Design (recommended/default)
-2. Arco Design
-3. shadcn/ui
-
-Recommend Ant Design as the default option, but do not select it before the user has responded to the component-library choice. The user may either explicitly name Ant Design, Arco Design, or shadcn/ui, or delegate to the default/recommended option. Generic answers such as "default", "recommended", "you decide", "anything is fine", or "whatever" count as choosing Ant Design. Until the user gives one of those explicit or delegated choices, do not scaffold or edit component-library-specific UI code, imports, theme setup, icons, or package dependencies. If progress is still useful before the answer, produce only a component-library-neutral plan, file map, or pseudocode.
-
-Do not mix Ant Design, Arco Design, and shadcn/ui in the same app unless the existing project already does so and the user asks to keep it.
-
-When shadcn/ui is selected, treat it as a source-code component system, not a traditional prebuilt UI package. Follow the official Vite path for new or existing Vite projects:
-
-- ensure Tailwind CSS is configured before generating shadcn/ui components
-- ensure the `@/*` alias is configured in TypeScript and Vite
-- run the shadcn CLI from `apps/ui` or pass the correct config path for the workspace
-- add only the components actually needed by the generated UI
-- keep generated shadcn/ui components under the host project's established component path, usually `src/components/ui`
-- use `lucide-react` icons unless the project has another established icon system
-
 ## Default candidate mapping
 
 When Ant Design is the selected component library on desktop/tablet:
@@ -94,20 +86,33 @@ When Ant Design is the selected component library on desktop/tablet:
 - feedback: `message`, `Alert`, `Result`, `Spin`, `Empty`
 - avatar and user menu: `Avatar`, `Dropdown`
 
-Use `lucide-react` for newly generated Make App icons, including Ant Design hosts. Keep existing project-standard icons only where replacing them would be an unrelated migration.
+Use `lucide-react` by default for newly generated Make App icons, including Ant Design hosts; honor an explicit request for another icon library. Keep existing project-standard icons only where replacing them would be an unrelated migration.
 
 When shadcn/ui is the selected component system on desktop/tablet:
 
 - shell: CSS/Tailwind layout with project-local shell components
 - sidebar navigation: project-local sidebar/menu components, or shadcn/ui navigation primitives when already added
 - global and page actions: `Button`
-- search: `Input` with a lucide search icon
+- search: `Input` with a search icon from the selected icon library (Lucide by default)
 - optional filters: `Popover`, `Sheet`, or compact form controls
 - create/edit/detail: right-side `Sheet` with `side="right"` by default; do not use bottom Sheet for Make object CRUD unless explicitly requested
 - route forms: `Form` with type-appropriate field controls
 - read-only details: simple grids or project-local panels; avoid inventing nested card layouts
 - feedback: `Alert`, `Skeleton`, toast/sonner, and explicit empty states when those components are installed
 - avatar and user menu: `Avatar` and `DropdownMenu`
+
+When shadcn/ui is selected, treat it as a source-code component system, not a traditional prebuilt UI package. Follow the official Vite path for new or existing Vite projects:
+
+- ensure Tailwind CSS is configured before generating shadcn/ui components
+- ensure the `@/*` alias is configured in TypeScript and Vite
+- run the shadcn CLI from `apps/ui` or pass the correct config path for the workspace
+- add only the components actually needed by the generated UI
+- keep generated shadcn/ui components under the host project's established component path, usually `src/components/ui`
+- use `lucide-react` icons for newly generated Make App UI unless the user explicitly requests another icon library
+
+## Field-type icons
+
+The [field-type icon contract](field-type-icons.md) is a default requirement for desktop/tablet field-name surfaces, not an optional decorative add-on. Reuse one type mapping for form/detail labels, card field labels, and true field-choice options. Phone field labels and field-choice options remain plain text. CanvasTable header drawing follows the same mapping through `canvas-table-integration`.
 
 ## Make field-metadata-driven components
 
@@ -119,16 +124,16 @@ If no field metadata exists, stop and call out the missing UI dependency instead
 
 ### Permission-derived field-set handoff
 
-`makeui` receives authorized field metadata from the host permission layer; it does not calculate permission policy:
+先区分新建分支：普通新建消费权限层从 `createFields` 得到的字段集；有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 消费启动配置授权字段，不再与普通 IAM 字段集合求交。`makeui` 接收宿主已授权的字段元数据，不自行计算权限策略：
 
-- create mode receives the permission-derived `createFields` / create field set and renders only that set
+- 普通新建接收权限层提供的 `createFields` / create field set，只渲染该集合；审批新建接收启动配置中 `readable` 授权的字段，并仅允许 `editable` 且受宿主类型能力支持的字段输入
 - edit mode receives visible fields plus an editable-key set; visible non-editable fields may render read-only, while invisible fields do not render
-- do not fall back from an empty or missing create field set to visible fields
+- 普通 `createFields` 缺失或为空时不回退到 visible `fields`；审批启动配置加载失败或无效时显示错误与重试，不能回退普通字段
 - do not read backend `editableFields` directly in a component; use the host's existing visible/editable result from `make-app-permission`
 
-Schema requiredness has one metadata source: `field.validations.isRequired`. Derive the UI control's `required` prop and 必填 validation from it, scoped only to rendered authorized fields in the active mode. A required field excluded by create or visibility permission must not leave a hidden validator that blocks submit. Before submit, the permission layer still owns rebuilding the authorized payload allowlist.
+Schema requiredness has one metadata source: `field.validations.isRequired`. Derive the UI control's `required` prop and 必填 validation from it, scoped only to rendered authorized fields in the active mode. A required field excluded by the current mode's authorization must not leave a hidden validator that blocks submit. Before submit, the host must rebuild the mode-specific authorized payload allowlist; approval create also requires Service to recheck the authoritative start config.
 
-If record creation is allowed but there are no creatable fields, render an explicit `暂无可新建字段` empty state and disable the create submit action. Do not synthesize inputs from visible or editable fields.
+普通新建允许创建但没有可新建字段时，显示 `暂无可新建字段` 空态并禁用提交，不从 visible 或 editable fields 拼凑输入。审批新建不得因普通 `createFields` 为空进入该空态或禁用提交；按启动配置授权字段、校验结果与当前分支的提交合同决定表单和按钮状态。
 
 For new Make App projects, create or reuse a shared field type registry at `apps/ui/src/lib/make-field-types.ts` before implementing field-driven UI. The registry is the shared source for host-owned form controls, detail display, CanvasTable table display, and table cell editors; these consumers should resolve common `Make.Field.*` presentation behavior from the registry instead of carrying separate local mappings. The registry must preserve normalized `field.properties` and expose the properties needed by generated UI, including `format`, `precision`, `decimalPlaces`, `maxCount`, `begin`, `end`, `symbol`, and `useGrouping`. Advanced-filter controls resolve support and editor behavior through `make-app-filter` package APIs, not this registry.
 

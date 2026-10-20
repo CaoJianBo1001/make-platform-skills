@@ -4,9 +4,12 @@
 
 ## Bottom action bar
 
-Use package `AntdRecordSelectionActionBar` for Ant Design hosts. A non-AntD host
-may use the generic package action bar with its own primitives, but must not mix
-in AntD. Keep the standard bar centered near the bottom of the table viewport,
+For a new App, use package `RecordSelectionActionBar` with host
+`MakeAppActionComponents` in every React design system, including Ant Design.
+Inject the selected design system's button wrappers and default Lucide icons.
+The `0.3.1` AntD action-bar adapter embeds Ant Design icons and may remain in
+existing integrations outside a field-icon change. Do not mix AntD into a
+non-AntD host. Keep the standard bar centered near the bottom of the table viewport,
 above table summary/scroll affordances, without changing table geometry when
 actions appear.
 
@@ -62,12 +65,25 @@ Build batch candidates from runtime normalized schema:
 2. Pass those fields to `resolveBatchEditableFields`.
 3. Exclude readonly/derived Lookup fields or any field the installed package
    reports unsupported.
-4. In an Ant Design host, pass the result to `AntdRecordBatchEditModal`. In other
-   React design systems, pass it to `RecordBatchEditModal` and inject
+4. For a new Make App, pass the result to public `RecordBatchEditModal` and inject
    `MakeAppBatchEditComponents` for the host `Modal`, `FieldSelect`, and
-   `ModeControl`.
+   `ModeControl`, including Ant Design hosts. The injected `FieldSelect` turns
+   field-name options into the default desktop/tablet
+   [type-icon labels](../../makeui/references/field-type-icons.md) while preserving
+   each option's original string for search and accessible naming. Do not add
+   icons to mode or value options. The package's public `FieldSelect` options
+   expose only `{ value, label: string }`: build a lookup from the same normalized
+   and permission-filtered batch fields, resolve `option.value` to `field.key`
+   and then `field.type`, and render the icon only in the host Select option.
+   Preserve `option.value`, the package-provided `option.label`, the controlled
+   `value`/`onChange`, and a plain-text search/accessibility name. Do not change
+   the package option type or patch package internals.
 
-- `AntdRecordBatchEditModal` in `0.3.1` uses
+- `AntdRecordBatchEditModal` in `0.3.1` has no public `FieldSelect` renderer and
+  therefore cannot meet the new default field-icon rule as-is. Keep it only in
+  existing integrations outside a field-icon change, or use it if a later
+  installed public API exposes field-option customization. Do not fork its internals.
+  In `0.3.1`, it uses
   `renderValueControl(field, control)`. Forward `control.disabled` to the actual
   field control; one-argument callbacks are compatibility-only.
 - `RecordBatchEditModal` uses `renderValueControl(field, control)`. Forward
@@ -105,8 +121,10 @@ installed design system's public portal or overlay API so the popup is outside
 every `overflow: hidden` or `overflow: auto` clipping ancestor.
 
 Do not make AntD's `getPopupContainer` name or semantics a generic contract.
-AntD hosts may pass the adapter's public `getPopupContainer` for its field
-selector and separately configure host-rendered value controls. Arco hosts use
+New AntD hosts configure the injected `FieldSelect` and host-rendered value
+controls through AntD's public popup API. Existing integrations using the AntD
+modal adapter may pass its public `getPopupContainer` for its field selector.
+Arco hosts use
 the installed Arco popup-container API. shadcn/ui or Radix hosts use the
 installed primitive's `Portal`/`container` mechanism. Read the installed library
 contract instead of copying one adapter's props into another design system.

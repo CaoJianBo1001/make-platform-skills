@@ -118,7 +118,7 @@ Consume `fieldAccess` by permission dimension:
 - `meta.entity.read`: entity metadata permission only; use it to include a Schema-present entity in navigation and allow its object route. It does not grant field visibility or record values.
 - `data.record.read`: record-data permission only; use it for list/detail/pagination requests and record values. Denial replaces the record-reading business content; it does not alter `meta.field.read` grants or remove metadata-authorized navigation. See `scoped-route-feedback.md` for mounting, not IAM interpretation.
 - `data.record.create`: operation permission only; use it for create route, entry, handler, and submit checks, never to choose fields.
-- `meta.field.read`: use `creatable|readonly|editable|partialMask|fullMask|*` to choose fields from Schema `createFields`, and use readable states to choose visible fields from Schema `fields`; `creatable` is create-only, not readable.
+- `meta.field.read`: for ordinary create, use `creatable|readonly|editable|partialMask|fullMask|*` to choose fields from Schema `createFields`; approval create uses Workflow start-config field authorization instead. Use readable states to choose visible fields from Schema `fields`; `creatable` is ordinary-create-only, not readable.
 - `meta.field.create` is not a platform permission point. Do not require it, synthesize it, or use it as a create-field fallback.
 - `meta.field.update`: use `editable` or `*` only after visibility is established.
 - All `data.record.*` rows control operations and do not grant create/read/update field access. In particular, `data.record.create.fieldAccess` must not be used as the create-field dimension.

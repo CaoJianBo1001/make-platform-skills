@@ -21,6 +21,7 @@ Route tests should cover:
 - Service-fronted published routes for `gatewayBaseUrl: "/api/make"` projects use `/api/make/**`: at minimum test `/api/make/auth/**`, `/api/make/oauth/**`, and `/api/make/app/**` or the documented business paths; prefix-free compatibility routes alone are not enough. Older `/api` projects may keep `/api/auth/**` and `/api/app/**` only as an explicit legacy contract
 - schema routes return normalized `fields` and `createFields` independently; missing `createFields` returns `[]` and never falls back to visible `fields`
 - permission-trimmed Schema caches do not reuse one principal's result for another principal and permission refresh invalidates or reloads the cached generation
+- 显式刷新成功后普通读取取得新 Schema；用可控并发顺序验证旧请求晚返回不能覆盖新值，旧请求失败也不能删除新代际缓存，并保留权限刷新失败时的 fail-closed 行为
 - record list parses `fields`, `filter`, `groupFilter`, `sort`, `pagination`
 - record list sends Make filters as `{ expression }`, omits empty filters, and rejects malformed filter query/body values before calling the adapter
 - record-groups parses `filter`, `groupFilter`, `group`, `pagination`, requires non-empty group, and validates `capabilities.groupable === true`
@@ -29,6 +30,7 @@ Route tests should cover:
 - record list/detail call the Make adapter path selected by runtime mode and forward the required login/session context: local preview public gateway `/api/make/data/v1/record` with server-side makecli auth, published k8s gateway `/make/data/v1/record` with browser session context
 - cancellable list/page routes abort their request-scoped signal when the client disconnects, propagate that signal to the downstream adapter, avoid writing a response or reporting a user-visible 5xx for `AbortError`, and remove lifecycle listeners after success, failure, or cancellation
 - normal completion does not abort downstream work; test the framework's completion guard such as `res.writableEnded`, a completed flag, or response finished state separately from premature close
+- 共享进行中请求时，取消一个调用方后其他有效调用方正常完成；底层共享请求若失败或中止，仍在等待的调用方也必须结清，不能因跳过 `AbortError` 响应处理而挂起
 - invalid query/body returns 400 and does not call Make adapter
 - a direct Make proxy preserves byte-for-byte status, Content-Type, and body for
   HTTP 200 JSON success, HTTP 403 JSON permission denial, HTTP 500 text error,

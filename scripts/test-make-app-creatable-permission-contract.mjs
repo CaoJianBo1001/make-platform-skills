@@ -160,6 +160,13 @@ assert.match(
   /Every new Make App Service[^\n]*`make-app-observability`[^\n]*Trace ID[^\n]*validate or create[^\n]*boundary[^\n]*return `X-Log-Id`[^\n]*logs[^\n]*forward only validated trace headers/i,
   'make-app-service must include the default Trace ID handoff',
 );
+const serviceVersion = serviceSkill.match(/metadata:\s*\n\s*version:\s*(\d+)\.(\d+)\.(\d+)/);
+assert.ok(serviceVersion, 'make-app-service 必须声明版本');
+const [serviceMajor, serviceMinor, servicePatch] = serviceVersion.slice(1).map(Number);
+assert.ok(
+  serviceMajor > 0 || serviceMinor > 2 || (serviceMinor === 2 && servicePatch >= 4),
+  'make-app-service 必须保留 0.2.4+ 的发布基线，允许后续兼容修订',
+);
 assert.match(
   serviceContracts,
   /## Default route response modes[\s\S]{0,1800}\/api\/make\/app\/principal\/permission[\s\S]{0,240}(direct Make proxy|直接 Make 代理)[\s\S]{0,1800}\/api\/schema[\s\S]{0,240}(non-proxy|非代理)/i,

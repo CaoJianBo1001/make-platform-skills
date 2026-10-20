@@ -34,6 +34,7 @@
 - 普通 `SingleSelect` 使用无搜索的 `MobileOptionPickerSheet`，选择或清除后立即确认；普通 `MultiSelect` 使用同一组件的多选模式，以“确定”提交草稿。
 - Date／DateTime／DateRange 使用对应日期组件。若当前包版本未公开所需组件或属性，不得伪造深层导入；先升级受支持包或报告依赖缺口。
 - 新建／编辑底部保存／提交使用 `MobileFormActionBar`，单个按钮无图标、靠右并保留安全区；详情记录操作（编辑、删除）使用 `MobileBottomActionBar`。两种操作栏不能互换。
+- 该单按钮默认不覆盖 [make-app-approval](../../make-app-approval/SKILL.md) 的审批新建：有效配置时按 [手机表单双按钮例外](mobile-form-controls.md#审批新建的双按钮例外) 同时呈现“保存”和“保存并提交”，沿用无图标、靠右及安全区要求。
 - 不复制任何试点应用的业务字段、接口、类名或整页源码。确需宿主样式时，限于 schema adapter 或页面组合，并保证窄选择器命名空间、避免全局控件覆盖。
 
 ## 实际页面验收

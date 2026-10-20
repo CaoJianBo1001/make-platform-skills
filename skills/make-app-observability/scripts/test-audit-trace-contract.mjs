@@ -40,12 +40,16 @@ const serviceTrace = `
 const fixture = (name, options = {}) => {
   const root = path.join(temporary, name);
   write(root, 'apps/ui/package.json', JSON.stringify({
-    dependencies: { '@qfei-design/make-app-observability': options.version ?? '^0.1.5' },
+    dependencies: { '@qfei-design/make-app-observability': options.version ?? '^0.1.8' },
   }));
   write(root, 'apps/ui/src/main.tsx', `import '@qfei-design/make-app-observability/styles.css';`);
-  write(root, 'apps/ui/src/error.tsx', `
-    import { MakeAppErrorNotice } from '@qfei-design/make-app-observability/react';
-    export const ErrorNotice = (props) => <MakeAppErrorNotice {...props} />;
+  write(root, 'apps/ui/src/error.tsx', options.errorOutlet ?? `
+    import { MakeAppErrorNotice, MakeAppErrorNoticeViewport } from '@qfei-design/make-app-observability/react';
+    export const ErrorNotice = (props) => (
+      <MakeAppErrorNoticeViewport>
+        <MakeAppErrorNotice {...props} />
+      </MakeAppErrorNoticeViewport>
+    );
   `);
   write(root, 'apps/ui/src/request.ts', options.uiRequest ?? uiRequest);
   if (options.service !== false) {
@@ -68,10 +72,60 @@ try {
   const serviceRoot = fixture('service-fronted');
   assert.equal(run(serviceRoot, 'service-fronted').code, 0);
   assert.match(run(serviceRoot, 'service-fronted').output, /status: PASS/);
-  assert.match(run(serviceRoot, 'service-fronted').output, /scope: trace wiring only; verify error notice visibility in a real AppShell test/);
+  assert.match(run(serviceRoot, 'service-fronted').output, /scope: static trace wiring and declared package version; verify error notice visibility in a real AppShell test/);
 
   const directRoot = fixture('direct', { service: false });
   assert.equal(run(directRoot, 'direct').code, 0);
+
+  const missingViewport = fixture('missing-viewport', {
+    service: false,
+    errorOutlet: `
+      import { MakeAppErrorNotice } from '@qfei-design/make-app-observability/react';
+      export const ErrorNotice = (props) => <MakeAppErrorNotice {...props} />;
+    `,
+  });
+  assert.match(run(missingViewport, 'direct').output, /observability_viewport_missing/);
+
+  const elementViewport = fixture('element-viewport', {
+    service: false,
+    errorOutlet: `
+      import React from 'react';
+      import { MakeAppErrorNotice, MakeAppErrorNoticeViewport } from '@qfei-design/make-app-observability/react';
+      export const ErrorNotice = (props) => React.createElement(
+        MakeAppErrorNoticeViewport,
+        null,
+        React.createElement(MakeAppErrorNotice, props),
+      );
+    `,
+  });
+  assert.equal(run(elementViewport, 'direct').code, 0);
+
+  const aliasedViewport = fixture('aliased-viewport', {
+    service: false,
+    errorOutlet: `
+      import {
+        MakeAppErrorNotice,
+        MakeAppErrorNoticeViewport as ErrorViewport,
+      } from '@qfei-design/make-app-observability/react';
+      export const ErrorNotice = (props) => (
+        <ErrorViewport><MakeAppErrorNotice {...props} /></ErrorViewport>
+      );
+    `,
+  });
+  assert.equal(run(aliasedViewport, 'direct').code, 0);
+
+  const namespaceViewport = fixture('namespace-viewport', {
+    service: false,
+    errorOutlet: `
+      import * as Observability from '@qfei-design/make-app-observability/react';
+      export const ErrorNotice = (props) => (
+        <Observability.MakeAppErrorNoticeViewport>
+          <Observability.MakeAppErrorNotice {...props} />
+        </Observability.MakeAppErrorNoticeViewport>
+      );
+    `,
+  });
+  assert.equal(run(namespaceViewport, 'direct').code, 0);
 
   const objectHeaders = fixture('object-headers', {
     service: false,
@@ -128,24 +182,27 @@ try {
   });
   assert.match(run(missingForwarding, 'service-fronted').output, /service_gateway_trace_missing/);
 
-  for (const version of ['^0.1.3', '^0.1.4', '>0.1.3']) {
+  for (const version of ['^0.1.3', '^0.1.4', '^0.1.5', '^0.1.6', '^0.1.7', '>0.1.6', '>=0.1.7 <0.2.0']) {
     const oldVersion = fixture(`old-version-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version });
-    assert.match(run(oldVersion, 'direct').output, /observability_version_too_old/);
+    assert.match(run(oldVersion, 'direct').output, /observability_version_too_old:[^\n]*>= 0\.1\.8/);
   }
 
-  for (const version of ['^0.1.5', '>0.1.4', '>=0.1.5 <0.2.0']) {
+  for (const version of ['^0.1.8', '>0.1.7', '>=0.1.8 <0.2.0']) {
     const validRange = fixture(`valid-range-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version, service: false });
-    assert.equal(run(validRange, 'direct').code, 0, `expected ${version} to allow version 0.1.5`);
+    assert.equal(run(validRange, 'direct').code, 0, `expected ${version} to allow version 0.1.8`);
   }
 
   const alpha = fixture('published-alpha-local-test', { version: '0.1.8-alpha.1', service: false });
   assert.notEqual(run(alpha, 'direct').code, 0, 'prerelease must remain opt-in');
   assert.equal(run(alpha, 'direct', ['--allow-prerelease']).code, 0, 'an explicitly approved exact alpha must be auditable');
+  const alpha2 = fixture('published-alpha2-local-test', { version: '0.1.8-alpha.2', service: false });
+  assert.notEqual(run(alpha2, 'direct').code, 0, 'the current alpha must not bypass the default release gate');
+  assert.equal(run(alpha2, 'direct', ['--allow-prerelease']).code, 0, 'an approved current alpha must retain the explicit local-test path');
   for (const version of ['^0.1.8-alpha.1', '0.1.8-alpha..1', '0.1.8-01', 'file:../observability', 'latest']) {
     const invalid = fixture(`invalid-alpha-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version, service: false });
     assert.match(run(invalid, 'direct', ['--allow-prerelease']).output, /observability_version_unverifiable/);
   }
-  for (const version of ['0.1.4-alpha.1', '0.1.5-alpha.1']) {
+  for (const version of ['0.1.4-alpha.1', '0.1.5-alpha.1', '0.1.6-alpha.1', '0.1.7-alpha.1']) {
     const oldAlpha = fixture(`old-alpha-${version}`, { version, service: false });
     assert.match(run(oldAlpha, 'direct', ['--allow-prerelease']).output, /observability_version_too_old/);
   }

@@ -23,10 +23,13 @@ The published package exposes headless core, generic React action-bar and
 batch-modal primitives, a CanvasTable adapter, and Ant Design action-bar/modal
 adapters:
 
-- Ant Design host: verify compatible React, AntD, and icon peer versions, then
-  use the AntD adapter.
-- Non-AntD host such as Arco or shadcn/ui: use the generic React action bar and
-  `RecordBatchEditModal`. Inject the host design system through
+- Ant Design host: verify compatible React and AntD versions. For a new App, use
+  the public generic `RecordSelectionActionBar` and `RecordBatchEditModal`;
+  inject AntD button/select/modal controls and default Lucide icons. The AntD
+  action-bar adapter in `0.3.1` embeds `@ant-design/icons` and cannot provide
+  the default unified icon library.
+- Non-AntD host such as Arco or shadcn/ui: use the same generic React action
+  bar and `RecordBatchEditModal`. Inject the host design system through
   `MakeAppActionComponents` and `MakeAppBatchEditComponents`. Do not mix AntD
   into the host and do not copy either package modal implementation.
 
@@ -74,16 +77,7 @@ import {
 import "@qfei-design/make-app-actions/styles.css";
 ```
 
-Ant Design hosts additionally use:
-
-```ts
-import {
-  AntdRecordBatchEditModal,
-  AntdRecordSelectionActionBar,
-} from "@qfei-design/make-app-actions/adapters/antd";
-```
-
-Non-AntD React hosts use the public generic entries:
+New Ant Design and non-AntD React hosts use the public generic entries:
 
 ```ts
 import {
@@ -94,7 +88,21 @@ import {
 } from "@qfei-design/make-app-actions/react";
 ```
 
-In `0.3.1`, `AntdRecordBatchEditModal` calls
+For the generic action bar, provide `MakeAppActionComponents`: the host's
+`ActionButton` and `IconButton` wrap its selected design-system buttons, while
+`icons.bulkEdit`, `close`, `delete`, `edit`, and `lock` use `lucide-react` by
+default. Keep the labels and callbacks supplied by the package. An existing
+integration may retain `AntdRecordSelectionActionBar` outside requested icon
+changes; migrating it to the generic public bar is required when adopting the
+unified icon rule for that action surface. Do not use
+`createAntdMakeAppActionComponents` for new Apps because it embeds Ant Design
+icons. Add `lucide-react` as a direct UI-package dependency only when the host
+imports it, preserving the package manager and compatible installed version.
+
+In `0.3.1`, `AntdRecordBatchEditModal` has no public `FieldSelect` renderer.
+It can remain in an existing integration outside a field-icon change, but a new
+App uses the generic public modal above. If an existing integration does use it,
+it calls
 `renderValueControl(field, control)` where `control.disabled` represents the
 current submit lock. Forward it to the actual field control. The adapter keeps
 one-argument callbacks compatible, but new integrations must consume the second

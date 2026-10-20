@@ -25,7 +25,7 @@
 - Desktop/tablet Make record tables and list tables use `@qfei-design/canvas-table` through `canvas-table-integration`. Phone object lists use the card View from `mobile-defaults.md` and must not render CanvasTable. If desktop/tablet cell editing is needed, use `canvas-table-integration` for the editing design too.
 - Do not add product capabilities that were not requested, especially pagination, views, advanced filters, grouping, sorting, column settings, import, or export.
 - Do not force Ant Design or Less when the user or project already has another UI/styling system.
-- Do not silently choose Ant Design, Arco Design, or shadcn/ui for a new project. Component-library selection is blocking until the user explicitly names one of those three libraries or delegates to the default/recommended option, which means Ant Design.
+- For a new project with no established or user-specified component library, present the selection described in Decision order; accept a custom compatible React library and use Ant Design if the user does not choose after a reasonable opportunity to respond.
 - Do not skip the Make App shell for generated object-list UI. Start from the shell unless the project already has one.
 - Do not silently downgrade `Date`, `User`, `Department`, `Select`, `File`, or `Lookup` Make fields to plain text inputs. Use type-appropriate UI controls or show an explicit unsupported-field UI fallback.
 - Do not show attachment upload controls in create flows when upload requires a saved record identity. New records do not have a persisted id; omit file upload until edit/detail after persistence.
@@ -85,6 +85,7 @@ The object shell should have visible states for:
 - render-error fallback through a route or object-shell ErrorBoundary
 
 Keep the app shell visible when possible. A failed object view should render an inline alert/result/retry surface or a scoped error fallback, not unmount the whole page into blank white.
+Use the host's existing component library button for a page retry action, or its established styled button component when no library is present. When a global Trace error card already contains the failure details, keep the retry button centered on both axes of the content region; a button-only page error state is valid. If the Shell has not mounted, center the retry button in the persistent app root fallback instead. Give the button visible focus and pending/disabled states. Do not leave a bare browser-default retry button beside or below the global card. The retry handler remains owned by the host's data or permission flow.
 
 ## Decision order
 
@@ -94,7 +95,7 @@ Keep the app shell visible when possible. A failed object view should render an 
 
 If a detail is not requested and not present in the project, choose the simplest useful UI.
 
-For a new project with no established component library, ask the user to choose from this ordered list: Ant Design (recommended/default), Arco Design, or shadcn/ui. Do not offer TDesign as a new-project candidate. Do not choose automatically before the user responds. If the user explicitly names one of the three libraries, use that library. If the user answers with a generic delegation such as "default", "recommended", "you decide", "anything is fine", or "whatever", treat it as choosing Ant Design. If the user has not made either an explicit or delegated choice, pause component-library-specific implementation and only provide a neutral plan or ask the selection question. If the user chooses shadcn/ui, follow the host project's chosen setup path and add only the UI components needed by the generated screens.
+For a new project with no established or user-specified component library, show a selection pop-up through the available structured input UI. Offer three suggested options in order: Ant Design, Arco Design, shadcn/ui. Let the user specify another compatible React component library through the custom answer. If structured input is unavailable, ask the same question in chat. Honor an explicit choice; if the user delegates or makes no selection after a reasonable opportunity to respond, default to Ant Design and state that assumption. Existing projects keep their current library unless the user requests a change. If the user chooses shadcn/ui, follow the host project's chosen setup path and add only the UI components needed by the generated screens. The default Lucide icon library is a separate decision and does not constrain the UI component library.
 
 ## Dynamic object routes
 

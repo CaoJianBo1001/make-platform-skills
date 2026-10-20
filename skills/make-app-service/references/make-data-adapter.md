@@ -224,7 +224,7 @@ Rules:
 - target record reads still go through `/make/data/v1/record` with forwarded login context, not makecli
 - reject unsupported relation direction, non-lookup fields, and missing target metadata with 400
 - do not leak full target records into dropdown APIs by default
-- In create mode, the Lookup source field may come from `createFields`; resolve the Lookup target entity and target display fields from the target's visible `fields`. Do not expose a target field solely because it is creatable.
+- In create mode, resolve the Lookup source field from 普通新建的 `createFields` 或 审批新建的权威 启动配置 字段；resolve the Lookup target entity and target display fields from the target's visible `fields`. Do not expose a target field solely because it is creatable.
 
 ## Lookup relation update service
 

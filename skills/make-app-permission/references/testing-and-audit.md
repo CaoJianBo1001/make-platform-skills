@@ -1,5 +1,9 @@
 # Testing and audit
 
+本文件的 `createFields`/IAM 字段集合用例和通用权限一致性适配器验证普通新建。有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 单独增加 UI/Service 启动字段一致性测试：普通集合没有但启动配置授权的字段仍应显示并保存。不得将普通场景的“字段不在 createFields 就不能创建”当成审批分支断言，也不得删除原普通权限回归来通过审批测试。应用、对象、操作资格和关联目标权限仍需共同覆盖。
+
+审批测试还应覆盖普通 `createFields` 缺少但启动配置允许的 Lookup/File：Service 对源字段使用最新启动配置，Lookup 目标仍须可见且存在，File 只在已确认预上传合同下提交；审计普通字段交集时不得把这一审批分支判为缺失 `createFields` 的违规创建。
+
 Use this reference before implementation and before reporting permission work complete.
 
 ## Service and Schema tests

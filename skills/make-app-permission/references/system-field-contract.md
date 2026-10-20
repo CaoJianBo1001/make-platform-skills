@@ -4,6 +4,8 @@ Use this reference whenever create-capable or edit-capable fields are derived. K
 
 ## Create exclusions
 
+此处类型能力限制同时适用于普通和审批新建。普通新建在 `createFields`/IAM 交集后执行；审批新建在 [启动配置字段授权](../../make-app-approval/references/initiation-contract.md) 后执行，不为了复用类型保护重新套用普通字段交集。`qfei_process_instance_status`、`qfei_is_locked` 为只读流程元数据，始终排除出新建、普通编辑及批量写入；不因此改变下列既有审计字段的编辑兼容规则。
+
 The UI create-capability guard must reject these ID field types:
 
 ```text
@@ -24,7 +26,7 @@ qfei_update_user
 qfei_update_time
 ```
 
-Apply this guard after the `createFields ∩ meta.field.read.fieldAccess` intersection. The backend remains the final authority and should normally omit these fields from `createFields`; the UI guard is defense in depth for malformed or stale Schema responses.
+Apply this guard after mode-specific field authorization: ordinary create uses `createFields ∩ meta.field.read.fieldAccess`, while approval create uses the authorized start-config fields. The backend remains the final authority and should normally omit these fields from `createFields` or approval start-config; the UI guard is defense in depth for malformed or stale responses.
 
 Do not exclude a business field merely because its key contains `create`, `update`, `user`, or `time`. When the platform adds a real system type or audit key, update this reference, the host guard, and the conformance suite together.
 
