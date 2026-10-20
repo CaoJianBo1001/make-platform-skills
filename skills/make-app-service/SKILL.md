@@ -2,7 +2,7 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.4
+  version: 0.2.6
 ---
 
 # make-app-service
@@ -37,6 +37,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 | --- | --- |
 | Service route shapes and UI-Service response contracts | `references/service-api-contracts.md` |
 | Request cancellation, client disconnect handling, downstream `AbortSignal` propagation | `references/service-api-contracts.md` |
+| Schema 缓存刷新、进行中请求复用与取消的组合场景 | `references/service-api-contracts.md`、`references/testing-and-safety.md` |
 | Service folder structure, layering, logging, errors | `references/service-layering.md` |
 | Make Data API adapter rules, schema `fields` / `createFields`, records, files, lookup, candidates | `references/make-data-adapter.md` |
 | Test requirements, contract checks, safety review | `references/testing-and-safety.md` |
@@ -66,6 +67,8 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 - It must not hard-code environment-to-domain mapping. Make API base URL, gateway routing, and secret injection come from runtime config, backend/operations, or Make tooling.
 
 ## Default Service responsibilities
+
+审批新建、`bpmDefinitionKey`、启动字段、首次发起和流程状态传输使用 [make-app-approval](../make-app-approval/SKILL.md)。Service 保留对象顶层 key 及记录系统状态/锁字段；审批新建的可写字段来自权威启动配置，普通新建仍用原 `createFields`/IAM 合同，已有记录编辑仍用原更新链路。不要让普通源字段交集二次裁掉审批授权，也不要信任客户端声明的审批模式。
 
 Generated or refactored Make App Service code should provide these capabilities when the UI needs them and the host project does not already have equivalent routes:
 

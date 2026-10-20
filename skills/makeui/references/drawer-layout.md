@@ -1,5 +1,7 @@
 # Drawer layout
 
+审批新建的字段来源、保存/首次发起和详情标题 Tag 使用 [make-app-approval](../../make-app-approval/SKILL.md)。本文件的 `createFields` 要求是普通新建规则；有效审批新建消费启动配置授权结果，配置失败不回退普通字段。继续复用下述布局和字段控件，不把审批权限算法复制到 Drawer。
+
 ## Contents
 
 - [Default mode](#default-mode)

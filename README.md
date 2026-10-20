@@ -24,6 +24,7 @@ Codex 判断优先级：
 
 | 用户问题 / 关键词 | 使用 skill | 边界 |
 | --- | --- | --- |
+| 方案确认后新建/迭代项目、业务录入、默认我的审批导航、BPM、bpmDefinitionKey、审批新建字段、保存并提交、提交并保存、流程状态、详情标题 Tag | [make-app-approval](skills/make-app-approval/SKILL.md) | 按实际业务写入/审批能力判断入口；负责审批新建与首次发起、列表/详情系统状态及标题 Tag；不负责撤回、我的审批 npm 包接入、任务中心与办理、审批历史或流程设计器 |
 | Make 环境安装、更新 Make 环境、makecli 登录校验、Node/pnpm/git/makecli 版本检查 | `make-env-setup` | 只负责本地开发环境准备、工具链更新、Make skills 更新、环境选择和登录校验；不负责 PRD、DSL、Service、UI、apply、deploy 或 git 提交 |
 | 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、字段类型图标、移动端卡片列表、工作台、底部导航、人员/部门选择抽屉、响应式、UI 状态、`@qfei-design/make-app-mobile` | `makeui` | 新 App 图标默认用 Lucide，用户明确指定其他图标库时遵从其要求；React UI 组件库由用户选择。桌面／平板字段类型图标默认覆盖表头、字段标签及字段选择列表；手机使用独立卡片 View 和纯文本字段名；不负责认证、打包、Service、业务 API 设计和发布 |
 | CanvasTable、表格渲染、字段类型展示、表格编辑、序号列、行头详情图标、`showSN`、`bodyRowHeadSuffixOptions`、`GroupTableComponent` 底层接入 | `canvas-table-integration` | 只负责 `@qfei-design/canvas-table` 消费侧接入，不负责页面 Shell 和业务 API；Make 记录分组完整能力交给 `make-app-group` |
@@ -42,6 +43,8 @@ Codex 判断优先级：
 | 发票、票据、OCR、验真、识别金额/税号/票据内容 | `make-integration` | 只负责 Make 集成服务能力 |
 
 常见组合：
+
+- 方案确认后新建或迭代 Make App：先用 `make-app-approval` 判定是否生成一个“我的审批”入口；业务新增/录入/编辑保存或明确审批处理触发，纯查询/看板/登录/搜索/筛选不触发，不要求预先绑定流程。审批新建和状态展示组合 `makeui` + `make-app-permission` + `make-app-service`；只在审批新建分支使用启动字段授权，普通 IAM 规则保持不变。
 
 - 做一个对象列表页：`makeui` + `canvas-table-integration` + `make-app-actions`。desktop/tablet 使用 CanvasTable，手机使用独立卡片 View；手机只提供点击记录的单条编辑/删除，不提供记录多选或批量操作
 - 做记录编辑、删除、批量编辑或行级写权限预检：`make-app-actions` + `make-app-permission` + `make-app-service` + `makeui`；desktop/tablet 表格选择和批量能力再加 `canvas-table-integration`，手机只接单条操作
@@ -66,6 +69,26 @@ Codex 判断优先级：
 - 用户明确指定其他图标库时遵从其要求；否则新建 Make App 的图标默认统一使用 [Lucide](https://lucide.dev/icons/)。React UI 组件库由用户选择或沿用项目现有约定，不限于 Ant Design、Arco Design、shadcn/ui。桌面／平板字段类型图标按 [`makeui` 默认映射](skills/makeui/references/field-type-icons.md) 覆盖 CanvasTable 表头、新建／编辑／详情字段标签及已有字段选择列表，手机字段名保持纯文本，不需用户再次提示。
 
 ## 可用 Skill 列表
+
+### make-app-approval
+
+根据已确认需求中的实际写入或审批处理能力生成/复用“我的审批”入口，并接入审批新建字段、保存与首次发起、业务列表和详情的流程状态字段、详情标题 Tag。无当前流程或任务不删除已生成入口；不包含撤销/撤回或“我的审批”npm 包与任务页面实现。
+
+新 skill 首次安装：
+
+```bash
+npx skills add qfeius/make-platform-skills --skill make-app-approval -g
+```
+
+已安装后升级：
+
+```bash
+npx skills update make-app-approval
+```
+
+生成规则和验证场景见 [make-app-approval](skills/make-app-approval/SKILL.md)。审批新建消费 `bpm-start-config.fields` 的 `readable/editable`，不再与普通 `createFields`/IAM 字段集合求交；UI 与 Service 同步切换，保留应用、对象和新建操作资格。普通已有记录编辑仍沿用原 IAM/更新链路。
+
+自动发现需要当前 Agent 能看到已安装的 `make-app-approval`，并同步本次更新的 `makeui`、权限、Service、actions 和 DSL skill。仅把源码放在此仓库、或只升级已安装的旧技能，不代表新增技能已经进入新项目的可用技能目录。发布后按上方命令首次添加新技能并更新关联技能，使用仓库安装同步检查验证完整文件一致；未安装时也可在任务中明确提供本地 `SKILL.md` 路径要求读取。README 路由表是说明，实际生成入口还通过 `makeui`、`makedsl` 的正文路由到默认生成规则。
 
 ### make-env-setup
 准备或更新本地 Make 开发环境，覆盖 Node、包管理器、git、makecli、Make platform skills、Make 环境选择和登录校验；新 App 使用固定 Node/Corepack/pnpm 基线，存量 App 保留兼容的既有运行时与锁文件。

@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make App 审批生成"
+  short_description: "按需求生成审批导航，接入审批新建字段、首次发起与列表详情状态展示"
+  default_prompt: "使用 $make-app-approval 根据已确认的 Make App 方案判断审批入口，接入审批新建字段、保存与首次发起及流程状态展示，不扩展撤回或任务中心 npm 接入。"

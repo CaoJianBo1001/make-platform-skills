@@ -124,16 +124,16 @@ If no field metadata exists, stop and call out the missing UI dependency instead
 
 ### Permission-derived field-set handoff
 
-`makeui` receives authorized field metadata from the host permission layer; it does not calculate permission policy:
+先区分新建分支：普通新建消费权限层从 `createFields` 得到的字段集；有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 消费启动配置授权字段，不再与普通 IAM 字段集合求交。`makeui` 接收宿主已授权的字段元数据，不自行计算权限策略：
 
-- create mode receives the permission-derived `createFields` / create field set and renders only that set
+- 普通新建接收权限层提供的 `createFields` / create field set，只渲染该集合；审批新建接收启动配置中 `readable` 授权的字段，并仅允许 `editable` 且受宿主类型能力支持的字段输入
 - edit mode receives visible fields plus an editable-key set; visible non-editable fields may render read-only, while invisible fields do not render
-- do not fall back from an empty or missing create field set to visible fields
+- 普通 `createFields` 缺失或为空时不回退到 visible `fields`；审批启动配置加载失败或无效时显示错误与重试，不能回退普通字段
 - do not read backend `editableFields` directly in a component; use the host's existing visible/editable result from `make-app-permission`
 
-Schema requiredness has one metadata source: `field.validations.isRequired`. Derive the UI control's `required` prop and 必填 validation from it, scoped only to rendered authorized fields in the active mode. A required field excluded by create or visibility permission must not leave a hidden validator that blocks submit. Before submit, the permission layer still owns rebuilding the authorized payload allowlist.
+Schema requiredness has one metadata source: `field.validations.isRequired`. Derive the UI control's `required` prop and 必填 validation from it, scoped only to rendered authorized fields in the active mode. A required field excluded by the current mode's authorization must not leave a hidden validator that blocks submit. Before submit, the host must rebuild the mode-specific authorized payload allowlist; approval create also requires Service to recheck the authoritative start config.
 
-If record creation is allowed but there are no creatable fields, render an explicit `暂无可新建字段` empty state and disable the create submit action. Do not synthesize inputs from visible or editable fields.
+普通新建允许创建但没有可新建字段时，显示 `暂无可新建字段` 空态并禁用提交，不从 visible 或 editable fields 拼凑输入。审批新建不得因普通 `createFields` 为空进入该空态或禁用提交；按启动配置授权字段、校验结果与当前分支的提交合同决定表单和按钮状态。
 
 For new Make App projects, create or reuse a shared field type registry at `apps/ui/src/lib/make-field-types.ts` before implementing field-driven UI. The registry is the shared source for host-owned form controls, detail display, CanvasTable table display, and table cell editors; these consumers should resolve common `Make.Field.*` presentation behavior from the registry instead of carrying separate local mappings. The registry must preserve normalized `field.properties` and expose the properties needed by generated UI, including `format`, `precision`, `decimalPlaces`, `maxCount`, `begin`, `end`, `symbol`, and `useGrouping`. Advanced-filter controls resolve support and editor behavior through `make-app-filter` package APIs, not this registry.
 

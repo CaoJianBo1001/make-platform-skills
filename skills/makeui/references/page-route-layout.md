@@ -1,5 +1,7 @@
 # Route-based form and detail pages
 
+审批新建的字段来源、保存/首次发起及详情状态使用 [make-app-approval](../../make-app-approval/SKILL.md)。下文 `createFields` 仅用于普通新建；手机与桌面共享审批配置、保存会话和状态映射。仅保存成功或首次发起成功沿用已有返回规则；保存成功但发起失败时保留原记录及恢复入口，不能丢失 ID 后重新新建。
+
 ## 展示模式优先级
 
 本文件的 Drawer 默认和“用户明确要求才使用路由页”规则仅适用于 desktop/tablet。手机端无论是否由 URL 驱动，都优先遵循 `mobile-defaults.md`：创建、编辑和详情默认使用可寻址的全屏任务路由；该规则覆盖本文件其余 Drawer 默认。

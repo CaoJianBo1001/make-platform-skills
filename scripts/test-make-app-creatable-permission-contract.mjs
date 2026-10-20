@@ -150,10 +150,12 @@ assert.match(
   /record-write-permission[\s\S]{0,240}records\/bulk[\s\S]{0,240}(?:existing|既有|established)[\s\S]{0,320}(?:do not|must not|不得|不能)[\s\S]{0,240}(?:successful (?:or|and) failed response|成功与失败响应|success and error|完整响应)/i,
   'the established action response contracts must not be changed by the direct-proxy rule',
 );
-assert.match(
-  serviceSkill,
-  /metadata:\s*\n\s*version:\s*0\.2\.4/,
-  'make-app-service must include the default Trace ID handoff',
+const serviceVersion = serviceSkill.match(/metadata:\s*\n\s*version:\s*(\d+)\.(\d+)\.(\d+)/);
+assert.ok(serviceVersion, 'make-app-service 必须声明版本');
+const [serviceMajor, serviceMinor, servicePatch] = serviceVersion.slice(1).map(Number);
+assert.ok(
+  serviceMajor > 0 || serviceMinor > 2 || (serviceMinor === 2 && servicePatch >= 4),
+  'make-app-service 必须保留 0.2.4+ 的发布基线，允许后续兼容修订',
 );
 assert.match(
   serviceContracts,

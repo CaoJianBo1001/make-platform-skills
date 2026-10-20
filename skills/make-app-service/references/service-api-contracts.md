@@ -114,6 +114,8 @@ Rules:
 
 ## Schema routes
 
+审批场景配合 [审批发起合同](../../make-app-approval/references/initiation-contract.md)：无损保留对象顶层 `bpmDefinitionKey`，启动配置规范化接口与普通 Schema 字段集合分开。以下 `createFields` 源字段授权及普通记录关系创建规则用于普通新建；审批新建改用 Service 最新取得的启动字段授权，复用相同创建/关系/附件编排及目标授权，不能二次套用普通字段交集。记录列表和详情必须保留 `qfei_process_instance_status`、`qfei_is_locked`，不接受其作为客户端可写字段。
+
 Default:
 
 - `GET /api/schema` -> normalized `MakeAppSchema`
@@ -130,6 +132,7 @@ Rules:
 - Do not require local DSL/YAML files to serve schema in published runtime.
 - If remote schema is unavailable, return a visible error status; do not silently serve stale generated fields unless the project explicitly has an offline-dev fallback.
 - If Schema responses are cached, isolate permission-trimmed values by tenant, principal/session, App, and access generation and document an explicit invalidation/reload path for permission refresh.
+- 显式刷新成功后，同一身份与访问代际下随后开始的普通读取必须取得新 Schema，不得从旧缓存或旧进行中请求返回旧值。刷新结果应按代际原子发布；旧请求晚返回不能覆盖新缓存，旧请求失败也不能删除新缓存。权限刷新失败仍遵守 `make-app-permission` 的 fail-closed 规则，不恢复可能已撤销的旧授权。
 
 ## Record routes
 
@@ -174,7 +177,7 @@ Rules:
   Service alias derived from `pagination.total`, not as the upstream response shape.
 - Do not infer returned fields from arbitrary UI row keys. The UI should request fields by schema keys when it needs a smaller payload.
 - Create/update payloads carry raw submit values, not formatted display labels.
-- For relation-backed `Make.Field.Lookup` during create, keep Lookup keys out of ordinary `data`. Reject client-supplied `data.qfei_relation`; validate `relations` keys against the permission-trimmed `createFields`, relation metadata, cardinality, target visibility/existence, and exact target identity, then let Service synthesize the backend `qfei_relation`.
+- For relation-backed `Make.Field.Lookup` during create, keep Lookup keys out of ordinary `data`. Reject client-supplied `data.qfei_relation`; validate `relations` keys against 普通新建的 permission-trimmed `createFields` 或 审批新建的权威 启动配置 字段白名单, plus relation metadata, cardinality, target visibility/existence, and exact target identity, then let Service synthesize the backend `qfei_relation`.
 
 Use `make-app-sort` for the canonical five-level ordered sort model, sortable-field
 capability, save-before-apply behavior, and CanvasTable header linkage. Service
@@ -198,6 +201,8 @@ At the Service boundary:
 5. In `finally`, remove disconnect listeners and release request-local resources so completed requests do not retain handlers. Listener cleanup must not itself abort a normally completed response.
 
 Keep cancellation scoped to the request that created it. Do not reuse an `AbortController` across users, routes, query contexts, or independent page requests. If one request starts several downstream calls, either pass the same signal to all calls or derive child controllers that are all aborted when the request ends.
+
+共享进行中的下游请求时，取消一个调用方不能影响其他仍有效请求：不要把任一调用方的 `AbortSignal` 直接作为共享网络请求的唯一信号。共享工作须有独立的存活/取消管理；仅当已无有效调用方时才可取消底层工作。一个调用方断开后只结束它自己的响应，其他调用方仍须收到正常结果或明确错误；共享工作发生 `AbortError` 时也必须结清仍在等待的调用方，不能仅跳过响应处理让它们一直挂起。跨主体共享仍受上面的 Schema 缓存身份隔离约束。
 
 The adapter must pass `signal` to the actual network client. Merely ignoring a late response protects state but does not save Service or Make gateway work. If an intermediate library cannot propagate `AbortSignal`, document that boundary as a performance limitation and retain stale-response guards; do not claim end-to-end cancellation.
 

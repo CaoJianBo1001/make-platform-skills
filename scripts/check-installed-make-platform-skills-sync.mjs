@@ -9,6 +9,8 @@ const skillNames = [
   'make-app-service',
   'make-app-auth',
   'make-app-actions',
+  'make-app-approval',
+  'makedsl',
   'make-app-filter',
   'make-app-sort',
   'make-app-group',
