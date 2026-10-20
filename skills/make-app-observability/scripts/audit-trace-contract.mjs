@@ -127,8 +127,8 @@ if (!version) {
     const major = Number(rawMajor);
     const minor = Number(rawMinor);
     const patch = Number(rawPatch) + (operator === '>' ? 1 : 0);
-    if (major === 0 && (minor < 1 || (minor === 1 && patch < 8))) {
-      failures.push('observability_version_too_old: require @qfei-design/make-app-observability >= 0.1.8 for the desktop and mobile viewport contract');
+    if (major === 0 && (minor < 1 || (minor === 1 && patch < 9))) {
+      failures.push('observability_version_too_old: require @qfei-design/make-app-observability >= 0.1.9 for the permission notice and viewport contract');
     }
   }
 }

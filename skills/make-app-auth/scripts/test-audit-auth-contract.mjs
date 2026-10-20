@@ -59,12 +59,12 @@ try {
   write(path.join(goodRoot, 'scripts/legacy-route-check.mjs'), "console.error('Do not use /api/auth/** or /api/app/**');");
   assert.match(runAudit(goodRoot), /status: PASS/, 'vendored audit diagnostics must not count as App routes');
 
-  for (const version of ['^0.1.3', '0.1.3', '>0.1.2', '>=0.1.3 <0.2.0', '0.1.3 - 0.2.0', '^1.0.0']) {
+  for (const version of ['^0.1.5', '0.1.5', '>0.1.4', '>=0.1.5 <0.2.0', '0.1.5 - 0.2.0', '^1.0.0']) {
     writeSdkDependency(goodRoot, version);
     assert.match(runAudit(goodRoot), /status: PASS/, `expected ${version} to pass`);
   }
 
-  for (const version of ['^0.1.2', '<0.1.3', '>=0.1.3 || 0.1.2']) {
+  for (const version of ['^0.1.2', '^0.1.3', '^0.1.4', '<0.1.5', '>=0.1.5 || 0.1.4']) {
     writeSdkDependency(goodRoot, version);
     const output = runAudit(goodRoot, { expectFailure: true });
     assert.match(output, /sdk_version_too_old/, `expected ${version} to be rejected as too old`);
@@ -76,12 +76,12 @@ try {
     assert.match(output, /sdk_version_unverifiable/, `expected ${version} to be rejected as unverifiable`);
   }
 
-  writeSdkDependency(goodRoot, '^0.1.3');
+  writeSdkDependency(goodRoot, '^0.1.5');
   write(path.join(goodRoot, 'pnpm-workspace.yaml'), `
 packages:
   - apps/*
 overrides:
-  '@qfeius/make-app-auth': 0.1.2
+  '@qfeius/make-app-auth': 0.1.4
   `);
   const pnpmOverrideOutput = runAudit(goodRoot, { expectFailure: true });
   assert.match(pnpmOverrideOutput, /sdk_version_override_too_old/);
@@ -89,7 +89,7 @@ overrides:
 
   write(
     path.join(goodRoot, 'pnpm-workspace.yaml'),
-    `overrides: { unrelated-package: 1.0.0, '@qfeius/make-app-auth': 0.1.2 }`
+    `overrides: { unrelated-package: 1.0.0, '@qfeius/make-app-auth': 0.1.4 }`
   );
   const pnpmInlineOverrideOutput = runAudit(goodRoot, { expectFailure: true });
   assert.match(pnpmInlineOverrideOutput, /sdk_version_override_too_old/);
@@ -98,7 +98,7 @@ overrides:
   write(path.join(goodRoot, 'package.json'), JSON.stringify({
     private: true,
     overrides: {
-      '@qfeius/make-app-auth': '0.1.2'
+      '@qfeius/make-app-auth': '0.1.4'
     }
   }));
   const npmOverrideOutput = runAudit(goodRoot, { expectFailure: true });
@@ -117,7 +117,7 @@ overrides:
     private: true,
     pnpm: {
       overrides: {
-        '@qfeius/make-app-auth': '^0.1.3'
+        '@qfeius/make-app-auth': '^0.1.5'
       }
     }
   }));
@@ -985,7 +985,7 @@ function createFixture(name, files) {
   const root = path.join(tempRoot, name);
   write(path.join(root, 'apps/ui/package.json'), JSON.stringify({
     dependencies: {
-      '@qfeius/make-app-auth': '^0.1.3'
+      '@qfeius/make-app-auth': '^0.1.5'
     }
   }));
   write(path.join(root, 'apps/ui/src/app.ts'), files.ui);

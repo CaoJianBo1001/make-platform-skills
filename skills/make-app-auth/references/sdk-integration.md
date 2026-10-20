@@ -36,7 +36,7 @@ Use the public npm package by default when the SDK behavior is stable:
 ```json
 {
   "dependencies": {
-    "@qfeius/make-app-auth": "^0.1.3"
+    "@qfeius/make-app-auth": "^0.1.5"
   }
 }
 ```
@@ -44,10 +44,10 @@ Use the public npm package by default when the SDK behavior is stable:
 Install command:
 
 ```bash
-corepack pnpm add @qfeius/make-app-auth@^0.1.3 --registry=https://registry.npmjs.org/
+corepack pnpm add @qfeius/make-app-auth@^0.1.5 --registry=https://registry.npmjs.org/
 ```
 
-New Make Apps and explicit runtime migrations run this command with the `make-app-runtime` baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0`). Existing Apps retain their declared runtime during SDK work. Published unified-login Apps require `@qfeius/make-app-auth >= 0.1.3`. Do not generate or publish Apps with older npm dependencies.
+New Make Apps and explicit runtime migrations run this command with the `make-app-runtime` baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0`). Existing Apps retain their declared runtime during SDK work. Published unified-login Apps require `@qfeius/make-app-auth >= 0.1.5`. Do not generate or publish Apps with older npm dependencies. This generation/publish baseline does not remove the old-SDK runtime compatibility tests or make the optional administrator backend a login prerequisite.
 
 ## Startup Shape
 

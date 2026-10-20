@@ -22,7 +22,8 @@ export async function verifyFeedbackPackageSurface(directory, { allowPrerelease 
   const manifest = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
   assert.equal(manifest.name, '@qfei-design/make-app-observability', 'feedback_package_name_mismatch');
   const version = /^(\d+)\.(\d+)\.(\d+)(?:-([\w.-]+))?$/u.exec(manifest.version ?? '');
-  assert.ok(version && (Number(version[1]) > 0 || Number(version[2]) >= 1), 'feedback_version_unsupported');
+  assert.ok(version && (Number(version[1]) > 0 || Number(version[2]) > 1
+    || (Number(version[2]) === 1 && Number(version[3]) >= 9)), 'feedback_version_unsupported: require @qfei-design/make-app-observability >= 0.1.9');
   assert.ok(!version[4] || allowPrerelease, 'feedback_prerelease_requires_opt_in');
   const entry = manifest.exports?.['./react'];
   const esm = exportFile(root, entry, 'import', 'feedback_public_export_missing');

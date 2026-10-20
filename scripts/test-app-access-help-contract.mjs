@@ -4,6 +4,17 @@ import { readFile } from 'node:fs/promises';
 
 const read = file => readFile(new URL(`../skills/${file}`, import.meta.url), 'utf8');
 
+test('new App dependency guidance uses feedback 0.1.9 and auth SDK 0.1.5', async () => {
+  const sdk = await read('make-app-auth/references/sdk-integration.md');
+  const feedback = await read('make-app-observability/references/package-integration.md');
+  const permission = await read('makeui/references/permission-feedback.md');
+  const dependency = JSON.parse(sdk.match(/```json\n([\s\S]*?)\n```/u)?.[1] ?? '{}');
+  assert.equal(dependency.dependencies?.['@qfeius/make-app-auth'], '^0.1.5');
+  assert.match(sdk, /pnpm add @qfeius\/make-app-auth@\^0\.1\.5\b/u);
+  assert.match(feedback, /@qfei-design\/make-app-observability@\^0\.1\.9\b/u);
+  assert.match(permission, /pnpm add @qfei-design\/make-app-observability@0\.1\.9\b/u);
+});
+
 test('permission package and route regression tests are continuous CI gates', async () => {
   const workflow = await readFile(new URL('../.github/workflows/skill-metadata-lint.yml', import.meta.url), 'utf8');
   assert.match(workflow, /node --test skills\/makeui\/scripts\/test-verify-feedback-package-surface\.mjs/u);

@@ -6,7 +6,7 @@ Use one host-owned adapter for startup denial, frontend permission guards and kn
 
 Skill/npm releases may precede backend deployment. Administrator lookup is an optional enhancement, never a prerequisite for App generation, login, IAM loading, business access or denial rendering. A missing SDK method or undeployed endpoint does not by itself block App readiness; preserve embedded contacts and generic authorization guidance, and report named-contact lookup as degraded rather than fully available. Existing auth/IAM gates remain mandatory, and a missing npm component/JS/types/CSS is still a package blocker.
 
-The contact-query addition may be unreleased. Do not infer availability from the existing minimum auth SDK version or a changed template. Verify the installed SDK types expose `getAppAdministrators` and test the deployed gateway before claiming independent contact lookup is available. Do not require an unreleased SDK version, invent a published version or hand-write a raw-fetch/Console/IAM fallback.
+New Apps use `@qfeius/make-app-auth@^0.1.5`, which exposes `getAppAdministrators`. Still verify the installed SDK types and test the deployed gateway before claiming independent contact lookup is available: the SDK version does not prove backend rollout. Keep the optional-method guard for older hosts. Do not require an unreleased SDK version, invent a published version or hand-write a raw-fetch/Console/IAM fallback.
 
 ```js
 const canLoadContacts = 'getAppAdministrators' in auth && typeof auth.getAppAdministrators === 'function';

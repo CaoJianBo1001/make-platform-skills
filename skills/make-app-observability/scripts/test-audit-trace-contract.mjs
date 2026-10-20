@@ -40,7 +40,7 @@ const serviceTrace = `
 const fixture = (name, options = {}) => {
   const root = path.join(temporary, name);
   write(root, 'apps/ui/package.json', JSON.stringify({
-    dependencies: { '@qfei-design/make-app-observability': options.version ?? '^0.1.8' },
+    dependencies: { '@qfei-design/make-app-observability': options.version ?? '^0.1.9' },
   }));
   write(root, 'apps/ui/src/main.tsx', `import '@qfei-design/make-app-observability/styles.css';`);
   write(root, 'apps/ui/src/error.tsx', options.errorOutlet ?? `
@@ -182,27 +182,27 @@ try {
   });
   assert.match(run(missingForwarding, 'service-fronted').output, /service_gateway_trace_missing/);
 
-  for (const version of ['^0.1.3', '^0.1.4', '^0.1.5', '^0.1.6', '^0.1.7', '>0.1.6', '>=0.1.7 <0.2.0']) {
+  for (const version of ['^0.1.3', '^0.1.4', '^0.1.5', '^0.1.6', '^0.1.7', '^0.1.8', '>0.1.7', '>=0.1.8 <0.2.0']) {
     const oldVersion = fixture(`old-version-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version });
-    assert.match(run(oldVersion, 'direct').output, /observability_version_too_old:[^\n]*>= 0\.1\.8/);
+    assert.match(run(oldVersion, 'direct').output, /observability_version_too_old:[^\n]*>= 0\.1\.9/);
   }
 
-  for (const version of ['^0.1.8', '>0.1.7', '>=0.1.8 <0.2.0']) {
+  for (const version of ['^0.1.9', '0.1.9', '>0.1.8', '>=0.1.9 <0.2.0']) {
     const validRange = fixture(`valid-range-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version, service: false });
-    assert.equal(run(validRange, 'direct').code, 0, `expected ${version} to allow version 0.1.8`);
+    assert.equal(run(validRange, 'direct').code, 0, `expected ${version} to allow version 0.1.9`);
   }
 
-  const alpha = fixture('published-alpha-local-test', { version: '0.1.8-alpha.1', service: false });
+  const alpha = fixture('exact-alpha-local-test', { version: '0.1.9-alpha.1', service: false });
   assert.notEqual(run(alpha, 'direct').code, 0, 'prerelease must remain opt-in');
   assert.equal(run(alpha, 'direct', ['--allow-prerelease']).code, 0, 'an explicitly approved exact alpha must be auditable');
-  const alpha2 = fixture('published-alpha2-local-test', { version: '0.1.8-alpha.2', service: false });
-  assert.notEqual(run(alpha2, 'direct').code, 0, 'the current alpha must not bypass the default release gate');
-  assert.equal(run(alpha2, 'direct', ['--allow-prerelease']).code, 0, 'an approved current alpha must retain the explicit local-test path');
-  for (const version of ['^0.1.8-alpha.1', '0.1.8-alpha..1', '0.1.8-01', 'file:../observability', 'latest']) {
+  const alpha2 = fixture('exact-alpha2-local-test', { version: '0.1.9-alpha.2', service: false });
+  assert.notEqual(run(alpha2, 'direct').code, 0, 'an exact alpha must not bypass the default release gate');
+  assert.equal(run(alpha2, 'direct', ['--allow-prerelease']).code, 0, 'an approved exact alpha must retain the explicit local-test path');
+  for (const version of ['^0.1.9-alpha.1', '0.1.9-alpha..1', '0.1.9-01', 'file:../observability', 'latest']) {
     const invalid = fixture(`invalid-alpha-${version.replaceAll(/[^a-z0-9]/gi, '-')}`, { version, service: false });
     assert.match(run(invalid, 'direct', ['--allow-prerelease']).output, /observability_version_unverifiable/);
   }
-  for (const version of ['0.1.4-alpha.1', '0.1.5-alpha.1', '0.1.6-alpha.1', '0.1.7-alpha.1']) {
+  for (const version of ['0.1.4-alpha.1', '0.1.5-alpha.1', '0.1.6-alpha.1', '0.1.7-alpha.1', '0.1.8-alpha.2']) {
     const oldAlpha = fixture(`old-alpha-${version}`, { version, service: false });
     assert.match(run(oldAlpha, 'direct', ['--allow-prerelease']).output, /observability_version_too_old/);
   }

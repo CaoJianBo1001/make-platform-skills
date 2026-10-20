@@ -10,7 +10,7 @@ const script = fileURLToPath(new URL('./verify-feedback-package-surface.mjs', im
 const run = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' });
 const withPackage = (changes, check) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'feedback-surface-test-'));
-  fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({ name: '@qfei-design/make-app-observability', version: '0.1.8', ...changes }));
+  fs.writeFileSync(path.join(directory, 'package.json'), JSON.stringify({ name: '@qfei-design/make-app-observability', version: '0.1.9', ...changes }));
   try { check(directory); } finally { fs.rmSync(directory, { recursive: true, force: true }); }
 };
 
@@ -29,6 +29,20 @@ test('the package name must match the requested dependency', () => withPackage({
   assert.equal(result.status, 1);
   assert.match(result.stderr, /feedback_package_name_mismatch/u);
 }));
+for (const version of ['0.1.0', '0.1.8', '0.1.8-alpha.2']) {
+  test(`installed version ${version} is below the new feedback baseline`, () => withPackage({ version }, directory => {
+    const result = run(directory, '--allow-prerelease');
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /feedback_version_unsupported/u);
+  }));
+}
+for (const version of ['0.1.9', '0.2.0', '1.0.0']) {
+  test(`installed version ${version} still requires public exports`, () => withPackage({ version }, directory => {
+    const result = run(directory);
+    assert.equal(result.status, 1);
+    assert.match(result.stderr, /feedback_public_export_missing/u);
+  }));
+}
 test('prerelease requires an explicit local-test opt-in', () => withPackage({ version: '0.1.9-alpha.0' }, directory => {
   const result = run(directory);
   assert.equal(result.status, 1);
