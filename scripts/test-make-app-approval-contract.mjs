@@ -35,6 +35,7 @@ for (const file of [
   'skills/make-app-service/SKILL.md',
   'skills/make-app-actions/SKILL.md',
   'skills/makedsl/SKILL.md',
+  'skills/makeui/references/app-shell-layout.md',
   'skills/makeui/references/mobile-form-controls.md',
   'skills/makeui/references/mobile-defaults.md',
   'skills/makeui/references/mobile-visual-standard.md',
