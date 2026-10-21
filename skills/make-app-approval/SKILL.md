@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当 Make App 需求方案确认后新建或迭代项目时使用，按业务录入、编辑保存或审批处理能力判断是否默认生成我的审批导航；也适用于 BPM、bpmDefinitionKey、审批新建字段、保存并提交、提交并保存、流程状态及详情标题审批 Tag。负责生成条件、运行时发起配置、保存与首次发起、业务列表及详情状态展示。不负责撤销/撤回、我的审批 npm 包安装与任务中心实现、审批办理、审批历史、流程设计器或 Console 审批管理。"
 metadata:
-  version: 0.1.2
+  version: 0.1.3
 ---
 
 # Make App 审批生成与发起侧适配
@@ -20,6 +20,7 @@ metadata:
 ## 必须保持的边界
 
 - **导航是方案决策。** 业务新增、录入、编辑保存，或明确审批处理需求即可触发；不要求先绑定流程。无任务、全部流程停用或解绑后仍保留已生成入口及历史访问路径。
+- **入口独立位于最外层。** “我的审批”不能挂在任何对象、模块或可折叠分组下面。桌面/平板侧栏中固定在导航最底部的独立区域，折叠对象分组不会隐藏它；手机为它保留一个底部 Tab，并按剩余容量展示业务对象和工作台，总数不超过五项。具体布局与复用规则见 [默认生成规则](references/generation-rules.md)。
 - **新建是运行时决策。** 成功取得的 Schema 对象含有效 `bpmDefinitionKey` 才进入审批新建分支。配置读取失败是错误态，不能等同未绑定。
 - **审批新建字段独立授权。** 使用 `bpm-start-config.fields` 的完整字段元数据和 `readable/editable`，不再与普通 IAM 字段集合或 `createFields` 求交。应用、对象、新建操作、关联目标和后台最终授权仍保留。
 - **保存与首次发起分开。** 普通保存不发起；用户选择保存并发起时先取得已保存记录 ID，再首次发起。失败恢复不得重复创建或上传，配置变化不得自动提交历史记录。
@@ -30,7 +31,7 @@ metadata:
 
 | 落点 | 责任 |
 | --- | --- |
-| [makeui](../makeui/SKILL.md) | Shell、导航位置、Drawer/手机任务页、现有字段控件及 Tag 外观；本 skill 决定审批分支和字段来源 |
+| [makeui](../makeui/SKILL.md) | Shell、导航布局实现、Drawer/手机任务页、现有字段控件及 Tag 外观；遵守本 skill 的审批入口层级与位置约束，本 skill 决定审批分支和字段来源 |
 | [make-app-permission](../make-app-permission/SKILL.md) | 普通 IAM、应用/对象/操作权限；本 skill 定义审批新建字段分支，不替换普通权限算法 |
 | [make-app-service](../make-app-service/SKILL.md) | API 合同、适配、缓存隔离、错误和取消；本 skill 提供 Workflow 发起参数与失败语义 |
 | [make-app-actions](../make-app-actions/SKILL.md) | 普通记录操作入口、预检及批量能力；消费同一锁判断，不复制审批任务动作 |

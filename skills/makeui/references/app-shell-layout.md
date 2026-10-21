@@ -108,7 +108,7 @@ The rules above are the desktop default. On phones, use the avatar-only top-left
 
 Use the sidebar for app modules or object navigation.
 
-- Support collapse / expand when the app has enough navigation items to benefit from it.
+- Support collapse / expand when the app has enough navigation items to benefit from it. The independent “我的审批” entry defined below must remain accessible when object/module groups collapse or the sidebar narrows.
 - Keep navigation labels concise.
 - Default sidebar navigation items are single-line primary labels only. Do not add per-object subtitles, descriptions, helper text, or second-line summaries by default.
 - Object navigation items should link to a dynamic object route, for example `/objects/:objectKey`, instead of separate hard-coded pages per object.
@@ -117,6 +117,15 @@ Use the sidebar for app modules or object navigation.
 - Do not move long navigation scrolling to `body`, app root, shell, workspace, or list-page containers.
 
 For a metadata-driven Make App, build navigation from modules or object groups when available. If no grouping exists, list objects directly. Object entries still use a dynamic route such as `/objects/:objectKey`.
+
+When [make-app-approval](../../make-app-approval/SKILL.md) requires “我的审批”, render it as a separate top-level application entry in the sidebar's bottom region:
+
+- Keep it outside all object/module groups, submenus, and collapsible or “more” containers. Grouping metadata and expanded-group state must not control its placement or visibility.
+- Use a full-height sidebar column with a flexible, independently scrolling business-navigation region above a non-scrolling approval region at the bottom. Keep the approval region from shrinking; do not append it inside the scrolling object tree or position it relative to the whole browser viewport.
+- Collapsing groups, changing object order, and scrolling a long object list must leave this entry visible and clickable at the bottom. If the existing sidebar narrows to an icon rail, keep its independent clickable icon with an accessible name and label tooltip.
+- Reuse the existing approval route and navigation identity. If it was nested under an object, move that entry and remove the old placement instead of creating a duplicate.
+
+This bottom-region rule applies to desktop/tablet sidebars, including the tablet navigation overlay when open. Phone navigation follows [mobile-defaults.md](mobile-defaults.md#底部导航与工作台): reserve one bottom Tab for the generated approval entry and use the remaining capacity for business objects, the optional AI assistant, and the workbench. Keep at most five items and reuse the same approval route and navigation key.
 
 If object descriptions exist in host-provided metadata, do not show them under each sidebar item by default. Use them only when the user asks for richer navigation, and prefer a tooltip or detail surface over making every item two lines.
 
