@@ -14,7 +14,7 @@
 Code Repository Server host has no flag: `$MAKE_REPO_SERVER_URL` > profile `repo-server-url` > context preset.
 Context presets: `production` → `qfei.cn` hosts, `dev`/`test` → `qtech.cn` hosts (`makecli context list` prints them).
 
-**context ≠ environment.** `--context` (global) picks the Make backend; `--env` (local to `app delete`) picks the app's deployment environment `beta|production`. `app deploy` has no `--env` (beta-only); `app promote` moves beta → production.
+**context ≠ appRole.** `--context` (global) picks the Make backend; `app delete --appRole beta|prod|all` picks the app role to delete. `app deploy` is beta-only; `app promote` moves beta → production.
 
 `logs deploy --appRole beta|prod` selects which app role to read logs from within that backend context. It defaults to `beta`; the JSON snapshot reports the selection in `appRole`.
 
@@ -147,18 +147,20 @@ Filter: comma = OR; `key` exact match, `name`/`description` fuzzy. Table columns
 ### app delete
 
 ```
-makecli app delete [key] --env production|beta|ALL [-f app.yaml] [--yes| -y]
+makecli app delete [key] --appRole beta|prod|all [-f app.yaml] [--timeout 30m] [--yes|-y]
 ```
 
-Every app is a **prod/beta pair** on the server; `--env` (required, case-insensitive) picks which half:
+Every app is a **prod/beta pair** on the server. Pass the Prod app key (or read it from `-f`); `--appRole` is required and case-insensitive:
 
-| `--env` | Deletes |
+| `--appRole` | Deletes |
 |---------|---------|
-| `production` | `<key>` itself (server refuses with 409 while its beta pair still exists) |
+| `prod` | `<key>` itself (server refuses while its Beta pair still exists) |
 | `beta` | the paired beta app (looked up from `<key>`; pass the prod key, not the beta key) |
-| `ALL` | beta first, then production (ordered steps, each confirmed) |
+| `all` | Beta first; only after it succeeds, delete Prod |
 
-Confirms by typing the app key (gh-style). Non-interactive shells are refused unless `--yes`.
+The command confirms once by asking for the app key (gh-style); non-interactive shells require `--yes`. It then polls the deletion task until success or failure. Exit code **0** means all selected roles were deleted, **2** means a deletion task failed (the message includes the failed step and server reason when available), and **124** means waiting timed out; the server task may still be running. `--timeout` defaults to 30 minutes and is shared by both roles when deleting `all`.
+
+After a timeout, rerun in the same context/profile. The CLI continues waiting if the delete request reports a conflict and the status confirms `RUNNING`; other conflicts remain errors. For `all`, it skips Beta only when the status confirms that its deletion already `SUCCEEDED`, then starts or continues Prod. Temporary status-query failures are retried within the wait limit; authentication and permission failures stop immediately. There is no separate public `app delete-status` CLI command.
 
 ### app deploy
 
