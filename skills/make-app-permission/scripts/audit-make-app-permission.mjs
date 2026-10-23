@@ -1,8 +1,10 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.3.0
+// make-app-permission contract version: 0.3.21
 import fs from 'node:fs';
 import path from 'node:path';
+import { calls, codeMask as maskJavaScriptNonCode, identifier, stripComments, unwrap } from './permission-source-expressions.mjs';
 import { runtimeSignals } from './permission-runtime-signals.mjs';
+import { navigationGate } from './permission-navigation-signals.mjs';
 import { auditCreatePayloads, defaultCreateCalls } from './create-payload-signals.mjs';
 import { auditScopedRouteFeedback } from './scoped-route-feedback-audit.mjs';
 
@@ -44,6 +46,7 @@ const signals = runtimeSignals(uiSources);
 const failures = [];
 const warnings = [];
 const reviews = [];
+let createSummary;
 
 checkSourceRoots();
 checkServiceContract();
@@ -168,8 +171,9 @@ function checkUiContract() {
     failures.push('entity_metadata_permission_key_missing: UI permission model must include meta.entity.read for entity navigation and routes');
   }
   for (const key of ['read', 'update']) {
-    if (!new RegExp(`meta\\.field\\.${key}`).test(uiRuntimeText)) {
-      failures.push(`field_permission_key_missing_${key}: UI permission model must include meta.field.${key}`);
+    const namespace = key === 'read' ? 'meta' : 'data';
+    if (!new RegExp(`${namespace}\\.field\\.${key}`).test(uiRuntimeText)) {
+      failures.push(`field_permission_key_missing_${key}: UI permission model must include ${namespace}.field.${key}`);
     }
   }
 
@@ -179,8 +183,11 @@ function checkUiContract() {
   if (!/(canReadEntityField|visibleFieldsForEntity|visibleFieldKeys|META_FIELD_READ|meta\.field\.read)/.test(uiRuntimeText)) {
     failures.push('field_visibility_helper_missing: UI must evaluate field visibility from meta.field.read');
   }
-  if (!/(canUpdateEntityField|editableFieldKeysForEntity|editableFieldNames|META_FIELD_UPDATE|meta\.field\.update)/.test(uiRuntimeText)) {
-    failures.push('field_edit_helper_missing: UI must evaluate field editability from meta.field.update');
+  if (!/(canUpdateEntityField|editableFieldKeysForEntity|editableFieldNames|DATA_FIELD_UPDATE|data\.field\.update)/.test(uiRuntimeText)) {
+    failures.push('field_edit_helper_missing: UI must evaluate field editability from data.field.update');
+  }
+  if (uiSources.flatMap(source => extractNamedFunctionSources(source, 'canUpdateEntityField')).some(hasMetadataUpdateCall)) {
+    failures.push('business_field_edit_uses_metadata_update: business field edit must not use meta.field.update, including fallback grants');
   }
   if (!/(canCreateEntityField|creatableFieldKeysForEntity)/.test(uiRuntimeText)) {
     failures.push('create_field_permission_helper_missing: UI must evaluate create fields from meta.field.read fieldAccess');
@@ -198,23 +205,23 @@ function checkUiContract() {
     );
   }
   if (!namedFunctionUsesPermissionKey(
-    uiRuntimeText,
+    uiSources,
     'canCreateEntityField',
     /(?:META_FIELD_READ|meta\.field\.read)/,
   )) {
     failures.push('create_field_permission_key_missing: create-field permission must use meta.field.read');
   }
   if (namedFunctionUsesPermissionKey(
-    uiRuntimeText,
+    uiSources,
     'canCreateEntityField',
     /(?:DATA_RECORD_CREATE|data\.record\.create)/,
   )) {
     failures.push('create_field_permission_uses_record_operation: create-field permission must not use data.record.create');
   }
   if (namedFunctionUsesPermissionKey(
-    uiRuntimeText,
+    uiSources,
     'canCreateEntityField',
-    /(?:META_FIELD_(?:CREATE|UPDATE)|meta\.field\.(?:create|update))/,
+    /(?:META_FIELD_(?:CREATE|UPDATE)|DATA_FIELD_UPDATE|meta\.field\.(?:create|update)|data\.field\.update)/,
   )) {
     failures.push('create_field_permission_uses_wrong_field_dimension: create-field permission must use meta.field.read, not meta.field.create/update');
   }
@@ -234,7 +241,7 @@ function checkUiContract() {
     failures.push('lookup_target_uses_create_fields: Lookup target display fields must come from visible fields, not target createFields');
   }
   if (/(?:canEditEntityField|editableFieldKeysForEntity|editableFieldNames)\s*\([\s\S]{0,180}(?:DATA_RECORD_CREATE|DATA_RECORD_UPDATE|data\.record\.(?:create|update))/.test(uiRuntimeText)) {
-    failures.push('field_permission_tied_to_data_record: field visibility/editability must use meta.field.*, not data.record.create/update');
+    failures.push('field_permission_tied_to_data_record: field visibility/editability must use meta.field.read/data.field.update, not data.record.create/update');
   }
   if (hasRecordEntryEditableFieldCountGate(uiRuntimeText, {
     actionKeyPattern: '(?:create|new)',
@@ -261,7 +268,7 @@ function checkUiContract() {
   if (!hasEntityRouteGuardSignal(uiRuntimeText)) {
     failures.push('entity_route_not_gated_by_meta_entity_read: dynamic entity routes must require meta.entity.read');
   }
-  if (!hasEntityNavigationGateSignal(uiRuntimeText) && !signals.navigation) {
+  if (!navigationGate(uiSources.map((source, index) => ({ source, file: uiRuntimeFiles[index] }))) && !signals.navigation) {
     failures.push('entity_navigation_not_gated_by_meta_entity_read: entity navigation must use meta.entity.read rather than data.record.read');
   }
   if (!hasReadGateSignal(uiRuntimeText)) {
@@ -287,12 +294,18 @@ function checkUiContract() {
   }
   const createCalls = [...defaultCreateCalls.filter(call=>!config.createCalls?.some(configured=>configured.name === call.name)),...(config.createCalls ?? [])];
   const payloads = auditCreatePayloads(uiSources,createCalls);
+  createSummary = `create calls: checked=${payloads.checked}; filtered=${payloads.checked - payloads.failures.length - payloads.reviews.length}; unproven=${payloads.failures.length}; review=${payloads.reviews.length}`;
   for (const call of config.createCalls ?? []) {
     if (!payloads.recognizedNames.includes(call.name)) failures.push(`configured_create_call_not_found: ${call.name} must identify an actual production call`);
   }
-  if (!payloads.checked || payloads.failures.length) {
-    failures.push('create_payload_filter_not_obvious: create submit must build an allowlisted payload from current creatable fields');
-    for (const call of payloads.failures) failures.push(`create_payload_unverified_call: ${path.relative(root,uiRuntimeFiles[call.fileIndex])}: ${call.name} must consume the filtered payload; unsupported builders need production-call review`);
+  if (!payloads.checked) {
+    failures.push('create_call_not_recognized: no production create call was recognized; check source roots and configure createCalls for the actual create boundary before reviewing payload filtering');
+  } else if (payloads.failures.length) {
+    failures.push('create_payload_filter_not_obvious: the recognized create calls include payloads whose allowlisted source could not be proved locally');
+    for (const call of payloads.failures) {
+      const line = uiSources[call.fileIndex].slice(0,call.index).split('\n').length;
+      failures.push(`create_payload_unverified_call: ${path.relative(root,uiRuntimeFiles[call.fileIndex])}:${line}: ${call.name}: payload argument[${call.argument}] (${call.origin})${call.property ? ` property ${call.property}` : ''} source unproven; raw inputs, imported builders and cross-callback sources require production-call evidence; this is not proof of an authorization defect`);
+    }
   }
   for (const call of payloads.reviews) reviews.push(`create_payload_branch_requires_review: ${path.relative(root,uiRuntimeFiles[call.fileIndex])}: ${call.name} consumes a filtered payload plus an unproven branch or transform; verify its production inputs and outgoing fields with host tests`);
   if (!/refreshPermissions[\s\S]{0,500}(refresh|loadPage|fetch|close)/.test(uiRuntimeText) && !signals.refresh) {
@@ -307,8 +320,20 @@ function checkUiContract() {
   }
 }
 
-function namedFunctionUsesPermissionKey(text, functionName, permissionKeyPattern) {
-  return extractNamedFunctionSources(text, functionName).some((source) =>
+// Inspect actual call arguments; guidance comments and diagnostic text are not grants.
+function hasMetadataUpdateCall(source) {
+  const executable = stripComments(source);
+  const code = maskJavaScriptNonCode(executable);
+  return calls(executable, identifier + '(?:\\.' + identifier + ')*').some(call => {
+    if (/^(?:console|logger|log)\.(?:trace|debug|info|warn|error|log)$/.test(call.name)
+      || /^(?:Error|TypeError|RangeError|SyntaxError|ReferenceError)$/.test(call.name)
+      || isDiagnosticCallArgument(code.slice(0, call.index))) return false;
+    return call.args.some(argument => /^(?:META_FIELD_UPDATE|(['"`])meta\.field\.update\1)$/.test(unwrap(argument)));
+  });
+}
+
+function namedFunctionUsesPermissionKey(sources, functionName, permissionKeyPattern) {
+  return sources.flatMap(source => extractNamedFunctionSources(source, functionName)).some((source) =>
     permissionKeyPattern.test(source),
   );
 }
@@ -540,113 +565,6 @@ function expressionContinuesAcrossLine(beforeLineBreak, afterLineBreak) {
   );
 }
 
-function maskJavaScriptNonCode(source) {
-  const output = [];
-  const contexts = [{ type: 'code', templateExpression: false, braceDepth: 0 }];
-
-  for (let index = 0; index < source.length; index += 1) {
-    const context = contexts.at(-1);
-    const character = source[index];
-    const nextCharacter = source[index + 1];
-
-    if (context.type === 'line-comment') {
-      if (character === '\n' || character === '\r') {
-        contexts.pop();
-        output.push(character);
-      } else {
-        output.push(' ');
-      }
-      continue;
-    }
-
-    if (context.type === 'block-comment') {
-      if (character === '*' && nextCharacter === '/') {
-        output.push(' ', ' ');
-        contexts.pop();
-        index += 1;
-      } else {
-        output.push(character === '\n' || character === '\r' ? character : ' ');
-      }
-      continue;
-    }
-
-    if (context.type === 'string') {
-      if (character === '\\') {
-        output.push(' ');
-        if (index + 1 < source.length) {
-          output.push(' ');
-          index += 1;
-        }
-      } else {
-        output.push(' ');
-        if (character === context.quote) contexts.pop();
-      }
-      continue;
-    }
-
-    if (context.type === 'template') {
-      if (character === '\\') {
-        output.push(' ');
-        if (index + 1 < source.length) {
-          output.push(' ');
-          index += 1;
-        }
-      } else if (character === '`') {
-        output.push(' ');
-        contexts.pop();
-      } else if (character === '$' && nextCharacter === '{') {
-        output.push('$', '{');
-        contexts.push({ type: 'code', templateExpression: true, braceDepth: 0 });
-        index += 1;
-      } else {
-        output.push(' ');
-      }
-      continue;
-    }
-
-    if (context.templateExpression && character === '}') {
-      if (context.braceDepth === 0) {
-        output.push('}');
-        contexts.pop();
-      } else {
-        context.braceDepth -= 1;
-        output.push(character);
-      }
-      continue;
-    }
-    if (context.templateExpression && character === '{') {
-      context.braceDepth += 1;
-      output.push(character);
-      continue;
-    }
-    if (character === '/' && nextCharacter === '/') {
-      output.push(' ', ' ');
-      contexts.push({ type: 'line-comment' });
-      index += 1;
-      continue;
-    }
-    if (character === '/' && nextCharacter === '*') {
-      output.push(' ', ' ');
-      contexts.push({ type: 'block-comment' });
-      index += 1;
-      continue;
-    }
-    if (character === "'" || character === '"') {
-      output.push('_');
-      contexts.push({ type: 'string', quote: character });
-      continue;
-    }
-    if (character === '`') {
-      output.push('_');
-      contexts.push({ type: 'template' });
-      continue;
-    }
-    output.push(character);
-  }
-
-  return output.join('');
-}
-
 function isArrowExpressionResult(prefix) {
   const arrowIndex = prefix.lastIndexOf('=>');
   if (arrowIndex < 0) return false;
@@ -698,31 +616,32 @@ function extractNamedFunctionSources(text, functionName) {
     'g',
   );
   const sources = [];
+  const code = maskJavaScriptNonCode(text);
 
-  for (const match of text.matchAll(declaration)) {
+  for (const match of code.matchAll(declaration)) {
     const start = match.index ?? 0;
-    const arrowIndex = text.indexOf('=>', start);
-    const braceIndex = text.indexOf('{', start);
+    const arrowIndex = code.indexOf('=>', start);
+    const braceIndex = code.indexOf('{', start);
     const isArrow = arrowIndex >= 0 && (braceIndex < 0 || arrowIndex < braceIndex);
 
     if (isArrow) {
       const expressionStart = arrowIndex + 2;
-      const firstCharacterIndex = text.slice(expressionStart).search(/\S/);
+      const firstCharacterIndex = code.slice(expressionStart).search(/\S/);
       const bodyStart = firstCharacterIndex < 0
         ? expressionStart
         : expressionStart + firstCharacterIndex;
-      if (text[bodyStart] === '{') {
-        const bodyEnd = findMatchingBraceEnd(text, bodyStart);
+      if (code[bodyStart] === '{') {
+        const bodyEnd = findMatchingBraceEnd(code, bodyStart);
         sources.push(text.slice(start, bodyEnd));
       } else {
-        const statementEnd = text.indexOf(';', bodyStart);
+        const statementEnd = code.indexOf(';', bodyStart);
         sources.push(text.slice(start, statementEnd < 0 ? text.length : statementEnd + 1));
       }
       continue;
     }
 
     if (braceIndex >= 0) {
-      sources.push(text.slice(start, findMatchingBraceEnd(text, braceIndex)));
+      sources.push(text.slice(start, findMatchingBraceEnd(code, braceIndex)));
     }
   }
 
@@ -819,43 +738,6 @@ function hasReadGateSignal(text) {
   );
 }
 
-function hasEntityNavigationGateSignal(text) {
-  const navigationComponent = String.raw`<\w*(?:Navigation|Sidebar|SideBar|Menu)\w*\b[^>]*>`;
-  const directMetaEntityGate = new RegExp(
-    `${navigationComponent.slice(0, -1)}[^>]*\\b(?:visible|enabled)\\s*=\\s*\\{[^}]*meta\\.entity\\.read[^}]*\\}[^>]*>`,
-    'is',
-  );
-  const entityGateVariable = String.raw`can(?:View|Read)(?:Entity|Object|Metadata)\w*`;
-  const gatedNavigation = new RegExp(
-    `${navigationComponent.slice(0, -1)}[^>]*\\b(?:visible|enabled)\\s*=\\s*\\{[^}]*${entityGateVariable}[^}]*\\}[^>]*>`,
-    'is',
-  );
-  const entityGateDefinition = new RegExp(
-    `\\b${entityGateVariable}\\s*=\\s*can(?:UseEntityOperation|Use.*Operation|Has.*Permission)\\([^;\\n]*(?:META_ENTITY_READ|meta\\.entity\\.read)`,
-    'is',
-  );
-  const navigationCollectionProp = String.raw`(?:objects|entities|items|menuItems|navigationItems)`;
-  const directFilteredNavigation = new RegExp(
-    `${navigationComponent.slice(0, -1)}[^>]*\\b${navigationCollectionProp}\\s*=\\s*\\{\\s*(?:objects|entities)\\s*\\.\\s*filter\\s*\\([\\s\\S]{0,400}?(?:META_ENTITY_READ|meta\\.entity\\.read)[\\s\\S]{0,400}?\\)\\s*\\}[^>]*>`,
-    'is',
-  );
-  const filteredEntityCollections = /\b(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:objects|entities)\s*\.\s*filter\s*\([\s\S]{0,400}?(?:META_ENTITY_READ|meta\.entity\.read)/gi;
-  const filteredCollectionFeedsNavigation = [...text.matchAll(filteredEntityCollections)]
-    .some((match) => {
-      const collectionName = match[1];
-      const escapedCollectionName = collectionName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const navigationConsumesCollection = new RegExp(
-        `${navigationComponent.slice(0, -1)}[^>]*\\b${navigationCollectionProp}\\s*=\\s*\\{\\s*${escapedCollectionName}\\s*\\}[^>]*>`,
-        'is',
-      );
-      return navigationConsumesCollection.test(text);
-    });
-
-  return directMetaEntityGate.test(text)
-    || (gatedNavigation.test(text) && entityGateDefinition.test(text))
-    || directFilteredNavigation.test(text)
-    || filteredCollectionFeedsNavigation;
-}
 
 function hasRecordReadGatedTableHeaders(text) {
   // Column authorization stays independent. Whole-content guards may unmount the table.
@@ -1131,6 +1013,7 @@ function readFile(file) {
 function printResult() {
   console.log(`make-app-permission audit: ${root}`);
   console.log(`sources: ${uiRuntimeFiles.length} UI/shared, ${serviceFiles.length} Service${configFile ? '; explicit config' : ''}`);
+  if (createSummary) console.log(createSummary);
   if (failures.length > 0) {
     console.log('status: FAIL');
     console.log('\nFailures:');

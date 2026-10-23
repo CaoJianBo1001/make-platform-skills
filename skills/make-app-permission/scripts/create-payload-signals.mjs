@@ -212,7 +212,9 @@ export function auditCreatePayloads(rawSources, boundaries = defaultCreateCalls)
     const source = stripComments(rawSource);
     return boundaries.flatMap(boundary=>calls(source,escapePattern(boundary.name)).flatMap(call=>{
       if (/\bfunction\s*$/.test(source.slice(0,call.index))) return [];
-      return [{fileIndex, name:boundary.name, index:call.index, proof:payloadProof(source,call.args[boundary.argument],call.index,boundary.property)}];
+      const argument = call.args[boundary.argument] ?? '';
+      const origin = singleIdentifier(unwrap(argument)) ? `identifier ${unwrap(argument)}` : argument ? 'expression' : 'missing argument';
+      return [{fileIndex, name:boundary.name, index:call.index, argument:boundary.argument, property:boundary.property, origin, proof:payloadProof(source,argument,call.index,boundary.property)}];
     }));
   });
   return {

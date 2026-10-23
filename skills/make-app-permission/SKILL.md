@@ -1,8 +1,8 @@
 ---
 name: make-app-permission
-description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
+description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, data.field.update, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.3.19
+  version: 0.3.21
 ---
 
 # make-app-permission
@@ -36,7 +36,8 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 - Keep create, visibility, and editability as separate field-set decisions:
   - create form: `createFields ∩ meta.field.read fieldAccess(creatable|readonly|editable|partialMask|fullMask|*)`;
   - list/detail/filter: `fields ∩ meta.field.read fieldAccess(readable states)`;
-  - edit/cell edit: visible `fields ∩ meta.field.update fieldAccess(editable|*)`.
+  - edit/cell edit: visible `fields ∩ data.field.update fieldAccess(editable|*)`.
+- Business data editing must retain `data.field.update` and matching data wildcards; never substitute or fall back to `meta.field.update`. UI controls, submit whitelists, and Service writes must apply the same current field rule and independent record-operation gate.
 - Keep entity, field and record authorization independent: `meta.entity.read` controls whether a Schema-present entity appears in navigation and can enter its object route; both the navigation and the dynamic route must reject the entity when this permission is absent. `meta.field.read` controls authorized columns/table headers when business content is rendered; `data.record.read` controls record/detail requests and values. Denied or revoked record read does not remove metadata-authorized navigation or rewrite field grants, but replaces the current record-reading business content as a whole with resource feedback. Unmount its title, toolbar, headers, data and dialogs, skip denied requests, and invalidate cached values and stale work. Do not preserve an empty table shell around the feedback.
 - Preserve every access state returned for a field. Current IAM responses may use arrays such as `["creatable", "readonly"]` or scalar strings; normalize a supported scalar string to a one-element array and authorize a permission dimension when any state is allowed for that dimension. Never coerce an array with `String(value)` or template interpolation.
 - Treat missing `createFields` as empty. Never fall back to `fields`, and do not consume `editableFields` for current edit behavior.
@@ -80,6 +81,14 @@ Also expose a thin host adapter and run the executable behavior contract:
 ```bash
 node skills/make-app-permission/scripts/permission-conformance-suite.mjs <host-adapter-module>
 ```
+
+Also verify UI submit and Service rejection through production boundaries:
+
+```bash
+node skills/make-app-permission/scripts/write-permission-conformance-suite.mjs <host-write-adapter-module>
+```
+
+Use the write harness contract in `references/testing-and-audit.md`; a passing pure model cannot replace this check.
 
 Also run the wire-response contract against a thin adapter to the production UI permission loader:
 

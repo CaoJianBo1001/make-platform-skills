@@ -14,7 +14,7 @@ Use this reference before choosing scope, resource, permissionKey, Schema collec
 
 ## Front-end App scope
 
-This skill only consumes the front-end App permission response. Request the exact App scope `make://<tenantId>/meta/app/<appKey>` and use only the rows needed for this App's `data.record.*`, `meta.entity.*`, `meta.field.*`, and supported wildcard decisions. Do not use tenant-root or unrelated permission results to authorize App routes, fields, buttons, or records.
+This skill only consumes the front-end App permission response. Request the exact App scope `make://<tenantId>/meta/app/<appKey>` and use only the rows needed for this App's `data.record.*`, `data.field.update`, `meta.entity.*`, `meta.field.*`, and supported wildcard decisions. Do not use tenant-root or unrelated permission results to authorize App routes, fields, buttons, or records.
 
 ## Permission-row selection
 
@@ -24,12 +24,12 @@ Validate the response envelope and derive the current App from `scope` first. Th
 | --- | --- | --- |
 | `*`, or a documented canonical/namespace-alias resource for the current tenant and App | Exact supported key, or a valid three-part wildcard matching at least one supported key | Select and validate strictly. |
 | `*`, or a documented canonical/namespace-alias resource for the current tenant and App | Structurally valid three-part key that matches no supported decision, such as `data.record.export`, `meta.field.custom`, `iam.permission.read`, `make.platform.admin`, or `meta.app.read` | Clearly unrelated: ignore without validating `effect` or `fieldAccess`; it must never grant or deny an App capability. |
-| `*`, or a documented canonical/namespace-alias resource for the current tenant and App | Non-string key, or malformed/truncated key in a supported namespace such as `data.record` or `meta.field` | Select and fail closed during strict validation. |
+| `*`, or a documented canonical/namespace-alias resource for the current tenant and App | Non-string key, or malformed/truncated key in a supported namespace such as `data.record`, `data.field`, or `meta.field` | Select and fail closed during strict validation. |
 | Tenant-root `make://<tenantId>`, or a structurally valid documented App resource for another tenant/App | Any key | Clearly unrelated: ignore without validating row fields. |
 | Missing, malformed, arbitrary-namespace, or wildcard-tenant/App resource | Any key | Unclassifiable: select and fail closed. |
 | Null, primitive, or array row | N/A | Unclassifiable: select and fail closed. |
 
-Supported decisions are `data.record.read`, `data.record.create`, `data.record.update`, `data.record.bulkUpdate`, `data.record.delete`, `meta.entity.read`, `meta.field.read`, and `meta.field.update`. A valid wildcard is supported only when it matches at least one item in that list; `*.*.*` is therefore supported. Unknown decisions are not future-proof grants: when a new business decision is introduced, update this list, its matching helper, and the conformance cases together.
+Supported decisions are `data.record.read`, `data.record.create`, `data.record.update`, `data.record.bulkUpdate`, `data.record.delete`, `meta.entity.read`, `meta.field.read`, and `data.field.update`. A valid wildcard is supported only when it matches at least one item in that list; `*.*.*` is therefore supported. Unknown decisions are not future-proof grants: when a new business decision is introduced, update this list, its matching helper, and the conformance cases together.
 
 This local response tolerance does not alter the upstream query: Service still requests only the exact App scope and no platform permission filter. IAM should correct surplus response rows separately.
 
@@ -93,7 +93,7 @@ Creation, visibility, and editability are separate field-set decisions:
 | --- | --- | --- | --- |
 | Create form | `createFields` | `meta.field.read` | `creatable`, `readonly`, `editable`, `partialMask`, `fullMask`, `*` |
 | List/detail/filter | `fields` | `meta.field.read` | `readonly`, `editable`, `partialMask`, `fullMask`, `*` |
-| Edit/cell edit | already-visible `fields` | `meta.field.update` | `editable`, `*` |
+| Edit/cell edit | already-visible `fields` | `data.field.update` | `editable`, `*` |
 
 Therefore:
 
@@ -132,7 +132,7 @@ Schema membership never replaces principal permission checks, and principal perm
 
 ## Matching semantics
 
-- Match exact permission keys, `data.record.*`, `meta.field.*`, `*.*.*`, and valid three-part wildcards.
+- Match exact permission keys, `data.record.*`, `data.field.*`, `data.*.*`, `meta.field.*`, `*.*.*`, and valid three-part wildcards.
 - Validate the envelope before selecting rows: the current scope must be an exact `make://<tenantId>/meta/app/<appKey>` App scope, and an extra `appResource` value must exactly equal that scope; explicit `null`, blank, non-string-equivalent, or conflicting values fail closed. Apply the permission-row selection table before strict row validation. Every selected or unclassifiable row must have exactly three non-empty `permissionKey` segments and an `allow` or `deny` effect; one malformed row poisons the whole access snapshot. Never drop a malformed selected row while retaining sibling allows.
 - Treat requested entity and field keys as concrete string identifiers, not policy patterns. Non-strings (including `null`, numbers, arrays, and objects), blank/whitespace strings, and the literal `*` must fail closed before resource or field wildcard matching; `*` is valid only inside permission statements.
 - A selected row may use only the documented permission resource families: global `*`, or the current tenant/App with namespace `meta` or IAM alias `*`, optionally followed by an exact or wildcard entity. Do not treat arbitrary namespaces or wildcard tenant/App segments as App permission. A resource that cannot be classified as clearly unrelated must remain selected and fail closed rather than being guessed away.
@@ -142,7 +142,7 @@ Schema membership never replaces principal permission checks, and principal perm
 - Treat empty `fieldAccess` on the most-specific allow as unrestricted for that permissionKey:
   - all `createFields` while evaluating `meta.field.read` for creation;
   - all `fields` while evaluating `meta.field.read` for display;
-  - all already-visible `fields` for `meta.field.update`.
+  - all already-visible `fields` for `data.field.update`.
 - Distinguish an omitted or empty `fieldAccess` from a malformed value. An omitted property or empty object is the intentional unrestricted form; explicit `null`, a non-object, an array, a blank field key, an empty state list, an unknown state, or a state list containing non-strings is invalid IAM data and the access snapshot must fail closed instead of being normalized to `{}`. Null/primitive envelopes or rows and non-array `permissions` must return denied access without throwing.
 
 Interpret access states inside the matched permissionKey. Do not treat a value such as `*` as a global field grant detached from its create/read/update dimension.
@@ -170,3 +170,11 @@ In an expanded IAM runtime response, a wildcard field baseline may coexist with 
 - Hiding create/edit because no writable field exists.
 - Filtering visible controls but submitting the complete form store.
 - Refreshing permissions without invalidating permission-trimmed Schema.
+
+## 业务数据编辑统一规则
+
+业务字段更新只接受 `data.field.update` 或匹配它的合法三段通配权限（如 `data.field.*`、`data.*.*`），不得使用 `meta.field.update` 替代或兜底。解析器必须保留这些数据字段权限；未知元数据更新权限不能授予业务写入。
+
+前端控件、提交白名单和 Service 更新校验使用同一合同：最新可见 Schema `fields` ∩ `meta.field.read` 可读字段 ∩ `data.field.update(editable|*)` ∩ 支持编辑的字段。记录操作权限另行检查：普通编辑为 `data.record.update`，批量编辑为 `data.record.bulkUpdate`。字段更新许可不能代替记录操作许可，记录操作许可也不能授权字段。
+
+数据字段权限的字段范围、最具体资源优先级、命名字段覆盖、hidden 优先及显式 deny 均沿用上述匹配合同；readonly 不授予编辑。提交前重新计算最新授权，撤权或 Schema 改变时同步清理编辑状态和旧白名单。Service 不信任前端已过滤的结果，对每个写入字段再次验证并拒绝越权写入；禁止用管理员或扩大为 `*.*.*` 绕过。

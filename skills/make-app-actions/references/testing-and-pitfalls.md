@@ -32,6 +32,8 @@ Action permissions:
 - independent combinations of update/delete/bulkUpdate
 - bulkUpdate without update still shows batch edit for multiple selection
 - batch edit is hidden when `batchEditableFields.length === 0`
+- approval-restricted targets have no single edit button/menu item; known restricted records in the current selection hide batch edit without clearing selection or hiding independently allowed actions
+- use the [approval edit matrix](../../make-app-approval/references/verification.md#普通编辑禁编矩阵) for stale edit sessions, cell commits and the task-action exception; ordinary row-level IAM denial still follows the existing visible-action/precheck feedback path
 - no allowed actions renders scheme two
 - principal cache is reused on click/submit; identity/tenant/explicit refresh can
   replace it
@@ -110,7 +112,7 @@ UI:
   hide the entire bottom action bar, and never replace detail actions with card actions
 - no-action bar, close, selected count, and row-alert cleanup
 - the default modal title is exactly `批量编辑`
-- batch field list enforces meta.field.update and package capability
+- batch field list enforces data.field.update and package capability
 - Select, Input, DatePicker, User, and Department controls submit normalized values
 - for FieldSelect and each popup value control, open the dropdown/picker and assert
   its popup DOM is mounted outside the modal panel/body or other overflow clipping

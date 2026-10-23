@@ -142,7 +142,7 @@ editable = editableFieldKeysForEntity(access, entityKey, visible)
 - Mark visible non-editable form fields readonly/disabled.
 - Do not attach cell editors or required validation to non-editable fields.
 - Build update payloads from latest visible/editable allowlists.
-- Ignore backend `editableFields`; editing remains “visible first, then `meta.field.update`”.
+- Ignore backend `editableFields`; editing remains “visible first, then `data.field.update`”.
 - A create revoke closes create only. An update revoke closes edit only. A `data.record.read` revoke unmounts the current record-reading business content and its dialogs but keeps entity-authorized navigation; it does not revoke independently authorized create-only routes. A `meta.entity.read` revoke also removes the object navigation entry. Operation-only denial keeps allowed drafts; it must not masquerade as whole-resource denial.
 
 ## Special fields and Lookup
@@ -183,7 +183,7 @@ Fail closed when either permission or Schema refresh fails.
 
 - Ordinary create form reads `fields` or `editableFields` instead of `createFields`; approval create form ignores the authorized start-config fields.
 - Missing ordinary `createFields` falls back to visible fields, or missing approval start-config falls back to ordinary fields.
-- Ordinary create fields depend on `data.record.create` or `meta.field.update`, use `meta.field.create`, omit `createFields`, or treat `creatable` as readable instead of using `meta.field.read` with the documented create-state set; approval create reapplies that ordinary intersection.
+- Ordinary create fields depend on `data.record.create` or `data.field.update`, use `meta.field.create`, omit `createFields`, or treat `creatable` as readable instead of using `meta.field.read` with the documented create-state set; approval create reapplies that ordinary intersection.
 - Edit consumes `editableFields` or skips visibility.
 - Entries are hidden by writable-field count.
 - Submit expands raw form values or relation values without a latest allowlist.
@@ -195,3 +195,5 @@ Fail closed when either permission or Schema refresh fails.
 ## Scoped route feedback
 
 Read `scoped-route-feedback.md` for App guard -> shell -> object/fixed-route guard composition. React uses a shared host adapter for `MakeAppPermissionNotice` from `@qfei-design/make-app-observability/react`; read `makeui/references/permission-feedback.md` for verified exports/CSS, visual variants and the package release gate. Scope, retry state, allowed return targets and protected-request invalidation remain host-owned; the component cannot authorize or refresh data by itself. Administrator contacts must work without a business request: follow `make-app-auth/references/access-help.md`. If embedded contacts are absent and the installed SDK supports it, use `auth.getAppAdministrators()` independently; a supplied empty list remains authoritative. For a local denial, do not fetch data merely to obtain a 403; retain authorized navigation and replace the business content. Record-read-only denial remains distinct from metadata/App entry denial. Existing non-React host helpers remain compatible without a forced framework migration.
+
+业务字段编辑遵循 [统一规则](permission-boundaries.md#业务数据编辑统一规则)：保留并匹配 `data.field.update`、`data.field.*`、`data.*.*`；前端编辑、提交字段过滤和 Service 写入验证使用同一规则。禁止 `meta.field.update` 兜底。回归覆盖精确授权、数据通配、仅元数据更新、readonly、显式拒绝及撤权后的 UI 与 Service 拒写。

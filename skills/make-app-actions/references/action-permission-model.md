@@ -28,29 +28,30 @@ data.record.bulkUpdate  -> batch edit for two or more records
 These three keys are independent; they must not be coupled or inferred from one
 another.
 
-Having `data.record.bulkUpdate` without `data.record.update` must still show batch
-edit for multiple selection. Having `data.record.update` without
+Having `data.record.bulkUpdate` without `data.record.update` must still allow batch
+edit for multiple selection, subject to the field and approval visibility gates below. Having `data.record.update` without
 `data.record.bulkUpdate` must not expose batch edit. Delete never implies either
 update permission.
 
-Use `meta.field.read` for field visibility and `meta.field.update` for field
+Use `meta.field.read` for field visibility and `data.field.update` for field
 editability. Do not use field counts to infer record-operation permission.
 
 ## Action state
 
 Build package action definitions from the cached principal result:
 
-- `visible` represents the current App/entity operation permission.
+- `visible` combines the current App/entity operation permission with the field and approval visibility gates below.
 - `scope: "single"` applies to edit/delete.
 - `scope: "multiple"` applies to batch edit.
 - `canOperateRecord` may consume row operation metadata already loaded with a
   record for immediate local validation.
 
-Batch-edit visibility requires both the independent operation permission and at
-least one field after permission/capability filtering:
+Batch-edit visibility requires the independent operation permission, at least
+one field after permission/capability filtering, and no known approval-restricted
+record within the current selection:
 
 ```ts
-visible: canBulkUpdate && batchEditableFields.length > 0
+visible: canBulkUpdate && batchEditableFields.length > 0 && !hasSelectedApprovalRestriction
 ```
 
 When no batch-editable field remains, hide the batch-edit action before precheck;
@@ -63,9 +64,18 @@ Pass all definitions to `resolveRecordSelectionActionState`:
 - no available selected action: use scheme two, retaining `已选 n/total`, lock
   icon, `暂无可用的操作`, and close
 
-Do not hide an action merely because only some loaded selected rows fail local
-row checks. Keep the App-level action visible and call
-`validateRecordSelectionAction` on click.
+For ordinary row-level IAM denial, do not hide an action merely because some
+loaded selected rows fail local row checks. Keep the App-level action visible
+and call `validateRecordSelectionAction` on click.
+
+Approval write restrictions are an explicit exception: follow the shared
+[approval restriction](../../make-app-approval/references/status-display.md#锁与范围)
+to hide single edit for a restricted target and batch edit when any known
+selected record is restricted. Apply this to buttons and menu items, not just
+their disabled state; keep `canOperateRecord`, precheck and final write checks
+as well. Do not infer safety for unloaded selected records or silently drop
+restricted records from a bulk mutation. Other allowed actions and ordinary
+IAM denial feedback remain independent; no actions still uses scheme two.
 
 ## Denial feedback
 

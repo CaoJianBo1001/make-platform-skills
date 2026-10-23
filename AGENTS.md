@@ -17,4 +17,8 @@ Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建�
 
 2026-10-20：建立 main/beta 发布约定，README 补充配置、覆盖安装和 npx 分支来源。
 
+2026-10-23：修正业务字段编辑权限为 data.field.update，同步权限审计与批量编辑契约，增加 UI 提交与 Service 拒写验证。
+
+2026-10-23：将审批导航与业务字段权限修复合并至 canvas/skill，保留分支现有 CLI 指导并执行合并验证。
+
 [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
