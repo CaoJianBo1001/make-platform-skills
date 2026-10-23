@@ -1,6 +1,6 @@
 # 审批新建与首次发起合同
 
-适用于业务对象的新建表单及首次发起编排。普通已有记录编辑继续使用宿主 IAM 和更新链路；任务节点编辑、退回后的继续办理不属于本文件。
+适用于业务对象的新建表单及首次发起编排。普通已有记录编辑继续使用宿主 IAM 和更新链路；任务节点编辑、退回后继续提交见 [任务详情](task-detail.md)，未提交记录恢复和撤回见 [记录生命周期](record-lifecycle.md)。
 
 ## 运行时分支
 
@@ -16,7 +16,7 @@
 
 ## 字段来源、展示和提交
 
-启动配置成功模型：
+Service 归一化后的启动配置成功模型（不要求 Workflow 原始响应已包含完整字段对象）：
 
 ```ts
 type BpmStartConfig<FieldSchema> = {
@@ -32,11 +32,12 @@ type BpmStartConfig<FieldSchema> = {
 };
 ```
 
-- `field` 包含完整字段定义，保留稳定 key、名称、类型、必填、校验、选项、精度、关联和文件属性。按返回字段顺序复用宿主标准字段渲染器，不只支持文本或示例业务的几种类型。
+- 当前 Workflow 可返回 `{ field: "字段key", readable, editable }`。存在可见的字符串 field 时，Service 对当前对象调用一次 Meta `/meta/v1/entity` + `MakeService.GetResource`，正文 `{ appKey: 部署配置, key: entityKey }`，按 key 从 `data.properties.fields` 补定义；不从 Schema fields/createFields 补齐。完整字段对象格式继续兼容，已含完整定义时不额外请求实体；隐藏的 key 不要求查到定义，也不能因 Entity 含更多字段扩大授权。
+- 交给 UI 的 `field` 包含完整字段定义，保留稳定 key、名称、类型、必填、校验、选项、精度、关联和文件属性。按启动配置顺序返回可见字段，复用宿主标准字段渲染器，不只支持文本或示例业务的几种类型。响应定位、类型或可见字段定义不完整时停止，保留原错误，不回退普通字段。
 - `readable: true` 才展示；可见且 `editable: true`、宿主支持该字段的新建写入时才提供输入和提交能力。只读用详情展示，隐藏字段不注册、不提交；保存前按最新授权清理失效值。
 - 审批新建的可见/可写字段**不与**普通 `createFields`、`fields` 或 IAM 字段集合求交。即使普通新建不包含某字段，只要启动配置授权且类型支持，也应在审批新建中正确展示和保存。不要将审批字段写回全局 Schema/权限缓存来放宽其他页面。
 - 应用访问、对象可见与 `data.record.create` 仍需校验；关联候选目标权限、平台数据约束和最终后端写入校验继续保留。审批字段授权不等于通用 CRUD 授权。
-- UI 与 Service 必须选择同一场景：Service 重新取得权威 Schema/启动配置，按审批可写白名单验证普通值、关联值和附件，不能相信 UI 传来的 `approvalMode`、字段授权或流程 key。
+- UI 与 Service 必须选择同一场景：Service 用权威 Schema 判定绑定，再读取启动配置并按需用 Entity 补字段定义，按审批可写白名单验证普通值、关联值和附件。Schema 只承担绑定及普通权限场景，不能作为审批基础字段来源；不能相信 UI 传来的 `approvalMode`、字段授权或流程 key。
 - 复用完整字段类型注册表。ID 的准确类型是 `Make.Field.ID`，系统 ID、系统流程状态和锁不成为可写输入；未知类型或缺失关键元数据明确报错，不能当文本、静默丢字段或伪造定义。
 - 适配器可能取得标准 Schema 字段，也可能取得 Workflow 的 `fieldKey/fieldName/makeFieldType` 及类型专用属性。仅在 Service 边界依据已确认合同统一成宿主字段类型；保留原始 `selection.fieldSelections` 与规范化 `properties.options` 等选项及属性，不从中文名称猜类型。非法权限布尔值、`editable && !readable`、重复 key 或缺少类型应报告配置错误。
 - 已提供的 `bpm-start-config` 样例中，字段定义位于 `fields[].field`；一份样例外层是 `data.fields`，另一份直接从 `fields` 开始。以宿主 Service 已确认的响应合同解析外层，不把任一样例的包装层假定为全部应用的固定协议。两份样例的 `type` 都是 `Make.Field.*` 字符串，`makeFieldType` 是 `NUMBER` 等枚举字符串。对此端点，优先采用已识别的 `Make.Field.*` 作为宿主标准类型，再依据该端点已确认的映射核对 `makeFieldType` 的一致性；映射不明或两者冲突时报告合同错误，不让其中一个值静默遮蔽另一个。以下为实际响应的精简摘录，省略了业务标识和无关属性：
@@ -61,11 +62,14 @@ type BpmStartConfig<FieldSchema> = {
 
 复用宿主控件、值序列化和 Service 创建编排，审批改变的是源字段授权，不另造业务写入格式。
 
-- File：使用已确认的不依赖 recordID 的预上传合同，完成上传后将后端认可的附件数组随创建数据保存。只有依赖已保存记录的旧上传接口时，先补合法的预上传合同，不为了上传先建一条空记录。保存或发起失败后复用已确认上传结果。
+- File：使用已确认的不依赖 recordID 的预上传合同，完成上传后将后端认可的附件数组随创建数据保存。只有依赖已保存记录的旧上传接口时，先补合法的预上传合同，不为了上传先建一条空记录。支持原始 `File[]` 与已上传元数据同时回显；不得只按已有附件对象解析而丢掉新选文件。保存或发起失败后复用已确认上传结果，保留追加、移除、上限和预览行为。
 - Lookup：候选与目标读权限沿用既有链路；提交稳定的字符串 ID 或 ID 数组，沿用宿主 `relations` 输入，Service 按当前审批源字段授权、基数和目标身份检查后构造后端关系数据。UI 不直接传原始 `qfei_relation`，不能为了审批绕过目标对象授权。
+- 多个独立关系指向同一目标实体时，创建载荷的 `qfei_relation: [{ entityKey, id }]` 不能凭字段名区分关系；按 [Service 关系合同](../../make-app-service/references/service-api-contracts.md#lookup-relation-updates) 核对明确的后台映射。任务 recordPatch 可按 fieldKey 区分，不代表首次创建也支持同样的关系组合；没有已确认映射时不猜测或合并两次选择。
 - 日期、数值、选项、人员、部门等使用业务字段原有格式。不要仅为审批引入第二套控件、精度或序列化规则。
 
 ## 保存与首次发起
+
+桌面/平板按 [审批头部布局](../../makeui/references/drawer-layout.md#approval-header-placement) 放置按钮：左侧为全屏、模式标记与标题，右侧按“保存 → 保存并提交 → 关闭 X”排列，仅在符合下述条件时显示双按钮。保存成功后的恢复状态复用该操作区，不增加底部操作栏；按钮文案与可用性继续按本合同处理。
 
 提供两个独立意图，按钮统一为“保存”“保存并提交”，执行顺序为先保存后发起。沿用宿主现有操作位置，桌面/手机一致；不将仅保存偷偷改为自动审批，也不根据“生成了我的审批导航”就展示提交按钮。
 
@@ -94,20 +98,20 @@ HTTP 状态与业务错误码必须按已确认的 Workflow 接口协议共同�
 
 发起前确认配置停用时刷新能力，仅保留当前仍有权的普通保存；若发起时发生配置冲突，报告真实错误、保留已保存记录并刷新，不自动改用另一流程。
 
-已有记录的保护边界：首次发起只能用于未提交且未锁定、对象仍有有效 key 的记录；当前宿主以缺失/null 或 `UNSUBMITTED` 识别未提交，其他非空状态不得当作未提交。若宿主已支持编辑后首次发起，更新原记录后使用原 ID；不切换到审批新建字段，不重新创建。该兼容边界不要求本期新增普通编辑按钮或任务继续提交功能。
+已有记录的保护边界：首次发起只用于明确 `UNSUBMITTED`、未锁定且对象仍有有效 key 的记录；缺失/null/空状态不代表按审批配置创建，不能当作可发起。若宿主已支持编辑后首次发起，更新原记录后使用原 ID；不切换到审批新建字段，不重新创建。RETURNING 与终态规则见 [记录生命周期](record-lifecycle.md)。
 
 ## UI → Service → Workflow
 
 使用 [make-app-service](../../make-app-service/SKILL.md) 的现有请求、登录上下文、Trace、取消、错误及配置链路。浏览器只访问宿主 Service，不直连 Workflow，不接受浏览器覆盖部署 `appKey`。
 
-以下是可复用的宿主接口形状；优先使用宿主已经声明的等价接口，并同步 `apps/docs/api.md`，不要并排新建同义路由：
+以下是可复用的宿主接口形状；优先使用宿主已经声明的等价接口，并同步 `apps/docs/api.md`，不要并排新建同义路由。任务、撤回与历史的完整映射见 [接口合同](workflow-api.md)：
 
 | 宿主接口 | 用途 |
 | --- | --- |
-| `GET /api/make/app/entities/:entityKey/bpm-start-config` | 新建启动字段；不传已有记录 ID 冒充新建 |
-| `POST /api/make/app/entities/:entityKey/records` | 复用已有创建编排，按运行时选择普通/审批字段授权 |
-| `POST /api/make/app/entities/:entityKey/bpm-files/:fieldKey` | 新建审批附件预上传，multipart 使用宿主已确认合同 |
-| `POST /api/make/app/entities/:entityKey/records/:recordID/bpm-start`，body `{}` | 对已保存记录首次发起 |
+| `GET /api/entities/:entityKey/bpm-start-config` | 新建启动字段；不传已有记录 ID 冒充新建 |
+| `POST /api/entities/:entityKey/records` | 复用已有创建编排，按运行时选择普通/审批字段授权 |
+| `POST /api/entities/:entityKey/bpm-files/:fieldKey` | 新建审批附件预上传，multipart 使用宿主已确认合同 |
+| `POST /api/entities/:entityKey/records/:recordID/bpm-start`，body `{}` | 对已保存记录首次发起 |
 
 Workflow 均为 `POST`，由 Service 设置 `X-Make-Target`：
 

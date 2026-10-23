@@ -134,6 +134,123 @@ try {
 
   assert.match(runAudit(goodRoot), /status: PASS/);
 
+  // Relocating production code and renaming a helper must not change its contract.
+  const customRoot = createFixture('custom-layout', goodFiles);
+  fs.mkdirSync(path.join(customRoot, 'clients'), {recursive:true});
+  fs.mkdirSync(path.join(customRoot, 'services'), {recursive:true});
+  fs.renameSync(path.join(customRoot, 'apps/ui/src'), path.join(customRoot, 'clients/browser'));
+  fs.renameSync(path.join(customRoot, 'apps/service/src'), path.join(customRoot, 'services/api'));
+  const modelPath = path.join(customRoot, 'clients/browser/features/permissions/principalPermissionModel.js');
+  write(path.join(customRoot, 'packages/access-core/index.js'), fs.readFileSync(modelPath, 'utf8').replaceAll('canCreateEntityField', 'canCreateField'));
+  fs.rmSync(modelPath);
+  write(path.join(customRoot, 'audit.json'), JSON.stringify({
+    uiRoots: ['clients/browser'], serviceRoots: ['services/api'], sharedRoots: ['packages/access-core'],
+    symbols: {canCreateEntityField: 'canCreateField'},
+  }));
+  assert.match(runAudit(customRoot, {args:['--config', 'audit.json']}), /status: PASS/);
+  const customModel = path.join(customRoot, 'packages/access-core/index.js');
+  write(customModel, fs.readFileSync(customModel, 'utf8').replace('fieldKey, META_FIELD_READ); }', 'fieldKey, META_FIELD_UPDATE); }'));
+  assert.match(runAudit(customRoot, {args:['--config', 'audit.json'], expectFailure:true}), /create_field_permission_uses_wrong_field_dimension/);
+  write(path.join(customRoot, 'bad.json'), JSON.stringify({sharedRoots:['missing']}));
+  assert.match(runAudit(customRoot, {args:['--config', 'bad.json'], expectFailure:true}), /Configured source directory/);
+  write(path.join(customRoot, 'unknown.json'), JSON.stringify({skipChecks:['create_gate_missing']}));
+  assert.match(runAudit(customRoot, {args:['--config', 'unknown.json'], expectFailure:true}), /Unknown audit config/);
+
+  const callbackRoot = createFixture('create-callback-filter', {
+    ...goodFiles, page: goodFiles.page + '\nfunction prepare(values) { return {data: values, relations: {}}; }',
+  });
+  assert.match(runAudit(callbackRoot), /status: PASS/, 'an intermediate DTO is not a raw create mutation');
+
+  const createCallConfig = {createCalls:[{name:'createRecordForApproval',argument:1}]};
+  const configuredCreate = (name,statement) => {
+    const fixture = createFixture(name,{...goodFiles,page:goodFiles.page.replace('return createRecord(buildCreatePayload(values));',statement)});
+    write(path.join(fixture,'audit.json'),JSON.stringify(createCallConfig));
+    return fixture;
+  };
+  const validCreate = configuredCreate('configured-create-payload','const payload = buildCreatePayload(values); return createRecordForApproval(entityKey,payload,relations,key);');
+  assert.match(runAudit(validCreate,{args:['--config','audit.json']}),/status: PASS/);
+  write(path.join(goodRoot,'missing-call.json'),JSON.stringify({createCalls:[{name:'missingCreateBoundary',argument:1}]}));
+  assert.match(runAudit(goodRoot,{args:['--config','missing-call.json'],expectFailure:true}),/configured_create_call_not_found/);
+  assert.match(runAudit(validCreate,{expectFailure:true}),/create_payload_filter_not_obvious/,'an unconfigured boundary cannot borrow a global filter signal');
+  for (const [name,statement] of [
+    ['unused-filter','const payload = buildCreatePayload(values); return createRecordForApproval(entityKey,values,relations,key);'],
+    ['wrong-argument','const payload = buildCreatePayload(values); return createRecordForApproval(payload,values,relations,key);'],
+    ['same-name-other-function','function other() { const payload = buildCreatePayload(values); } return createRecordForApproval(entityKey,payload,relations,key);'],
+    ['literal-filter','const message = "const payload = buildCreatePayload(values)"; return createRecordForApproval(entityKey,values,relations,key);'],
+  ]) {
+    const fixture = configuredCreate(name,statement);
+    assert.match(runAudit(fixture,{args:['--config','audit.json'],expectFailure:true}),/create_payload_filter_not_obvious/);
+  }
+  const conditionalCreate = configuredCreate('conditional-create-payload','const payload = latest.config ? values : buildCreatePayload(values); return createRecordForApproval(entityKey,payload,relations,key);');
+  const reviewOutput = runAudit(conditionalCreate,{args:['--config','audit.json'],expectFailure:true});
+  assert.match(reviewOutput,/status: REVIEW_REQUIRED/);
+  assert.doesNotMatch(reviewOutput,/status: PASS/);
+  assert.match(reviewOutput,/create_payload_branch_requires_review/);
+  for (const value of [[],[{name:'createRecordForApproval',argument:-1}],[{name:'createRecordForApproval',argument:1.5}],[{name:'createRecordForApproval',argument:1,skip:true}]]) {
+    write(path.join(validCreate,'invalid-create.json'),JSON.stringify({createCalls:value}));
+    assert.match(runAudit(validCreate,{args:['--config','invalid-create.json'],expectFailure:true}),/Invalid createCalls/);
+  }
+
+  for (const [name, call] of [
+    ['inline-raw-create', 'return createRecord({data: values});'],
+    ['alias-raw-create', 'const payload = {data: values}; return createRecord(payload);'],
+  ]) {
+    const fixture = createFixture(name, {...goodFiles, page: goodFiles.page.replace('return createRecord(buildCreatePayload(values));',call)});
+    assert.match(runAudit(fixture,{expectFailure:true}), /create_payload_filter_not_obvious/);
+  }
+  const excludedRoot = createFixture('configured-test-only-runtime', {...goodFiles,permissionModel:''});
+  write(path.join(excludedRoot,'packages/access-core/model.test.js'),goodFiles.permissionModel);
+  write(path.join(excludedRoot,'audit.json'),JSON.stringify({sharedRoots:['packages/access-core']}));
+  assert.match(runAudit(excludedRoot,{args:['--config','audit.json'],expectFailure:true}),/create_field_permission_key_missing/);
+
+  const unrelatedContentRoot = createFixture('unrelated-content-guard', {
+    ...goodFiles,
+    router: goodFiles.router.replace('if (!canViewEntity) return <Result status="403" title="forbidden" />;', ''),
+    page: goodFiles.page + `
+      function OtherPage() {
+        const allowed = canUseEntityOperation(access, otherEntity, "meta.entity.read");
+        if (!allowed) return <AppShell resourceDenied />;
+      }
+    `,
+  });
+  assert.match(runAudit(unrelatedContentRoot,{expectFailure:true}),/entity_route_not_gated/);
+
+  const iamPathCases = [
+    { name: 'single-quoted-api-iam', expression: "new URL('/api/make/iam/v1/principal/permission', gatewayOrigin)" },
+    { name: 'double-quoted-api-iam', expression: 'new URL("/api/make/iam/v1/principal/permission", gatewayOrigin)' },
+    { name: 'template-api-iam', expression: '`${gatewayOrigin}/api/make/iam/v1/principal/permission`' },
+    { name: 'absolute-api-iam', expression: "'http://gateway.invalid/api/make/iam/v1/principal/permission'" },
+    { name: 'api-host-correct-iam', expression: "'http://api/api/make/iam/v1/principal/permission'" },
+    { name: 'query-api-iam', expression: "new URL('/api/make/iam/v1/principal/permission?diagnostic=1', gatewayOrigin)" },
+    { name: 'literal-wrong-iam', expression: "new URL('/make/iam/v1/principal/permission', gatewayOrigin)", expectFailure: true },
+    { name: 'template-wrong-iam', expression: '`${gatewayOrigin}/make/iam/v1/principal/permission`', expectFailure: true },
+    { name: 'absolute-wrong-iam', expression: "'http://gateway.invalid/make/iam/v1/principal/permission'", expectFailure: true },
+    { name: 'api-host-wrong-iam', expression: "'http://api/make/iam/v1/principal/permission'", expectFailure: true },
+    { name: 'correct-before-wrong-iam', expression: "new URL('/api/make/iam/v1/principal/permission', gatewayOrigin)",
+      after: "export function legacyPrincipalPermission() { return fetch(new URL('/make/iam/v1/principal/permission', gatewayOrigin)); }", expectFailure: true },
+    { name: 'wrong-before-correct-iam', expression: "new URL('/api/make/iam/v1/principal/permission', gatewayOrigin)",
+      before: "export function legacyPrincipalPermission() { return fetch(new URL('/make/iam/v1/principal/permission', gatewayOrigin)); }", expectFailure: true },
+  ];
+  for (const fixture of iamPathCases) {
+    const service = goodFiles.service.replace(
+      "'http://make-gateway.make-dev' + makeIamGatewayScope + PRINCIPAL_PERMISSION_PATH",
+      () => fixture.expression,
+    );
+    assert.notEqual(service, goodFiles.service, `${fixture.name} must change the actual IAM call`);
+    const fixtureRoot = createFixture(fixture.name, {
+      ...goodFiles,
+      service: `const gatewayOrigin = 'http://gateway.invalid';\n${fixture.before ?? ''}\n${service}\n${fixture.after ?? ''}`,
+    });
+    const output = runAudit(fixtureRoot, { expectFailure: fixture.expectFailure ?? false });
+    if (fixture.expectFailure) {
+      assert.match(output, /iam_upstream_wrong_make_scope/, `${fixture.name} must reject the wrong IAM scope`);
+    } else {
+      assert.match(output, /status: PASS/, `${fixture.name} must accept the correct IAM scope`);
+      assert.doesNotMatch(output, /iam_upstream_wrong_make_scope/);
+    }
+  }
+  console.log(`IAM upstream path regressions: PASS (${iamPathCases.length} cases)`);
+
   const platformResponseFilterRoot = createFixture('platform-response-filter', {
     app: goodFiles.app,
     permissionModel: goodFiles.permissionModel,
@@ -387,33 +504,39 @@ try {
     /table_headers_tied_to_record_read/,
   );
 
-  const tableHeadersHiddenByEarlyReturnRoot = createFixture('table-headers-hidden-by-early-return', {
-    app: goodFiles.app,
-    permissionModel: goodFiles.permissionModel,
-    router: goodFiles.router,
-    page: `${goodFiles.page}\nif (!canReadRecord) return <Empty />;`,
-    api: goodFiles.api,
-    service: goodFiles.service,
-  });
-  assert.match(
-    runAudit(tableHeadersHiddenByEarlyReturnRoot, { expectFailure: true }),
-    /table_headers_tied_to_record_read/,
-  );
-
-  const tableHeadersHiddenByTernaryRoot = createFixture('table-headers-hidden-by-ternary', {
+  const resourceContentReplacedByEarlyReturnRoot = createFixture('resource-content-replaced-by-early-return', {
     app: goodFiles.app,
     permissionModel: goodFiles.permissionModel,
     router: goodFiles.router,
     page: goodFiles.page.replace(
-      '<MasterDataCanvasTable columns={visibleFields} rows={tableRows} onDataLoad={canReadRecord ? recordState.loadPage : undefined} onCellEditCommit={canUpdateRecord ? commit : undefined} />',
-      '{canReadRecord ? <MasterDataCanvasTable columns={visibleFields} rows={tableRows} onDataLoad={recordState.loadPage} onCellEditCommit={canUpdateRecord ? commit : undefined} /> : <Empty />}',
+      '<MasterDataToolbar',
+      'if (!canReadRecord) return <Forbidden variant="inline" scope="resource" />;\n<MasterDataToolbar',
     ),
     api: goodFiles.api,
     service: goodFiles.service,
   });
   assert.match(
-    runAudit(tableHeadersHiddenByTernaryRoot, { expectFailure: true }),
-    /table_headers_tied_to_record_read/,
+    runAudit(resourceContentReplacedByEarlyReturnRoot),
+    /status: PASS/,
+    'a resource guard may unmount the entire business content before its toolbar/table/detail',
+  );
+
+  const resourceContentReplacedByTernaryRoot = createFixture('resource-content-replaced-by-ternary', {
+    app: goodFiles.app,
+    permissionModel: goodFiles.permissionModel,
+    router: goodFiles.router,
+    page: `function OrderTablePage() { ${goodFiles.page} }
+      function ObjectContent() {
+        const canReadRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_READ);
+        return canReadRecord ? <OrderTablePage /> : <Forbidden variant="inline" scope="resource" />;
+      }`,
+    api: goodFiles.api,
+    service: goodFiles.service,
+  });
+  assert.match(
+    runAudit(resourceContentReplacedByTernaryRoot),
+    /status: PASS/,
+    'replacing the whole content component is not a column-authorization error',
   );
 
   const tableHeadersHiddenByDerivedColumnsRoot = createFixture('table-headers-hidden-by-derived-columns', {
@@ -1338,9 +1461,9 @@ function write(file, text) {
   fs.writeFileSync(file, text, 'utf8');
 }
 
-function runAudit(root, { expectFailure = false } = {}) {
+function runAudit(root, { expectFailure = false, args = [] } = {}) {
   try {
-    const output = execFileSync(process.execPath, [auditScript, root], { encoding: 'utf8' });
+    const output = execFileSync(process.execPath, [auditScript, root, ...args], { encoding: 'utf8' });
     if (expectFailure) {
       assert.fail(`Expected audit failure for ${root}, got:\n${output}`);
     }

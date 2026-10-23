@@ -2,7 +2,7 @@
 name: makedsl
 description: Use when designing or generating Make platform DSL YAML — defining apps, entities, fields, relations, views, or record schemas. Also triggered by requests like "建模", "建表", "加字段", "定义关联", or "生成 DSL". Does not deploy resources (use makecli), build frontend UI (makeui), implement Service/API code (make-app-service), handle auth (make-app-auth), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior (use canvas-table-integration).
 metadata:
-  version: 0.2.5
+  version: 0.2.8
 ---
 
 # makedsl usage
@@ -15,7 +15,7 @@ Use `canvas-table-integration` for CanvasTable display, columns, renderers, or c
 
 ## Runtime Boundary
 
-确认方案后生成应用的审批入口、审批新建字段与状态展示，使用 [make-app-approval](../make-app-approval/SKILL.md)。`bpmDefinitionKey` 由运行时 Meta 返回；`qfei_process_instance_status` 和 `qfei_is_locked` 为平台系统字段，不在 DSL 新建同名业务字段，不为“已保存”新增审批状态。业务已有生命周期字段继续保留。
+确认方案后生成应用的完整前台审批（入口、发起/撤回、我的审批包、节点办理和历史），使用 [make-app-approval](../make-app-approval/SKILL.md)。`bpmDefinitionKey` 由运行时 Meta 返回；`qfei_process_instance_status` 和 `qfei_is_locked` 为平台系统字段，不在 DSL 新建同名业务字段，不为“已保存”新增审批状态。业务已有生命周期字段继续保留。
 
 - DSL YAML is a design and deployment input, not a required runtime file for a published App Service.
 - Do not generate Service startup logic that hard-codes container paths such as `/dsl/00-app.yaml`.

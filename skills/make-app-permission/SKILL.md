@@ -2,10 +2,12 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.3.4
+  version: 0.3.19
 ---
 
 # make-app-permission
+
+Direct URL and runtime resource denial follow `references/scoped-route-feedback.md`: App guard outside shell, object/fixed-route guards inside shell. Replace the entire denied business content, not just table rows; keep authorized navigation and the global identity header. Require rendered-tree and zero-denied-request regression tests. React renders the verified package through `makeui/references/permission-feedback.md`; this Skill decides scope and access lifecycle, not component styling. Read `make-app-auth/references/access-help.md` for current-App personnel contacts without sending denied business requests.
 
 Use this skill when a request creates, changes, reviews, or debugs Make App single-app permission enforcement. It must be enabled by default for every generated or refactored Make App. Do not omit the IAM proxy, route guards, permission-aware Schema, or permission audits merely because the request focuses on UI, Service, Schema, or runtime work.
 
@@ -20,20 +22,22 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 5. Read `references/system-field-contract.md` before implementing ID/audit create or edit capability.
 6. Read `references/testing-and-audit.md` before implementation and before reporting completion.
 7. Implement tests first, then the Service/schema boundary, permission pure model, route/action gates, field-set consumers, submit allowlists, and refresh invalidation.
-8. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. Wire both permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
+8. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. For nonstandard roots, helper names or create-call signatures use the [audit configuration](references/testing-and-audit.md#audit); do not force the host to match example names. `REVIEW_REQUIRED` is not PASS: retain the result and verify the identified production branches before a manual review conclusion. Wire permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
 9. When publishing or installing this Skill, run `check-installed-skill-sync.mjs` with explicit source and installed directories. When the release changes shared Make response/auth/permission guidance, publish the platform package, run `npx skills update qfeius/make-platform-skills`, then run the repository-wide `check-installed-make-platform-skills-sync.mjs` with explicit source and installed Skill roots. Keep these local release checks out of portable host CI.
 
 ## Required contract
 
-本节的 `createFields ∩ meta.field.read` 规则适用于普通新建。对象有有效 `bpmDefinitionKey` 时，先按 [make-app-approval](../make-app-approval/SKILL.md) 选择审批新建分支：UI 和 Service 均以启动配置授权字段为准，不再与普通 IAM 字段集合求交；应用、对象及新建操作权限仍保留。此例外不扩展到普通已有记录编辑，也不把“我的审批”固定导航作为业务对象菜单权限项。详细合同见 [审批新建字段](../make-app-approval/references/initiation-contract.md)。
+本节的 `createFields ∩ meta.field.read` 规则适用于普通新建。对象有有效 `bpmDefinitionKey` 时，先按 [make-app-approval](../make-app-approval/SKILL.md) 选择审批新建分支：UI 和 Service 均以启动配置授权字段为准，不再与普通 IAM 字段集合求交；应用、对象及新建操作权限仍保留。此例外不扩展到普通已有记录编辑，也不把“我的审批”固定导航作为业务对象菜单权限项。详细合同见 [审批新建字段](../make-app-approval/references/initiation-contract.md)。我的审批节点办理另按 [任务详情授权](../make-app-approval/references/task-detail.md) 使用当前任务 fieldPermission/actions，字段定义来自未做字段权限裁剪的 Meta Entity GetResource，不从 Schema 补字段、不套普通 update 字段或启动节点权限；Workflow 执行最终授权。完整实体元数据不写回普通 Schema/权限缓存。节点附件预上传重查任务授权，发起人撤回依据最新流程 starter；这些能力不放宽普通 CRUD。
 
 - Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. This is a direct Make proxy: return every completed IAM response unchanged, including 2xx/4xx/5xx status, Content-Type, and body. Do not request tenant-root scope or upstream platform permission filters. Before strict normalization, classify rows with `references/permission-boundaries.md`: ignore only clearly unrelated rows, and fail closed for every selected or unclassifiable row.
+- Current-context-based tenant resolution follows `make-app-auth/references/service-fronted-mode.md#current-context-consumption`. Only the actual App-scoped IAM response is the principal-permission result, not auth compatibility claims.
+- The IAM wire success is `{code:200,data:{principal,scope,permissions}}`, unlike bare auth identity. Service preserves it; the UI request adapter checks code and unwraps data exactly once before permission normalization. Verify the production UI loader boundary as well as the DTO-only pure model; see `references/testing-and-audit.md`.
 - Match exact, wildcard, parent, App, entity, IAM namespace-wildcard App resources, and deny correctly. Use the most-specific allow field range; deny wins.
 - Keep create, visibility, and editability as separate field-set decisions:
   - create form: `createFields ∩ meta.field.read fieldAccess(creatable|readonly|editable|partialMask|fullMask|*)`;
   - list/detail/filter: `fields ∩ meta.field.read fieldAccess(readable states)`;
   - edit/cell edit: visible `fields ∩ meta.field.update fieldAccess(editable|*)`.
-- Keep entity navigation, table headers, and record data independent: `meta.entity.read` controls whether a Schema-present entity appears in navigation and can enter its object route; both the navigation and the dynamic route must reject the entity when this permission is absent. `meta.field.read` controls the authorized columns/table headers; `data.record.read` controls record/detail requests and rows only. When record read is denied or revoked but entity and fields are authorized, keep the navigation item and table shell with authorized headers, skip every record request, and render an explicit empty row set so cached values cannot remain visible.
+- Keep entity, field and record authorization independent: `meta.entity.read` controls whether a Schema-present entity appears in navigation and can enter its object route; both the navigation and the dynamic route must reject the entity when this permission is absent. `meta.field.read` controls authorized columns/table headers when business content is rendered; `data.record.read` controls record/detail requests and values. Denied or revoked record read does not remove metadata-authorized navigation or rewrite field grants, but replaces the current record-reading business content as a whole with resource feedback. Unmount its title, toolbar, headers, data and dialogs, skip denied requests, and invalidate cached values and stale work. Do not preserve an empty table shell around the feedback.
 - Preserve every access state returned for a field. Current IAM responses may use arrays such as `["creatable", "readonly"]` or scalar strings; normalize a supported scalar string to a one-element array and authorize a permission dimension when any state is allowed for that dimension. Never coerce an array with `String(value)` or template interpolation.
 - Treat missing `createFields` as empty. Never fall back to `fields`, and do not consume `editableFields` for current edit behavior.
 - Gate the create entry and submit operation with `data.record.create`; 普通新建 derives fields from the matched `meta.field.read` row and `createFields`, while 审批新建 uses the authorized 启动配置 fields from `make-app-approval`. `meta.field.create` is not a platform permission point and must not be required, inferred, or emitted. The operation gate never grants field access; ordinary create retains its field intersection, and approval create retains the separate Workflow field authorization. Gate update/delete/bulk-update independently with their own operation keys.
@@ -41,7 +45,7 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 - Exclude ID and system audit fields from create capability. Keep existing audit-field edit capability when the field is visible, update-authorized, and supported by the host editor.
 - Keep create-only invisible fields available only in create mode. A `creatable` access state is not readable or editable.
 - Add App/object/fixed-route guards; hiding menus or buttons is not authorization. Recheck handlers before reads and mutations.
-- Refresh permission and permission-trimmed Schema in one access generation before data refresh. Invalidate stale permission, Schema, form, and record work; do not close a still-authorized create surface merely because read is revoked.
+- Refresh permission and permission-trimmed Schema in one access generation before data refresh. Invalidate stale permission, Schema, form, and record work. Record-read denial does not revoke an independent create route's permission; descendants of the replaced business content still unmount. Operation-only refusal preserves allowed inputs.
 - Fail closed on permission or Schema failure. Leave row-level `dataCondition` enforcement to backend APIs.
 - Permission and Schema request failures must retain the safe structured `kind/status/title/description/traceId` from the shared request adapter through Provider state to the error outlet. Use `make-app-observability` for request-error classification and card presentation; do not reduce these failures to a plain string or expose raw upstream errors. A denied permission result is still a forbidden state, not a fabricated request failure.
 - Add Service/schema, permission-model, route/page, payload, special-field, refresh, and negative audit tests.
@@ -68,7 +72,7 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 ```
 
-Treat failures as blockers and warnings as review items. The audit is heuristic and never replaces runtime tests.
+Treat failures as blockers and warnings as review items. Exit codes are 0 for PASS, 1 for failure and 2 for REVIEW_REQUIRED or invalid usage; distinguish the latter by the diagnostic. Do not mask nonzero exits or describe REVIEW_REQUIRED as an automated pass. The audit is heuristic and never replaces runtime tests.
 It rejects obvious `fieldAccess` state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()` when the coerced value affects normalization output or permission evaluation, including direct control-flow conditions. Diagnostic-only logging, comments, and string literals inside a named normalization helper must not fail the audit, regardless of whether the parameter uses a generic or `fieldAccess`-specific name. The executable behavior contract remains authoritative.
 
 Also expose a thin host adapter and run the executable behavior contract:
@@ -76,6 +80,14 @@ Also expose a thin host adapter and run the executable behavior contract:
 ```bash
 node skills/make-app-permission/scripts/permission-conformance-suite.mjs <host-adapter-module>
 ```
+
+Also run the wire-response contract against a thin adapter to the production UI permission loader:
+
+```bash
+node skills/make-app-permission/scripts/principal-response-conformance-suite.mjs <host-loader-adapter-module>
+```
+
+This protects business-code validation, one-time unwrap, empty IAM grants and retained denial contacts; the existing pure-model suite does not exercise SDK response decoding. The adapter contract and host-gate instructions are in `references/testing-and-audit.md`.
 
 If the adapter is TypeScript, run the same command through the host's existing TypeScript runner. Do not add a runtime dependency only for this check. The adapter must delegate to the production permission helpers and create-capability guard; it must not reimplement them in the test.
 Keep the audit and conformance runner project-local or install them through a versioned dependency before making them a host gate. Do not hardcode another workspace checkout or a developer home-directory Skill path into portable CI.

@@ -1,10 +1,13 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.9
+// make-app-permission contract version: 0.3.0
 import fs from 'node:fs';
 import path from 'node:path';
+import { runtimeSignals } from './permission-runtime-signals.mjs';
+import { auditCreatePayloads, defaultCreateCalls } from './create-payload-signals.mjs';
+import { auditScopedRouteFeedback } from './scoped-route-feedback-audit.mjs';
 
 const USAGE = `Usage:
-  node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
+  node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root> [--config <json-file>]
 
 Checks Make App single-app permission enforcement, including create operations and read-derived create fields. This is a static contract audit; it does not replace Service/UI tests.`;
 
@@ -14,34 +17,43 @@ if (args.includes('--help') || args.includes('-h')) {
   process.exit(0);
 }
 
-const projectRoot = args.find((arg) => !arg.startsWith('-')) || process.cwd();
-const root = path.resolve(projectRoot);
-
-if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) {
-  failUsage(`Project root does not exist or is not a directory: ${root}`);
+const positional = [];
+let configFile;
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--config') {
+    if (!args[i + 1] || configFile) failUsage('--config requires one JSON file');
+    configFile = args[++i];
+  } else if (args[i].startsWith('-')) failUsage(`Unknown audit option: ${args[i]}`);
+  else positional.push(args[i]);
 }
-
-const uiRoot = firstExisting(['apps/ui/src', 'apps/ui', 'ui/src', 'src']);
-const serviceRoot = firstExisting(['apps/service/src', 'apps/service', 'service/src', 'server/src']);
-const uiFiles = collectSourceFiles(uiRoot);
-const sharedUiRuntimeFiles = collectExistingSourceFiles([
-  'apps/packages/permission-runtime/src',
-  'packages/permission-runtime/src',
-]);
-const uiRuntimeFiles = [...uiFiles, ...sharedUiRuntimeFiles].filter(isRuntimeSourceFile);
-const serviceFiles = collectSourceFiles(serviceRoot).filter(isRuntimeSourceFile);
+if (positional.length > 1) failUsage('Expected one project root');
+const root = path.resolve(positional[0] || process.cwd());
+if (!fs.existsSync(root) || !fs.statSync(root).isDirectory()) failUsage(`Project root does not exist or is not a directory: ${root}`);
+const config = readConfig(configFile);
+const uiFiles = sourceRoots(config.uiRoots, ['apps/ui/src', 'apps/ui', 'ui/src', 'src']).flatMap(collectSourceFiles);
+const sharedUiRuntimeFiles = config.sharedRoots
+  ? sourceRoots(config.sharedRoots, []).flatMap(collectSourceFiles)
+  : collectExistingSourceFiles(['apps/packages/permission-runtime/src', 'packages/permission-runtime/src']);
+const uiRuntimeFiles = [...new Set([...uiFiles, ...sharedUiRuntimeFiles])].filter(isRuntimeSourceFile);
+const serviceFiles = sourceRoots(config.serviceRoots, ['apps/service/src', 'apps/service', 'service/src', 'server/src']).flatMap(collectSourceFiles).filter(isRuntimeSourceFile);
 const uiRuntimeText = readJoined(uiRuntimeFiles);
 const serviceText = readJoined(serviceFiles);
 
+const uiSources = uiRuntimeFiles.map(file => normalizeSymbols(readFile(file)));
+const signals = runtimeSignals(uiSources);
 const failures = [];
 const warnings = [];
+const reviews = [];
 
 checkSourceRoots();
 checkServiceContract();
 checkUiContract();
+warnings.push(...auditScopedRouteFeedback(uiRuntimeFiles.map(file => ({
+  file: path.relative(root, file), source: fs.readFileSync(file, 'utf8'),
+}))));
 
 printResult();
-process.exit(failures.length > 0 ? 1 : 0);
+process.exit(failures.length > 0 ? 1 : reviews.length > 0 ? 2 : 0);
 
 function checkSourceRoots() {
   if (uiFiles.filter(isRuntimeSourceFile).length === 0) {
@@ -64,7 +76,10 @@ function checkServiceContract() {
   if (!/\/iam\/v1\/principal\/permission/.test(serviceText)) {
     failures.push('iam_upstream_path_missing: Service must call Make IAM /iam/v1/principal/permission through make-gateway');
   }
-  if (/\/make\/iam\/v1\/principal\/permission/.test(serviceText)) {
+  const iamUpstreamPaths = serviceText.matchAll(
+    /(?:https?:\/\/[^/\s'"`]+)?(\/(?:api\/)?make\/iam\/v1\/principal\/permission)/g,
+  );
+  if ([...iamUpstreamPaths].some(([, upstreamPath]) => upstreamPath.startsWith('/make/'))) {
     failures.push('iam_upstream_wrong_make_scope: IAM principal permission must use /api/make/iam/v1/principal/permission, not /make/iam/v1/principal/permission');
   }
   if (/(?:makeIamGatewayScope|iamGatewayScope|IAM_SCOPE)\s*=\s*[`'"]\/make[`'"]/.test(serviceText)) {
@@ -139,7 +154,7 @@ function checkUiContract() {
   if (!/(PermissionProvider|MdmPermissionProvider)/.test(uiRuntimeText)) {
     failures.push('permission_provider_missing: UI must provide app-level permission context after auth');
   }
-  if (!/refreshPermissions/.test(uiRuntimeText)) {
+  if (!/refreshPermissions/.test(uiRuntimeText) && !signals.refresh) {
     failures.push('refresh_permissions_missing: UI must expose/use refreshPermissions for refresh-time reload');
   }
   checkProviderOrder();
@@ -246,16 +261,16 @@ function checkUiContract() {
   if (!hasEntityRouteGuardSignal(uiRuntimeText)) {
     failures.push('entity_route_not_gated_by_meta_entity_read: dynamic entity routes must require meta.entity.read');
   }
-  if (!hasEntityNavigationGateSignal(uiRuntimeText)) {
+  if (!hasEntityNavigationGateSignal(uiRuntimeText) && !signals.navigation) {
     failures.push('entity_navigation_not_gated_by_meta_entity_read: entity navigation must use meta.entity.read rather than data.record.read');
   }
   if (!hasReadGateSignal(uiRuntimeText)) {
     failures.push('read_gate_missing: list/detail loading must be gated by data.record.read');
   }
   if (hasRecordReadGatedTableHeaders(uiRuntimeText)) {
-    failures.push('table_headers_tied_to_record_read: table headers must derive from meta.field.read visible fields even when data.record.read is denied');
+    failures.push('table_headers_tied_to_record_read: authorized columns must derive from meta.field.read; replace denied business content rather than emptying its columns');
   }
-  if (!hasRecordRowsClearSignal(uiRuntimeText)) {
+  if (!hasRecordRowsClearSignal(uiRuntimeText) && !signals.rows) {
     failures.push('record_rows_not_cleared_on_read_revoke: denied data.record.read must render an empty row set and clear cached record values');
   }
   if (!/DATA_RECORD_CREATE|data\.record\.create/.test(uiRuntimeText) || !/(onCreate|openCreate|canCreate)/.test(uiRuntimeText)) {
@@ -270,35 +285,26 @@ function checkUiContract() {
   if (!/(filter.*Editable|editableFieldNames|editableFieldKeys|hiddenFields|formModel\.fields)/is.test(uiRuntimeText)) {
     failures.push('payload_field_filter_not_obvious: form/custom-page submit payload must filter unauthorized fields');
   }
-  if (!hasCreatePayloadFilterSignal(uiRuntimeText) || hasObviousUnfilteredCreatePayload(uiRuntimeText)) {
-    failures.push('create_payload_filter_not_obvious: create submit must build an allowlisted payload from current creatable fields');
+  const createCalls = [...defaultCreateCalls.filter(call=>!config.createCalls?.some(configured=>configured.name === call.name)),...(config.createCalls ?? [])];
+  const payloads = auditCreatePayloads(uiSources,createCalls);
+  for (const call of config.createCalls ?? []) {
+    if (!payloads.recognizedNames.includes(call.name)) failures.push(`configured_create_call_not_found: ${call.name} must identify an actual production call`);
   }
-  if (!/refreshPermissions[\s\S]{0,500}(refresh|loadPage|fetch|close)/.test(uiRuntimeText)) {
+  if (!payloads.checked || payloads.failures.length) {
+    failures.push('create_payload_filter_not_obvious: create submit must build an allowlisted payload from current creatable fields');
+    for (const call of payloads.failures) failures.push(`create_payload_unverified_call: ${path.relative(root,uiRuntimeFiles[call.fileIndex])}: ${call.name} must consume the filtered payload; unsupported builders need production-call review`);
+  }
+  for (const call of payloads.reviews) reviews.push(`create_payload_branch_requires_review: ${path.relative(root,uiRuntimeFiles[call.fileIndex])}: ${call.name} consumes a filtered payload plus an unproven branch or transform; verify its production inputs and outgoing fields with host tests`);
+  if (!/refreshPermissions[\s\S]{0,500}(refresh|loadPage|fetch|close)/.test(uiRuntimeText) && !signals.refresh) {
     warnings.push('refresh_order_not_obvious: could not prove refreshPermissions runs before data refresh or workspace close');
   }
   if (
     /refreshPermissions/.test(uiRuntimeText)
+    && !signals.refresh
     && !/(?:refreshSchema|reloadSchema|invalidateSchema|clearSchema)\s*\(|(?:schemaGeneration|accessGeneration|permissionGeneration)\s*(?:\+\+|[+]?=|:)/.test(uiRuntimeText)
   ) {
     failures.push('permission_refresh_does_not_refresh_schema: permission refresh must invalidate or reload permission-trimmed schema');
   }
-}
-
-function hasCreatePayloadFilterSignal(text) {
-  const hasCreateMutation = /(createRecord|createMakeEntityRecord|submitCreate|handleCreate|onCreate)/.test(text);
-  const hasCreateFieldSet = /(creatableFieldKeys|createFormFields|writableFormFields)/.test(text);
-  const hasAllowlistBuilder = /(buildCreateRecordPayload|buildCreatePayload|filter[^\n]*(?:Creatable|CreateFields)|Object\.fromEntries)/.test(text);
-
-  return hasCreateMutation && hasCreateFieldSet && hasAllowlistBuilder;
-}
-
-function hasObviousUnfilteredCreatePayload(text) {
-  const rawArgument = /(?:createRecord|createMakeEntityRecord)\s*\(\s*(?:values|formValues|draft)\s*\)/;
-  const spreadArgument = /(?:createRecord|createMakeEntityRecord)\s*\(\s*\{\s*\.\.\.(?:values|formValues|draft)\b/;
-  const rawProperty = /\b(?:data|payload|record)\s*:\s*(?:values|formValues|draft)\b/;
-  const spreadProperty = /\b(?:data|payload|record)\s*:\s*\{\s*\.\.\.(?:values|formValues|draft)\b/;
-
-  return rawArgument.test(text) || spreadArgument.test(text) || rawProperty.test(text) || spreadProperty.test(text);
 }
 
 function namedFunctionUsesPermissionKey(text, functionName, permissionKeyPattern) {
@@ -798,7 +804,8 @@ function hasEntityRouteGuardSignal(text) {
     'is',
   );
 
-  return sources.some((source) => (
+  // A guard on an unrelated page must not cover a known dynamic route.
+  return (preferredRouteSources.length === 0 && signals.route) || sources.some((source) => (
     directGuard.test(source)
       || variableGuard.test(source)
       || protectedRoute.test(source)
@@ -851,22 +858,11 @@ function hasEntityNavigationGateSignal(text) {
 }
 
 function hasRecordReadGatedTableHeaders(text) {
+  // Column authorization stays independent. Whole-content guards may unmount the table.
   const recordReadGate = String.raw`(?:can\w*(?:Read|View)\w*Record\w*|DATA_RECORD_READ|data\.record\.read)`;
   const visibleColumns = String.raw`(?:visible\w*(?:Fields|Columns|Headers)|fieldsFor(?:List|Table)|table\w*(?:Fields|Columns|Headers))`;
   const directColumnGate = new RegExp(
     `\\b(?:columns|fields|headers)\\s*=\\s*\\{[^}]{0,220}${recordReadGate}[^}]{0,220}${visibleColumns}|\\b(?:columns|fields|headers)\\s*=\\s*\\{[^}]{0,220}${visibleColumns}[^}]{0,220}${recordReadGate}`,
-    'is',
-  );
-  const conditionalTableMount = new RegExp(
-    `${recordReadGate}\\s*&&\\s*<[^>]*(?:Table|Grid|Canvas)[^>]*>|<[^>]*(?:Table|Grid|Canvas)[^>]*>[^<]{0,80}\\{\\s*${recordReadGate}\\s*&&`,
-    'is',
-  );
-  const ternaryTableMount = new RegExp(
-    `${recordReadGate}\\s*\\?\\s*<[^>]*(?:Table|Grid|Canvas)|<[^>]*(?:Table|Grid|Canvas)[^>]*>[^<]{0,80}\\{\\s*${recordReadGate}\\s*\\?`,
-    'is',
-  );
-  const earlyReturnWithoutTable = new RegExp(
-    `\\bif\\s*\\(\\s*!\\s*${recordReadGate}\\s*\\)\\s*(?:\\{\\s*)?return\\s+<(?:Empty|Result|Forbidden|NoData|AccessDenied|Placeholder)\\b`,
     'is',
   );
   const derivedColumnGate = new RegExp(
@@ -875,9 +871,6 @@ function hasRecordReadGatedTableHeaders(text) {
   );
 
   return directColumnGate.test(text)
-    || conditionalTableMount.test(text)
-    || ternaryTableMount.test(text)
-    || earlyReturnWithoutTable.test(text)
     || derivedColumnGate.test(text);
 }
 
@@ -1124,7 +1117,7 @@ function isRuntimeSourceFile(file) {
 }
 
 function readJoined(files) {
-  return files.map(readFile).join('\n');
+  return files.map(readFile).map(normalizeSymbols).join('\n');
 }
 
 function readFile(file) {
@@ -1137,15 +1130,71 @@ function readFile(file) {
 
 function printResult() {
   console.log(`make-app-permission audit: ${root}`);
+  console.log(`sources: ${uiRuntimeFiles.length} UI/shared, ${serviceFiles.length} Service${configFile ? '; explicit config' : ''}`);
   if (failures.length > 0) {
     console.log('status: FAIL');
     console.log('\nFailures:');
     for (const failure of failures) console.log(`- ${failure}`);
+  } else if (reviews.length > 0) {
+    console.log('status: REVIEW_REQUIRED');
   } else {
     console.log('status: PASS');
+  }
+  if (reviews.length > 0) {
+    console.log('\nReview required (not an audit pass):');
+    for (const review of reviews) console.log(`- ${review}`);
   }
   if (warnings.length > 0) {
     console.log('\nWarnings:');
     for (const warning of warnings) console.log(`- ${warning}`);
   }
+}
+
+function readConfig(file) {
+  if (!file) return {};
+  let value;
+  try { value = JSON.parse(fs.readFileSync(path.resolve(root, file), 'utf8')); }
+  catch (error) { failUsage(`Cannot read audit config: ${error.message}`); }
+  if (!value || typeof value !== 'object' || Array.isArray(value)) failUsage('Audit config must be an object');
+  for (const key of Object.keys(value)) if (!['uiRoots', 'serviceRoots', 'sharedRoots', 'symbols', 'createCalls'].includes(key)) failUsage(`Unknown audit config key: ${key}`);
+  for (const key of ['uiRoots', 'serviceRoots', 'sharedRoots']) {
+    if (key in value && (!Array.isArray(value[key]) || !value[key].length || value[key].some(v => typeof v !== 'string' || !v.trim()))) failUsage(`${key} must be a nonempty directory array`);
+  }
+  const roles = ['PermissionProvider', 'refreshPermissions', 'canUseEntityOperation', 'canCreateEntityField', 'canReadEntityField', 'canUpdateEntityField'];
+  if (value.symbols !== undefined) {
+    if (!value.symbols || Array.isArray(value.symbols) || typeof value.symbols !== 'object') failUsage('symbols must be an object');
+    for (const [role, name] of Object.entries(value.symbols)) {
+      if (!roles.includes(role) || typeof name !== 'string' || !/^[A-Za-z_$][\w$]*$/.test(name)) failUsage(`Invalid audit symbol: ${role}`);
+    }
+    if (new Set(Object.values(value.symbols)).size !== Object.values(value.symbols).length) failUsage('Audit symbols must be distinct');
+  }
+  if (value.createCalls !== undefined) {
+    if (!Array.isArray(value.createCalls) || !value.createCalls.length) failUsage('Invalid createCalls: expected a nonempty array');
+    for (const call of value.createCalls) {
+      if (!call || typeof call !== 'object' || Array.isArray(call)
+        || Object.keys(call).some(key=>!['name','argument','property'].includes(key))
+        || typeof call.name !== 'string' || !/^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*$/.test(call.name)
+        || !Number.isInteger(call.argument) || call.argument < 0 || call.argument > 32
+        || (call.property !== undefined && (typeof call.property !== 'string' || !/^[A-Za-z_$][\w$]*$/.test(call.property)))) failUsage('Invalid createCalls: use name, zero-based argument, and optional property');
+    }
+    if (new Set(value.createCalls.map(call=>call.name)).size !== value.createCalls.length) failUsage('Invalid createCalls: names must be distinct');
+  }
+  return value;
+}
+
+function sourceRoots(configured, defaults) {
+  if (!configured) return [firstExisting(defaults)].filter(Boolean);
+  return configured.map(dir => {
+    const absolute = path.resolve(root, dir);
+    if (!fs.existsSync(absolute) || !fs.statSync(absolute).isDirectory()) failUsage(`Configured source directory does not exist: ${dir}`);
+    return absolute;
+  });
+}
+
+function normalizeSymbols(source) {
+  const aliases = new Map(Object.entries(config.symbols ?? {}).map(([role, name]) => [name, role]));
+  // Replace code identifiers only. Literal permission keys and comments are unchanged.
+  const code = maskJavaScriptNonCode(source);
+  return source.replace(/[A-Za-z_$][\w$]*/g, (name, offset) =>
+    aliases.has(name) && code.slice(offset, offset + name.length) === name ? aliases.get(name) : name);
 }

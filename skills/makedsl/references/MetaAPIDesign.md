@@ -47,12 +47,43 @@ Response Body 格式如下：
 }
 ```
 
+## Entity
+
+#### 获取单个 Entity 的字段基础定义
+
+Entity 详情返回全部自定义字段，不按当前调用方的字段读取权限裁剪，仍排除系统字段。它只提供元数据，不代表取得记录值的读写权限。审批任务需要完整字段定义时使用此接口，再按当前节点 fieldPermission/actions 选取可见/可编辑字段；普通业务 UI 继续使用权限过滤的 Schema。
+
+通过 Service 的 Meta 请求适配器调用，沿用运行时网关、登录上下文与部署 appKey；不在浏览器硬编码下列示例地址。
+
+```http
+POST https://make.qtech.cn/api/make/meta/v1/entity
+Content-Type: application/json
+X-Make-Target: MakeService.GetResource
+```
+
+**Request Body**
+```json
+{
+  "appKey": "<APP_KEY>",
+  "key": "<ENTITY_KEY>"
+}
+```
+
+请求字段是 `key`，不是 `entityKey`。成功响应为 `{ code: 200, msg, data: entity }`；校验 `data.key` 与 `data.appKey` 后读取 `data.properties.fields`。保留每个字段的 key/name/type/properties/validations，不套用普通 fields/createFields 权限集合。审批任务的完整授权、缺失定义处理与附件校验见 [任务详情](../../make-app-approval/references/task-detail.md)。关系为独立元数据资源，不能把 Entity fields 当成完整关系集合。
+
+审批启动配置若仅返回 field key，也通过同一 Entity GetResource 补基础定义，授权和顺序仍取启动配置；完整字段对象格式无需额外读取。普通 Schema 仍负责对象绑定判定与普通权限场景。
+
+## Relation
+
+已知 relationKey 时，通过同一 Meta 网关 `POST /meta/v1/relation`，`X-Make-Target: MakeService.GetResource`，正文 `{ appKey, key: relationKey }` 读取单个关系。成功 data 为 Make.Relation，核验 key/appKey/type；`properties.from/to` 各含 entityKey/cardinality，目标基数取 one/many。再按需要读取目标 Entity 的目标字段定义，不从 Entity.fields 猜关系，也不把关系定义当作读取目标记录的授权。任务表单仅组合可见 Lookup 的必要定义；自关联和同目标读取只在单次请求内去重。
+
 ## Schema
 
 #### 按 App 查询 Schema
 
-> 获取指定 App 在 Meta 层的逻辑 Schema 聚合视图。  
-> 返回 App 及其下全部 Entity、Relation 的聚合结果，其中字段通过 `Entity.properties.fields` 返回。  
+> 获取指定 App 在 Meta 层按当前主体权限过滤的逻辑 Schema 聚合视图，不保证包含审批节点独立授权的字段。
+>
+> 返回当前可访问的 App、Entity、Relation 聚合结果，其中字段通过 `Entity.properties.fields` 返回；普通新建字段独立消费 `createFields`。审批任务字段基础信息使用上方 Entity GetResource，不从 Schema 补齐。
 > `entities` 和 `relations` 的结构与上方定义保持一致。
 
 ```http

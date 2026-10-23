@@ -1,5 +1,7 @@
 # Make Data Adapter
 
+本文件描述 Make Data 普通记录适配。审批任务办理的 recordPatch 属于 Workflow：按 [审批接口合同](../../make-app-approval/references/workflow-api.md) 保留任务字段格式与节点授权，不进入这里的普通 Lookup 关系合成和记录更新链路。任务字段基础定义及附件类型核验统一读取 Meta Entity GetResource，不使用下文普通权限 Schema 的字段来源，也不以完整实体字段扩大节点授权。
+
 Use this reference when implementing Service adapters that call Make platform APIs.
 
 ## Adapter ownership
@@ -44,6 +46,10 @@ The wrapper should:
 - log start/success/failure with redacted context
 
 Do not duplicate Make fetch logic in each route.
+
+### Endpoint-specific success and prerequisites
+
+Meta/Data envelope parsing applies only to endpoints that define it. Existing auth current-context consumers follow the response, prerequisite and regression contract in `make-app-auth/references/service-fronted-mode.md#current-context-consumption`; do not extend business parsing rules to auth responses.
 
 ### HTTP-client implementation requirement
 

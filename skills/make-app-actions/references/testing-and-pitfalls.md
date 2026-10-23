@@ -32,6 +32,8 @@ Action permissions:
 - independent combinations of update/delete/bulkUpdate
 - bulkUpdate without update still shows batch edit for multiple selection
 - batch edit is hidden when `batchEditableFields.length === 0`
+- approval-restricted targets have no single edit button/menu item; known restricted records in the current selection hide batch edit without clearing selection or hiding independently allowed actions
+- use the [approval edit matrix](../../make-app-approval/references/verification.md#普通编辑禁编矩阵) for stale edit sessions, cell commits and the task-action exception; ordinary row-level IAM denial still follows the existing visible-action/precheck feedback path
 - no allowed actions renders scheme two
 - principal cache is reused on click/submit; identity/tenant/explicit refresh can
   replace it
@@ -94,6 +96,9 @@ Service:
   operational contract failure without guessed row feedback
 - select-all 403 maps to denied with an empty ID list; other upstream failures
   remain failed
+- explicit-mode precheck and bulk HTTP failures preserve status, Content-Type
+  and raw bytes, including `permission_denied`, permissionKey and contacts;
+  test unknown 403, 401 and 503 without reclassifying them as permission refusal
 - bulk route causes exactly one Make `/data/v1/field` call and zero
   `/data/v1/record` update loops
 - precheck and bulk forward identical select-all filter/groupFilter values
@@ -129,6 +134,10 @@ UI:
   visibly error red, then `clearRowColors` restores the underlying row state; run
   the same assertion for grouped tables when grouped actions are in scope
 - opaque precheck denial shows toast without marking the whole explicit selection
+- delete precheck HTTP 403 with confirmed `permission_denied` shows operation
+  guidance with embedded contacts or optional administrator lookup, preserves
+  permitted page/confirmation UI, and sends zero real delete requests; an
+  unknown 403 stays a request error, with no automatic retries or mutation replay
 - selected-count fallback uses frozen count when select-all updatedCount is null
 
 ## Readiness blockers

@@ -133,6 +133,36 @@ The Service auth proxy must forward browser auth context:
 
 Do not convert the gateway response into a JSON envelope for auth routes.
 
+## Current-context consumption
+
+Published `GET /make/auth/current-context` succeeds with HTTP 200 and a **bare** JSON identity. Minimal example:
+
+```json
+{"userId":"user-1","tenantId":"tenant-1","appId":"AppKey"}
+```
+
+Apply this contract only when a Service already consumes current-context, such as an existing tenant-resolution or download prerequisite. Do not add another authentication request when trusted config/context already supplies the required identity. Keep SDK login, auth namespace proxies and gateway admission unchanged.
+
+The Service consumer must not apply the Meta/Data `{code,data}` parser or unconditionally read `.data`; SDK normalization does not cover this separate consumer.
+
+| Current-context result | Service behavior |
+| --- | --- |
+| Valid bare identity | Validate non-empty string `userId`/`tenantId` and `appId` against trusted `MAKE_APP_KEY`; continue to the intended upstream with the same session/host context |
+| Completed auth failure, such as 401/403/503 | Stop and preserve its status, Content-Type and body, including the login challenge |
+| Malformed successful body or conflicting App | Stop with a safe Service contract error (502), not the successful identity response |
+
+Older responses may include `roles`, string `permissions` and a `fallback:...` `grantVersion` from the pre-IAM Mock implementation. These are legacy compatibility fields, not evidence of real IAM roles, permissions or grant freshness. They may be absent or empty and must not be required for authentication or used instead of IAM. This guidance does not remove fields or change Mock admission in the gateway.
+
+After a valid prerequisite, the principal route must call IAM and return **that IAM response**, never the earlier identity HTTP 200. Permission/Schema startup acceptance belongs to `make-app-permission/references/testing-and-audit.md`.
+
+Run the executable HTTP contract against a thin host adapter:
+
+```bash
+node skills/make-app-auth/scripts/current-context-conformance-suite.mjs <host-adapter-module>
+```
+
+The adapter exports `createPermissionContractHandler({appKey,gatewayOrigin,fetchImpl})` and delegates to the production Node `RequestListener`, injecting only gateway I/O. The runner validates the existing identity → IAM route, session/host forwarding, App scope, failures and malformed success. It accepts missing/empty legacy fields and rejects Mock-based authorization shortcuts. Keep the runner project-local or versioned for CI, not dependent on a sibling checkout. Do not add envelope compatibility by default; `--legacy-envelope` is only for a host that explicitly retains it. Namespace proxies remain transparent.
+
 ## Attachment Download Proxy
 
 In Service-fronted apps, file previews and downloads must stay on Service-owned browser paths:
@@ -269,3 +299,7 @@ These checks belong to the agent, generated tests, CI, or publish pipeline. Do n
 - Service derives `X-Forwarded-Host` from inbound `Host`, does not pass through client-supplied `X-Forwarded-Host`, and adds `X-Forwarded-Proto`; auth and business requests share this helper.
 - `session/complete` reaches the browser as `302 + Set-Cookie + Location`.
 - At least one authenticated schema/meta request and one record-list request pass through the same Service/auth adapter path before reporting publish success.
+
+## Administrator contact help
+
+Reuse the existing `/api/make/auth/**` namespace proxy for `/api/make/auth/app-administrators`, preserving Cookie and trusted forwarded host/proto. Contact help must remain available when the current App business request or current-context is denied. It does not authorize business access and does not require a broad `/api/make/**` proxy; follow `access-help.md`.

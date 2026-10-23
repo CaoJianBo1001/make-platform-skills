@@ -77,11 +77,19 @@ Return a stable UI result:
 - In select-all mode (`selectAllMode=true`), preserve the documented opaque 403
   denial with an empty `unauthorizedRecordIDList`; this mode does not return
   `noPermissionRecordIds`.
-- Other upstream HTTP failures or business codes remain operational errors and
-  must not be downgraded to permission denial.
+- Apart from that select-all projection, relay completed HTTP errors with their
+  original status, Content-Type and response bytes. In explicit mode, a whole
+  object/operation refusal can be HTTP 403 with `reason: "permission_denied"`;
+  retain this marker, `permissionKey` and optional administrator contacts for the
+  host's scoped operation feedback. Do not replace the payload with code/message
+  alone, manufacture denied row IDs, or continue to the real write.
+- Unknown 403, 401, 503 and other business failures remain operational errors and
+  must not be downgraded to permission denial. HTTP status 403 alone is not a
+  permission classifier outside the established select-all projection.
 
-UI always shows `勾选范围中存在无权限数据，请检查勾选范围` and blocks
-opening the edit surface for a permission denial. Explicit mode marks only the
+For the stable `allowed: false` row/select-all result, UI shows
+`勾选范围中存在无权限数据，请检查勾选范围` and blocks
+opening the edit surface. Explicit mode marks only the
 exact normalized `unauthorizedRecordIDList` rows with the host error-red whole-row
 style. Select-all mode has no exact IDs and remains toast-only. Never mark the
 complete selection or perform diagnostic requests to manufacture IDs.
@@ -122,8 +130,28 @@ target count. Select-all may return `null` when Make does not report affected
 rows; UI then uses the snapshot's frozen selected count for success text.
 
 The final write remains authoritative and may reject even after a successful
-precheck. Preserve its error status/message through the Service's documented
-error envelope.
+precheck. Preserve completed HTTP failure status, Content-Type and response
+bytes, including permission details, just as for precheck.
+
+### Completed action HTTP failures
+
+After the existing select-all 403 projection and before replacing an error with
+a host envelope, forward the completed response through the host's normal raw
+response boundary. For example, `CompletedMakeResponse` below is a host-owned
+response carrier, not an SDK or action-package export; the outer handler must
+send its original status, Content-Type and bytes.
+
+```js
+function preserveActionHttpFailure(response) {
+  if (response.status >= 400) throw new CompletedMakeResponse(response);
+}
+```
+
+This does not classify permission, parse a raw error message for UI, or change
+success/business-code decoding. Keep HTTP 200/code `20000032` exact-ID mapping
+and the established select-all 403 result unchanged. The UI must stop on denied
+precheck, show one scoped notice only for confirmed `permission_denied`, and
+never automatically retry or replay delete/update after recovery.
 
 ## Boundary safety
 

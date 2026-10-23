@@ -2,10 +2,12 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.6
+  version: 0.2.12
 ---
 
 # make-app-service
+
+For administrator-contact feedback, reuse the published auth namespace proxy described by `make-app-auth/references/access-help.md`. Preserve completed denial status/body (including reason and permissionKey), Cookie and trusted forwarded host/proto; do not gate contact help on a successful business request or add a broad gateway proxy.
 
 Use this skill for Make App Service API work in `apps/service`.
 
@@ -25,7 +27,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 8. Implement the default single-app permission proxy through `make-app-permission`, including `/api/make/app/principal/permission`; do not omit it from a generated or refactored Make App.
 9. Preserve permission-trimmed Schema collections independently: normalize `fields` and `createFields` separately; missing `createFields` means an empty create collection with no fallback to `fields`. Preserve unknown response properties, including `editableFields`, but leave their permission semantics to `make-app-permission`.
 10. If Schema is cached, isolate permission-trimmed results by tenant, principal/session, App, and access generation, and expose explicit invalidation for permission refresh.
-11. For Make record actions, implement the documented `record-write-permission` route before edit UI and the `records/bulk` route for batch edit; use `make-app-actions` for target, permission, one-request semantics, and the established complete UI-Service response contract. Do not apply generic passthrough/normalization rules to alter either action route's successful or failed response shape.
+11. For Make record actions, implement the documented `record-write-permission` route before edit UI and the `records/bulk` route for batch edit; use `make-app-actions` for target, permission, one-request semantics, and the established complete UI-Service response contract. Keep its success, HTTP200 partial-denial and select-all403 projections; other completed HTTP failures preserve status, Content-Type and body, including reason, permissionKey and administrator contacts, rather than a generic code/message wrapper.
 12. For cancellable or supersedable requests, propagate a request-scoped `AbortSignal` from the Service boundary into every downstream adapter; read `references/service-api-contracts.md` before implementation.
 13. If the Make App Service change is for Make AI 助手, AI助手, AI 对话框, SSE, Agent Gateway, or `@qfei-design/make-ai-assistant`, use `make-ai-assistant` for the Make App AI Chat protocol first. Service then implements only its documented route handlers, proxy adapter, config validation, logging, cancellation, and tests.
 14. Add or update Service tests for every changed route, adapter, validation path, and error path.
@@ -68,7 +70,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 
 ## Default Service responsibilities
 
-审批新建、`bpmDefinitionKey`、启动字段、首次发起和流程状态传输使用 [make-app-approval](../make-app-approval/SKILL.md)。Service 保留对象顶层 key 及记录系统状态/锁字段；审批新建的可写字段来自权威启动配置，普通新建仍用原 `createFields`/IAM 合同，已有记录编辑仍用原更新链路。不要让普通源字段交集二次裁掉审批授权，也不要信任客户端声明的审批模式。
+审批新建、`bpmDefinitionKey`、发起/撤回、我的审批任务查询/办理/继续提交、历史和状态传输使用 [make-app-approval](../make-app-approval/SKILL.md)。Service 保留对象顶层 key 及记录系统状态/锁字段；审批新建的可写字段来自权威启动配置，普通新建仍用原 `createFields`/IAM 合同，已有记录编辑仍用原更新链路。不要让普通源字段交集二次裁掉审批授权，也不要信任客户端声明的审批模式。任务字段基础信息及任务附件类型核验统一使用 Meta `/meta/v1/entity` 的 GetResource，正文 `{ appKey, key: task.entityKey }`；不从权限过滤的 Schema 补字段，不覆盖普通 Schema 缓存。任务动作及其 recordPatch 走 [Workflow 接口合同](../make-app-approval/references/workflow-api.md)，不经过普通记录 PATCH 或 Lookup 关系转换；任务附件按当前节点授权预上传。保留完整上游信封、业务错误与 Trace，不把任务办理改成普通 IAM 更新。
 
 Generated or refactored Make App Service code should provide these capabilities when the UI needs them and the host project does not already have equivalent routes:
 
@@ -96,6 +98,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - A UI-facing aggregation route may use a documented normalized success shape only when `apps/docs/api.md` explicitly marks it as non-proxy. Start from the default route-response-mode table in `references/service-api-contracts.md`, then document any host-specific exception and its migration. Ordinary completed Make errors remain unchanged; the selected Make AI assistant error contract is a separately documented exception.
 - Service route handlers validate query/body/path params before calling Make adapters and return 400 for invalid client input.
 - Service adapters own Make request details such as `appKey`, `X-Make-Target`, Make response code checks, pagination translation, file body mapping, and consuming a prepared login/session forwarding context. Auth/session mechanics and shared forwarding helpers belong to `make-app-auth`; publish/runtime proxy header contracts belong to `make-app-runtime`.
+- Parse successes by endpoint contract. Existing auth `current-context` consumers follow `make-app-auth/references/service-fronted-mode.md#current-context-consumption`; do not reuse the Meta/Data envelope parser.
 - Make-backed record read APIs must call Make gateway Data API through the Service Make adapter. Published runtime uses k8s-internal `/make/data/v1/record`; local preview with `MAKE_APP_LOCAL_PREVIEW=true` uses `makecli configure resolve --target local-preview --output=json` field `make_api_origin` plus `/api/make/data/v1/record`. This applies to record list, record detail, lookup target-record reads, and any custom Service route that reads Make records.
 - Service Make adapters must forward the incoming request's established login context to Make gateway for Make-backed data reads and writes. At minimum, preserve the browser `Cookie` session header when the host uses cookie/unified-login auth, preserve an existing `Authorization` header only when the host contract already uses bearer auth, and apply the host gateway context headers such as `X-Forwarded-Host` and `X-Forwarded-Proto` through the shared auth/runtime helper. Do not invent auth policy here; use `make-app-auth` for auth mechanics, but do not drop the login context before calling gateway.
 - Published/runtime Service APIs must never use `makecli` as a data source. Do not shell out to `makecli`, `npx makecli`, local makecli config, or makecli JSON stdout to serve schema, records, candidates, lookup options, files, or custom API data. Online Service containers do not have makecli, so runtime data must come from Make gateway/API adapters.
@@ -118,7 +121,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - Preset sort and records sort must share shape validation and authoritatively validate fields against current runtime schema `capabilities.sortable === true`. Reject invalid, duplicate, non-sortable, or more-than-five rules before Make calls.
 - Sparse Preset updates must preserve sibling dimensions; saving sort must not send filter/group, saving filter must not send sort/group, and saving group must not send filter/sort.
 - User and department candidates come from Service routes such as `GET /api/users` and `GET /api/departments` or the host equivalent; do not use local demo arrays in generated Service.
-- Lookup option APIs must resolve target object/field from schema metadata and return `{ options, total }`. Do not expose full target records to selector UIs by default.
+- Ordinary Lookup option APIs must resolve target object/field from permission-aware schema metadata and return `{ options, total }`. Approval-task Lookup instead follows [task candidates](../make-app-approval/references/task-detail.md#任务-lookup-候选): recheck current task authorization, resolve Entity/Relation metadata, and preserve target read permissions. Do not expose full target records to selector UIs by default.
 - File routes proxy upload/delete/download through Service. UI should not expose raw backend file URLs when a Service download proxy is available.
 - Browser resource tags such as `<img src>` cannot attach `Authorization`. When Make file downloads require a bearer token, keep the URL browser-facing through a Service download proxy, verify the current App session first, and let only the Service adapter attach the deployment-injected token. Do not put Make tokens or raw `/data/v1/download/**` URLs in UI state, public config, JSX, or logs.
 - Add boundary logs at route/adapter entry, success, and failure. Redact tokens, cookies, Authorization, API keys, signed download query strings, and unnecessary personal data.

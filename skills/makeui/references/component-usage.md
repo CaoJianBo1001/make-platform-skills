@@ -124,6 +124,10 @@ If no field metadata exists, stop and call out the missing UI dependency instead
 
 ### Permission-derived field-set handoff
 
+以下 edit 字段与必填规则用于普通业务记录表单。我的审批任务按 [当前节点字段与动作合同](../../make-app-approval/references/task-detail.md) 消费 fieldPermission/actions，Meta Entity GetResource 补字段定义，不从权限过滤的 Schema 获取，不展示节点未授权的实体字段；不能改用普通 edit/IAM 或启动配置。RETURN 跳过业务字段校验，其余任务动作按该合同区分必填校验与已修改数值校验。
+
+任务 Lookup 复用关联选择器外观并注入任务候选 provider，每次查询携带当前任务 reference，不能沿用普通 CRUD 源字段查询。包直接渲染的字段错误与宿主控件内部错误分别对齐输入区，避免嵌套缩进；意见区保持自己的对齐。审批列表四列图标和动态列宽由包提供，宿主历史表格才复用字段类型图标配置。
+
 先区分新建分支：普通新建消费权限层从 `createFields` 得到的字段集；有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 消费启动配置授权字段，不再与普通 IAM 字段集合求交。`makeui` 接收宿主已授权的字段元数据，不自行计算权限策略：
 
 - 普通新建接收权限层提供的 `createFields` / create field set，只渲染该集合；审批新建接收启动配置中 `readable` 授权的字段，并仅允许 `editable` 且受宿主类型能力支持的字段输入
@@ -349,12 +353,20 @@ Default detail display by Make field type:
 | `Make.Field.Date` | date-like value | `YYYY-MM-DD` or the host project date format |
 | `Make.Field.DateTime` | date-time-like value | `YYYY-MM-DD HH:mm` or the host project date-time format |
 | `Make.Field.DateRange` | `[begin, end]` or `{ begin, end }`, also accepting `start/from/to` aliases when the host already returns them | `YYYY-MM-DD 至 YYYY-MM-DD`; do not render raw JSON such as `{"begin":...,"end":...}` |
-| `Make.Field.SingleSelect` | raw value or option object | option label from field metadata, displayed as text/tag |
+| `Make.Field.SingleSelect` | Data/Workflow `[{ label, value }]` (normally one item); also existing raw scalar or `{ label, value }` inputs | normalize to the selected scalar `value` for the form; display metadata option label, then saved label, then value |
 | `Make.Field.MultiSelect` | array of raw values or option objects | labels/tags joined or wrapped in the project's detail tag style |
 | `Make.Field.SingleUser`, `Make.Field.MultiUser` | user object or array, normally with `userId/userName` or `recordID/name` | read-only avatar/name list |
 | `Make.Field.SingleDepartment`, `Make.Field.MultiDepartment` | department object/id or array, normally with `departmentId/departmentName` or `recordID/name` | read-only department name/tag list |
 | `Make.Field.File` | URL string, file object, JSON string, or array | attachment thumbnails/file chips/links; do not flatten to raw filenames when richer metadata exists |
 | `Make.Field.Lookup` | object/JSON wrapper, often `{ entity, field, data }` | extract labels/references from `data`; openable references are links, deleted references are muted/struck through when status is available |
+
+### SingleSelect read → form → submit
+
+The [Data API read contract](../../makedsl/references/DataAPIDesign.md) returns an array for SingleSelect too. Normalize `[{ label: "未开始", value: "not_started" }]` to form value `"not_started"`; `[]`, null and absent values produce an empty control. Preserve the original label for read-only fallback when metadata no longer contains that option. Existing scalar/option-object inputs stay supported; do not turn the array into JSON text or a multi-select control.
+
+Use the same field registry for ordinary create/edit/detail, approval create and approval task fields. Submit the scalar option **value**, never its label, `{label,value}` object or the read array. MultiSelect remains an array of option values. Preserve valid falsy values. Empty/clear/unchanged-field behavior follows the host's confirmed API contract; do not infer null, omission or a clear operation from an empty read value.
+
+A small [executable reference adapter](../assets/single-select-value.mjs) covers extraction, display fallback and serialization. Reuse or adapt the existing host helper; do not add a parallel field store. The reference's default empty submit value is undefined; pass a different clear value only when the host contract establishes it. Test actual host controls and task `recordPatch`, not just this helper.
 
 Value extraction should be tolerant but deterministic:
 
@@ -364,7 +376,7 @@ Value extraction should be tolerant but deterministic:
 
 - empty values display a muted `-`
 - generic object label priority is `label`, `name`, `title`, `displayName`, then `value`
-- select labels come from field metadata options before falling back to raw values
+- select labels come from field metadata options, then the saved option label, before falling back to raw values
 - user label priority is `name`, `userName`, `displayName`, then `label`; identity uses `recordID`, `userId`, or `id`
 - department label priority is `name`, `departmentName`, `displayName`, then `label`; identity uses `recordID`, `departmentId`, or `id`
 - file name priority is `name`, `fileName`, then filename from URL; file URL priority is string value, `url`, then `fileURL`
