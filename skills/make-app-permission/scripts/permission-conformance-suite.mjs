@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.9
+// make-app-permission contract version: 0.3.20
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -213,7 +213,7 @@ const cases = [
     const current = access(
       permission('meta.field.read', { fieldAccess: { createOnly: 'creatable' } }),
       permission('meta.field.read', { fieldAccess: { visibleOnly: 'readonly' } }),
-      permission('meta.field.update', { fieldAccess: { editableOnly: 'editable' } }),
+      permission('data.field.update', { fieldAccess: { editableOnly: 'editable' } }),
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'createOnly'), true);
@@ -333,7 +333,7 @@ const cases = [
     const current = access(
       permission('meta.field.read', { fieldAccess: { title: ['creatable', 'readonly'] } }),
       permission('meta.field.read', { fieldAccess: { title: ['readonly', 'editable'] } }),
-      permission('meta.field.update', { fieldAccess: { title: ['readonly', 'editable'] } }),
+      permission('data.field.update', { fieldAccess: { title: ['readonly', 'editable'] } }),
     );
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
     assert.equal(adapter.canReadEntityField(current, 'order', 'title'), true);
@@ -564,13 +564,47 @@ const cases = [
       'create_user', 'create_time', 'update_user', 'update_time',
       'qfei_create_user', 'qfei_create_time', 'qfei_update_user', 'qfei_update_time',
     ];
-    const current = access(permission('meta.field.update', {
+    const current = access(permission('data.field.update', {
       fieldAccess: Object.fromEntries(auditKeys.map((key) => [key, 'editable'])),
     }));
     for (const key of auditKeys) {
       assert.equal(adapter.canUpdateEntityField(current, 'order', key), true);
       assert.equal(adapter.isEditCapableField({ key, type: 'Make.Field.Text' }), true);
     }
+  }],
+  ['business_field_update_exact_and_data_wildcards', () => {
+    for (const key of ['data.field.update', 'data.field.*', 'data.*.*']) {
+      const current = access(permission(key, { fieldAccess: { title: 'editable', secret: 'hidden' } }));
+      assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), true);
+      assert.equal(adapter.canUpdateEntityField(current, 'order', 'secret'), false);
+      assert.equal(adapter.canUpdateEntityField(current, 'order', 'other'), false);
+    }
+  }],
+  ['metadata_update_never_grants_business_edit', () => {
+    const current = access(permission('meta.field.update'));
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
+  }],
+  ['metadata_wildcards_never_grant_business_edit', () => {
+    for (const key of ['meta.field.*', 'meta.*.*']) {
+      const current = access(permission(key, { fieldAccess: { title: 'editable' } }));
+      assert.equal(adapter.canReadEntityField(current, 'order', 'title'), true);
+      assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
+    }
+  }],
+  ['business_field_exact_deny_overrides_data_wildcards', () => {
+    for (const grant of ['data.field.*', 'data.*.*']) {
+      for (const resource of [APP_RESOURCE, ENTITY_RESOURCE]) {
+        const current = access(permission(grant), permission('data.field.update', { effect: 'deny', resource }));
+        assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
+      }
+    }
+  }],
+  ['business_field_update_readonly_deny_and_revoke', () => {
+    const grant = permission('data.field.update');
+    assert.equal(adapter.canUpdateEntityField(access(grant), 'order', 'title'), true);
+    assert.equal(adapter.canUpdateEntityField(access(permission('data.field.update', { fieldAccess: { title: 'readonly' } })), 'order', 'title'), false);
+    assert.equal(adapter.canUpdateEntityField(access(grant, permission('data.*.*', { effect: 'deny' })), 'order', 'title'), false);
+    assert.equal(adapter.canUpdateEntityField(access(), 'order', 'title'), false);
   }],
 ];
 

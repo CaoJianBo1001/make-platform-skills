@@ -112,7 +112,7 @@ UI:
   hide the entire bottom action bar, and never replace detail actions with card actions
 - no-action bar, close, selected count, and row-alert cleanup
 - the default modal title is exactly `批量编辑`
-- batch field list enforces meta.field.update and package capability
+- batch field list enforces data.field.update and package capability
 - Select, Input, DatePicker, User, and Department controls submit normalized values
 - for FieldSelect and each popup value control, open the dropdown/picker and assert
   its popup DOM is mounted outside the modal panel/body or other overflow clipping

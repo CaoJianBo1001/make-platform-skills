@@ -1,7 +1,8 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.3.0
+// make-app-permission contract version: 0.3.20
 import fs from 'node:fs';
 import path from 'node:path';
+import { calls, identifier, stripComments, unwrap } from './permission-source-expressions.mjs';
 import { runtimeSignals } from './permission-runtime-signals.mjs';
 import { auditCreatePayloads, defaultCreateCalls } from './create-payload-signals.mjs';
 import { auditScopedRouteFeedback } from './scoped-route-feedback-audit.mjs';
@@ -168,8 +169,9 @@ function checkUiContract() {
     failures.push('entity_metadata_permission_key_missing: UI permission model must include meta.entity.read for entity navigation and routes');
   }
   for (const key of ['read', 'update']) {
-    if (!new RegExp(`meta\\.field\\.${key}`).test(uiRuntimeText)) {
-      failures.push(`field_permission_key_missing_${key}: UI permission model must include meta.field.${key}`);
+    const namespace = key === 'read' ? 'meta' : 'data';
+    if (!new RegExp(`${namespace}\\.field\\.${key}`).test(uiRuntimeText)) {
+      failures.push(`field_permission_key_missing_${key}: UI permission model must include ${namespace}.field.${key}`);
     }
   }
 
@@ -179,8 +181,11 @@ function checkUiContract() {
   if (!/(canReadEntityField|visibleFieldsForEntity|visibleFieldKeys|META_FIELD_READ|meta\.field\.read)/.test(uiRuntimeText)) {
     failures.push('field_visibility_helper_missing: UI must evaluate field visibility from meta.field.read');
   }
-  if (!/(canUpdateEntityField|editableFieldKeysForEntity|editableFieldNames|META_FIELD_UPDATE|meta\.field\.update)/.test(uiRuntimeText)) {
-    failures.push('field_edit_helper_missing: UI must evaluate field editability from meta.field.update');
+  if (!/(canUpdateEntityField|editableFieldKeysForEntity|editableFieldNames|DATA_FIELD_UPDATE|data\.field\.update)/.test(uiRuntimeText)) {
+    failures.push('field_edit_helper_missing: UI must evaluate field editability from data.field.update');
+  }
+  if (extractNamedFunctionSources(uiRuntimeText, 'canUpdateEntityField').some(hasMetadataUpdateCall)) {
+    failures.push('business_field_edit_uses_metadata_update: business field edit must not use meta.field.update, including fallback grants');
   }
   if (!/(canCreateEntityField|creatableFieldKeysForEntity)/.test(uiRuntimeText)) {
     failures.push('create_field_permission_helper_missing: UI must evaluate create fields from meta.field.read fieldAccess');
@@ -214,7 +219,7 @@ function checkUiContract() {
   if (namedFunctionUsesPermissionKey(
     uiRuntimeText,
     'canCreateEntityField',
-    /(?:META_FIELD_(?:CREATE|UPDATE)|meta\.field\.(?:create|update))/,
+    /(?:META_FIELD_(?:CREATE|UPDATE)|DATA_FIELD_UPDATE|meta\.field\.(?:create|update)|data\.field\.update)/,
   )) {
     failures.push('create_field_permission_uses_wrong_field_dimension: create-field permission must use meta.field.read, not meta.field.create/update');
   }
@@ -234,7 +239,7 @@ function checkUiContract() {
     failures.push('lookup_target_uses_create_fields: Lookup target display fields must come from visible fields, not target createFields');
   }
   if (/(?:canEditEntityField|editableFieldKeysForEntity|editableFieldNames)\s*\([\s\S]{0,180}(?:DATA_RECORD_CREATE|DATA_RECORD_UPDATE|data\.record\.(?:create|update))/.test(uiRuntimeText)) {
-    failures.push('field_permission_tied_to_data_record: field visibility/editability must use meta.field.*, not data.record.create/update');
+    failures.push('field_permission_tied_to_data_record: field visibility/editability must use meta.field.read/data.field.update, not data.record.create/update');
   }
   if (hasRecordEntryEditableFieldCountGate(uiRuntimeText, {
     actionKeyPattern: '(?:create|new)',
@@ -305,6 +310,18 @@ function checkUiContract() {
   ) {
     failures.push('permission_refresh_does_not_refresh_schema: permission refresh must invalidate or reload permission-trimmed schema');
   }
+}
+
+// Inspect actual call arguments; guidance comments and diagnostic text are not grants.
+function hasMetadataUpdateCall(source) {
+  const executable = stripComments(source);
+  const code = maskJavaScriptNonCode(executable);
+  return calls(executable, identifier + '(?:\\.' + identifier + ')*').some(call => {
+    if (/^(?:console|logger|log)\.(?:trace|debug|info|warn|error|log)$/.test(call.name)
+      || /^(?:Error|TypeError|RangeError|SyntaxError|ReferenceError)$/.test(call.name)
+      || isDiagnosticCallArgument(code.slice(0, call.index))) return false;
+    return call.args.some(argument => /^(?:META_FIELD_UPDATE|(['"`])meta\.field\.update\1)$/.test(unwrap(argument)));
+  });
 }
 
 function namedFunctionUsesPermissionKey(text, functionName, permissionKeyPattern) {
@@ -698,31 +715,32 @@ function extractNamedFunctionSources(text, functionName) {
     'g',
   );
   const sources = [];
+  const code = maskJavaScriptNonCode(text);
 
-  for (const match of text.matchAll(declaration)) {
+  for (const match of code.matchAll(declaration)) {
     const start = match.index ?? 0;
-    const arrowIndex = text.indexOf('=>', start);
-    const braceIndex = text.indexOf('{', start);
+    const arrowIndex = code.indexOf('=>', start);
+    const braceIndex = code.indexOf('{', start);
     const isArrow = arrowIndex >= 0 && (braceIndex < 0 || arrowIndex < braceIndex);
 
     if (isArrow) {
       const expressionStart = arrowIndex + 2;
-      const firstCharacterIndex = text.slice(expressionStart).search(/\S/);
+      const firstCharacterIndex = code.slice(expressionStart).search(/\S/);
       const bodyStart = firstCharacterIndex < 0
         ? expressionStart
         : expressionStart + firstCharacterIndex;
-      if (text[bodyStart] === '{') {
-        const bodyEnd = findMatchingBraceEnd(text, bodyStart);
+      if (code[bodyStart] === '{') {
+        const bodyEnd = findMatchingBraceEnd(code, bodyStart);
         sources.push(text.slice(start, bodyEnd));
       } else {
-        const statementEnd = text.indexOf(';', bodyStart);
+        const statementEnd = code.indexOf(';', bodyStart);
         sources.push(text.slice(start, statementEnd < 0 ? text.length : statementEnd + 1));
       }
       continue;
     }
 
     if (braceIndex >= 0) {
-      sources.push(text.slice(start, findMatchingBraceEnd(text, braceIndex)));
+      sources.push(text.slice(start, findMatchingBraceEnd(code, braceIndex)));
     }
   }
 

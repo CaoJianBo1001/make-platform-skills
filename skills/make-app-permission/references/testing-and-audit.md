@@ -36,7 +36,7 @@ Required field cases:
 | --- | --- |
 | `meta.field.read` access=creatable | create yes; read/update no |
 | `meta.field.read` access=readonly | create/read yes; update no |
-| `meta.field.read` access=editable plus `meta.field.update` | create/read/update yes |
+| `meta.field.read` access=editable plus `data.field.update` | create/read/update yes |
 | `data.record.create` with no `meta.field.read` | operation yes; field no |
 | `meta.field.read` with no `data.record.create` | field yes; operation no |
 | `data.record.create` deny + `meta.field.read` allow | operation no; field yes |
@@ -61,7 +61,7 @@ Required field cases:
 - A field outside `createFields`, or a `hidden` field in matched `meta.field.read`, is absent from create.
 - Create operation with zero fields keeps the entry, shows “暂无可新建字段”, and prevents unsupported empty submission.
 - Create entry/handler depends only on current `data.record.create`; create field sets depend on current `createFields ∩ meta.field.read`.
-- Edit remains visible-first then `meta.field.update`; `editableFields` is ignored.
+- Edit remains visible-first then `data.field.update`; `editableFields` is ignored.
 - ID/audit fields are absent from create; ID fields are also absent from edit forms, cell editors, and update payloads; audit fields remain editable when visible/update-authorized.
 - Persisted-record-only `Make.Field.File` is absent from create render/required/payload; an explicitly implemented pre-upload/direct-create contract may include only its backend-approved attachment array without a `recordID`. Read/edit behavior stays independent and follows visible fields, update permission, and the host edit capability.
 - `Make.Field.Lookup` candidate requests use the dedicated option route without exposing invisible target fields. Create sends `{ data, relations }` and Service validates `relations` before synthesizing `qfei_relation`; edit sends authorized `values` to the snapshot-preserving `lookup-relations` route. Neither path accepts a client-supplied partial raw `qfei_relation` or a Lookup key hidden in ordinary `data`.
@@ -116,7 +116,9 @@ An imported transform that receives a filtered field list (for example attachmen
 
 Keep the config in the host's existing tooling and CI command. If copying the audit to a host, copy its sibling `scoped-route-feedback-audit.mjs`, `permission-runtime-signals.mjs`, `permission-source-expressions.mjs` and `create-payload-signals.mjs` too. Re-run static audit plus production permission/response conformance and page tests after updating; old copied scripts do not automatically update from this skill.
 
-The audit should fail on outbound IAM request filters containing `make.platform.*`, including a platform-key array assigned to a local variable and then passed directly as `body`/`payload`/`request.permissionKeys`; missing `meta.entity.read` dynamic-route or navigation gates; field-column lists computed from `data.record.read` instead of `meta.field.read` through direct props or derived variables; missing empty/cleared rows after a record-read revoke; missing create permission helpers; create-field helpers tied to `data.record.create`, `meta.field.create`, or `meta.field.update` instead of `meta.field.read`; missing/overwritten `createFields`; `createFields ?? fields`; runtime `editableFields` use; create fields built from visible/editable sets; unfiltered create payloads; operation entries tied to field count; permission-only refresh without Schema refresh/invalidation; and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`. Whole-content early returns/conditional mounts are valid resource guards, not column-authorization failures. Response-side filtering of surplus platform rows is allowed. A positive navigation, route, or row-clear signal must be consumed by that same surface: a `ProtectedRoute` must be returned by the dynamic object route and use its resolved entity key, and an explicit empty row branch must occur on a Table/Grid/Canvas row prop or flow into it. Unrelated guards, entity filters, row props, store clears, or page components do not satisfy the gate.
+The audit should fail on outbound IAM request filters containing `make.platform.*`, including a platform-key array assigned to a local variable and then passed directly as `body`/`payload`/`request.permissionKeys`; missing `meta.entity.read` dynamic-route or navigation gates; field-column lists computed from `data.record.read` instead of `meta.field.read` through direct props or derived variables; missing empty/cleared rows after a record-read revoke; missing create permission helpers; create-field helpers tied to `data.record.create`, `meta.field.create`, or `data.field.update` instead of `meta.field.read`; missing/overwritten `createFields`; `createFields ?? fields`; runtime `editableFields` use; create fields built from visible/editable sets; unfiltered create payloads; operation entries tied to field count; permission-only refresh without Schema refresh/invalidation; and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`. Whole-content early returns/conditional mounts are valid resource guards, not column-authorization failures. Response-side filtering of surplus platform rows is allowed. A positive navigation, route, or row-clear signal must be consumed by that same surface: a `ProtectedRoute` must be returned by the dynamic object route and use its resolved entity key, and an explicit empty row branch must occur on a Table/Grid/Canvas row prop or flow into it. Unrelated guards, entity filters, row props, store clears, or page components do not satisfy the gate.
+
+The edit-key audit inspects actual call arguments and ignores comments, inert strings, logging arguments and built-in error messages; it is not complete alias or cross-function data-flow analysis. Run the behavior and write contracts as well.
 
 The audit is heuristic. Its stringification rule is a targeted defense against known bad shapes, not complete data-flow proof. It must reject coercion that affects a normalization result or permission branch, including direct `if`/`switch`/loop conditions. It must lexically ignore comments and string literals and must not fail on diagnostic-only logging inside a named normalization helper, including structured log arguments, `fieldAccess`-specific parameter names, and semicolonless code where an earlier return ends through automatic semicolon insertion. Parenthesized, bracketed, or operator-continued returns remain result-affecting and must still fail. Host tests must prove permission matching, actual form field sets, payloads, Lookup target visibility, generation safety, and server-side enforcement.
 
@@ -144,6 +146,35 @@ node skills/make-app-permission/scripts/permission-conformance-suite.mjs <adapte
 
 For TypeScript adapters, invoke the command with the project's existing TypeScript runner. The adapter must delegate to production code rather than duplicate permission logic. The suite proves missing operation denial, named-entity isolation, deterministic pre-validation row selection, rejection of non-string/blank/wildcard requested identifiers, the fixed `* < App < entity/* < entity/exact` resource order, malformed permission-envelope and explicit App-resource rejection, valid state-list preservation, deny-wins, independent create/read/update fields, permissionKey-specific access values, wildcard exceptions, and the canonical create/edit system-field exclusions.
 
+## UI 提交与 Service 写入边界契约
+
+运行独立的写入契约，不能以纯 helper 返回值替代提交和拒写验证：
+
+```bash
+node skills/make-app-permission/scripts/write-permission-conformance-suite.mjs <host-write-adapter-module>
+```
+
+适配器导出 `createWriteHarness({snapshot, entityKey, operation, onRequest, onWrite})`。每次创建隔离的宿主实例：`snapshot.access` 是原始 IAM DTO，`snapshot.fields` 是当前对象的 Schema 可见字段上限；`entityKey` 为对象键，`operation` 为 `data.record.update` 或 `data.record.bulkUpdate`。套件保留 `meta.entity.read`、`data.record.read` 作为进入编辑场景的前置权限，只单独改变待验证的字段或记录写权限。使用字段定义 `{key, type}`，适配器只映射数据形状，不实现权限判断。适配器可准备固定测试记录和选中目标，仍需经真实 UI 提交及 Service 更新处理器。
+
+宿主实例必须连接生产权限上下文、表单提交函数、Service 更新处理函数；只替换真实外部 I/O。回调 `onRequest(values)` 观察前端实际发送的数据字段对象，`onWrite(values)` 替换 Service 最终持久化调用并观察其真实参数；不得由适配器先过滤、先鉴权或伪造回调。对于 HTTP/DTO 包装只提取实际的 data/values，保留所有字段，不可按期望值改写。
+
+返回以下方法，异步方法可返回 Promise：
+
+| 方法 | 必须连接的生产边界 |
+| --- | --- |
+| `editableFieldKeys()` | 表单、单元格或批量编辑实际消费的可编辑字段键，统一以数组返回。 |
+| `refreshUi(snapshot)` | 发布权限和 Schema 新代际的真实 UI 刷新链路；更新后重新计算编辑字段和提交白名单。 |
+| `refreshService(snapshot)` | 替换 Service 可信权限/Schema 数据源并按生产刷新机制失效缓存；不可读取 UI 缓存或客户端提交的授权。 |
+| `submit(values)` | 打开编辑后提交当前草稿的真实前端处理器；禁止字段不离开 UI，已撤权的旧草稿也必须重新过滤。若没有可提交字段或缺记录操作资格，适配器将宿主真实失败信号转为 rejected Promise。 |
+| `requestUpdate(values)` | 绕过 UI，直接调用生产 Service 的单条/批量写入边界；越权返回的真实拒绝信号转为 rejected Promise，不得伪造拒绝。 |
+| `dispose()` | 卸载 UI、释放订阅和隔离缓存，避免用例之间共享授权。 |
+
+Service 必须在持久化前独立验证当前记录操作和全部写入字段；混合合法/非法字段时整次拒绝，`onWrite` 调用次数为零。UI 更新白名单时可以只提交仍获授权的字段，但不能发送旧的 readonly/hidden 字段。
+
+套件同时覆盖普通与批量编辑：精确权限与数据通配授权可写；额外字段、隐藏字段和 ID 不提交；只读、hidden、精确拒绝、撤权、仅元数据授权、Schema 移除及缺少可读权限不能写；记录操作与字段权限独立。特别保持 UI 在旧授权状态，只刷新 Service，验证旧提交已经产生请求但持久化次数仍为零。前端拒绝路径则要求请求数和写入数同时为零。
+
+仓库中的 `test-write-permission-conformance-suite.mjs` 以本地夹具验证这些边界，并注入原始表单提交、旧白名单、提交仍使用旧白名单、缺字段校验、Service 信任 UI、缺操作校验、忽略刷新等错误实现，证明套件会失败。夹具自身通过仅证明套件有效，不代表任何存量业务项目已经通过。业务项目必须用生产适配器接入默认测试/CI，不能复制夹具作为验收实现；没有宿主证据时只可提交技能候选修复，不能声称已完成实际任务验证或发布。
+
 ## UI wire-response conformance
 
 Copy `scripts/principal-response-conformance-suite.mjs` into project-local test tooling. Export `createPermissionLoader(request)` from a thin host adapter: `request` is an injected SDK-level request function returning parsed JSON (or throwing an HTTP error), and the export returns the actual production permission load function. Delegate to the existing API factory; do not duplicate its parser or model in the adapter. For a factory that accepts `auth.api.request`, this can be:
@@ -165,7 +196,7 @@ The loader resolves a validated `{scope,permissions,...}` DTO for successful IAM
 ## Host gate integration
 
 - Keep the audit and conformance runner project-local, or consume them from a versioned build dependency. Do not make CI depend on a sibling checkout or an unversioned local Skill installation.
-- Make the host's default test, CI workflow, or publish verification invoke the audit, pure-model conformance and UI wire-response conformance. A change record stating that two projects passed once is acceptance evidence, not a continuing gate.
+- Make the host's default test, CI workflow, or publish verification invoke the audit, pure-model conformance, UI/Service write conformance and UI wire-response conformance. A change record stating that two projects passed once is acceptance evidence, not a continuing gate.
 - Add a host contract test that asserts the gate commands still exist and that the vendored/current runners contain the multi-state-array audit and behavior cases.
 - Treat source-to-installed-Skill comparison as a local install/release verification. Generic CI must not require a developer home-directory copy.
 
@@ -200,3 +231,5 @@ React also follows the installed-package verifier in `makeui/references/permissi
 Include the staggered-release cases from `make-app-auth/references/access-help.md`: new Skill/npm with a missing SDK method or a 404 administrator endpoint must retain generic guidance and the original access/scope. Contact-only 401/403/503, timeout and invalid-response failures stay local; they must not trigger login, global request-error feedback, permission retries, protected reads or mutation replay. A later entry may discover a newly deployed endpoint. Keep these production-adapter checks in the host test/CI gate; degraded contact help is not an App-readiness blocker or a permission grant.
 
 Do not reuse business permission-reason matching as an additional auth bootstrap gate. Follow `make-app-auth/references/sdk-integration.md#startup-shape` for SDK startup `forbidden`; test old refusal text and new JSON without reason, including zero IAM/Schema/business calls. The unknown-403 request-error requirement above applies to business requests, not this separate SDK startup result. An old SDK must still render contacts already embedded by a new backend; a new query endpoint alone cannot supply a missing SDK method.
+
+业务字段编辑遵循 [统一规则](permission-boundaries.md#业务数据编辑统一规则)：保留并匹配 `data.field.update`、`data.field.*`、`data.*.*`；前端编辑、提交字段过滤和 Service 写入验证使用同一规则。禁止 `meta.field.update` 兜底。回归覆盖精确授权、数据通配、仅元数据更新、readonly、显式拒绝及撤权后的 UI 与 Service 拒写。

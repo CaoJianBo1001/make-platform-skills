@@ -97,7 +97,7 @@ Preserve the actual IAM response and select/normalize App permission rows at the
         }
       },
       {
-        "permissionKey": "meta.field.update",
+        "permissionKey": "data.field.update",
         "resource": "make://<tenantId>/*/app/<appKey>/entity/<entityKey>",
         "effect": "allow",
         "fieldAccess": {
@@ -120,7 +120,7 @@ Consume `fieldAccess` by permission dimension:
 - `data.record.create`: operation permission only; use it for create route, entry, handler, and submit checks, never to choose fields.
 - `meta.field.read`: for ordinary create, use `creatable|readonly|editable|partialMask|fullMask|*` to choose fields from Schema `createFields`; approval create uses Workflow start-config field authorization instead. Use readable states to choose visible fields from Schema `fields`; `creatable` is ordinary-create-only, not readable.
 - `meta.field.create` is not a platform permission point. Do not require it, synthesize it, or use it as a create-field fallback.
-- `meta.field.update`: use `editable` or `*` only after visibility is established.
+- `data.field.update`: use `editable` or `*` only after visibility is established.
 - All `data.record.*` rows control operations and do not grant create/read/update field access. In particular, `data.record.create.fieldAccess` must not be used as the create-field dimension.
 
 An allow row with empty `fieldAccess` is unrestricted for that permissionKey at its resolved resource specificity. A matching deny wins. Named field entries override a wildcard field baseline.
@@ -134,3 +134,5 @@ The Service preserves resources such as `make://<tenantId>/*/app/<appKey>`; UI s
 ## Failure behavior
 
 When IAM returns a response, return its status, Content-Type, and body unchanged so the UI receives the real backend result, including its error code and message. UI must still fail closed: clear protected access, avoid protected reads/mutations, invalidate permission-dependent Schema, and render a visible retry/error/forbidden state from that real response. Only a transport failure with no IAM response may use a documented Service-generated error.
+
+业务字段编辑遵循 [统一规则](permission-boundaries.md#业务数据编辑统一规则)：保留并匹配 `data.field.update`、`data.field.*`、`data.*.*`；前端编辑、提交字段过滤和 Service 写入验证使用同一规则。禁止 `meta.field.update` 兜底。回归覆盖精确授权、数据通配、仅元数据更新、readonly、显式拒绝及撤权后的 UI 与 Service 拒写。
