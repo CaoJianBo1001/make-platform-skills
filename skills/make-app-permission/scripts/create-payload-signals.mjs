@@ -28,7 +28,24 @@ const propertyValue = (expression,property) => {
   return matches.length === 1 ? matches[0] : null;
 };
 
-function parameterShadows(source,name,parentScope,currentScope) {
+function parameterShadows(source,name,parentScope,currentScope,start,at) {
+  // Concise arrow callbacks have no body brace and therefore are absent from
+  // the lexical scope stack. Do not borrow a previous const through that binding.
+  const arrows = new RegExp(`(?:\\b${escapePattern(name)}|\\([^()]*\\b${escapePattern(name)}\\b[^()]*\\))\\s*=>`, 'g');
+  for (const match of source.slice(start,at).matchAll(arrows)) {
+    let cursor = start + match.index + match[0].length;
+    while (/\s/.test(source[cursor] ?? '') && cursor < at) cursor++;
+    const block = source[cursor] === '{';
+    for (;cursor < at;cursor++) {
+      if ('([{'.includes(source[cursor])) {
+        const end = closingIndex(source,cursor);
+        if (end < 0 || at <= end) return true;
+        if (block) break;
+        cursor = end;
+      } else if (',;)]}'.includes(source[cursor])) break;
+    }
+    if (cursor >= at) return true;
+  }
   return currentScope.slice(parentScope.length).some(brace=>{
     const prefix = source.slice(0,brace).trimEnd().replace(/=>\s*$/,'').trimEnd();
     if (!prefix.endsWith(')')) return false;
@@ -69,7 +86,7 @@ function fieldCollectionProof(source,expression,at,trail = new Set()) {
   if (singleIdentifier(value)) {
     const mask = codeMask(source), scope = scopeAt(mask,at);
     const declaration = declarations(source).filter(item=>item.name === value && item.end < at && containsScope(scopeAt(mask,item.index),scope)).at(-1);
-    return Boolean(declaration && !parameterShadows(mask,value,scopeAt(mask,declaration.index),scope)
+    return Boolean(declaration && !parameterShadows(mask,value,scopeAt(mask,declaration.index),scope,declaration.end,at)
       && !mutatedBeforeUse(source,value,declaration.end,at)
       && fieldCollectionProof(source,declaration.expression,declaration.index,next));
   }
@@ -130,7 +147,7 @@ function payloadProof(source, expression, at, property, trail = new Set(), useAt
     const candidates = declarations(source).filter(declaration=>declaration.name === value && declaration.end < at && containsScope(scopeAt(mask,declaration.index),scope));
     const declaration = candidates.at(-1);
     if (!declaration) return 'unknown';
-    if (parameterShadows(mask,value,scopeAt(mask,declaration.index),scope) || mutatedBeforeUse(source,value,declaration.end,useAt)) return 'unknown';
+    if (parameterShadows(mask,value,scopeAt(mask,declaration.index),scope,declaration.end,at) || mutatedBeforeUse(source,value,declaration.end,useAt)) return 'unknown';
     return payloadProof(source,declaration.expression,declaration.index,property,next,useAt);
   }
 

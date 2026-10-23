@@ -94,3 +94,16 @@ test('callback payload provenance stays unproved even when prepare contains a fi
   fail(audit(body));
  }
 });
+
+// A callback binding is distinct from an outer filtered const of the same name.
+test('an outer filtered payload cannot lend proof to a shadowing callback parameter',()=>{
+ for (const create of ['payload => saveBusinessRecord(entity,payload)', '(payload) => saveBusinessRecord(entity,payload)', 'payload => { return saveBusinessRecord(entity,payload); }']) {
+  fail(audit(`const payload = ${filter}; saveSession({prepare: () => data, create: ${create}});`));
+ }
+});
+
+test('a completed sibling callback does not shadow a later filtered write',()=>{
+ for (const sibling of ['const unused = payload => payload;', 'values.map(payload => payload);', 'const unused = payload => { return payload; };']) {
+  pass(audit(`const payload = ${filter}; ${sibling} return saveBusinessRecord(entity,payload);`));
+ }
+});

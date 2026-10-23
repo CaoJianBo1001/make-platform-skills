@@ -129,7 +129,7 @@ function forwardedProps(context, definition) {
   });
 }
 
-function renderedNavigation(context, definition) {
+function renderedTags(context, definition) {
   // Only direct component returns and one local JSX slot are supported. Merely
   // constructing a navigation element inside an unused const is not evidence.
   const returns = [...context.mask.matchAll(/\breturn\s+/g)]
@@ -139,13 +139,19 @@ function renderedNavigation(context, definition) {
       const expression = splitTopLevel(context.source.slice(start, definition.end), ';')[0];
       return { start, end: start + expression.length, expression: codeMask(expression) };
     });
-  return context.tags.filter(tag => definition.start < tag.index && tag.index < definition.end && isNavigation(tag.name)
-    && (tag.uncertain || [...tag.props.keys()].some(prop => collectionProps.has(prop)))
+  return context.tags.filter(tag => definition.start < tag.index && tag.index < definition.end
     && returns.some(result => (result.start <= tag.index && tag.index < result.end)
       || context.declarations.some(declaration => definition.start < declaration.index && declaration.index < tag.index && tag.index < declaration.end && declaration.end < result.start
-        && unwrap(declaration.expression).startsWith('<')
+        && splitTopLevel(declaration.expression, '=>').length === 1
+        && (unwrap(declaration.expression).startsWith('<') || splitTopLevel(declaration.expression, '?').length === 2)
         && scopeAt(context.mask, declaration.index).at(-1) === definition.start
-        && new RegExp(`\\{\\s*${esc(declaration.name)}\\s*\\}`).test(result.expression))));
+        && (new RegExp(`\\{\\s*${esc(declaration.name)}\\s*\\}`).test(result.expression)
+          || unwrap(result.expression) === declaration.name))));
+}
+
+function renderedNavigation(context, definition) {
+  return renderedTags(context, definition).filter(tag => isNavigation(tag.name)
+    && (tag.uncertain || [...tag.props.keys()].some(prop => collectionProps.has(prop))));
 }
 
 export function navigationGate(entries) {
@@ -153,12 +159,25 @@ export function navigationGate(entries) {
     const source = stripComments(entry.source), mask = codeMask(source);
     return { file: path.resolve(entry.file), source, mask, declarations: declarations(source), functions: functions(source, mask), tags: tags(source, mask) };
   });
-  return contexts.some(context => context.tags.some(tag => {
-    if (tag.uncertain) return false;
-    if (isNavigation(tag.name)) return ['visible', 'enabled'].some(prop => tag.props.has(prop) && gateProof(context, tag.props.get(prop), tag.index))
-      || [...tag.props].some(([prop, value]) => collectionProps.has(prop) && collectionProof(context, value, tag.index));
-    const local = context.functions.find(fn => fn.name === tag.name && containsScope(scopeAt(context.mask, fn.index), scopeAt(context.mask, tag.index)));
-    const target = local ? { context, definition: local } : importedComponent(context, tag.name, contexts);
-    return Boolean(target && forwardedProps(target.context, target.definition).some(prop => tag.props.has(prop) && collectionProof(context, tag.props.get(prop), tag.index)));
-  }));
+  return contexts.some(context => {
+    const surfaces = new Map();
+    for (const tag of context.tags) {
+      const owner = context.functions.filter(fn => fn.start < tag.index && tag.index < fn.end).at(-1);
+      if (owner && !renderedTags(context, owner).includes(tag)) continue;
+      let proof;
+      if (isNavigation(tag.name)) {
+        if (!tag.uncertain && ![...tag.props.keys()].some(prop => collectionProps.has(prop) || ['visible', 'enabled'].includes(prop))) continue;
+        proof = !tag.uncertain && (['visible', 'enabled'].some(prop => tag.props.has(prop) && gateProof(context, tag.props.get(prop), tag.index))
+          || [...tag.props].some(([prop, value]) => collectionProps.has(prop) && collectionProof(context, value, tag.index)));
+      } else {
+        const local = context.functions.find(fn => fn.name === tag.name && containsScope(scopeAt(context.mask, fn.index), scopeAt(context.mask, tag.index)));
+        const target = local ? { context, definition: local } : importedComponent(context, tag.name, contexts);
+        if (!target || !renderedNavigation(target.context, target.definition).length) continue;
+        proof = !tag.uncertain && forwardedProps(target.context, target.definition).some(prop => tag.props.has(prop) && collectionProof(context, tag.props.get(prop), tag.index));
+      }
+      const key = owner?.start ?? -1;
+      surfaces.set(key, [...(surfaces.get(key) ?? []), proof]);
+    }
+    return [...surfaces.values()].some(proofs => proofs.length && proofs.every(Boolean));
+  });
 }
