@@ -1,6 +1,10 @@
 # Testing and audit
 
-本文件的 `createFields`/IAM 字段集合用例和通用权限一致性适配器验证普通新建。有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 单独增加 UI/Service 启动字段一致性测试：普通集合没有但启动配置授权的字段仍应显示并保存。不得将普通场景的“字段不在 createFields 就不能创建”当成审批分支断言，也不得删除原普通权限回归来通过审批测试。应用、对象、操作资格和关联目标权限仍需共同覆盖。
+任务节点办理另按 [审批验证矩阵](../../make-app-approval/references/verification.md) 验证：普通 Schema 已省略、但 Entity GetResource 返回且当前节点授权的字段可展示并通过任务动作保存；实体返回的未授权字段不可进入任务 UI/补丁，普通 CRUD 仍拒绝越权，普通 Schema 缓存不被替换；RETURN 空补丁且不上传，Lookup 保持任务字段格式。任务预上传用实体字段定义校验类型。当前 starter 撤回与节点办理、普通 IAM 审计分开，不能要求通用权限函数返回节点授权。
+
+本文件的 `createFields`/IAM 字段集合用例和通用权限一致性适配器验证普通新建。有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 单独增加 UI/Service 启动字段一致性测试：普通集合没有但启动配置授权的字段仍应显示并保存，启动配置只给 field key 时由 Entity GetResource 补定义。不得将普通场景的“字段不在 createFields 就不能创建”当成审批分支断言，也不得删除原普通权限回归来通过审批测试。应用、对象、操作资格和关联目标权限仍需共同覆盖。
+
+任务 form 聚合允许已完成且无动作的任务只读访问；Lookup 的辅助目标定义不进入可见/可编辑字段集合。每次任务 lookup-options 搜索/翻页都重查节点授权，撤权后不读元数据或候选；只解析当前字段，仍检查关联目标对象/显示字段/记录读取。不能用普通源字段 IAM 门禁替代节点权限，也不能因为节点可编辑就放宽目标数据权限。
 
 审批测试还应覆盖普通 `createFields` 缺少但启动配置允许的 Lookup/File：Service 对源字段使用最新启动配置，Lookup 目标仍须可见且存在，File 只在已确认预上传合同下提交；审计普通字段交集时不得把这一审批分支判为缺失 `createFields` 的违规创建。
 
@@ -82,6 +86,35 @@ Run:
 ```bash
 node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 ```
+
+For a nonstandard layout, pass `--config <json-file>` (relative paths resolve from the audited project root):
+
+```json
+{
+  "uiRoots": ["clients/browser/src"],
+  "serviceRoots": ["services/api/src"],
+  "sharedRoots": ["packages/access-core/src"],
+  "symbols": {
+    "PermissionProvider": "AppAccessProvider",
+    "canCreateEntityField": "canCreateField"
+  },
+  "createCalls": [{"name": "saveBusinessRecord", "argument": 1}]
+}
+```
+
+Only override roots that differ from defaults; `sharedRoots` adds production shared modules to the UI scan. For an `apps/ui` host whose permission model lives in `apps/packages/types/src`, configure that shared root instead. Directory and symbol names are host choices, not permission requirements. Symbol keys may be PermissionProvider, refreshPermissions, canUseEntityOperation, canCreateEntityField, canReadEntityField and canUpdateEntityField; values are actual identifiers. Mapping only enables code recognition, never grants access or skips a check. Unknown keys/options and nonexistent directories fail with usage errors. Tests, stories, fixtures and build output are excluded even under configured roots.
+
+`createCalls` identifies actual UI write boundaries, not trusted payload builders. Each entry has a call `name` (identifier or dotted member), zero-based payload `argument`, and optional DTO `property` such as `data`. Defaults are `createRecord` argument 0 and `createMakeEntityRecord` argument 0/property `data`; a configured name replaces that default signature, other names add boundaries. For `createRecordForApproval(entityKey, payload, relations, key)`, configure `{ "name": "createRecordForApproval", "argument": 1 }`. Unknown options, duplicate names, invalid indices and configured names with no actual call fail; no check can be skipped by configuration. A project with no recognized create call cannot pass by merely defining a builder elsewhere.
+
+The audit additionally recognizes generation-based context refresh (permission → fresh Schema → atomic context publication), navigation filtered from that context's Schema, whole-content permission guards and row-clearing enabled hooks consumed by the table. It checks necessary boolean conditions, including parentheses and guarded alternatives: `true || readable`, inverted permissions and OR between independent required permissions cannot establish a gate. The hook's actual enabled argument must consume the gate; mentioning it in another argument does not count. A nullable context wrapper is recognized only with the corresponding context's guarded generation provider; production tests still verify actual mounting and identity changes.
+
+Create checking follows the configured argument through local immutable aliases, DTO properties and simple expression helpers to a consumed allowlist filter. It also recognizes a local field-driven reducer when its actual field argument is filtered and its accumulator only receives that field's key. Unused builders, same-name values in another function/file, mutated aliases, raw spreads and an always-true filter predicate do not establish a safe write. A prepared `{data: values}` DTO is not itself a mutation; the consuming boundary determines the result. This is a bounded static check, not a full JavaScript interpreter: unsupported builders require inspecting the actual production call chain and extending recognition with positive **and negative** fixtures, not renaming application code or planting keywords.
+
+For a conditional payload such as `approvalConfig ? sessionData : ordinaryFilteredData`, local analysis may prove only the ordinary branch. The tool reports `REVIEW_REQUIRED` with exit 2 rather than PASS. Keep that result separate from the manual review: trace the session's real input filtering and configured create call; exercise both branches through production UI/Service code with extra, hidden and read-only inputs; assert the exact outgoing payload and zero forbidden writes. Confirm that bypassing each filter makes those tests fail. Do not intersect approval fields with ordinary IAM just to satisfy the scanner. A manual review may resolve the identified branch with evidence, but cannot turn the CLI result into an automated pass; an unattended CI gate must keep the nonzero result until its recognizer and production contract are supported. Exit 1 denotes audit failure; exit 2 also denotes usage/configuration errors, which must be corrected and cannot be manually waived.
+
+An imported transform that receives a filtered field list (for example attachment preupload) is also unproven locally. Merging its result with filtered data requires review of the actual transform and its outgoing keys; an unused allowlist or merging raw form values still fails. Exercise unauthorized attachment values as well as allowed values, assert zero uploads for excluded fields, and ensure a transform that enumerates all input keys makes the production-backed test fail.
+
+Keep the config in the host's existing tooling and CI command. If copying the audit to a host, copy its sibling `scoped-route-feedback-audit.mjs`, `permission-runtime-signals.mjs`, `permission-source-expressions.mjs` and `create-payload-signals.mjs` too. Re-run static audit plus production permission/response conformance and page tests after updating; old copied scripts do not automatically update from this skill.
 
 The audit should fail on outbound IAM request filters containing `make.platform.*`, including a platform-key array assigned to a local variable and then passed directly as `body`/`payload`/`request.permissionKeys`; missing `meta.entity.read` dynamic-route or navigation gates; field-column lists computed from `data.record.read` instead of `meta.field.read` through direct props or derived variables; missing empty/cleared rows after a record-read revoke; missing create permission helpers; create-field helpers tied to `data.record.create`, `meta.field.create`, or `meta.field.update` instead of `meta.field.read`; missing/overwritten `createFields`; `createFields ?? fields`; runtime `editableFields` use; create fields built from visible/editable sets; unfiltered create payloads; operation entries tied to field count; permission-only refresh without Schema refresh/invalidation; and obvious field-access state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()`. Whole-content early returns/conditional mounts are valid resource guards, not column-authorization failures. Response-side filtering of surplus platform rows is allowed. A positive navigation, route, or row-clear signal must be consumed by that same surface: a `ProtectedRoute` must be returned by the dynamic object route and use its resolved entity key, and an explicit empty row branch must occur on a Table/Grid/Canvas row prop or flow into it. Unrelated guards, entity filters, row props, store clears, or page components do not satisfy the gate.
 

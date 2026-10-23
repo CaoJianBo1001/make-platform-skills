@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.35
+  version: 0.4.41
 ---
 
 # makeui
@@ -15,9 +15,9 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 
 ## Quick start
 
-需求方案确认后新建或迭代 Make App，先按 [make-app-approval](../make-app-approval/SKILL.md) 判断是否生成/复用“我的审批”入口。审批新建字段、保存后首次发起、流程状态字段和详情标题 Tag 由该 skill 主责；下文 `createFields` 新建规则仅用于普通无有效审批配置的场景，已有记录普通编辑保持原 IAM 链路。不要因未绑定流程漏掉导航，也不要因有导航就切换所有表单的字段权限。
+需求方案确认后新建或迭代 Make App，先按 [make-app-approval](../make-app-approval/SKILL.md) 判断是否生成/复用“我的审批”入口。审批新建/发起、撤回、我的审批包、节点办理与继续提交、历史和流程状态由该 skill 主责；下文 `createFields` 新建规则仅用于普通无有效审批配置的场景，已有记录普通编辑保持原 IAM 链路。不要因未绑定流程漏掉导航，也不要因有导航就切换所有表单的字段权限。我的审批按 [包与列表](../make-app-approval/references/package-and-list.md) 注入宿主控件，节点编辑按 [任务详情](../make-app-approval/references/task-detail.md) 使用当前节点授权；下文普通 edit 规则不套入审批任务。手机 View 按包实际能力与本 skill 的移动规范完成，不将某个项目窄屏抽屉的定制推广为默认。
 
-生成“我的审批”入口时，必须独立放在应用导航最外层；桌面/平板侧栏固定在导航最底部，不挂在对象、模块或可折叠分组下。手机为审批保留一个底部 Tab，按剩余容量展示业务对象及工作台，总数不超过五项。侧栏布局与滚动关系见 [App shell layout](references/app-shell-layout.md#sidebar)，手机顺序与容量见 [移动导航规范](references/mobile-defaults.md#底部导航与工作台)。
+生成“我的审批”入口时，必须作为应用导航一级菜单，紧接所有业务对象/模块分组之后；桌面/平板与其他菜单在同一列表中按正常行间距排列、共同滚动，不固定到侧栏底部，不单独增加分隔区，也不挂在对象、模块或可折叠分组下。手机为审批保留一个底部 Tab，按剩余容量展示业务对象及工作台，总数不超过五项。侧栏布局与滚动关系见 [App shell layout](references/app-shell-layout.md#sidebar)，手机顺序与容量见 [移动导航规范](references/mobile-defaults.md#底部导航与工作台)。
 
 1. Inspect the existing UI stack, routes, shell, component library, styling system, and page layout conventions. For a new project with no established or user-specified library, use the three-option selection UI in `references/component-usage.md`; allow a custom compatible React library and default to Ant Design only if the user does not choose.
 2. Preserve the host project's data and auth behavior. Do not design login, tokens, business API routes, Service orchestration, deployment, or build output in this skill.
@@ -57,6 +57,7 @@ For mobile delivery, verify the actually installed package with [`scripts/verify
 | Object list page, toolbar placement, default actions | `references/list-page-layout.md` |
 | Create/edit/detail Drawer, stacked Drawers, mask close, header actions | `references/drawer-layout.md` |
 | Route-based create/edit/detail pages or URL-addressable state | `references/page-route-layout.md` |
+| SingleSelect read/form/submit reference adapter | [assets/single-select-value.mjs](assets/single-select-value.mjs) |
 | Component library choice, field-type UI controls, detail value display | `references/component-usage.md` |
 | Default Lucide field-type mapping, desktop/tablet label and field-choice icon coverage, phone exclusion | `references/field-type-icons.md` |
 | Spacing, density, responsive layout, loading/empty/error states | `references/styling-and-responsive.md` |

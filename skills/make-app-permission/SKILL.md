@@ -2,7 +2,7 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.3.14
+  version: 0.3.19
 ---
 
 # make-app-permission
@@ -22,12 +22,12 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 5. Read `references/system-field-contract.md` before implementing ID/audit create or edit capability.
 6. Read `references/testing-and-audit.md` before implementation and before reporting completion.
 7. Implement tests first, then the Service/schema boundary, permission pure model, route/action gates, field-set consumers, submit allowlists, and refresh invalidation.
-8. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. Wire both permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
+8. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. For nonstandard roots, helper names or create-call signatures use the [audit configuration](references/testing-and-audit.md#audit); do not force the host to match example names. `REVIEW_REQUIRED` is not PASS: retain the result and verify the identified production branches before a manual review conclusion. Wire permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
 9. When publishing or installing this Skill, run `check-installed-skill-sync.mjs` with explicit source and installed directories. When the release changes shared Make response/auth/permission guidance, publish the platform package, run `npx skills update qfeius/make-platform-skills`, then run the repository-wide `check-installed-make-platform-skills-sync.mjs` with explicit source and installed Skill roots. Keep these local release checks out of portable host CI.
 
 ## Required contract
 
-本节的 `createFields ∩ meta.field.read` 规则适用于普通新建。对象有有效 `bpmDefinitionKey` 时，先按 [make-app-approval](../make-app-approval/SKILL.md) 选择审批新建分支：UI 和 Service 均以启动配置授权字段为准，不再与普通 IAM 字段集合求交；应用、对象及新建操作权限仍保留。此例外不扩展到普通已有记录编辑，也不把“我的审批”固定导航作为业务对象菜单权限项。详细合同见 [审批新建字段](../make-app-approval/references/initiation-contract.md)。
+本节的 `createFields ∩ meta.field.read` 规则适用于普通新建。对象有有效 `bpmDefinitionKey` 时，先按 [make-app-approval](../make-app-approval/SKILL.md) 选择审批新建分支：UI 和 Service 均以启动配置授权字段为准，不再与普通 IAM 字段集合求交；应用、对象及新建操作权限仍保留。此例外不扩展到普通已有记录编辑，也不把“我的审批”固定导航作为业务对象菜单权限项。详细合同见 [审批新建字段](../make-app-approval/references/initiation-contract.md)。我的审批节点办理另按 [任务详情授权](../make-app-approval/references/task-detail.md) 使用当前任务 fieldPermission/actions，字段定义来自未做字段权限裁剪的 Meta Entity GetResource，不从 Schema 补字段、不套普通 update 字段或启动节点权限；Workflow 执行最终授权。完整实体元数据不写回普通 Schema/权限缓存。节点附件预上传重查任务授权，发起人撤回依据最新流程 starter；这些能力不放宽普通 CRUD。
 
 - Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. This is a direct Make proxy: return every completed IAM response unchanged, including 2xx/4xx/5xx status, Content-Type, and body. Do not request tenant-root scope or upstream platform permission filters. Before strict normalization, classify rows with `references/permission-boundaries.md`: ignore only clearly unrelated rows, and fail closed for every selected or unclassifiable row.
 - Current-context-based tenant resolution follows `make-app-auth/references/service-fronted-mode.md#current-context-consumption`. Only the actual App-scoped IAM response is the principal-permission result, not auth compatibility claims.
@@ -72,7 +72,7 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 ```
 
-Treat failures as blockers and warnings as review items. The audit is heuristic and never replaces runtime tests.
+Treat failures as blockers and warnings as review items. Exit codes are 0 for PASS, 1 for failure and 2 for REVIEW_REQUIRED or invalid usage; distinguish the latter by the diagnostic. Do not mask nonzero exits or describe REVIEW_REQUIRED as an automated pass. The audit is heuristic and never replaces runtime tests.
 It rejects obvious `fieldAccess` state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()` when the coerced value affects normalization output or permission evaluation, including direct control-flow conditions. Diagnostic-only logging, comments, and string literals inside a named normalization helper must not fail the audit, regardless of whether the parameter uses a generic or `fieldAccess`-specific name. The executable behavior contract remains authoritative.
 
 Also expose a thin host adapter and run the executable behavior contract:

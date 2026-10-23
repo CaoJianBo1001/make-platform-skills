@@ -35,6 +35,8 @@ jobs:
           node skills/make-app-auth/scripts/test-current-context-conformance-suite.mjs
           node skills/make-app-auth/scripts/test-audit-auth-contract.mjs
           node skills/make-app-permission/scripts/test-audit-make-app-permission.mjs
+          node --test skills/make-app-permission/scripts/test-permission-runtime-signals.mjs
+          node --test skills/make-app-permission/scripts/test-create-payload-signals.mjs
           node --test skills/make-app-permission/scripts/test-scoped-route-feedback.mjs
 
       - name: Check feedback package and SDK compatibility
