@@ -32,6 +32,8 @@ Action permissions:
 - independent combinations of update/delete/bulkUpdate
 - bulkUpdate without update still shows batch edit for multiple selection
 - batch edit is hidden when `batchEditableFields.length === 0`
+- approval-restricted targets have no single edit button/menu item; known restricted records in the current selection hide batch edit without clearing selection or hiding independently allowed actions
+- use the [approval edit matrix](../../make-app-approval/references/verification.md#普通编辑禁编矩阵) for stale edit sessions, cell commits and the task-action exception; ordinary row-level IAM denial still follows the existing visible-action/precheck feedback path
 - no allowed actions renders scheme two
 - principal cache is reused on click/submit; identity/tenant/explicit refresh can
   replace it
