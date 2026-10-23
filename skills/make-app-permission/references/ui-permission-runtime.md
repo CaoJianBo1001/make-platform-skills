@@ -1,5 +1,7 @@
 # UI permission runtime
 
+以下普通编辑/更新字段规则不用于我的审批节点办理。任务表单按 [审批任务详情](../../make-app-approval/references/task-detail.md) 消费当前节点 fieldPermission/actions，字段定义统一读取 Meta Entity GetResource，不从权限过滤的 Schema 补齐；完整实体字段不并入普通权限缓存。任务附件重查节点权限并用同一实体来源校验类型，任务写入交 Workflow，不经普通记录更新门禁，也不以此放宽普通 CRUD。
+
 Use this reference for frontend permission providers, matching, route/action gates, field sets, payloads, and refresh.
 
 ## Contents

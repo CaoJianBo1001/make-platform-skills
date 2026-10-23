@@ -118,14 +118,14 @@ Use the sidebar for app modules or object navigation.
 
 For a metadata-driven Make App, build navigation from modules or object groups when available. If no grouping exists, list objects directly. Object entries still use a dynamic route such as `/objects/:objectKey`.
 
-When [make-app-approval](../../make-app-approval/SKILL.md) requires “我的审批”, render it as a separate top-level application entry in the sidebar's bottom region:
+When [make-app-approval](../../make-app-approval/SKILL.md) requires “我的审批”, render it as a top-level menu item immediately after all visible business objects/module groups in the same navigation list:
 
-- Keep it outside all object/module groups, submenus, and collapsible or “more” containers. Grouping metadata and expanded-group state must not control its placement or visibility.
-- Use a full-height sidebar column with a flexible, independently scrolling business-navigation region above a non-scrolling approval region at the bottom. Keep the approval region from shrinking; do not append it inside the scrolling object tree or position it relative to the whole browser viewport.
-- Collapsing groups, changing object order, and scrolling a long object list must leave this entry visible and clickable at the bottom. If the existing sidebar narrows to an icon rail, keep its independent clickable icon with an accessible name and label tooltip.
-- Reuse the existing approval route and navigation identity. If it was nested under an object, move that entry and remove the old placement instead of creating a duplicate.
+- Keep it outside all object/module groups, submenus, and collapsible or “more” containers. Grouping metadata must not turn it into a group child, and expanded-group state must not hide it.
+- Use the same row spacing, navigation container, and sidebar scroll area as the preceding menu items. Do not add an approval-only divider, card, footer region, or large blank gap. “After the objects” describes menu order, not the bottom edge of the sidebar or viewport; do not use fixed/sticky positioning, `margin-top: auto`, or a flex spacer to push the item there.
+- Collapsing object/module groups must not hide this sibling item. It moves naturally with the preceding menu content and remains after the business entries when objects are reordered or changed. A long navigation list scrolls together, including approval, which may leave the visible area; do not pin it in view. If the existing sidebar narrows to an icon rail, keep its clickable icon with an accessible name and label tooltip.
+- Reuse the existing approval route and navigation identity. If it was nested under an object or placed in a fixed bottom region, move that entry after the business entries and remove its old placement, approval-only separator, and spacer instead of creating a duplicate.
 
-This bottom-region rule applies to desktop/tablet sidebars, including the tablet navigation overlay when open. Phone navigation follows [mobile-defaults.md](mobile-defaults.md#底部导航与工作台): reserve one bottom Tab for the generated approval entry and use the remaining capacity for business objects, the optional AI assistant, and the workbench. Keep at most five items and reuse the same approval route and navigation key.
+This menu-order and shared-scroll rule applies to desktop/tablet sidebars, including the tablet navigation overlay when open. Phone navigation follows [mobile-defaults.md](mobile-defaults.md#底部导航与工作台): reserve one bottom Tab for the generated approval entry and use the remaining capacity for business objects, the optional AI assistant, and the workbench. Keep at most five items and reuse the same approval route and navigation key.
 
 If object descriptions exist in host-provided metadata, do not show them under each sidebar item by default. Use them only when the user asks for richer navigation, and prefer a tooltip or detail surface over making every item two lines.
 
