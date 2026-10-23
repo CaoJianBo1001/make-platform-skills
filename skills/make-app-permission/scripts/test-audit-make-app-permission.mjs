@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -132,7 +132,45 @@ try {
     `,
   });
 
-  assert.match(runAudit(goodRoot), /status: PASS/);
+  const goodOutput = runAudit(goodRoot);
+  assert.match(goodOutput, /status: PASS/);
+  assert.match(goodOutput, /create calls: checked=1; filtered=1; unproven=0; review=0/);
+
+  const regexModel = String.raw`const tenantPattern = /^make:\/\/[^/*]+$/;` + '\n' + goodFiles.permissionModel;
+  assert.match(runAudit(createFixture('regex-before-permission-model', {
+    ...goodFiles, permissionModel: regexModel,
+  })), /status: PASS/);
+  assert.match(runAudit(createFixture('regex-before-wrong-permission', {
+    ...goodFiles, permissionModel: regexModel.replace('return evaluateField(access, entityKey, fieldKey, META_FIELD_READ);', 'return evaluateField(access, entityKey, fieldKey, DATA_RECORD_CREATE);'),
+  }), { expectFailure: true }), /create_field_permission_(?:key_missing|uses_record_operation)/);
+
+  for (const [name, expression] of [
+    ['or-true', 'canViewEntity || true'],
+    ['negated', '!canViewEntity'],
+    ['fallback', 'canViewEntity ? true : cached'],
+    ['direct-or-true', 'canUseEntityOperation(access, object.entityKey, "meta.entity.read") || true'],
+  ]) {
+    const fixture = createFixture(`navigation-visible-${name}`, {
+      ...goodFiles, page: goodFiles.page.replace('visible={canViewEntity}', `visible={${expression}}`),
+    });
+    assert.match(runAudit(fixture, { expectFailure: true }), /entity_navigation_not_gated_by_meta_entity_read/);
+  }
+
+  for (const [name, predicate, allowed] of [
+    ['valid', 'canUseEntityOperation(access, item.entityKey, META_ENTITY_READ)', true],
+    ['and', 'canUseEntityOperation(access, item.entityKey, META_ENTITY_READ) && ready', true],
+    ['or-true', 'canUseEntityOperation(access, item.entityKey, META_ENTITY_READ) || true', false],
+    ['negated', '!canUseEntityOperation(access, item.entityKey, META_ENTITY_READ)', false],
+  ]) for (const wrapper of [false, true]) {
+    const navigation = wrapper ? '<DesktopObjectListView objects={authorizedObjects} />' : '<ObjectNavigation items={authorizedObjects} />';
+    const fixture = createFixture(`navigation-filter-${name}-${wrapper}`, {
+      ...goodFiles,
+      page: goodFiles.page.replace('<ObjectNavigation object={object} visible={canViewEntity} />',
+        `const authorizedObjects = objects.filter(item => ${predicate});\n${navigation}\n`
+        + (wrapper ? 'function DesktopObjectListView({ objects }: Props) { return <ObjectNavigation items={objects} />; }' : '')),
+    });
+    assert.match(runAudit(fixture, { expectFailure: !allowed }), allowed ? /status: PASS/ : /entity_navigation_not_gated_by_meta_entity_read/);
+  }
 
   const legacyEditRoot = createFixture('legacy-business-edit', {
     ...goodFiles,
@@ -204,7 +242,26 @@ try {
   assert.match(runAudit(validCreate,{args:['--config','audit.json']}),/status: PASS/);
   write(path.join(goodRoot,'missing-call.json'),JSON.stringify({createCalls:[{name:'missingCreateBoundary',argument:1}]}));
   assert.match(runAudit(goodRoot,{args:['--config','missing-call.json'],expectFailure:true}),/configured_create_call_not_found/);
-  assert.match(runAudit(validCreate,{expectFailure:true}),/create_payload_filter_not_obvious/,'an unconfigured boundary cannot borrow a global filter signal');
+  const unconfiguredOutput = runAudit(validCreate,{expectFailure:true});
+  assert.match(unconfiguredOutput,/create_call_not_recognized/,'an unconfigured boundary cannot borrow a global filter signal');
+  assert.match(unconfiguredOutput,/create calls: checked=0; filtered=0; unproven=0; review=0/);
+  assert.doesNotMatch(unconfiguredOutput,/create_payload_unverified_call/);
+
+  const sessionRoot = createFixture('cross-callback-create-diagnostics', {
+    ...goodFiles, page: goodFiles.page.replace('return createRecord(buildCreatePayload(values));', `
+      saveSession({prepare: () => buildCreatePayload(values), create: (payload) => dependencies.createWorkorder(payload)});
+      saveSession({prepare: () => buildCreatePayload(values), create: (payload) => dependencies.createEntityRecord(entityKey, payload)});
+    `),
+  });
+  write(path.join(sessionRoot,'audit.json'),JSON.stringify({createCalls:[
+    {name:'dependencies.createWorkorder',argument:0}, {name:'dependencies.createEntityRecord',argument:1},
+  ]}));
+  const sessionResult = spawnSync(process.execPath,[auditScript,sessionRoot,'--config','audit.json'],{encoding:'utf8'});
+  assert.equal(sessionResult.status,1,'unproved callback payloads must keep a nonzero failure');
+  assert.match(sessionResult.stdout,/create calls: checked=2; filtered=0; unproven=2; review=0/);
+  assert.match(sessionResult.stdout,/dependencies\.createWorkorder: payload argument\[0\] \(identifier payload\).*source unproven/);
+  assert.match(sessionResult.stdout,/dependencies\.createEntityRecord: payload argument\[1\] \(identifier payload\).*source unproven/);
+  assert.doesNotMatch(sessionResult.stdout,/create_call_not_recognized|status: PASS/);
   for (const [name,statement] of [
     ['unused-filter','const payload = buildCreatePayload(values); return createRecordForApproval(entityKey,values,relations,key);'],
     ['wrong-argument','const payload = buildCreatePayload(values); return createRecordForApproval(payload,values,relations,key);'],

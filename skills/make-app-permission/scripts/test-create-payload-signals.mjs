@@ -83,6 +83,14 @@ test('a call followed by a standalone block is still a mutation',()=>{
  assert.equal(result.checked,2); assert.equal(result.failures.length,1);
 });
 test('definitions, comments and strings are not create calls',()=>{
- const result = auditCreatePayloads(['function saveBusinessRecord(a,b) {}', 'const saveBusinessRecord = (a,b) => api.post(b);', '// saveBusinessRecord(entity,data)', 'const s="saveBusinessRecord(entity,data)";'],calls);
+ const result = auditCreatePayloads(['function saveBusinessRecord(a,b) {}', 'const saveBusinessRecord = (a,b) => api.post(b);', '// saveBusinessRecord(entity,data)', 'const s="saveBusinessRecord(entity,data)";', 'const r=/saveBusinessRecord(entity,data)/;'],calls);
  assert.equal(result.checked,0);
+});
+
+test('callback payload provenance stays unproved even when prepare contains a filter',()=>{
+ for (const input of [filter, 'data']) {
+  const body = `saveSession({prepare: () => (${input}), create: payload => saveBusinessRecord(entity,payload)});`;
+  assert.doesNotThrow(() => new Function(source(body)));
+  fail(audit(body));
+ }
 });

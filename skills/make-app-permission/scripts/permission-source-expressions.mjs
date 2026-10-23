@@ -2,22 +2,115 @@
 // unknown; only supported boolean structure can establish a necessary gate.
 export const identifier = String.raw`[A-Za-z_$][\w$]*`;
 export const escapePattern = value => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-export const stripComments = source => source.replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, (whole, literal) => literal ?? ' ');
-
-function quoteEnd(source, start) {
-  for (let i = start + 1; i < source.length; i++) {
-    if (source[i] === '\\') i++;
-    else if (source[i] === source[start]) return i;
+// Keep offsets and executable template interpolations. A slash inside a regex
+// character class is never a comment delimiter. This is lexical masking, not
+// a parser or an authorization proof; unknown expressions stay unknown below.
+const lexicalCache = new Map();
+function lexicalMasks(source) {
+  if (lexicalCache.has(source)) return lexicalCache.get(source);
+  const code = source.split(''), comments = source.split('');
+  const blank = (start, end, comment = false) => {
+    for (let i = start; i < end; i++) if (!/[\r\n]/.test(source[i])) {
+      code[i] = ' ';
+      if (comment) comments[i] = ' ';
+    }
+    if (!comment) code[start] = '_';
+  };
+  const regexEnd = start => {
+    let inClass = false;
+    for (let i = start + 1; i < source.length && !/[\r\n]/.test(source[i]); i++) {
+      if (source[i] === '\\') { i++; continue; }
+      if (source[i] === '[') inClass = true;
+      else if (source[i] === ']') inClass = false;
+      else if (source[i] === '/' && !inClass) {
+        while (/[a-z]/i.test(source[i + 1] ?? '') && i + 1 < source.length) i++;
+        return i + 1;
+      }
+    }
+    return -1;
+  };
+  const contexts = [{ template: false, regexAllowed: true, previous: '', parens: [], braces: [] }];
+  let i = 0;
+  while (i < source.length) {
+    const context = contexts.at(-1), ch = source[i], next = source[i + 1];
+    if (context.template) {
+      const start = i;
+      while (i < source.length) {
+        if (source[i] === '\\') { i += 2; continue; }
+        if (source[i] === '`' || (source[i] === '$' && source[i + 1] === '{')) break;
+        i++;
+      }
+      if (i > start) blank(start, i);
+      if (source[i] === '`') { blank(i, ++i); contexts.pop(); }
+      else if (i < source.length) {
+        i += 2;
+        contexts.push({ template: false, interpolation: true, regexAllowed: true, previous: '', parens: [], braces: [] });
+      }
+      continue;
+    }
+    if (/\s/.test(ch)) { i++; continue; }
+    if (ch === '/' && (next === '/' || next === '*')) {
+      const start = i;
+      if (next === '/') { while (i < source.length && !/[\r\n]/.test(source[i])) i++; }
+      else { const end = source.indexOf('*/', i + 2); i = end < 0 ? source.length : end + 2; }
+      blank(start, i, true); continue;
+    }
+    if (ch === '"' || ch === "'") {
+      const start = i++;
+      while (i < source.length) {
+        if (source[i] === '\\') { i += 2; continue; }
+        if (source[i++] === ch) break;
+      }
+      blank(start, Math.min(i, source.length)); context.regexAllowed = false; context.previous = 'literal'; continue;
+    }
+    if (ch === '`') {
+      blank(i, ++i); context.regexAllowed = false; context.previous = 'literal';
+      contexts.push({ template: true }); continue;
+    }
+    if (ch === '/' && context.regexAllowed && context.previous !== '<') {
+      const end = regexEnd(i);
+      if (end >= 0) { blank(i, end); i = end; context.regexAllowed = false; context.previous = 'literal'; continue; }
+    }
+    if (/[A-Za-z_$\d]/.test(ch)) {
+      const start = i++;
+      while (i < source.length && /[\w$]/.test(source[i])) i++;
+      context.previous = source.slice(start, i);
+      context.regexAllowed = /^(?:return|throw|case|delete|void|typeof|yield|await|in|of|instanceof|else|do)$/.test(context.previous);
+      continue;
+    }
+    if (ch === '(') {
+      context.parens.push(/^(?:if|while|for|with|switch|catch)$/.test(context.previous));
+      context.regexAllowed = true;
+    } else if (ch === ')') context.regexAllowed = context.parens.pop() ?? false;
+    else if (ch === '{') {
+      context.braces.push(context.previous === '=>' || context.previous === ')' || context.previous === 'else' || context.previous === 'try');
+      context.regexAllowed = true;
+    } else if (ch === '}') {
+      if (context.interpolation && !context.braces.length) { contexts.pop(); i++; continue; }
+      context.regexAllowed = context.braces.pop() ?? true;
+    } else if (ch === ']') context.regexAllowed = false;
+    else if ((ch === '+' || ch === '-') && next === ch) { context.previous = ch + ch; i += 2; continue; }
+    else context.regexAllowed = ch !== '.';
+    context.previous = ch === '>' && source[i - 1] === '=' ? '=>' : ch;
+    i++;
   }
-  return source.length;
+  const result = { code: code.join(''), comments: comments.join('') };
+  if (lexicalCache.size >= 12) lexicalCache.delete(lexicalCache.keys().next().value);
+  lexicalCache.set(source, result);
+  return result;
 }
 
+export const stripComments = source => lexicalMasks(source).comments;
+
 export function closingIndex(source, start) {
+  return closingMaskIndex(codeMask(source), start);
+}
+
+function closingMaskIndex(source, start) {
   const pairs = { '(': ')', '[': ']', '{': '}' };
   const stack = [];
   for (let i = start; i < source.length; i++) {
     const ch = source[i];
-    if ('\'"`'.includes(ch)) { i = quoteEnd(source, i); continue; }
     if (pairs[ch]) stack.push(pairs[ch]);
     else if (')]}'.includes(ch)) {
       if (stack.pop() !== ch) return -1;
@@ -28,16 +121,16 @@ export function closingIndex(source, start) {
 }
 
 export function splitTopLevel(source, separator) {
+  const mask = codeMask(source);
   const parts = [];
   let start = 0;
   for (let i = 0; i < source.length; i++) {
-    if ('\'"`'.includes(source[i])) { i = quoteEnd(source,i); continue; }
-    if ('([{'.includes(source[i])) {
-      const end = closingIndex(source,i);
+    if ('([{'.includes(mask[i])) {
+      const end = closingMaskIndex(mask,i);
       if (end < 0) return [source];
       i = end; continue;
     }
-    if (source.startsWith(separator,i)) {
+    if (mask.startsWith(separator,i)) {
       if (separator === '?' && ['?', '.'].includes(source[i + 1])) { i++; continue; }
       parts.push(source.slice(start,i).trim());
       i += separator.length - 1; start = i + 1;
@@ -62,7 +155,7 @@ export function parseCall(source) {
 // Offsets are preserved when masking literals, so matches cannot come from
 // comments/diagnostic strings. Returned arguments still retain real literals.
 export function codeMask(source) {
-  return source.replace(/("(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|`(?:\\.|[^`\\])*`)|\/\/[^\n]*|\/\*[\s\S]*?\*\//g, text => text.replace(/[^\n]/g,' '));
+  return lexicalMasks(source).code;
 }
 
 export function calls(source, namePattern) {
