@@ -87,3 +87,29 @@ test('direct visible gates use the full boolean condition', () => {
     assert.equal(navigationGate([entry(`const allowed = canUseEntityOperation(access, object.entityKey, 'meta.entity.read'); <ObjectNavigation visible={${expression}} />`)]), expected);
   }
 });
+
+test('unused direct or wrapped JSX cannot authorize the rendered raw menu', () => {
+  for (const component of ['ObjectNavigation', 'DesktopObjectListView']) {
+    const source = page().replace('return <DesktopObjectListView objects={filtered} />;',
+      `const unused = <${component} objects={filtered} />; return <ObjectNavigation items={objects} />;`);
+    assert.equal(navigationGate([entry(source), entry(wrapper, wrapperFile)]), false);
+  }
+});
+
+test('a safe direct menu cannot hide a raw sibling in the same rendered surface', () => {
+  const source = `function Page() { const filtered = objects.filter(item => ${gate});
+    return <><ObjectNavigation items={filtered} /><ObjectNavigation items={objects} /></>; }`;
+  assert.equal(navigationGate([entry(source)]), false);
+});
+
+test('returned conditional JSX slots preserve the collection proof', () => {
+  const source = page().replace('return <DesktopObjectListView objects={filtered} />;',
+    'const view = compact ? <div /> : <DesktopObjectListView objects={filtered} />; return <Layout>{view}</Layout>;');
+  assert.equal(navigationGate([entry(source), entry(wrapper, wrapperFile)]), true);
+});
+
+test('existing direct navigation in an arrow component remains recognized', () => {
+  const source = `const Page = () => { const filtered = objects.filter(item => ${gate});
+    return <ObjectNavigation items={filtered} />; };`;
+  assert.equal(navigationGate([entry(source)]), true);
+});

@@ -615,7 +615,7 @@ try {
     app: goodFiles.app,
     permissionModel: goodFiles.permissionModel,
     router: goodFiles.router,
-    page: `function OrderTablePage() { ${goodFiles.page} }
+    page: `function OrderTablePage() { ${goodFiles.page.replace('<MasterDataToolbar', 'return <><MasterDataToolbar')} </>; }
       function ObjectContent() {
         const canReadRecord = canUseEntityOperation(access, object.entityKey, DATA_RECORD_READ);
         return canReadRecord ? <OrderTablePage /> : <Forbidden variant="inline" scope="resource" />;
