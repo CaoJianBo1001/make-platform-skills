@@ -442,3 +442,11 @@ npx skills update make-integration
 
 **使用场景**
 - 识别发票(打车, 火车票, 宾馆, 餐饮等)的内容(金额等相关信息)
+
+## 业务字段编辑权限修复（2026-10-23）
+
+权限技能 0.3.20、操作技能 0.1.21 将业务字段编辑统一修正为 `data.field.update`，字段可见性继续使用 `meta.field.read`，记录更新继续独立校验 `data.record.update`（批量为 `data.record.bulkUpdate`）。不得用 `meta.field.update`、应用管理员或扩大授权范围来绕过。
+
+发布时先更新 beta，验证通过后将同一修复合入 main。发布完成后，用户应按所选通道更新全局及项目内技能副本：全局运行 `npx skills update -g`，在每个业务项目目录运行 `npx skills update`；makecli 用户按上文所选通道运行 `makecli skills update`，并检查 Agent 实际读取的副本版本。
+
+技能更新不会自动修改已生成的业务代码。存量项目需要检查权限解析支持列表、前端编辑控件与提交字段过滤、Service 写入验证，并通过 `write-permission-conformance-suite.mjs` 的生产适配器验证 UI 提交和 Service 拒写边界；验证精确及数据通配授权可编辑、仅元数据更新不可编辑，以及字段只读、显式拒绝和撤权后均不可写。

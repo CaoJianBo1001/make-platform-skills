@@ -36,7 +36,7 @@ Normal edit keeps the existing rule:
 
 - exclude ID fields from edit capability;
 - do not automatically exclude the audit keys above;
-- an audit field is editable only when it is present in visible `fields`, allowed by `meta.field.update`, and supported by the host editor.
+- an audit field is editable only when it is present in visible `fields`, allowed by `data.field.update`, and supported by the host editor.
 
 This preserves “审计字段不可新建但仍保留既有可编辑能力”. Do not reuse the create-capability guard as the edit-capability guard.
 

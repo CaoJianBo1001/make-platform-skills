@@ -61,7 +61,7 @@ Apply this order:
 
 Build batch candidates from runtime normalized schema:
 
-1. Keep fields allowed by `meta.field.read` and `meta.field.update`.
+1. Keep fields allowed by `meta.field.read` and `data.field.update`.
 2. Pass those fields to `resolveBatchEditableFields`.
 3. Exclude readonly/derived Lookup fields or any field the installed package
    reports unsupported.
@@ -149,7 +149,7 @@ into the host.
 
 1. Acquire a single-submit lock; duplicate confirm clicks do nothing.
 2. Recheck the current cached `data.record.bulkUpdate` and target field
-   `meta.field.update` without refetching principal.
+   `data.field.update` without refetching principal.
 3. Re-resolve current field capability and validate the normalized value.
 4. Build `data`/`relations` using the host's existing field mutation builders.
 5. Reuse the frozen prechecked target exactly and call one Service bulk route.

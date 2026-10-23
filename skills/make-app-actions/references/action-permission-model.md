@@ -33,7 +33,7 @@ edit for multiple selection, subject to the field and approval visibility gates 
 `data.record.bulkUpdate` must not expose batch edit. Delete never implies either
 update permission.
 
-Use `meta.field.read` for field visibility and `meta.field.update` for field
+Use `meta.field.read` for field visibility and `data.field.update` for field
 editability. Do not use field counts to infer record-operation permission.
 
 ## Action state
