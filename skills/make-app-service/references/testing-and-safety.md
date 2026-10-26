@@ -45,16 +45,18 @@ Route tests should cover:
   upstream headers and returns the documented transport failure; after the first
   write it preserves the started Make status/body, terminates the connection, and
   never appends or substitutes a Service error envelope
-- record-write permission explicit denial maps HTTP 200, business code
-  `20000032`, and ordered numeric `noPermissionRecordIds` to the documented stable
-  result; malformed or out-of-target IDs fail as a contract error, while
-  select-all 403 stays denied with no row IDs
+- record-write permission explicit denial maps HTTP 200 and business code
+  `20000032` to denied independently of optional `noPermissionRecordIds`;
+  ordered string/numeric IDs enrich row feedback, while missing, malformed, or
+  out-of-target IDs keep denial with no row IDs rather than 502; select-all 403
+  stays denied with no row IDs
 - record-write permission and bulk routes retain their documented successful and
   failed UI-Service response shapes; generic direct-proxy/non-proxy rules must not
   rewrite either action contract
 - the permission adapter decodes raw JSON losslessly before JavaScript `Number`
-  coercion, maps `9007199254740993` to the exact request string row key, and rejects
-  fractional, zero, negative, duplicate numeric identities, and rounded values
+  coercion and maps string/numeric `9007199254740993` to the exact request row key;
+  equivalent IDs deduplicate, and fractional, non-positive, malformed, out-of-target
+  or rounded IDs suppress row feedback without changing confirmed denial
 - create/update/delete/cell-update call the adapter with the documented payload
 - detail uses the single-record adapter
 - user and department candidates return `{ users,total }` and `{ departments,total }`

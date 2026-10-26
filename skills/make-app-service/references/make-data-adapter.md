@@ -74,9 +74,11 @@ there is no `error.response` and no upstream response was received.
 
 For the `make-app-actions` row-write permission precheck, parse the documented
 permission-specific business result before generic `code !== 200` error handling.
-HTTP 200 with `code: 20000032` and `data.noPermissionRecordIds` is an expected
-explicit-selection permission denial whose exact IDs must remain available for
-normalization; it is not a generic Make failure. Read this endpoint's raw response
+HTTP 200 with `code: 20000032` is an expected explicit-selection permission denial,
+not a generic Make failure. The code establishes denial independently of optional
+`data.noPermissionRecordIds`: usable decimal-string or numeric IDs enrich row
+feedback; missing or unusable IDs must not turn the refusal into 502 or allow the
+write. Read this endpoint's raw response
 text and use a documented lossless JSON decoder that preserves every
 `noPermissionRecordIds` integer token as a decimal string or `BigInt` before the
 shared wrapper can coerce it to JavaScript `Number`. Never recover an ID from an
