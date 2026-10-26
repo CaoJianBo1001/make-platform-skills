@@ -49,7 +49,7 @@ assert.match(traceChain, /实际 HTTP 状态码/);
 assert.match(traceChain, /非 2xx[^\n]*Span[^\n]*错误/);
 assert.match(testingAndAudit, /业务码失败[^\n]*实际 HTTP 状态码/);
 assert.match(testingAndAudit, /AI[^\n]*非 2xx[^\n]*Span[^\n]*错误/);
-assert.match(packageIntegration, /@qfei-design\/make-app-observability@\^0\.1\.9/);
+assert.match(packageIntegration, /@qfei-design\/make-app-observability@\^0\.1\.10/);
 assert.match(packageIntegration, /`business`[^\n]*展示有效 ID/);
 assert.match(skill, /业务码异常[^\n]*Trace ID/);
 assert.match(skill, /全局错误队列[^\n]*MakeAppErrorNoticeViewport/);

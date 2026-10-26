@@ -41,3 +41,34 @@ test('UI composition replaces the entire business slot without changing operatio
   assert.match(guide, /preserves permitted draft values/u);
   assert.match(guide, /never performs this work or replays a mutation/u);
 });
+
+test('new feedback installations resolve a compatible release without silently updating locked Apps', async () => {
+  const guide = await read('makeui/references/permission-feedback.md');
+  const integration = await read('make-app-observability/references/package-integration.md');
+  const install = guide.match(/corepack pnpm add (@qfei-design\/make-app-observability@[^`\s]+)/u)?.[1];
+  assert.equal(install, '@qfei-design/make-app-observability@^0.1.10');
+  assert.match(integration, /@qfei-design\/make-app-observability@\^0\.1\.10/u);
+  assert.match(guide, /lockfile[\s\S]*explicit[\s\S]*upgrade/iu);
+  assert.match(guide, /untouched legacy Apps/iu);
+});
+
+test('the queue example forwards one event identity to the component and close callback', async () => {
+  const guide = await read('makeui/references/permission-feedback.md');
+  const example = [...guide.matchAll(/```tsx\n([\s\S]*?)\n```/gu)].map(match => match[1]).find(code => code.includes('variant="toast"'));
+  assert.ok(example, 'the actual host queue example must remain discoverable');
+  assert.match(example, /key=\{notice\.id\}/u);
+  assert.match(example, /noticeKey=\{notice\.id\}/u);
+  assert.match(example, /onClose=\{\(\) => dismissNotice\(notice\.id\)\}/u);
+  assert.doesNotMatch(example, /setTimeout|setInterval/u);
+  assert.doesNotMatch(guide, /Toast component does not start a timer|host owns duration/iu);
+});
+
+test('lifecycle guidance keeps persistent feedback distinct from timed notifications', async () => {
+  const guide = await read('makeui/references/permission-feedback.md');
+  const evidence = await read('make-app-observability/references/testing-and-audit.md');
+  assert.match(guide, /duration[\s\S]*3[\s\S]*0[\s\S]*inline\/page/u);
+  assert.match(guide, /noticeKey[\s\S]*rerender/iu);
+  for (const requirement of ['noticeKey', 'duration', 'onClose', 'inline/page', '管理员', '卸载']) {
+    assert.ok(evidence.includes(requirement), `mounted lifecycle evidence must cover ${requirement}`);
+  }
+});
