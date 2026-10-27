@@ -1,6 +1,6 @@
 # Make Data Adapter
 
-本文件描述 Make Data 普通记录适配。审批任务办理的 recordPatch 属于 Workflow：按 [审批接口合同](../../make-app-approval/references/workflow-api.md) 保留任务字段格式与节点授权，不进入这里的普通 Lookup 关系合成和记录更新链路。任务字段基础定义及附件类型核验统一读取 Meta Entity GetResource，不使用下文普通权限 Schema 的字段来源，也不以完整实体字段扩大节点授权。
+本文件描述 Make Data 普通记录适配。审批任务办理的 recordPatch 属于 Workflow：按 [审批接口合同](../../make-app-approval/references/workflow-api.md) 保留任务字段格式与节点授权，不进入这里的普通 Lookup 关系合成和记录更新链路。任务字段基础定义及附件类型核验读取 bpm-node-form-metadata 的 TASK 场景，不使用下文普通权限 Schema 的字段来源，不回退普通 entity 补源字段，也不以节点元数据扩大节点授权。
 
 Use this reference when implementing Service adapters that call Make platform APIs.
 

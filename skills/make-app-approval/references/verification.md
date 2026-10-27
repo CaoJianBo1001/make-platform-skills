@@ -2,6 +2,8 @@
 
 先将本次触及的场景落到宿主已有测试：纯字段/状态函数单测，保存编排调用顺序和次数测试，UI 按钮与可见性测试，Service 权威校验及请求合同测试。保留普通 IAM 回归，不复制审批函数到测试里计算期望。
 
+节点字段转换先执行 `node skills/make-app-approval/scripts/verify-node-form-metadata.mjs`，覆盖随包 [转换合同](node-form-metadata.md) 的真实参考函数；宿主可传入桥接自身转换代码的 ESM 文件复用同一测试。仓库 `scripts/test-bpm-node-form-metadata-behavior.mjs` 另验证故障注入会被发现，CI 的 `scripts/test-*.mjs` 入口会自动运行。`test-bpm-node-form-metadata-contract.mjs` 仅检查文档来源与链接，不作为转换行为或真实 Workflow 联调证据。
+
 ## 默认生成决策场景
 
 | 已确认需求 | 应观察的结果 |
@@ -49,7 +51,7 @@
 | 场景 | 可观察断言 |
 | --- | --- |
 | Schema 成功且无 key | 普通字段集，保存不调用启动配置/发起接口 |
-| 启动配置 field 为 key 或完整对象 | 可见 key 按启动顺序从一次 Entity GetResource 补齐；隐藏 key 缺定义不阻断，完整对象不额外读取；不从 Schema fields/createFields 兜底，不加入 Entity 中未授权字段 |
+| 启动配置 field 为 key 或完整对象 | 可见 key 按启动顺序从一次 START 节点元数据补齐；隐藏 key 缺定义不阻断，完整对象不额外读取；不从 Schema fields/createFields 兜底，不加入节点定义中未授权字段 |
 | 有 key、启动配置加载或失败 | 正确加载/错误与重试；没有普通字段回退或未授权提交 |
 | 普通 createFields 不含 F，启动配置允许 F | F 正常显示且能保存；UI、Service 均不再做 IAM 字段交集 |
 | 可读不可写、隐藏、可读可写字段 | 分别只读、消失、可输入；注入隐藏/只读值被拒绝或从白名单移除 |
@@ -123,12 +125,12 @@
 | 高度增加、深处滚动和卸载 | 仅补取新增可见缺页，已加载页不反复请求，卸载后监听不更新旧表格 |
 | field/none 与 optional/required、字段缺失/重复/未知 scope | 仅规范化已知枚举；NONE 无授权，非法元数据报错，不回退普通 IAM 或启动节点 |
 | 普通 IAM 不可编辑、当前任务允许编辑 | 节点字段正常展示并通过任务动作写入，普通 CRUD 仍被原权限限制 |
-| 普通 Schema 不含 F，Entity 详情含 F，节点授权 F；Entity 另含节点未授权的 G | F 正常展示/编辑，G 不进入任务 UI/补丁；普通 CRUD 仍不获得 F/G 权限，普通 Schema 缓存不被覆盖 |
-| 任务字段加载、办理前重读和任务 File 预上传 | 真实请求均使用 Meta entity + GetResource，正文为部署 appKey 与任务实体的 key；不调用 Schema 补字段，任务/实体响应定位一致；类型和附件限制来自实体定义 |
-| form 聚合、无动作/已完成任务、原 detail 代理 | UI 每次 loadDetail 只调用一次 form；data 保持原任务，metadata 只含可见与必要辅助定义；已完成可读，原 detail 返回形状不变；任务不匹配时元数据请求数为 0 |
+| 普通 Schema/entity 不含 F，节点元数据含 F，节点授权 F；节点定义另含未授权的 G | F 正常展示/编辑，G 不进入任务 UI/补丁；普通 CRUD 仍不获得 F/G 权限，普通 Schema 缓存不被覆盖 |
+| 任务字段加载、办理前重读和任务 File 预上传 | 真实请求均使用 bpm-node-form-metadata + GetResource，正文仅 TASK/processInstanceId/taskId；不调用 entity/Schema 补源字段，任务/节点响应定位一致；类型和附件限制来自节点定义 |
+| form 聚合、无动作/已完成任务、原 detail 代理 | UI 每次 loadDetail 只调用一次 form；data 保持原任务，metadata 只含可见与必要辅助定义；已完成仍可读节点元数据，原 detail 返回形状不变；任务不匹配时元数据请求数为 0 |
 | 多个 Lookup、重复目标及自关联 | 关系 GetResource、目标 Entity 请求只在单次编排内去重，辅助字段不成为可见/可编辑字段；下一次核查重新读取，错误/取消不留跨请求授权缓存 |
-| Entity 响应失败、跨应用/实体、授权自定义字段缺失或重复 | 报告错误并停止依赖该定义的办理/上传，不回退 Schema、启动字段或猜测类型；实体接口排除系统字段不被误判为业务自定义字段缺失 |
-| 新任务/实体元数据加载、切换身份/应用/环境 | reference 与应用核验、旧请求取消、过期响应不污染新页面；历史与候选也隔离 |
+| 节点元数据失败、跨应用/实体、START 节点不匹配、授权字段缺失或重复 | 报告错误并停止依赖该定义的办理/上传，不回退 Schema、启动字段或猜测类型；空授权字段数组合法；数字 type:1 用 makeFieldType 解析，ID 与各类型配置保留 |
+| 新任务/节点元数据加载、切换身份/应用/环境 | reference 与应用核验、旧请求取消、过期响应不污染新页面；历史与候选也隔离 |
 | 服务端字段值或节点授权在点击前改变 | 重读后停止本次提交；权限变化清理旧草稿，值冲突只清冲突字段，无写请求 |
 | COMPLETED 仍带历史 editPermission、actions 为空，processStatus 仍 IN_APPROVAL | 用真实精简响应通过宿主 loadDetail 和包渲染：原 viewPermission/值保留，编辑权限收紧 NONE，无输入框、动作、编辑候选/预上传；不能只在测试夹具预先写 NONE |
 | PENDING 但 actions 为空；非 PENDING 却带动作；提交前从 PENDING 变为 COMPLETED | 同一适配器收紧为只读，旧草稿不能提交；PENDING 且有动作（含 SUBMIT）的合法编辑仍保留；原非法权限必须在收紧前被拒绝 |
@@ -137,7 +139,7 @@
 | RETURN 有未填必填、无效数值、待上传附件 | 仅意见及唯一目标校验；validateFields/预上传/普通 PATCH 都为零次，recordPatch 为 {} |
 | RETURN 目标缺失、多项、显式参数不一致 | 阻止发送；不显示目标选择器，不默认选第一项 |
 | Lookup 单选/清空/多选 | 最终 Workflow recordPatch 为字符串/null/字符串数组，长 ID 无损；不转普通关系载荷、不额外 PATCH 补写 |
-| Lookup 搜索/翻页、授权撤销、无关关系失败 | 使用任务 lookup-options；每次重读当前任务，撤权时在元数据前拒绝；只加载当前字段链路，无关 Lookup 不阻断；目标对象/字段/记录读取仍校验；不回退普通候选接口 |
+| Lookup 搜索/翻页、授权撤销、无关关系失败 | 使用任务 lookup-options；每次重读当前任务，撤权时在元数据前拒绝；只解析当前字段的节点定义和依赖，无关 Lookup 不阻断；目标定义仍缺失时明确失败；目标对象/字段/记录读取仍校验；不回退普通候选接口 |
 | Lookup 只读/已完成、名称 wrapper、ID 草稿、已删除引用 | 原名称与删除标记保留，编辑后复用已选名称；只读不查询可编辑候选，ID-only 不伪造名称或新增越权读取；展示归一化不改写补丁 |
 | File 新选与已有附件、删除、上传失败重试 | 新 File 预上传、保留元数据回显；删除只改草稿，未变附件不发补丁，重试复用已上传结果 |
 | 伪造任务文件字段/跨应用 reference/失效授权 | Service 拒绝预上传，不附加到已有业务记录，不套普通记录上传授权 |

@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成、任务详情办理和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.8
+  version: 0.2.9
 ---
 
 # Make App 前台审批完整接入
@@ -27,6 +27,8 @@ metadata:
 | 包版本、公开入口、控件适配、我的审批列表与筛选 | [包与列表](references/package-and-list.md) |
 | 节点字段、同意/拒绝/退回/继续提交、任务附件及失败恢复 | [任务详情与办理](references/task-detail.md) |
 | Service 路由、Workflow Target、DTO、Long ID 与信封 | [接口合同](references/workflow-api.md) |
+| 节点字段完整枚举、配置保留、成功响应与异常边界 | [节点字段转换合同](references/node-form-metadata.md) |
+| Service 可复用纯转换、宿主转换验证及响应样例 | [参考转换器](assets/bpm-node-form-metadata.mjs)、[行为验证器](scripts/verify-node-form-metadata.mjs)、[脱敏夹具](scripts/fixtures/node-form-metadata.json) |
 | 业务详情流程区、任务详情历史插槽 | [审批历史](references/history.md) |
 | 业务列表/详情流程状态、标题 Tag 和普通编辑锁 | [状态展示](references/status-display.md) |
 | 核验宿主已安装包的只读策略兼容性 | [包校验脚本](scripts/verify-task-detail-policy.mjs) |
@@ -38,8 +40,8 @@ metadata:
 - **导航是方案决策。** 业务新增、录入、编辑保存，或明确审批处理需求即可触发；不要求先绑定流程。无任务、全部流程停用或解绑后仍保留已生成入口及历史访问路径。
 - **入口独立位于最外层。** “我的审批”是一级菜单，桌面/平板中紧接所有业务对象/模块分组之后，与其他菜单在同一导航列表中按正常间距排列、共同滚动；不固定到侧栏底部，不单独增加分隔区。它不属于任何对象、模块或可折叠分组，折叠分组不会隐藏它；手机为它保留一个底部 Tab，并按剩余容量展示业务对象和工作台，总数不超过五项。具体布局与复用规则见 [默认生成规则](references/generation-rules.md)。
 - **新建是运行时决策。** 成功取得的 Schema 对象含有效 `bpmDefinitionKey` 才进入审批新建分支。配置读取失败是错误态，不能等同未绑定。
-- **审批新建字段独立授权。** 使用 `bpm-start-config.fields` 的 `readable/editable`；字段只返回 key 时由 Service 用 Entity GetResource 补齐定义，再交给 UI。不与普通 IAM 字段集合或 `createFields` 求交。应用、对象、新建操作、关联目标和后台最终授权仍保留。
-- **任务办理另用当前节点授权。** 任务详情的 fieldPermission/actions 决定字段和动作；字段基础定义统一由 Meta `/meta/v1/entity` 的 `MakeService.GetResource` 读取，不从带权限过滤的 Schema 获取。实体详情返回完整自定义字段不代表全部可见或可写；不能套普通编辑字段或启动节点字段，也不经普通记录 PATCH 保存任务修改。
+- **审批新建字段独立授权。** 使用 `bpm-start-config.fields` 的 `readable/editable`；字段只返回 key 时由 Service 用 `/workflow/v1/bpm-node-form-metadata` 的 START 场景补齐定义，再交给 UI。不与普通 IAM 字段集合或 `createFields` 求交。应用、对象、新建操作、关联目标和后台最终授权仍保留。
+- **任务办理另用当前节点授权。** 任务详情的 fieldPermission/actions 决定字段和动作；字段基础定义通过 `bpm-node-form-metadata` 的 TASK 场景读取，不从普通 entity 或 Schema 获取。节点字段定义不代表全部可见或可写；不能套普通编辑字段或启动节点字段，也不经普通记录 PATCH 保存任务修改。
 - **保存与首次发起分开。** 普通保存不发起；用户选择保存并发起时先取得已保存记录 ID，再首次发起。失败恢复不得重复创建或上传，配置变化不得自动提交历史记录。
 - **恢复与继续提交分开。** 已有记录仅明确 UNSUBMITTED 且未锁定时首次发起；RETURNING 通过当前任务 SUBMIT“继续提交”继续原实例。已撤回/拒绝/同意的记录不生成终态重新发起。
 - **撤回由真实发起人资格决定。** 读取最新流程及 starter，确认时重查；使用 appKey/entityKey/recordId 定位，不需要 bpmKey，不以业务申请人或普通编辑权限推断资格。

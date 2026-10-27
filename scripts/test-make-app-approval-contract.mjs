@@ -89,8 +89,10 @@ assert.match(initiation, /`data\.fields`[^\n]*`fields`[^\n]*Service[^\n]*响应�
   '启动配置示例的包装层不得被误当作固定协议');
 assert.match(initiation, /`selection\.fieldSelections`[^\n]*`properties\.options`/,
   '选项字段应保留原始与规范化的选项信息');
-assert.match(initiation, /其他版本出现数字 `type`[^\n]*接口合同/,
-  '数字 type 只能作为其他版本的条件性兼容分支');
+assert.match(initiation, /bpm-node-form-metadata[^\n]*已实测[^\n]*数字 `type: 1`[^\n]*makeFieldType/,
+  '新节点接口已确认的数字 type 不能套用旧启动配置的字符串类型规则');
+assert.match(initiation, /数字不能直接拼成 `Make\.Field\.\*`/,
+  '数值标识不能被猜测为控件类型');
 assert.match(initiation, /发起前检查[^\n]*尚未发送[^\n]*重试[^\n]*recordID/,
   '发起请求前失败应保留已保存 ID 并允许重新检查');
 assert.match(initiation, /HTTP[^\n]*业务错误码[^\n]*明确拒绝[^\n]*结果未知/,

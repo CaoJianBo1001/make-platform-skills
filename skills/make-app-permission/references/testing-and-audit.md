@@ -1,8 +1,8 @@
 # Testing and audit
 
-任务节点办理另按 [审批验证矩阵](../../make-app-approval/references/verification.md) 验证：普通 Schema 已省略、但 Entity GetResource 返回且当前节点授权的字段可展示并通过任务动作保存；实体返回的未授权字段不可进入任务 UI/补丁，普通 CRUD 仍拒绝越权，普通 Schema 缓存不被替换；RETURN 空补丁且不上传，Lookup 保持任务字段格式。任务预上传用实体字段定义校验类型。当前 starter 撤回与节点办理、普通 IAM 审计分开，不能要求通用权限函数返回节点授权。
+任务节点办理另按 [审批验证矩阵](../../make-app-approval/references/verification.md) 验证：普通 Schema/entity 已省略、但 bpm-node-form-metadata 返回且当前节点授权的字段可展示并通过任务动作保存；节点定义返回的未授权字段不可进入任务 UI/补丁，普通 CRUD 仍拒绝越权，普通 Schema 缓存不被替换；RETURN 空补丁且不上传，Lookup 保持任务字段格式。任务预上传用 TASK 节点字段定义校验类型。当前 starter 撤回与节点办理、普通 IAM 审计分开，不能要求通用权限函数返回节点授权。
 
-本文件的 `createFields`/IAM 字段集合用例和通用权限一致性适配器验证普通新建。有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 单独增加 UI/Service 启动字段一致性测试：普通集合没有但启动配置授权的字段仍应显示并保存，启动配置只给 field key 时由 Entity GetResource 补定义。不得将普通场景的“字段不在 createFields 就不能创建”当成审批分支断言，也不得删除原普通权限回归来通过审批测试。应用、对象、操作资格和关联目标权限仍需共同覆盖。
+本文件的 `createFields`/IAM 字段集合用例和通用权限一致性适配器验证普通新建。有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 单独增加 UI/Service 启动字段一致性测试：普通集合没有但启动配置授权的字段仍应显示并保存，启动配置只给 field key 时由 bpm-node-form-metadata 的 START 场景补定义。不得将普通场景的“字段不在 createFields 就不能创建”当成审批分支断言，也不得删除原普通权限回归来通过审批测试。应用、对象、操作资格和关联目标权限仍需共同覆盖。
 
 任务 form 聚合允许已完成且无动作的任务只读访问；Lookup 的辅助目标定义不进入可见/可编辑字段集合。每次任务 lookup-options 搜索/翻页都重查节点授权，撤权后不读元数据或候选；只解析当前字段，仍检查关联目标对象/显示字段/记录读取。不能用普通源字段 IAM 门禁替代节点权限，也不能因为节点可编辑就放宽目标数据权限。
 
