@@ -2,7 +2,7 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, fieldAccess, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.4.0
+  version: 0.4.1
 ---
 
 # make-app-permission
@@ -29,9 +29,9 @@ This skill owns Make App consumption of configured permission results: navigatio
 
 ## Make App permission contract
 
-Read [permission-boundaries.md](references/permission-boundaries.md#platform-authority-and-response-formats) for the documented Make App keys and response shapes. Verify keys against PermissionDesign.md before changing examples, audit rules or test expectations. Existing generated code and a green fixture suite are not protocol evidence.
+Read [permission-boundaries.md](references/permission-boundaries.md#platform-authority-and-response-formats) for the bundled Make App permission dictionary, response shapes and field defaults. Use `scripts/permission-registry.mjs` to check concrete names before changing examples, audit rules or test expectations. Existing generated code and a green fixture suite are not protocol evidence.
 
-权限点清单按 PermissionDesign.md；/principal/permission 聚合结果按飞书 Permission Service 文档第 7.10 节消费；Schema 集合按 MetaAPIDesign.md 消费。仅对影响 Make App 消费接口的未定义或冲突内容提出具体疑问，不自行补充规则。Console 配置方式、配置合法性与权限后端聚合实现不属于本 Skill。
+本 Skill 随包提供权限点清单、principal 响应、Schema 集合及字段规则，使用者无需访问内部设计文档。实际接口与本地合同不一致或语义未定义时，先提出具体疑问，不自行增加权限点或规则。Console 配置方式、配置合法性与权限后端聚合实现不属于本 Skill。
 
 ## Required contract
 
@@ -47,7 +47,7 @@ Read [permission-boundaries.md](references/permission-boundaries.md#platform-aut
   - edit/cell edit: visible `fields ∩ editableFields` plus `data.record.update` and its editable field state; batch uses independent `data.record.bulkUpdate` field decisions.
 - `meta.field.update` changes Schema structure and cannot grant business data editing. Business write keys must be selected from the documented record operations. Retain the real record keys and valid matching data wildcards. UI controls, submit whitelists, and Service writes must apply the same current field rule and independent record-operation gate.
 - Keep entity, field and record authorization independent: `meta.entity.read` controls whether a Schema-present entity appears in navigation and can enter its object route; both the navigation and the dynamic route must reject the entity when this permission is absent. `meta.field.read` controls authorized columns/table headers when business content is rendered; `data.record.read` controls record/detail requests and values. Denied or revoked record read does not remove metadata-authorized navigation or rewrite field grants, but replaces the current record-reading business content as a whole with resource feedback. Unmount its title, toolbar, headers, data and dialogs, skip denied requests, and invalidate cached values and stale work. Do not preserve an empty table shell around the feedback.
-- Preserve the response contract: Schema aggregate access follows MetaAPIDesign.md; principal fieldAccess follows the Permission Service document §7.10 and uses five scalar final states. Do not transfer Schema multi-access/creatable compatibility into IAM parsing or widen a restrictive final state.
+- Preserve the bundled response contract: Schema aggregate eligibility and principal fieldAccess are separate formats; principal uses five scalar final states. Do not transfer Schema multi-access/creatable compatibility into IAM parsing or widen a restrictive final state.
 - Valid empty field maps and unlisted fields add no restriction after the operation is allowed; Schema and host capability still bound every field. A selected result missing the field map is incomplete and must not be defaulted to `{}`. See `references/permission-boundaries.md` for matching, coexisting results and validation.
 - Treat missing `createFields` as empty. Never fall back to `fields`, and preserve `editableFields` for ordinary update; do not use it to gate independent bulkUpdate.
 - Gate ordinary create entry and submit with `data.record.create`; resolve its fields from permission-aware `createFields` and create-eligible state, not metadata operations. Approval create uses authorized 启动配置 fields from `make-app-approval`. `meta.field.create` exists but creates Schema fields, not business values. Keep update/delete/bulkUpdate operation keys independent.

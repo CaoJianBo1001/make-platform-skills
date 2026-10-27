@@ -1,7 +1,7 @@
 // Documented data/meta keys for Make App consumers; not the platform-wide registry.
 // This dictionary validates names only. It does not configure permissions or grant access.
-// Source: AgenticDSL Design/PermissionDesign.md, data/meta entries in the built-in table.
-// https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/PermissionDesign.md
+// Bundled Make App contract: references/permission-boundaries.md.
+// Contains the verified data/meta entries from the platform's built-in definitions.
 export const registeredPermissionKeys = Object.freeze([
   "meta.app.create",
   "meta.app.read",

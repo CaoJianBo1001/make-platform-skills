@@ -442,8 +442,8 @@ assert.match(
   /(create|creatable|新建)[^\n]*(read|visible|可见)[^\n]*(update|edit|可编辑)/i,
   'agent metadata must advertise the complete create/read/update field chain',
 );
-assert.match(permissionBundle, /PermissionDesign\.md/);
-assert.match(permissionBundle, /MetaAPIDesign\.md/);
+assert.match(permissionBundle, /permission-registry\.mjs/);
+assert.match(permissionBundle, /service-principal-permission\.md/);
 assert.match(permissionBundle, /data\.record\.create[^\n]*(creatable|createFields)/);
 assert.match(permissionBundle, /editableFields[^\n]*(update|编辑)/i);
 console.log('make-app creatable permission contract passed');

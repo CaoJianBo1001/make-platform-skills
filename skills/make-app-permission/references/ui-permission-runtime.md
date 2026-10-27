@@ -69,7 +69,7 @@ read:    *, editable, readonly, partialMask, fullMask
 update:  *, editable
 ```
 
-Principal responses follow the five-state scalar map in the Permission Service document §7.10. Schema aggregate eligibility does not define this response format. Never include `creatable` in readable or editable states.
+Principal responses follow the five-state scalar map in [the bundled response contract](service-principal-permission.md#response-and-field-access). Schema aggregate eligibility does not define this response format. Never include `creatable` in readable or editable states.
 
 A valid empty `fieldAccess` map or an unlisted field adds no field restriction after the matching operation is allowed. Use a named state before `'*'` within the same map. As defined in [the response contract](permission-boundaries.md#platform-authority-and-response-formats), default editable still requires the corresponding Schema collection and host capability; never enumerate arbitrary payload keys as authorized fields.
 

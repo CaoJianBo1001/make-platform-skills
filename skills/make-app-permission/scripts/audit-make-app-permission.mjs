@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.4.0
+// make-app-permission contract version: 0.4.1
 import fs from 'node:fs';
 import path from 'node:path';
 import { calls, codeMask as maskJavaScriptNonCode, identifier, stripComments, unwrap } from './permission-source-expressions.mjs';

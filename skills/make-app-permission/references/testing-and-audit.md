@@ -246,4 +246,4 @@ Do not reuse business permission-reason matching as an additional auth bootstrap
 
 ## 范围与协议依据
 
-权限点清单按 Git PermissionDesign.md；已聚合的 principal 响应按飞书第 7.10 节消费；Schema 集合按 Meta API 文档消费。测试聚焦 Make App 使用已配置权限后的行为。Console 配置是否合法、权限服务如何聚合属于其他项目，不进入本 Skill 的实现或提测门槛。只有影响当前 App 接口消费的协议疑问需要澄清，不能依据夹具推导规则或扩展应用职责。
+权限点清单、principal 响应和 Schema 集合按本 Skill 随包提供的 [权限合同](permission-boundaries.md#platform-authority-and-response-formats) 与 [接口合同](service-principal-permission.md#response-and-field-access) 验证。`test-permission-portability-contract.mjs` 防止权限 Skill 再次依赖内部设计文档的地址或章节。测试聚焦 Make App 使用已配置权限后的行为。Console 配置是否合法、权限服务如何聚合属于其他项目，不进入本 Skill 的实现或提测门槛。只有影响当前 App 接口消费的协议疑问需要澄清，不能依据夹具推导规则或扩展应用职责。
