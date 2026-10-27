@@ -150,6 +150,16 @@ assert.match(
   /record-write-permission[\s\S]{0,240}records\/bulk[\s\S]{0,240}(?:existing|既有|established)[\s\S]{0,320}(?:do not|must not|不得|不能)[\s\S]{0,240}(?:successful (?:or|and) failed response|成功与失败响应|success and error|完整响应)/i,
   'the established action response contracts must not be changed by the direct-proxy rule',
 );
+assert.match(
+  serviceSkill.split('---')[1] ?? '',
+  /^metadata:[ \t]*\r?\n[ \t]+version:[ \t]+\d+\.\d+\.\d+[ \t]*$/m,
+  'make-app-service must declare a three-part metadata.version',
+);
+assert.match(
+  serviceSkill,
+  /Every new Make App Service[^\n]*`make-app-observability`[^\n]*Trace ID[^\n]*validate or create[^\n]*boundary[^\n]*return `X-Log-Id`[^\n]*logs[^\n]*forward only validated trace headers/i,
+  'make-app-service must include the default Trace ID handoff',
+);
 const serviceVersion = serviceSkill.match(/metadata:\s*\n\s*version:\s*(\d+)\.(\d+)\.(\d+)/);
 assert.ok(serviceVersion, 'make-app-service 必须声明版本');
 const [serviceMajor, serviceMinor, servicePatch] = serviceVersion.slice(1).map(Number);
@@ -183,14 +193,19 @@ assert.match(
   'Service layering must require browser-safe upstream error bodies before transparent forwarding',
 );
 assert.match(
+  authSkill.split('---')[1] ?? '',
+  /^metadata:[ \t]*\r?\n[ \t]+version:[ \t]+\d+\.\d+\.\d+[ \t]*$/m,
+  'make-app-auth must declare a three-part metadata.version',
+);
+assert.match(
   authSkill,
-  /metadata:\s*\n\s*version:\s*0\.1\.12/,
+  /shared authenticated business-request adapter[^\n]*`make-app-observability`[^\n]*Trace ID[^\n]*`traceparent`[^\n]*matching `X-Log-Id`[^\n]*without exposing tokens or changing unified-login behavior/i,
   'make-app-auth must include the default Trace ID handoff',
 );
 assert.match(
   authRequestAdapter,
-  /SDK owns the normal unified-login 401\/403 redirect/i,
-  'the SDK must retain the established unified-login redirect handling for 401 and 403',
+  /preserve the SDK's established session-recovery and redirect checks/i,
+  'session recovery must remain SDK-owned without treating every business 403 as a login challenge',
 );
 assert.match(
   authLogoutAnd401,

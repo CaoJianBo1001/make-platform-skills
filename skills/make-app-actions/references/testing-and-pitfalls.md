@@ -85,15 +85,22 @@ Service:
 - exact 1-200 ID and 0-200 exclusion limits
 - one Service request causes exactly one Make `/data/v1/permission` call
 - denied multi-record request causes no per-ID diagnostic calls
-- explicit denial maps HTTP 200 + `code: 20000032` + numeric
-  `data.noPermissionRecordIds` to ordered canonical string
+- explicit denial maps HTTP 200 + `code: 20000032` to `allowed: false` independently
+  of optional `data.noPermissionRecordIds`; string, numeric, and mixed IDs map to
+  ordered canonical string
   `unauthorizedRecordIDList`
 - raw-response lossless decoding preserves `9007199254740993` and maps it to the
   exact frozen request row key without JavaScript `Number` coercion or rounding
-- malformed, duplicate, or out-of-target `noPermissionRecordIds` remains an
-  operational contract failure without guessed row feedback
+- actual string ID `4323455642275676161` remains exact; duplicate equivalent IDs
+  deduplicate without losing the permission refusal
+- missing, empty, malformed, or out-of-target `noPermissionRecordIds` retains
+  `allowed: false` with no row IDs, not 502; unknown business codes and invalid
+  response JSON remain errors rather than confirmed permission denial
 - select-all 403 maps to denied with an empty ID list; other upstream failures
   remain failed
+- explicit-mode precheck and bulk HTTP failures preserve status, Content-Type
+  and raw bytes, including `permission_denied`, permissionKey and contacts;
+  test unknown 403, 401 and 503 without reclassifying them as permission refusal
 - bulk route causes exactly one Make `/data/v1/field` call and zero
   `/data/v1/record` update loops
 - precheck and bulk forward identical select-all filter/groupFilter values
@@ -129,6 +136,12 @@ UI:
   visibly error red, then `clearRowColors` restores the underlying row state; run
   the same assertion for grouped tables when grouped actions are in scope
 - opaque precheck denial shows toast without marking the whole explicit selection
+- explicit refusal with unusable ID metadata shows the same toast without row
+  highlights, never shows a request-error notice, and sends zero real writes
+- delete precheck HTTP 403 with confirmed `permission_denied` shows operation
+  guidance with embedded contacts or optional administrator lookup, preserves
+  permitted page/confirmation UI, and sends zero real delete requests; an
+  unknown 403 stays a request error, with no automatic retries or mutation replay
 - selected-count fallback uses frozen count when select-all updatedCount is null
 
 ## Readiness blockers
@@ -153,8 +166,9 @@ Do not report completion when any of these remain:
   behavior after portaling
 - select-all drops keyword, status, or quick-filter membership conditions
 - an opaque denied precheck marks rows without exact unauthorized IDs
-- an explicit `20000032` denial drops `noPermissionRecordIds`, marks the entire
-  selection, or fails to mark the exact returned rows error red
+- an explicit `20000032` denial becomes 502 because optional IDs are unavailable,
+  or drops usable `noPermissionRecordIds`, marks the entire selection, or fails
+  to mark the exact usable returned rows error red
 - selected or hovered rows hide an active denial color, cleanup uses
   `setRowColors(rowKeys, undefined)`, or clearing an alert loses an underlying
   durable row style

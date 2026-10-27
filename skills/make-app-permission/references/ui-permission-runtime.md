@@ -31,6 +31,8 @@ The global error outlet must remain mounted outside conditional `PermissionProvi
 
 Use the host API adapter for `/app/principal/permission`; never raw-fetch IAM from UI.
 
+The IAM wire response is `{code: 200, data: {principal, scope, permissions}}`. Follow `service-principal-permission.md`: the request adapter checks the business code and unwraps data exactly once before `normalizeAccess`. Do not pass the whole envelope into the pure model, unwrap a shared adapter's already-decoded DTO again, or reuse the bare `current-context` identity parser. Test this real UI loader boundary as well as the pure permission helpers.
+
 When permission or permission-aware Schema loading fails, keep a safe structured request error in Provider state through the error outlet: `kind/status/title/description/traceId`. The status is optional when no HTTP response exists, and description may be absent. Preserve the request Trace ID even on the first load, when the page route has not mounted yet. The error title and description must already be safe user text; do not pass a raw Error, upstream response body, or stack to the UI. Continue to fail closed for authorization, but render the failure through the shared `make-app-observability` card. Ordinary permission denial stays a forbidden state and does not acquire a synthetic Trace ID. If nearby copy tells users to provide a Trace ID, confirm the card actually receives and displays a valid one.
 
 Normalize each entity's permission-trimmed Schema collections independently:
@@ -71,7 +73,7 @@ An omitted `fieldAccess` property or an empty object is the intentional unrestri
 
 - Validate App entry and dynamic entity membership against permission-aware Schema, and require `meta.entity.read` before exposing an entity in left navigation or entering its dynamic object route. The route itself must return the host forbidden result before it mounts the object page; hiding the sidebar is not a route guard. When a host `ProtectedRoute`/`RouteGuard` is used instead of an explicit forbidden branch, return that guard from the dynamic route and bind it to the resolved current `entityKey`; merely declaring an unrelated guard does not protect the object page.
 - Bind fixed routes to an entity and permissionKey.
-- Require `data.record.read` before list/detail loading. It only gates record requests and values; it must not gate an entity-authorized navigation entry, table shell, or column headers.
+- Require `data.record.read` before list/detail loading. A denial replaces that record-reading business content, not the authorized shell/navigation. Do not reinterpret it as a metadata or field-permission revoke.
 - Require `data.record.create` for create routes, create entry, open handler, and submit.
 - Resolve create fields with `meta.field.read`; never read create-field access from `data.record.create` or `meta.field.create`. The operation authorization and field intersection remain separate.
 - Require `data.record.update` for edit routes/entry/submit/cell commit.
@@ -93,9 +95,9 @@ sourceRows = recordState.items
 tableRows = canReadRecords ? sourceRows : []
 ```
 
-Render the navigation item and object route only when `canViewEntity` is true and the entity exists in permission-aware Schema. In the dynamic route, evaluate `canViewEntity` after resolving the Schema entity and return the host forbidden result when it is false. Render the table shell and its headers from `visibleFields`, not from `canReadRecords`. Gate the records query, row values, detail open action, pagination, and record-backed table controls with `canReadRecords`.
+Render the navigation item and resolve the object route only when `canViewEntity` is true and the entity exists in permission-aware Schema. In the dynamic route, return the host resource-forbidden result when it is false. For a record-reading destination, also gate the entire business content with `canReadRecords` and any current target's classified read denial before mounting the business page. Authorized tables derive their columns from `visibleFields`, not by rewriting field grants through `canReadRecords`.
 
-When `canViewEntity` and `visibleFields` are authorized but `canReadRecords` is false, keep the table mounted with `columns={visibleFields}` and `rows={tableRows}` (or the equivalent CanvasTable API, where `tableRows` is explicitly `[]`). Do not execute `onDataLoad`, do not render cached/stale rows, and show a no-record-access/empty state without removing the headers. On a permission refresh that revokes record read, clear/invalidate the record store that supplies `sourceRows` before the next render or continue deriving `tableRows` from current access; changing only a request's `enabled` flag is insufficient. A record read grant never expands field visibility; a field read grant never authorizes a record request.
+When metadata is authorized but record read is denied, keep the authorized navigation and global identity header, not the object's business UI. Replace the full content subtree (business title, toolbar/search, statistics, table headers, rows, forms and dialogs) with `inline/resource` feedback. Do not execute `onDataLoad` or preserve an empty table around it. Keep denial state outside the replaced subtree so unmounting the page cannot reset the error and restart its requests. On refresh/revocation clear the actual `sourceRows` store and counts/selections, invalidate old requests, and reject late results. `tableRows` above is a stale-row safety bound, not a requirement to mount the table. A record read grant never expands field visibility; a field read grant never authorizes a record request.
 
 ## Create flow
 
@@ -139,7 +141,7 @@ editable = editableFieldKeysForEntity(access, entityKey, visible)
 - Do not attach cell editors or required validation to non-editable fields.
 - Build update payloads from latest visible/editable allowlists.
 - Ignore backend `editableFields`; editing remains “visible first, then `meta.field.update`”.
-- A create revoke closes create only. An update revoke closes edit only. A `data.record.read` revoke closes detail/edit and stops reads while retaining entity-authorized navigation and headers; it must not close a still-create-authorized create surface. A `meta.entity.read` revoke closes the object route and removes the navigation entry.
+- A create revoke closes create only. An update revoke closes edit only. A `data.record.read` revoke unmounts the current record-reading business content and its dialogs but keeps entity-authorized navigation; it does not revoke independently authorized create-only routes. A `meta.entity.read` revoke also removes the object navigation entry. Operation-only denial keeps allowed drafts; it must not masquerade as whole-resource denial.
 
 ## Special fields and Lookup
 
@@ -187,3 +189,7 @@ Fail closed when either permission or Schema refresh fails.
 - Create-only Lookup reads an invisible target field.
 - Permission refresh does not invalidate/reload Schema or accepts stale results.
 - Direct URL/handler access bypasses operation checks.
+
+## Scoped route feedback
+
+Read `scoped-route-feedback.md` for App guard -> shell -> object/fixed-route guard composition. React uses a shared host adapter for `MakeAppPermissionNotice` from `@qfei-design/make-app-observability/react`; read `makeui/references/permission-feedback.md` for verified exports/CSS, visual variants and the package release gate. Scope, retry state, allowed return targets and protected-request invalidation remain host-owned; the component cannot authorize or refresh data by itself. Administrator contacts must work without a business request: follow `make-app-auth/references/access-help.md`. If embedded contacts are absent and the installed SDK supports it, use `auth.getAppAdministrators()` independently; a supplied empty list remains authoritative. For a local denial, do not fetch data merely to obtain a 403; retain authorized navigation and replace the business content. Record-read-only denial remains distinct from metadata/App entry denial. Existing non-React host helpers remain compatible without a forced framework migration.
