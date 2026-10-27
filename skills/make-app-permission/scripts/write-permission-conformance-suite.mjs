@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.3.20
+// make-app-permission contract version: 0.4.1
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -21,9 +21,10 @@ const fields = [
 ];
 const entryPermissions = [permission('meta.entity.read'), permission('data.record.read')];
 const read = permission('meta.field.read', {fieldAccess: {title: 'readonly', amount: 'readonly', id: 'readonly', secret: 'hidden'}});
-const snapshot = (operation, update = [permission('data.field.update', {fieldAccess: {title: 'editable'}})], extra = {}) => structuredClone({
+const snapshot = (operation, update = [permission(operation, {fieldAccess: {title: 'editable', amount: 'readonly'}})], extra = {}) => structuredClone({
   fields,
-  access: {scope: APP, principal: 'user-1', permissions: [...entryPermissions, read, permission(operation), ...update]},
+  editableFields: fields,
+  access: {scope: APP, principal: 'user-1', permissions: [...entryPermissions, read, ...update]},
   ...extra,
 });
 
@@ -57,20 +58,72 @@ async function withHarness(operation, initial, run) {
 }
 
 const denialSnapshots = operation => [
-  ['readonly', snapshot(operation, [permission('data.field.update', {fieldAccess: {title: 'readonly'}})])],
-  ['hidden', snapshot(operation, [permission('data.field.update', {fieldAccess: {'*': 'editable', title: 'hidden'}})])],
-  ['explicit-deny', snapshot(operation, [permission('data.*.*'), permission('data.field.update', {effect: 'deny'})])],
+  ['readonly', snapshot(operation, [permission(operation, {fieldAccess: {title: 'readonly'}})])],
+  ['partial-mask', snapshot(operation, [permission(operation, {fieldAccess: {title: 'partialMask'}})])],
+  ['full-mask', snapshot(operation, [permission(operation, {fieldAccess: {title: 'fullMask'}})])],
+  ['read-only-operation', snapshot(operation, [permission('data.record.read')])],
+  ['hidden', snapshot(operation, [permission(operation, {fieldAccess: {'*': 'editable', title: 'hidden'}})])],
+  ['explicit-deny', snapshot(operation, [permission('data.*.*'), permission(operation, {effect: 'deny'})])],
   ['revoked', snapshot(operation, [])],
   ['metadata-only', snapshot(operation, [permission('meta.field.update')])],
   ['metadata-wildcard', snapshot(operation, [permission('meta.field.*', {fieldAccess: {title: 'editable'}})])],
+  ['incomplete-field-state', snapshot(operation, [permission(operation, {fieldAccess: {title: 'editable', amount: 'readonly'}}), {permissionKey: operation, resource: ENTITY, effect: 'allow'}])],
+  ...['readonly', 'hidden', 'partialMask', 'fullMask'].flatMap(state => {
+    const results = [permission('data.*.*', {fieldAccess: {title: 'editable'}}), permission(operation, {fieldAccess: {title: state}})];
+    return [
+      ['coexisting-' + state, snapshot(operation, results)],
+      ['coexisting-reversed-' + state, snapshot(operation, [...results].reverse())],
+    ];
+  }),
+  ...(operation === 'data.record.update' ? [['no-editable-schema', snapshot(operation, undefined, {editableFields: []})]] : []),
   ['no-visible-schema', snapshot(operation, undefined, {fields: fields.filter(field => field.key !== 'title')})],
-  ['no-readable-field', snapshot(operation, undefined, {access: {scope: APP, permissions: [...entryPermissions, permission(operation), permission('data.field.update')]}})],
+  ['no-readable-field', snapshot(operation, undefined, {access: {scope: APP, permissions: [...entryPermissions, permission(operation)]}})],
 ];
 
 const cases = [
+  ['compatible_grants_reach_ui_submit_and_service_write', async operation => {
+    for (const results of [
+      [permission(operation, {fieldAccess: {title: 'editable', amount: 'readonly'}}), permission('data.*.*', {fieldAccess: {title: 'editable', amount: 'readonly'}})],
+      [permission(operation, {resource: APP}), permission(operation, {fieldAccess: {title: 'editable', amount: 'readonly'}})],
+      [permission('data.*.*', {fieldAccess: {amount: 'readonly'}}), permission(operation, {fieldAccess: {title: 'editable'}})],
+    ]) {
+      for (const permissions of [results, [...results].reverse()]) {
+        await withHarness(operation, snapshot(operation, permissions), async (host, requests, writes) => {
+          assert.deepEqual(await host.editableFieldKeys(), ['title']);
+          await host.submit({title: 'compatible'});
+          assert.deepEqual(requests, [{title: 'compatible'}]);
+          assert.deepEqual(writes, [{title: 'compatible'}]);
+          await host.requestUpdate({title: 'direct'});
+          assert.deepEqual(writes, [{title: 'compatible'}, {title: 'direct'}]);
+        });
+      }
+    }
+  }],
+  ['empty_and_sparse_field_maps_stay_within_schema', async operation => {
+    for (const fieldAccess of [{}, {amount: 'readonly'}]) {
+      const current = snapshot(operation, [permission(operation, {fieldAccess})], {fields: [fields[0]], editableFields: [fields[0]]});
+      await withHarness(operation, current, async (host, requests, writes) => {
+        assert.deepEqual(await host.editableFieldKeys(), ['title']);
+        await host.submit({title: 'schema-bound', amount: 9, unknown: 'injected'});
+        assert.deepEqual(requests, [{title: 'schema-bound'}]);
+        assert.deepEqual(writes, [{title: 'schema-bound'}]);
+        await assert.rejects(async () => host.requestUpdate({title: 'allowed', amount: 9}));
+        assert.deepEqual(writes, [{title: 'schema-bound'}]);
+      });
+    }
+  }],
+  ['batch_fields_do_not_require_single_update_schema', async operation => {
+    if (operation !== 'data.record.bulkUpdate') return;
+    await withHarness(operation, snapshot(operation, undefined, {editableFields: []}), async (host, requests, writes) => {
+      assert.deepEqual(await host.editableFieldKeys(), ['title']);
+      await host.submit({title: 'bulk-only'});
+      assert.deepEqual(requests, [{title: 'bulk-only'}]);
+      assert.deepEqual(writes, [{title: 'bulk-only'}]);
+    });
+  }],
   ['ui_filters_injected_and_invisible_fields', async operation => {
-    for (const key of ['data.field.update', 'data.field.*', 'data.*.*']) {
-      await withHarness(operation, snapshot(operation, [permission(key, {fieldAccess: {title: 'editable', secret: 'editable', id: 'editable'}})]), async (host, requests, writes) => {
+    for (const key of [operation, 'data.record.*', 'data.*.*']) {
+      await withHarness(operation, snapshot(operation, [permission(key, {fieldAccess: {title: 'editable', amount: 'readonly', secret: 'editable', id: 'editable'}})]), async (host, requests, writes) => {
         assert.deepEqual(await host.editableFieldKeys(), ['title']);
         await host.submit({title: 'changed', amount: 99, secret: 'injected', id: 'injected', unknown: 'injected'});
         assert.deepEqual(requests, [{title: 'changed'}]);
@@ -90,7 +143,7 @@ const cases = [
       });
     }
     await withHarness(operation, snapshot(operation), async (host, requests, writes) => {
-      const next = snapshot(operation, [permission('data.field.update', {fieldAccess: {title: 'readonly', amount: 'editable'}})]);
+      const next = snapshot(operation, [permission(operation, {fieldAccess: {title: 'readonly', amount: 'editable'}})]);
       await host.refreshUi(next);
       await host.refreshService(next);
       await host.submit({title: 'stale', amount: 7});
@@ -123,7 +176,7 @@ const cases = [
     }
   }],
   ['ui_requires_independent_record_operation', async operation => {
-    const next = snapshot(operation, undefined, {access: {scope: APP, permissions: [...entryPermissions, read, permission('data.field.update')]}});
+    const next = snapshot(operation, undefined, {access: {scope: APP, permissions: [...entryPermissions, read, permission('meta.field.update')]}});
     await withHarness(operation, next, async (host, requests, writes) => {
       assert.deepEqual(await host.editableFieldKeys(), []);
       await assert.rejects(async () => host.submit({title: 'forged'}));
@@ -134,7 +187,7 @@ const cases = [
   ['service_requires_independent_record_operation', async operation => {
     await withHarness(operation, snapshot(operation), async (host, requests, writes) => {
       const otherOperation = operation === 'data.record.update' ? 'data.record.bulkUpdate' : 'data.record.update';
-      const next = snapshot(operation, undefined, {access: {scope: APP, permissions: [...entryPermissions, read, permission('data.field.update'), permission(otherOperation)]}});
+      const next = snapshot(operation, undefined, {access: {scope: APP, permissions: [...entryPermissions, read, permission('meta.field.update'), permission(otherOperation)]}});
       await host.refreshService(next);
       await assert.rejects(async () => host.requestUpdate({title: 'forged'}));
       assert.deepEqual(writes, []);

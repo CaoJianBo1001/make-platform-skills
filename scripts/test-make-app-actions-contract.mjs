@@ -527,7 +527,7 @@ assert.match(
 
 assert.match(
   batchEdit,
-  /data\.field\.update[\s\S]*resolveBatchEditableFields[\s\S]*(AntdRecordBatchEditModal)[\s\S]*(RecordBatchEditModal)/i,
+  /data\.record\.bulkUpdate[\s\S]*resolveBatchEditableFields[\s\S]*(AntdRecordBatchEditModal)[\s\S]*(RecordBatchEditModal)/i,
   'batch modal fields must pass permission and package capability filtering',
 );
 assert.match(

@@ -66,7 +66,7 @@ assert.match(makeuiSkill, /13\.[^\n]*普通新建[^\n]*审批新建[^\n]*启动�
   'MakeUI 表单字段交接须在主工作顺序中区分普通和审批新建');
 assert.match(makeuiSkill, /Create and edit forms[^\n]*普通新建[^\n]*审批新建[^\n]*启动配置/,
   'MakeUI 强规则不得将普通 createFields 套入审批表单');
-assert.match(permissionSkill, /Gate the create entry[^\n]*普通新建[^\n]*审批新建[^\n]*启动配置/,
+assert.match(permissionSkill, /Gate ordinary create entry[^\n]*data\.record\.create[^\n]*Approval create[^\n]*启动配置/,
   '权限操作门禁须与审批字段授权例外在同一规则中说明');
 assert.match(permissionRuntime, /Service must reject any client-provided raw[^\n]*普通新建[^\n]*`createFields`[^\n]*审批新建[^\n]*启动配置/,
   'Lookup 关系写入应按普通或审批模式选择源字段白名单');
