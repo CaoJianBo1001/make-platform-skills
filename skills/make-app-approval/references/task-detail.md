@@ -4,11 +4,11 @@
 
 `ApprovalTaskDetail` 必传 `scopeKey`、`reference: { processInstanceId, taskId }`、`provider: { loadDetail, submitAction }`、`components: { Button, TextArea }`、`renderField`、`validateFields`、`onActionSuccess`。可选 `renderLayout`、`history`、`renderFieldLabel`、`onRequestError`，均使用 `/detail` 导出的类型。
 
-每次 `loadDetail`（包括办理前重读）先取得并校验当前任务、实例和 appKey，再按任务的 entityKey 读取最新实体详情；两步都传递取消信号，并核验返回实体的 key/appKey 与当前任务及部署应用一致：
+每次 `loadDetail`（包括办理前重读）先取得并校验当前任务、实例和 appKey，再调用 `/workflow/v1/bpm-node-form-metadata` 的 TASK 场景取得实例绑定版本的节点定义；两步都传递取消信号，并核验返回 entityKey/appKey 与当前任务及部署应用一致：
 
 - `formData`、`fieldPermission`、`actions` 来自 `bpm-task / GetResource`；**当前节点授权**是唯一审批字段与动作依据。
-- 字段名、类型、必填、选项、精度和附件限制，从实体详情的 `data.properties.fields` 按 `task.entityKey + fieldKey` 精确补齐，保留字段 properties/validations。组装包的 `fields: { key, label, required, fullWidth?, schema? }[]`；这里的 schema 是字段定义，不是调用 `/api/schema`，fields 也是宿主组合结果，不要求 Workflow 原本返回同名字段。
-- 不使用普通 IAM 裁剪后的 Schema、普通 editFields 或 `bpm-start-config` 代替当前任务权限或补字段定义。实体详情只提供定义，不扩大授权；仅把节点可见字段的定义和值交给包。授权自定义字段定义缺失/重复时报告具体对象和字段，不静默丢字段，也不回退 Schema 或猜测类型。
+- 字段名、类型、必填、选项、精度和附件限制，从节点元数据的 `data.fields` 按 `task.entityKey + fieldKey` 精确补齐，保留字段 properties/validations。组装包的 `fields: { key, label, required, fullWidth?, schema? }[]`；这里的 schema 是字段定义，不是调用 `/api/schema`，fields 也是宿主组合结果，不要求 Workflow 原本返回同名字段。
+- 不使用普通 IAM 裁剪后的 Schema、普通 editFields 或 `bpm-start-config` 代替当前任务权限或补字段定义。节点元数据只提供定义，不扩大授权；仅把节点可见字段的定义和值交给包。授权自定义字段定义缺失/重复时报告具体对象和字段，不静默丢字段，也不回退 entity/Schema 或猜测类型。
 - 只适配已知枚举：Workflow `field/none` → 包 `FIELDS/NONE`，`optional/required` → `OPTIONAL/REQUIRED`。`NONE` 的空 fields 可规范为省略；未知范围、重复字段、editable 不属于 visible 都应报错。缺省权限为无权限，缺省 actions 为无动作，不能理解为全部允许。
 - 调用 `readApprovalTaskDetail` 校验，再用 `getApprovalTaskFields` 取得可见/可编辑字段；系统状态和锁字段永远不可写。无授权动作时只读展示，不能根据用户角色或流程状态自行添加按钮；宿主必须落实下述只读归一化，不能仅靠 actions 为空。
 
@@ -22,23 +22,23 @@ Workflow 已完成任务可能仍返回历史 `editPermission: { scope: "field",
 
 ### 元数据读取合同
 
-统一使用 Meta `POST /meta/v1/entity`，`X-Make-Target: MakeService.GetResource`，body `{ appKey: 部署配置, key: task.entityKey }`；注意请求属性是 `key`，不是 `entityKey`。网关前缀随运行时配置，本地预览为 `/api/make`、部署为 `/make`，使用 Meta 网关，不硬编码环境域名。完整请求与成功响应见 [实体元数据接口](../../makedsl/references/MetaAPIDesign.md#entity)。
+统一使用 `POST /workflow/v1/bpm-node-form-metadata` + `MakeService.GetResource`，body `{ scene: "TASK", processInstanceId, taskId }`；不带 appKey/entityKey/processKey。参数、成功结构、类型转换与错误处理见 [节点元数据合同](workflow-api.md#审批节点字段元数据)。新建另用 START，不能把新建配置用到历史任务。
 
-该实体接口返回全部自定义字段，不按当前调用方的字段读取权限裁剪，但仍排除系统字段；这不代表匿名访问，也不授予记录值读取或写入权限。复用现有登录上下文和 Service 请求层。Service 根据已授权任务确定实体，校验响应定位，交付当前节点可见字段及 Lookup 所需的最小辅助定义；辅助定义不成为额外表单字段。不要把完整实体字段并入普通 Schema/权限缓存。系统流程状态与锁继续按 [状态展示](status-display.md) 的只读合同处理。
+普通 entity/Schema 可能按字段权限裁剪，不能作为 BPM 源字段的补齐或失败回退来源。节点接口提供定义，bpm-task 提供值及权限；仅交付当前节点可见字段与必要辅助定义，不覆盖普通 Schema/权限缓存。系统流程状态与锁仍按 [状态展示](status-display.md) 处理。
 
 已实现的宿主聚合接点是 `POST /api/bpm/tasks/form`，body 仅 `{ processInstanceId, taskId }`；经宿主既有路由前缀适配后访问。返回 `{ ...Workflow原信封, metadata }`，其中 data 保持任务原文，metadata 使用宿主 `MakeAppSchema` 结构表达 `{ appName, schema: { appKey }, entities, relations }`。复用该数据结构不代表调用 Schema 接口。UI 的 loadDetail 每次只调聚合接口一次，组合 data 与 metadata；不再并行请求旧 detail 和 `/api/schema`。原 `/tasks/detail` 直接代理保留给原始响应消费者，聚合返回形状须写入 API 文档。
 
-聚合先校验 Workflow 任务访问结果及 appKey/taskId/processInstanceId，再读元数据；客户端不能覆盖 appKey/entityKey。已完成任务和没有 actions 的任务仍可只读查看。每次加载、刷新、办理前核查都重读，不跨请求缓存任务授权或实体快照；只在单次编排内按 entityKey/relationKey 去重。独立关系可并行获取并保留稳定顺序，自关联复用源实体。取消信号传递到所有上游，身份/应用/环境/任务切换时丢弃旧响应；任一上游失败不回退 Schema、不自动重试，保留已完成上游错误的 HTTP、Content-Type、正文和 Trace。
+聚合先校验 Workflow 任务访问结果及 appKey/taskId/processInstanceId，再读元数据；客户端不能覆盖 appKey/entityKey。已完成任务和没有 actions 的任务仍可只读查看。每次加载、刷新、办理前核查都重读，不跨请求缓存任务授权或节点元数据快照；只在单次编排内按 entityKey/relationKey 去重。独立关系可并行获取并保留稳定顺序，自关联优先复用节点中已有的目标定义。取消信号传递到所有上游，身份/应用/环境/任务切换时丢弃旧响应；任一上游失败不回退普通 entity/Schema 获取源字段、不自动重试，保留已完成上游错误的 HTTP、Content-Type、正文和 Trace。
 
-Lookup 从实体字段保留 relationKey/targetFieldKey；通过 Meta `/meta/v1/relation` 的 GetResource、body `{ appKey, key: relationKey }` 读取关系，再通过 Entity GetResource 读取目标字段定义。校验 key/appKey/type、源实体是否位于 from/to 及目标 one/many 基数；仅装配可见 Lookup 必需的关系与目标字段。自关联为回显补充的目标字段不扩展 view/editPermission。Entity 响应不等于完整应用 relations；定义缺失时报错，不以元数据代替候选数据的读取权限。
+Lookup 从节点字段保留 relationKey/targetFieldKey；当前成功样例未内嵌关系及目标定义，暂按 [Lookup 依赖边界](workflow-api.md#lookup-依赖边界) 补查；通过 Meta `/meta/v1/relation` 的 GetResource、body `{ appKey, key: relationKey }` 读取关系，再通过 Entity GetResource 读取目标字段定义。校验 key/appKey/type、源实体是否位于 from/to 及目标 one/many 基数；仅装配可见 Lookup 必需的关系与目标字段。自关联为回显补充的目标字段不扩展 view/editPermission。Entity 响应不等于完整应用 relations；定义缺失时报错，不以元数据代替候选数据的读取权限。
 
 ### 任务 Lookup 候选
 
 任务字段控件复用宿主关联选择器，但注入任务候选 provider，不沿用普通 CRUD 的源字段授权接口。`POST /api/bpm/tasks/lookup-options` 接收 `{ processInstanceId, taskId, fieldKey, keyword?, pagination: { page, size } }`，返回 `{ options, searchable, total }`。仅携带任务定位与当前字段，Service 从任务取得应用/对象，不接受客户端替换。
 
-每次搜索/翻页先重读任务，确认 PENDING、有效动作、当前字段可见且可编辑，再读取该字段的源 Entity、Relation、目标 Entity；目标对象、显示字段和记录读取继续执行既有 IAM/Data 检查。权限撤销应在元数据和候选读取前拒绝，不能复用首次打开详情的授权。关键词变化也重新核查；一次搜索只解析当前 Lookup，无关可见字段关系失效不应阻断它。
+每次搜索/翻页先重读任务，确认 PENDING、有效动作、当前字段可见且可编辑，再读 TASK 节点元数据，并只补查当前字段的 Relation、目标 Entity；目标对象、显示字段和记录读取继续执行既有 IAM/Data 检查。权限撤销应在元数据和候选读取前拒绝，不能复用首次打开详情的授权。关键词变化也重新核查；一次搜索只解析当前 Lookup，无关可见字段关系失效不应阻断它。
 
-单次普通关联搜索复用一次任务、源实体、当前关系、目标实体、权限和候选读取，自关联不重复读源实体；避免为每次搜索加载整份任务表单及全部关系。UI provider 身份稳定，传递取消信号和当前 reference，保留真实 searchable、分页、名称回显与单/多选格式；无任务定位时报错，不回退普通候选。此规则不改变普通业务导航、CRUD 或审批新建合同。
+单次普通关联搜索复用一次任务、节点元数据、当前关系、目标实体、权限和候选读取；自关联目标定义不在节点 fields 中时才补查目标 Entity；避免为每次搜索加载整份任务表单及全部关系。UI provider 身份稳定，传递取消信号和当前 reference，保留真实 searchable、分页、名称回显与单/多选格式；无任务定位时报错，不回退普通候选。此规则不改变普通业务导航、CRUD 或审批新建合同。
 
 读取值与写入值分开。宿主适配已验证支持如下 Lookup 展示形状，保留 value/name/label 等已有名称及 isDeleted，不先压成 ID 再丢失回显信息：
 
@@ -91,7 +91,7 @@ Lookup 从实体字段保留 relationKey/targetFieldKey；通过 Meta `/meta/v1/
 
 ## 任务附件
 
-预上传接口以 processInstanceId、taskId、fieldKey 定位。Service 重取任务，校验当前应用/任务/实例、PENDING 任务、有效动作、该字段可见且可编辑，再按上述实体详情合同确认 File 类型及限制；不能使用 Schema 核验源字段、套普通记录更新权限，也不能让浏览器指定任意 entityKey/recordID。
+预上传接口以 processInstanceId、taskId、fieldKey 定位。Service 重取任务，校验当前应用/任务/实例、PENDING 任务、有效动作、该字段可见且可编辑，再按上述 TASK 节点元数据合同确认 File 类型及限制；不能使用 Schema 核验源字段、套普通记录更新权限，也不能让浏览器指定任意 entityKey/recordID。
 
 预上传不带已有记录 ID，不立即增删业务记录附件；删除只改草稿最终数组。按任务+字段+原 File 复用已上传结果，失败重试不重复上传，未改附件不进入 recordPatch。支持原始 `File[]` 与上传后的元数据同时回显，部分成功时保存已取得结果；范围切换清理缓存。RETURN 即使有待上传 File，也必须上传零次、发送空补丁。
 

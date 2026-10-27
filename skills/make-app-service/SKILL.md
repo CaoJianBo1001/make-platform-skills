@@ -2,7 +2,7 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.13
+  version: 0.2.14
 ---
 
 # make-app-service
@@ -70,7 +70,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 
 ## Default Service responsibilities
 
-审批新建、`bpmDefinitionKey`、发起/撤回、我的审批任务查询/办理/继续提交、历史和状态传输使用 [make-app-approval](../make-app-approval/SKILL.md)。Service 保留对象顶层 key 及记录系统状态/锁字段；审批新建的可写字段来自权威启动配置，普通新建仍用原 `createFields`/IAM 合同，已有记录编辑仍用原更新链路。不要让普通源字段交集二次裁掉审批授权，也不要信任客户端声明的审批模式。任务字段基础信息及任务附件类型核验统一使用 Meta `/meta/v1/entity` 的 GetResource，正文 `{ appKey, key: task.entityKey }`；不从权限过滤的 Schema 补字段，不覆盖普通 Schema 缓存。任务动作及其 recordPatch 走 [Workflow 接口合同](../make-app-approval/references/workflow-api.md)，不经过普通记录 PATCH 或 Lookup 关系转换；任务附件按当前节点授权预上传。保留完整上游信封、业务错误与 Trace，不把任务办理改成普通 IAM 更新。
+审批新建、`bpmDefinitionKey`、发起/撤回、我的审批任务查询/办理/继续提交、历史和状态传输使用 [make-app-approval](../make-app-approval/SKILL.md)。Service 保留对象顶层 key 及记录系统状态/锁字段；审批新建的可写字段来自权威启动配置，普通新建仍用原 `createFields`/IAM 合同，已有记录编辑仍用原更新链路。不要让普通源字段交集二次裁掉审批授权，也不要信任客户端声明的审批模式。BPM 源字段基础信息及任务附件类型核验使用 `/workflow/v1/bpm-node-form-metadata` 的 GetResource：新建 START 使用部署 appKey/启动配置 processKey，任务 TASK 仅使用 processInstanceId/taskId；不从普通 entity 或权限过滤的 Schema 补源字段，不覆盖普通 Schema 缓存。任务动作及其 recordPatch 走 [Workflow 接口合同](../make-app-approval/references/workflow-api.md)，不经过普通记录 PATCH 或 Lookup 关系转换；任务附件按当前节点授权预上传。保留完整上游信封、业务错误与 Trace，不把任务办理改成普通 IAM 更新。
 
 Generated or refactored Make App Service code should provide these capabilities when the UI needs them and the host project does not already have equivalent routes:
 
@@ -121,7 +121,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - Preset sort and records sort must share shape validation and authoritatively validate fields against current runtime schema `capabilities.sortable === true`. Reject invalid, duplicate, non-sortable, or more-than-five rules before Make calls.
 - Sparse Preset updates must preserve sibling dimensions; saving sort must not send filter/group, saving filter must not send sort/group, and saving group must not send filter/sort.
 - User and department candidates come from Service routes such as `GET /api/users` and `GET /api/departments` or the host equivalent; do not use local demo arrays in generated Service.
-- Ordinary Lookup option APIs must resolve target object/field from permission-aware schema metadata and return `{ options, total }`. Approval-task Lookup instead follows [task candidates](../make-app-approval/references/task-detail.md#任务-lookup-候选): recheck current task authorization, resolve Entity/Relation metadata, and preserve target read permissions. Do not expose full target records to selector UIs by default.
+- Ordinary Lookup option APIs must resolve target object/field from permission-aware schema metadata and return `{ options, total }`. Approval-task Lookup instead follows [task candidates](../make-app-approval/references/task-detail.md#任务-lookup-候选): recheck current task authorization, resolve TASK node metadata and the current Lookup’s required Relation/target Entity definitions, and preserve target read permissions. Do not expose full target records to selector UIs by default.
 - File routes proxy upload/delete/download through Service. UI should not expose raw backend file URLs when a Service download proxy is available.
 - Browser resource tags such as `<img src>` cannot attach `Authorization`. When Make file downloads require a bearer token, keep the URL browser-facing through a Service download proxy, verify the current App session first, and let only the Service adapter attach the deployment-injected token. Do not put Make tokens or raw `/data/v1/download/**` URLs in UI state, public config, JSX, or logs.
 - Add boundary logs at route/adapter entry, success, and failure. Redact tokens, cookies, Authorization, API keys, signed download query strings, and unnecessary personal data.

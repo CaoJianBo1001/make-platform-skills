@@ -32,15 +32,15 @@ type BpmStartConfig<FieldSchema> = {
 };
 ```
 
-- 当前 Workflow 可返回 `{ field: "字段key", readable, editable }`。存在可见的字符串 field 时，Service 对当前对象调用一次 Meta `/meta/v1/entity` + `MakeService.GetResource`，正文 `{ appKey: 部署配置, key: entityKey }`，按 key 从 `data.properties.fields` 补定义；不从 Schema fields/createFields 补齐。完整字段对象格式继续兼容，已含完整定义时不额外请求实体；隐藏的 key 不要求查到定义，也不能因 Entity 含更多字段扩大授权。
+- 当前 Workflow 可返回 `{ field: "字段key", readable, editable }`。有可见字符串 field 时，Service 用 `/workflow/v1/bpm-node-form-metadata` 的 START 场景（部署 appKey、启动配置 processKey）读取一次节点 fields，按 key 补齐；核验 entityKey/processKey/nodeKey 与当前启动配置一致。不从普通 entity 或 Schema fields/createFields 补定义。旧完整字段对象格式继续兼容，已有定义时不额外请求；隐藏 key 不要求查到定义，也不因新接口含更多字段扩大授权。
 - 交给 UI 的 `field` 包含完整字段定义，保留稳定 key、名称、类型、必填、校验、选项、精度、关联和文件属性。按启动配置顺序返回可见字段，复用宿主标准字段渲染器，不只支持文本或示例业务的几种类型。响应定位、类型或可见字段定义不完整时停止，保留原错误，不回退普通字段。
 - `readable: true` 才展示；可见且 `editable: true`、宿主支持该字段的新建写入时才提供输入和提交能力。只读用详情展示，隐藏字段不注册、不提交；保存前按最新授权清理失效值。
 - 审批新建的可见/可写字段**不与**普通 `createFields`、`fields` 或 IAM 字段集合求交。即使普通新建不包含某字段，只要启动配置授权且类型支持，也应在审批新建中正确展示和保存。不要将审批字段写回全局 Schema/权限缓存来放宽其他页面。
 - 应用访问、对象可见与 `data.record.create` 仍需校验；关联候选目标权限、平台数据约束和最终后端写入校验继续保留。审批字段授权不等于通用 CRUD 授权。
-- UI 与 Service 必须选择同一场景：Service 用权威 Schema 判定绑定，再读取启动配置并按需用 Entity 补字段定义，按审批可写白名单验证普通值、关联值和附件。Schema 只承担绑定及普通权限场景，不能作为审批基础字段来源；不能相信 UI 传来的 `approvalMode`、字段授权或流程 key。
+- UI 与 Service 必须选择同一场景：Service 用权威 Schema 判定绑定，再读取启动配置并按需用 START 节点元数据补字段定义，按审批可写白名单验证普通值、关联值和附件。Schema 只承担绑定及普通权限场景，不能作为审批基础字段来源；不能相信 UI 传来的 `approvalMode`、字段授权或流程 key。
 - 复用完整字段类型注册表。ID 的准确类型是 `Make.Field.ID`，系统 ID、系统流程状态和锁不成为可写输入；未知类型或缺失关键元数据明确报错，不能当文本、静默丢字段或伪造定义。
 - 适配器可能取得标准 Schema 字段，也可能取得 Workflow 的 `fieldKey/fieldName/makeFieldType` 及类型专用属性。仅在 Service 边界依据已确认合同统一成宿主字段类型；保留原始 `selection.fieldSelections` 与规范化 `properties.options` 等选项及属性，不从中文名称猜类型。非法权限布尔值、`editable && !readable`、重复 key 或缺少类型应报告配置错误。
-- 已提供的 `bpm-start-config` 样例中，字段定义位于 `fields[].field`；一份样例外层是 `data.fields`，另一份直接从 `fields` 开始。以宿主 Service 已确认的响应合同解析外层，不把任一样例的包装层假定为全部应用的固定协议。两份样例的 `type` 都是 `Make.Field.*` 字符串，`makeFieldType` 是 `NUMBER` 等枚举字符串。对此端点，优先采用已识别的 `Make.Field.*` 作为宿主标准类型，再依据该端点已确认的映射核对 `makeFieldType` 的一致性；映射不明或两者冲突时报告合同错误，不让其中一个值静默遮蔽另一个。以下为实际响应的精简摘录，省略了业务标识和无关属性：
+- 此前完整对象版的 `bpm-start-config` 样例中，字段定义位于 `fields[].field`；一份样例外层是 `data.fields`，另一份直接从 `fields` 开始。以宿主 Service 已确认的响应合同解析外层，不把任一样例的包装层假定为全部应用的固定协议。两份样例的 `type` 都是 `Make.Field.*` 字符串，`makeFieldType` 是 `NUMBER` 等枚举字符串。对此端点，优先采用已识别的 `Make.Field.*` 作为宿主标准类型，再依据该端点已确认的映射核对 `makeFieldType` 的一致性；映射不明或两者冲突时报告合同错误，不让其中一个值静默遮蔽另一个。以下为实际响应的精简摘录，省略了业务标识和无关属性：
 
 ```json
 {
@@ -55,7 +55,7 @@ type BpmStartConfig<FieldSchema> = {
 }
 ```
 
-- 样例中的多选字段同时有 `selection.fieldSelections` 与 `properties.options`；Lookup 有 `lookup.relationKey/targetFieldKey`，文件有 `file.maxCount`，金额有 `currency.decimalPlaces/symbol/useGrouping`，百分比有 `percent.decimalPlaces`。规范化应保留这些类型专属元数据和校验信息，不能只留下 `fieldKey`、名称及类型。如果其他版本出现数字 `type`，先确认该版本接口合同及真实返回样例，再解释数值含义；不得把数字直接拼成 `Make.Field.*`，也不能把本响应的字符串规则或某个应用的数值枚举推广到全部 Make App。
+- 样例中的多选字段同时有 `selection.fieldSelections` 与 `properties.options`；Lookup 有 `lookup.relationKey/targetFieldKey`，文件有 `file.maxCount`，金额有 `currency.decimalPlaces/symbol/useGrouping`，百分比有 `percent.decimalPlaces`。规范化应保留这些类型专属元数据和校验信息，不能只留下 `fieldKey`、名称及类型。新的 bpm-node-form-metadata 已实测返回数字 `type: 1` 和字符串 makeFieldType；按 [完整映射与转换样例](node-form-metadata.md) 处理，数字不能直接拼成 `Make.Field.*`。ID 对应 Make.Field.ID，encoding 原样保留。两类字段在同一 Service 转换边界核验类型与配置一致性；请求方式见 [节点元数据合同](workflow-api.md#审批节点字段元数据)。
 - 两个保存动作均沿用必填和字段类型校验；不能用普通保存绕过必填。发起还需通过 Workflow 的资格、人员解析及流程可执行性检查。平台自动生成的 ID/审计字段不注册为待填写项；业务必填字段因不可编辑而缺值、且后台返回约束失败时，明确反馈配置问题，不代填、默认通过或暗中赋予编辑权。
 
 ### 文件与关联
@@ -63,7 +63,7 @@ type BpmStartConfig<FieldSchema> = {
 复用宿主控件、值序列化和 Service 创建编排，审批改变的是源字段授权，不另造业务写入格式。
 
 - File：使用已确认的不依赖 recordID 的预上传合同，完成上传后将后端认可的附件数组随创建数据保存。只有依赖已保存记录的旧上传接口时，先补合法的预上传合同，不为了上传先建一条空记录。支持原始 `File[]` 与已上传元数据同时回显；不得只按已有附件对象解析而丢掉新选文件。保存或发起失败后复用已确认上传结果，保留追加、移除、上限和预览行为。
-- Lookup：候选与目标读权限沿用既有链路；提交稳定的字符串 ID 或 ID 数组，沿用宿主 `relations` 输入，Service 按当前审批源字段授权、基数和目标身份检查后构造后端关系数据。UI 不直接传原始 `qfei_relation`，不能为了审批绕过目标对象授权。
+- Lookup：新接口当前仅返回 relationKey/targetFieldKey，关系和目标字段依赖见 [Lookup 边界](workflow-api.md#lookup-依赖边界)。候选与目标读权限沿用既有链路；提交稳定的字符串 ID 或 ID 数组，沿用宿主 `relations` 输入，Service 按当前审批源字段授权、基数和目标身份检查后构造后端关系数据。UI 不直接传原始 `qfei_relation`，不能为了审批绕过目标对象授权。
 - 多个独立关系指向同一目标实体时，创建载荷的 `qfei_relation: [{ entityKey, id }]` 不能凭字段名区分关系；按 [Service 关系合同](../../make-app-service/references/service-api-contracts.md#lookup-relation-updates) 核对明确的后台映射。任务 recordPatch 可按 fieldKey 区分，不代表首次创建也支持同样的关系组合；没有已确认映射时不猜测或合并两次选择。
 - 日期、数值、选项、人员、部门等使用业务字段原有格式。不要仅为审批引入第二套控件、精度或序列化规则。
 

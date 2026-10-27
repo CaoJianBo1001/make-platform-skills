@@ -124,7 +124,7 @@ If no field metadata exists, stop and call out the missing UI dependency instead
 
 ### Permission-derived field-set handoff
 
-以下 edit 字段与必填规则用于普通业务记录表单。我的审批任务按 [当前节点字段与动作合同](../../make-app-approval/references/task-detail.md) 消费 fieldPermission/actions，Meta Entity GetResource 补字段定义，不从权限过滤的 Schema 获取，不展示节点未授权的实体字段；不能改用普通 edit/IAM 或启动配置。RETURN 跳过业务字段校验，其余任务动作按该合同区分必填校验与已修改数值校验。
+以下 edit 字段与必填规则用于普通业务记录表单。我的审批任务按 [当前节点字段与动作合同](../../make-app-approval/references/task-detail.md) 消费 fieldPermission/actions，bpm-node-form-metadata 的 TASK 场景补字段定义，不从普通 entity/Schema 获取，不展示节点未授权的字段；不能改用普通 edit/IAM 或启动配置。RETURN 跳过业务字段校验，其余任务动作按该合同区分必填校验与已修改数值校验。
 
 任务 Lookup 复用关联选择器外观并注入任务候选 provider，每次查询携带当前任务 reference，不能沿用普通 CRUD 源字段查询。包直接渲染的字段错误与宿主控件内部错误分别对齐输入区，避免嵌套缩进；意见区保持自己的对齐。审批列表四列图标和动态列宽由包提供，宿主历史表格才复用字段类型图标配置。
 
