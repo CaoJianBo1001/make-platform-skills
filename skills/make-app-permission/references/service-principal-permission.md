@@ -65,7 +65,7 @@ Never log Cookie, Authorization, token, API key, or full signed URL values.
 
 ## Response and field access
 
-按 [Make Permission Service设计文档第 7.10 节](https://ysi13ckdb9.feishu.cn/wiki/HD84wjcbOidZnqktBpKcLGX8n7c) 消费实际 IAM 响应；第 7.10.4 节定义服务端聚合规则。 The wire success is a `{code: 200, data: ...}` envelope, not the bare identity returned by auth `current-context`. A representative complete IAM response is:
+本节完整定义 Make App 消费的 IAM 响应格式；字段默认态及多条结果的消费规则见 [本地权限合同](permission-boundaries.md#platform-authority-and-response-formats)。The wire success is a `{code: 200, data: ...}` envelope, not the bare identity returned by auth `current-context`. A representative complete IAM response is:
 
 ```json
 {
@@ -103,7 +103,7 @@ Consume `fieldAccess` according to [the App response contract](permission-bounda
 - `data.record.update` plus its field state controls ordinary edit; preserve Schema `editableFields`. `data.record.bulkUpdate` and its field state control batch edit independently.
 - `meta.field.create/update` exist for Schema structure operations. Neither grants business value writes.
 
-第 7.10 节中的 principal fieldAccess 使用五态单值 map；不要将 Schema 聚合的 creatable、多 access 数组或通配 access 搬入该响应合同。该接口不处理 dataCondition，因此不能替代具体请求的最终行级授权。
+principal fieldAccess 使用五态单值 map；不要将 Schema 聚合的 creatable、多 access 数组或通配 access 搬入该响应合同。该接口不处理 dataCondition，因此不能替代具体请求的最终行级授权。
 
 同一 App/对象/操作可能命中多条已返回结果。Make App 不因命中多条 allow 而拒绝字段，也不能借另一条 allow 放宽已返回的字段限制；响应条目的先后顺序不改变访问资格。操作允许与字段只读分别处理，字段限制不改写为整个操作被拒绝。
 
@@ -117,7 +117,7 @@ The Service preserves resources such as `make://<tenantId>/*/app/<appKey>`; UI s
 
 ## Make App consumption boundary
 
-第 7.10 节的聚合由权限后端完成。Make App 的 Service 透传结果，UI 按当前 App 的权限和 Schema 更新页面、控件及提交字段。不在这里实现 Console 配置校验、策略合并或记录级字段配置判断，也不增加决策接口调用。业务 API 的真实拒绝按现有错误处理链路展示。
+聚合由权限后端完成。Make App 的 Service 透传结果，UI 按当前 App 的权限和 Schema 更新页面、控件及提交字段。不在这里实现 Console 配置校验、策略合并或记录级字段配置判断，也不增加决策接口调用。业务 API 的真实拒绝按现有错误处理链路展示。
 
 ## Failure behavior
 

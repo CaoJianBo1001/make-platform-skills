@@ -6,7 +6,7 @@ import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {correctAdapterSource} from './fixtures/correct-permission-adapter.mjs';
 
-// Expected outcomes come from PermissionDesign.md and MetaAPIDesign.md,
+// Expected outcomes follow the bundled Make App permission and Schema contract,
 // not from the candidate fixture's list of supported permissions.
 const temp = fs.mkdtempSync(path.join(os.tmpdir(), 'make-platform-permission-'));
 try {

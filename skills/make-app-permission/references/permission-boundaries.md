@@ -87,21 +87,21 @@ For an entity that has `meta.entity.read` and readable fields but lacks `data.re
 
 ## Platform authority and response formats
 
-权限点名称以 [PermissionDesign.md](https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/PermissionDesign.md) 为准；Schema 字段集合以 [MetaAPIDesign.md](https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/MetaAPIDesign.md) 的 Schema 合同为准。`scripts/permission-registry.mjs` 仅保留文档中 23 个 data/meta 权限名称，供 Make App 回归核对；它不维护平台注册服务、不产生授权，也不校验 Console 配置。
+本节与 [principal 接口合同](service-principal-permission.md#response-and-field-access) 随 Skill 一起提供，定义 Make App 所需的权限点、响应格式及字段默认态。完整的 23 个 data/meta 权限名称见 [`scripts/permission-registry.mjs`](../scripts/permission-registry.mjs)，供名称和回归核对；它不维护平台注册服务、不产生授权，也不校验 Console 配置。
 
 - `data.record.create/read/update/delete/bulkUpdate/export` 是业务记录操作。附件的 `data.file.create/get/delete/download` 也是独立权限，不从记录 update 或元数据权限推导；Service 仍调用对应 Make File API 做最终授权。
 - `meta.field.create/read/update/delete` 均为合法元数据权限；create/update/delete 管字段结构，不能授权业务记录写入。`meta.field.read` 仍用于结构可见性。
-- 具体权限点只接受文档中已注册的名称，不能通过字段状态或命名规律推导新的权限点。
+- 具体权限点只接受随包字典列明的名称，不能通过字段状态或命名规律推导新的权限点。实际接口出现未列明的权限名称时先确认合同，不自行扩展授权。
 - 通配是匹配规则，不是新的注册权限点。先确认被查询的具体权限合法，再匹配 `data.record.*`、`data.*.*`、`*.record.update` 等三段通配。即使已收到 `*.*.*`，也不能把未知具体权限判为存在。
 
 按 Make App 已接入的响应合同消费数据：
 
-1. 权限过滤后的 Schema 已提供 `fields`、`createFields`、`editableFields`。Make App 保留并使用这些集合，分别用于可见字段、普通创建和普通编辑；Schema 文档中的 `creatable`、通配 access 与多 access 说明不改变 principal 接口的响应类型。
-2. `/principal/permission` 的 `fieldAccess` 按 [Make Permission Service设计文档第 7.10 节](https://ysi13ckdb9.feishu.cn/wiki/HD84wjcbOidZnqktBpKcLGX8n7c) 使用五态单值 map：`hidden|fullMask|partialMask|readonly|editable`。Make App 消费后端返回的访问态，不能把 readonly、隐藏或脱敏放宽为可写。
+1. 权限过滤后的 Schema 已提供 `fields`、`createFields`、`editableFields`。Make App 保留并使用这些集合，分别用于可见字段、普通创建和普通编辑；Schema 的 `creatable`、通配 access 与多 access 资格格式不改变 principal 接口的响应类型。
+2. `/principal/permission` 的 `fieldAccess` 使用五态单值 map：`hidden|fullMask|partialMask|readonly|editable`。Make App 消费后端返回的访问态，不能把 readonly、隐藏或脱敏放宽为可写。完整请求、响应及校验规则见上面的本地 principal 接口合同。
 
-字段默认态依据同一飞书文档第 5.2.3 节的字段访问定义，以及 PermissionDesign.md 的 `fieldAccess` 空容器约定：对应操作已 allow 时，合法空 map `{}` 或未列出的字段不增加字段限制；有 `'*'` 时先使用其基线，具名字段覆盖同一 map 的基线。这里的默认 editable 不能增加 Schema 集合外的字段，也不能代替记录操作资格或宿主字段能力。单条编辑仍受 `fields ∩ meta.field.read ∩ editableFields` 约束，批量使用其独立操作状态。
+对应操作已 allow 时，合法空 map `{}` 或未列出的字段不增加字段限制；有 `'*'` 时先使用其基线，具名字段覆盖同一 map 的基线。这里的默认 editable 不能增加 Schema 集合外的字段，也不能代替记录操作资格或宿主字段能力。单条编辑仍受 `fields ∩ meta.field.read ∩ editableFields` 约束，批量使用其独立操作状态。
 
-权限后端负责第 7.10 节的聚合。App 的权限接口保持原始返回结果，不合并不同资源、不重算配置规则、不增加资源覆盖优先级。具体记录的行级条件、数据投影、脱敏和最终拒写由 Make API 执行；本 Skill 不要求 App 新增决策接口或实现后台配置判断。
+权限后端返回已聚合的权限结果，每行包含 `permissionKey`、`resource`、`effect` 和 `fieldAccess`；不同资源的结果独立保留。App 的权限接口保持原始返回结果，不合并不同资源、不重算配置规则、不增加资源覆盖优先级。多条适用结果的应用消费规则见下文 Matching and validation。具体记录的行级条件、数据投影、脱敏和最终拒写由 Make API 执行；本 Skill 不要求 App 新增决策接口或实现后台配置判断。
 
 ## Independent field dimensions
 
