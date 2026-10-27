@@ -116,7 +116,7 @@ UI:
   hide the entire bottom action bar, and never replace detail actions with card actions
 - no-action bar, close, selected count, and row-alert cleanup
 - the default modal title is exactly `批量编辑`
-- batch field list enforces data.field.update and package capability
+- batch field list enforces data.record.bulkUpdate fieldAccess and package capability
 - Select, Input, DatePicker, User, and Department controls submit normalized values
 - for FieldSelect and each popup value control, open the dropdown/picker and assert
   its popup DOM is mounted outside the modal panel/body or other overflow clipping
@@ -238,3 +238,5 @@ search path, one explicit exact-ID denial path including selected/hover visibili
 and `clearRowColors` restoration, one select-all opaque-denial path, one 201-record
 action limit, one Shift 199/200/201 boundary, and one stale-request path in a real
 browser when the host supports browser automation.
+
+单条编辑使用 data.record.update，批量使用独立的 data.record.bulkUpdate 及其字段状态；批量不能额外要求单条 update。meta.field.update 只管字段结构，业务授权只使用文档列明的记录操作。只读、隐藏、脱敏、deny 和撤权必须在 UI 提交及 Service 写入两处拒绝；前端缓存不替代后端最终授权。

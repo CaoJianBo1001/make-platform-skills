@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.3.22
+// make-app-permission contract version: 0.4.0
 import fs from 'node:fs';
 import path from 'node:path';
 import { calls, codeMask as maskJavaScriptNonCode, identifier, stripComments, unwrap } from './permission-source-expressions.mjs';
@@ -11,7 +11,7 @@ import { auditScopedRouteFeedback } from './scoped-route-feedback-audit.mjs';
 const USAGE = `Usage:
   node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root> [--config <json-file>]
 
-Checks Make App single-app permission enforcement, including create operations and read-derived create fields. This is a static contract audit; it does not replace Service/UI tests.`;
+Checks Make App single-app permission enforcement, including record operations and operation-specific field states. This is a static contract audit; it does not replace Service/UI tests.`;
 
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
@@ -170,11 +170,8 @@ function checkUiContract() {
   if (!/meta\.entity\.read/.test(uiRuntimeText)) {
     failures.push('entity_metadata_permission_key_missing: UI permission model must include meta.entity.read for entity navigation and routes');
   }
-  for (const key of ['read', 'update']) {
-    const namespace = key === 'read' ? 'meta' : 'data';
-    if (!new RegExp(`${namespace}\\.field\\.${key}`).test(uiRuntimeText)) {
-      failures.push(`field_permission_key_missing_${key}: UI permission model must include ${namespace}.field.${key}`);
-    }
+  if (!/meta\.field\.read/.test(uiRuntimeText)) {
+    failures.push('field_permission_key_missing_read: UI permission model must include meta.field.read');
   }
 
   if (!/(canUseEntityOperation|canUse.*Operation|has.*Permission)/.test(uiRuntimeText)) {
@@ -183,14 +180,14 @@ function checkUiContract() {
   if (!/(canReadEntityField|visibleFieldsForEntity|visibleFieldKeys|META_FIELD_READ|meta\.field\.read)/.test(uiRuntimeText)) {
     failures.push('field_visibility_helper_missing: UI must evaluate field visibility from meta.field.read');
   }
-  if (!/(canUpdateEntityField|editableFieldKeysForEntity|editableFieldNames|DATA_FIELD_UPDATE|data\.field\.update)/.test(uiRuntimeText)) {
-    failures.push('field_edit_helper_missing: UI must evaluate field editability from data.field.update');
+  if (!/(canUpdateEntityField|editableFieldKeysForEntity|editableFieldNames|DATA_RECORD_UPDATE|data\.record\.update)/.test(uiRuntimeText)) {
+    failures.push('field_edit_helper_missing: UI must evaluate field editability from the record operation and fieldAccess');
   }
   if (uiSources.flatMap(source => extractNamedFunctionSources(source, 'canUpdateEntityField')).some(hasMetadataUpdateCall)) {
-    failures.push('business_field_edit_uses_metadata_update: business field edit must not use meta.field.update, including fallback grants');
+    failures.push('business_field_edit_uses_metadata_update: business field edit must use the record update operation and its fieldAccess, without metadata fallback grants');
   }
   if (!/(canCreateEntityField|creatableFieldKeysForEntity)/.test(uiRuntimeText)) {
-    failures.push('create_field_permission_helper_missing: UI must evaluate create fields from meta.field.read fieldAccess');
+    failures.push('create_field_permission_helper_missing: UI must evaluate create fields from data.record.create and createFields');
   }
   if (
     ['canUseEntityOperation', 'canCreateEntityField', 'canReadEntityField', 'canUpdateEntityField']
@@ -201,29 +198,14 @@ function checkUiContract() {
   const stringificationFiles = findFieldAccessStateStringificationFiles(uiRuntimeFiles);
   if (stringificationFiles.length > 0) {
     failures.push(
-      `field_access_state_stringified: preserve fieldAccess state arrays instead of coercing them to text (${stringificationFiles.join(', ')})`,
+      `field_access_state_stringified: validate scalar fieldAccess states; reject state arrays instead of coercing them to text (${stringificationFiles.join(', ')})`,
     );
   }
-  if (!namedFunctionUsesPermissionKey(
-    uiSources,
-    'canCreateEntityField',
-    /(?:META_FIELD_READ|meta\.field\.read)/,
-  )) {
-    failures.push('create_field_permission_key_missing: create-field permission must use meta.field.read');
+  if (!namedFunctionUsesPermissionKey(uiSources, 'canCreateEntityField', /(?:DATA_RECORD_CREATE|data\.record\.create)/)) {
+    failures.push('create_field_permission_key_missing: create-field permission must use data.record.create');
   }
-  if (namedFunctionUsesPermissionKey(
-    uiSources,
-    'canCreateEntityField',
-    /(?:DATA_RECORD_CREATE|data\.record\.create)/,
-  )) {
-    failures.push('create_field_permission_uses_record_operation: create-field permission must not use data.record.create');
-  }
-  if (namedFunctionUsesPermissionKey(
-    uiSources,
-    'canCreateEntityField',
-    /(?:META_FIELD_(?:CREATE|UPDATE)|DATA_FIELD_UPDATE|meta\.field\.(?:create|update)|data\.field\.update)/,
-  )) {
-    failures.push('create_field_permission_uses_wrong_field_dimension: create-field permission must use meta.field.read, not meta.field.create/update');
+  if (namedFunctionUsesPermissionKey(uiSources, 'canCreateEntityField', /(?:META_FIELD_(?:CREATE|UPDATE)|meta\.field\.(?:create|update))/)) {
+    failures.push('create_field_permission_uses_wrong_field_dimension: metadata field operations do not grant record creation');
   }
   if (!/createFields/.test(uiRuntimeText)) {
     failures.push('create_fields_contract_missing: UI schema and create form must preserve and consume createFields');
@@ -232,16 +214,13 @@ function checkUiContract() {
     failures.push('create_fields_fallback_to_visible_fields: missing createFields must produce an empty create form');
   }
   if (hasEditableFieldsRuntimeConsumption(uiRuntimeText)) {
-    failures.push('editable_fields_consumed_by_runtime: current edit/create behavior must ignore backend editableFields');
+    failures.push('create_form_uses_editable_fields: create forms must use createFields, not editableFields');
   }
   if (/\b(?:createFormFields|writableFormFields)\s*=\s*(?:visibleFields|editableFields|updateEditableFields)\b/.test(uiRuntimeText)) {
     failures.push('create_form_uses_visible_fields: create form fields must derive from createFields, not visible/editable fields');
   }
   if (/\btarget\w*(?:Display)?Fields\s*=\s*[^;\n]*\bcreateFields\b/i.test(uiRuntimeText)) {
     failures.push('lookup_target_uses_create_fields: Lookup target display fields must come from visible fields, not target createFields');
-  }
-  if (/(?:canEditEntityField|editableFieldKeysForEntity|editableFieldNames)\s*\([\s\S]{0,180}(?:DATA_RECORD_CREATE|DATA_RECORD_UPDATE|data\.record\.(?:create|update))/.test(uiRuntimeText)) {
-    failures.push('field_permission_tied_to_data_record: field visibility/editability must use meta.field.read/data.field.update, not data.record.create/update');
   }
   if (hasRecordEntryEditableFieldCountGate(uiRuntimeText, {
     actionKeyPattern: '(?:create|new)',
@@ -602,8 +581,8 @@ function variableAffectsFunctionResult(functionSource, matchIndex, variableName)
 }
 
 function hasEditableFieldsRuntimeConsumption(text) {
-  const directDerivation = /\b(?:create\w*Fields|edit(?!ableFields\b)\w*Fields|writable\w*Fields|form\w*Fields|fieldsForCreate|fieldsForEdit)\s*=\s*[^;\n]*(?:\.editableFields\b|\[['"]editableFields['"]\])/i;
-  const passedToPermissionOrFormLogic = /(?:canCreateEntityField|canUpdateEntityField|creatableFieldKeysForEntity|editableFieldKeysForEntity|buildCreate\w*|buildEdit\w*|render\w*Form)\s*\([^)]*(?:\.editableFields\b|\[['"]editableFields['"]\])/is;
+  const directDerivation = /\b(?:create\w*Fields|fieldsForCreate)\s*=\s*[^;\n]*(?:\.editableFields\b|\[['"]editableFields['"]\])/i;
+  const passedToPermissionOrFormLogic = /(?:canCreateEntityField|creatableFieldKeysForEntity|buildCreate\w*)\s*\([^)]*(?:\.editableFields\b|\[['"]editableFields['"]\])/is;
 
   return directDerivation.test(text)
     || passedToPermissionOrFormLogic.test(text);

@@ -97,7 +97,7 @@ Codex 判断优先级：
 
 - 做一个对象列表页：`makeui` + `canvas-table-integration` + `make-app-actions`。desktop/tablet 使用 CanvasTable，手机使用独立卡片 View；手机只提供点击记录的单条编辑/删除，不提供记录多选或批量操作
 - 做记录编辑、删除、批量编辑或行级写权限预检：`make-app-actions` + `make-app-permission` + `make-app-service` + `makeui`；desktop/tablet 表格选择和批量能力再加 `canvas-table-integration`，手机只接单条操作
-- 做字段可新建、`createFields` 或新建页字段权限：`make-app-permission` + `make-app-service` + `makeui`；Permission 计算权限与提交白名单，Service 独立传输/缓存 Schema 集合，MakeUI 只渲染授权字段和空状态
+- 做字段可新建、`createFields` 或新建页字段权限：`make-app-permission` + `make-app-service` + `makeui`；Permission 消费已配置的权限结果并形成应用提交白名单，Service 独立传输/缓存 Schema 集合，MakeUI 只渲染授权字段和空状态
 - 仅关键词搜索且通过 `filter.expression` 查询：`make-app-filter` + `make-app-permission` + `makeui`；只用包编译器，不读取／写入筛选 Preset 或挂载高级筛选面板，手机只显示搜索入口
 - 做高级筛选、表格筛选或表头按字段筛选：`make-app-filter` + `make-app-permission` + `makeui`；desktop/tablet 再配合 `canvas-table-integration` 完成表头筛选联动，手机显示顶部搜索／筛选入口与移动面板，不挂载隐藏 CanvasTable
 - 做筛选 Service 合同或 filter.expression 透传：`make-app-filter` + `make-app-service`
@@ -338,7 +338,7 @@ npx skills update make-ai-assistant
 - 对接 Make App 多会话、SSE 增量/快照/续传、历史对账、反馈、取消、文件图片上传；分别处理裸 JSON、204 空响应、SSE 和字节，不使用统一 JSON 解包
 - 当前 `make-app` v1 适配器不提供 Artifact 输出，不得伪造 Artifact capabilities、消息字段或 UI 承诺；文件/图片输入不受此限制。若未来有新协议，先升级公开契约和 Skill
 - 规范 AI 助手接口域名：浏览器始终同源调用 `/api/make/app/ai/v1/**`；local preview 的 Service 上游使用 `make_api_origin + /api/make/app/ai/v1/**`；published Service 使用 `MAKE_API_BASE_URL` / `MAKE_SERVER_URL` 严格 origin 加 `/make/app/ai/v1/**`。不得新增独立 AI Gateway / Agent Gateway 域名、Token 或配置变量；Service 必须校验请求 `appKey` 等于部署注入的 `MAKE_APP_KEY`
-- 页面布局、入口位置和响应式交给 `makeui`；Service route/proxy/log/test 交给 `make-app-service`；登录态交给 `make-app-auth`；权限策略交给 `make-app-permission`；运行时变量注入和发布检查交给 `make-app-runtime`
+- 页面布局、入口位置和响应式交给 `makeui`；Service route/proxy/log/test 交给 `make-app-service`；登录态交给 `make-app-auth`；Make App 权限结果接入交给 `make-app-permission`；运行时变量注入和发布检查交给 `make-app-runtime`
 
 ### make-app-service
 指导生成、重构或审查 Make App 的 `apps/service` API，覆盖 UI-Service 合同、Service 路由、Make Meta/Data API adapter、`MAKE_APP_KEY` / Make adapter 环境变量/config 语义、schema/records/users/departments/lookup/file 代理接口和 Service API 测试。
@@ -443,10 +443,8 @@ npx skills update make-integration
 **使用场景**
 - 识别发票(打车, 火车票, 宾馆, 餐饮等)的内容(金额等相关信息)
 
-## 业务字段编辑权限修复（2026-10-23）
+## Make App 业务编辑权限
 
-权限技能 0.3.20、操作技能 0.1.21 将业务字段编辑统一修正为 `data.field.update`，字段可见性继续使用 `meta.field.read`，记录更新继续独立校验 `data.record.update`（批量为 `data.record.bulkUpdate`）。不得用 `meta.field.update`、应用管理员或扩大授权范围来绕过。
+单条编辑使用 `data.record.update`，批量编辑使用独立的 `data.record.bulkUpdate`，并消费该操作返回的字段状态及权限过滤后的 Schema。`meta.field.read` 控制字段结构可见性，元数据更新权限不能授权业务写入。
 
-发布时先更新 beta，验证通过后将同一修复合入 main。发布完成后，用户应按所选通道更新全局及项目内技能副本：全局运行 `npx skills update -g`，在每个业务项目目录运行 `npx skills update`；makecli 用户按上文所选通道运行 `makecli skills update`，并检查 Agent 实际读取的副本版本。
-
-技能更新不会自动修改已生成的业务代码。存量项目需要检查权限解析支持列表、前端编辑控件与提交字段过滤、Service 写入验证，并通过 `write-permission-conformance-suite.mjs` 的生产适配器验证 UI 提交和 Service 拒写边界；验证精确及数据通配授权可编辑、仅元数据更新不可编辑，以及字段只读、显式拒绝和撤权后均不可写。
+前端控件、提交白名单与 App Service 写入校验使用同一份当前授权结果，通过 `write-permission-conformance-suite.mjs` 的生产适配器验证提交和拒写；覆盖正常授权、数据通配授权、只读、显式拒绝和撤权。
