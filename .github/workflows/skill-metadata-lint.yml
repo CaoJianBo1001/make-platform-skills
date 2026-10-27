@@ -34,6 +34,8 @@ jobs:
           node skills/make-app-observability/scripts/test-audit-trace-contract.mjs
           node skills/make-app-auth/scripts/test-current-context-conformance-suite.mjs
           node skills/make-app-auth/scripts/test-audit-auth-contract.mjs
+          node skills/make-app-permission/scripts/test-permission-registry.mjs
+          node skills/make-app-permission/scripts/test-platform-permission-contract.mjs
           node skills/make-app-permission/scripts/test-permission-conformance-suite.mjs
           node skills/make-app-permission/scripts/test-write-permission-conformance-suite.mjs
           node skills/make-app-permission/scripts/test-audit-make-app-permission.mjs

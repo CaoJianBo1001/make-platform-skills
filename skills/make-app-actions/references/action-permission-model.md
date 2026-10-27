@@ -33,8 +33,9 @@ edit for multiple selection, subject to the field and approval visibility gates 
 `data.record.bulkUpdate` must not expose batch edit. Delete never implies either
 update permission.
 
-Use `meta.field.read` for field visibility and `data.field.update` for field
-editability. Do not use field counts to infer record-operation permission.
+Use `meta.field.read` for field visibility. Field editability follows the current
+operation state: `data.record.update` for single edit and `data.record.bulkUpdate`
+for batch edit. Do not use field counts to infer record-operation permission.
 
 ## Action state
 
@@ -142,3 +143,5 @@ Single delete requires cached `data.record.delete`, local validation, explicit
 confirmation, and the normal authoritative delete Service endpoint. If the host
 uses the row-write precheck for delete, send `data.record.delete` once; never
 replace final delete authorization with the precheck.
+
+单条编辑使用 data.record.update，批量使用独立的 data.record.bulkUpdate 及其字段状态；批量不能额外要求单条 update。meta.field.update 只管字段结构，业务授权只使用文档列明的记录操作。只读、隐藏、脱敏、deny 和撤权必须在 UI 提交及 Service 写入两处拒绝；前端缓存不替代后端最终授权。

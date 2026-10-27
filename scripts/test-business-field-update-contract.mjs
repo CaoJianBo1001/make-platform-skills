@@ -19,4 +19,6 @@ assert.match(workflow, /node skills\/make-app-permission\/scripts\/test-write-pe
 for (const name of ['metadata_wildcards_never_grant_business_edit', 'business_field_exact_deny_overrides_data_wildcards']) {
   assert.ok(read('skills/make-app-permission/scripts/permission-conformance-suite.mjs').includes(name));
 }
+assert.match(workflow, /test-platform-permission-contract\.mjs/);
+assert.match(workflow, /test-permission-registry\.mjs/);
 console.log('business field update contract: PASS');
