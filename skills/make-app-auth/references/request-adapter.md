@@ -79,13 +79,16 @@ If a list request has no real filters, omit `filter`. Do not send `filter: []`.
 
 ## Error Handling
 
-When `apiAuthRedirect: true` is available, the SDK owns the normal unified-login 401/403 redirect. The shared adapter still owns three things:
+This section handles business requests, not `auth.init()` results. Startup follows `sdk-integration.md#startup-shape`: the SDK's `forbidden` status does not require the business payload reason. Do not import this business classifier into the bootstrap gate. Conversely, a business `MakeAppForbiddenError` must not be promoted to App-entry denial merely because startup uses that SDK status.
+
+When `apiAuthRedirect: true` is available, preserve the SDK's established session-recovery and redirect checks; do not add host redirects from HTTP status alone. A confirmed business permission denial must not trigger another login or redirect. The shared adapter still owns three things:
 
 - preventing scattered `auth.api` calls
 - fallback UI for errors that cannot redirect
 
 ```js
-async function handleMakeRequestError(error) {
+// onPermissionDenied is a host event sink wired to its shared feedback adapter.
+async function handleMakeRequestError(error, { scope, onPermissionDenied }) {
   if (error instanceof MakeAppUnauthorizedError) {
     showNeutralLoading();
     if (!makeAuthConfig.apiAuthRedirect) {
@@ -94,21 +97,22 @@ async function handleMakeRequestError(error) {
     return;
   }
 
-  if (error instanceof MakeAppForbiddenError) {
-    renderForbidden();
+  if (error instanceof MakeAppForbiddenError && error.payload?.reason === 'permission_denied') {
+    onPermissionDenied({ scope, payload: error.payload });
     return;
   }
 
   throw error;
 }
 
-export async function listRecords(payload) {
+export async function listRecords(payload, onPermissionDenied) {
   try {
     return await requestWithTrace((traceHeaders) =>
       auth.api.post('/data/v1/record', payload,
         makeRequestInit(traceHeaders, { 'X-Make-Target': 'MakeService.ListResources' })));
   } catch (error) {
-    return handleMakeRequestError(error);
+    await handleMakeRequestError(error, { scope: 'resource', onPermissionDenied });
+    throw error; // A denied request must not resolve as successful undefined data.
   }
 }
 ```
@@ -116,6 +120,8 @@ export async function listRecords(payload) {
 Do not call `auth.logout({ redirect: false })` as the default 401 path when `apiAuthRedirect` is enabled. Use logout-before-login only for a diagnosed stale or corrupted App session, not as the normal request adapter behavior.
 
 ## Tests
+
+`onPermissionDenied` is an App-owned state/event callback, not an SDK/npm export. React routes it to the shared package-backed adapter from `makeui/references/permission-feedback.md`; the adapter does not consume auth internals. The read example passes resource scope; create/update/delete handlers pass operation scope and retain permitted input. Bootstrap/App-entry denial is not the default for all requests. This example uses the structured permission-denial reason; for legacy responses without reason, reuse the host's tested, documented permission classifier rather than treating every code/HTTP 403 as denied permission. Follow `access-help.md` and preserve the existing requestWithTrace contract. Route a known permission denial once instead of also presenting a generic network-failure card; unrelated request errors keep the independent error outlet.
 
 When touching request code, add or update tests for:
 

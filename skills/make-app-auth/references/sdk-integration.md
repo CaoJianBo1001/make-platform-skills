@@ -36,7 +36,7 @@ Use the public npm package by default when the SDK behavior is stable:
 ```json
 {
   "dependencies": {
-    "@qfeius/make-app-auth": "^0.1.3"
+    "@qfeius/make-app-auth": "^0.1.5"
   }
 }
 ```
@@ -44,14 +44,16 @@ Use the public npm package by default when the SDK behavior is stable:
 Install command:
 
 ```bash
-corepack pnpm add @qfeius/make-app-auth@^0.1.3 --registry=https://registry.npmjs.org/
+corepack pnpm add @qfeius/make-app-auth@^0.1.5 --registry=https://registry.npmjs.org/
 ```
 
-New Make Apps and explicit runtime migrations run this command with the `make-app-runtime` baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0`). Existing Apps retain their declared runtime during SDK work. Published unified-login Apps require `@qfeius/make-app-auth >= 0.1.3`. Do not generate or publish Apps with older npm dependencies.
+New Make Apps and explicit runtime migrations run this command with the `make-app-runtime` baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0`). Existing Apps retain their declared runtime during SDK work. Published unified-login Apps require `@qfeius/make-app-auth >= 0.1.5`. Do not generate or publish Apps with older npm dependencies. This generation/publish baseline does not remove the old-SDK runtime compatibility tests or make the optional administrator backend a login prerequisite.
 
 ## Startup Shape
 
 Generated Apps use unified login. Direct App entry should call `auth.init({ redirect: true })` and go to the Org login page instead of showing an App-owned login page.
+
+For this SDK startup result, `status: 'forbidden'` is the App-entry denial signal. Do not additionally require `boot.payload.reason === 'permission_denied'` or reuse the business request's permission-payload predicate. Older gateways return refusal text; newer gateways may return `{code:403,msg,data:{appAdministrators}}` without a reason. Preserve either payload and mount App-scope feedback without requesting IAM/Schema/business data. SDK failure, unauthenticated and redirecting states are not permission denial, even if an incidental body contains a permission reason. This rule is specific to the documented SDK startup result, not arbitrary HTTP 403 or an object request.
 
 ```js
 import {
@@ -78,13 +80,15 @@ if (boot.status === 'authenticated') {
     onRelogin: () => auth.login({ redirect: true })
   });
 } else if (boot.status === 'forbidden') {
-  renderForbidden();
+  renderForbidden(boot.payload);
 } else {
   renderLoading();
 }
 ```
 
 ## Business Requests
+
+`renderForbidden(payload)` is the host App-scope wrapper, not an SDK/npm renderer. In React it updates the host state that mounts the shared adapter from `makeui/references/permission-feedback.md` with App scope. Preserve the payload and follow `access-help.md`; object/operation denials use local feedback, not this whole-App wrapper. A presentation package does not change login or establish authorization.
 
 Use `auth.api` for ordinary Make backend calls. The fixed Make App AI v1 raw-byte bridge is the only exception described in `request-adapter.md`; it preserves the same unified-login session while returning HTTP status, headers and bytes to the public AI Client. In direct gateway mode, the auth SDK handles `/api/make`, cookies, JSON request bodies, and unified auth errors for ordinary calls.
 
@@ -116,7 +120,10 @@ For published/vibe Apps, auth integration is not complete until the agent or pla
 ## Tests To Add When Touching Auth
 
 - 403 forbidden response.
-- Unified-login API 401/403 with `apiAuthRedirect: true` redirects through SDK login once.
+- Startup `forbidden` with old text, new JSON without reason, embedded/empty/missing contacts and a future explicit reason; the original payload survives, optional help failure stays local, and no IAM/Schema/business request occurs. Keep the existing relogin behavior for SDK session-expiry states.
+- Old SDK with a new backend: embedded contacts still display; a missing query method makes no request and retains generic help even when the endpoint exists. Test both runtime decoding and TypeScript compatibility without requiring a new SDK.
+- Unknown business 403, including one with contacts but no documented permission reason, still follows the request-error path rather than App-entry feedback. Add the startup and business-negative cases to the host's default test/CI gate; the repository executes both guide examples in `scripts/test-startup-denial-contract.mjs`.
+- Unified-login API 401 with `apiAuthRedirect: true` follows the SDK's existing session recovery and loop protection. A confirmed business permission denial must not trigger another login or redirect; optional contact lookup failures stay local.
 - Unified-login unauthenticated state does not loop redirects.
 - Business-request 401 from schema/list/create/update/delete enters the shared expired-session handler.
 - Make backend calls are routed through the shared adapter; no raw `window.fetch('/api/make/...')` outside the fixed AI v1 byte bridge, and no scattered unhandled `auth.api` calls in UI components.

@@ -60,30 +60,42 @@ Return a stable UI result:
   an empty list.
 - In explicit mode (`selectAllMode=false`), an unauthorized target returns HTTP
   200 with business code `20000032` and
-  `data.noPermissionRecordIds`. Treat this as an expected permission denial, not
-  an operational failure, and map the exact IDs to `unauthorizedRecordIDList`.
+  optional `data.noPermissionRecordIds`. The code `20000032` alone establishes
+  `allowed: false`; row metadata only enriches `unauthorizedRecordIDList`.
+- `noPermissionRecordIds` accepts decimal strings and numeric integer tokens.
 - Decode numeric `noPermissionRecordIds` losslessly from the raw JSON response
   before JavaScript `Number` coercion. Use a documented lossless JSON decoder that
   exposes integer tokens as decimal strings or `BigInt`; never round IDs through
   `Number` or impose an undocumented `Number.MAX_SAFE_INTEGER` limit.
-- Canonicalize both response integer tokens and frozen request ID strings as
-  arbitrary-precision positive decimal integers. Require unique response numeric
-  identities and membership in the request's unique numeric identities, map each
-  match back to the exact original request row key, and preserve the backend/request
-  order. Reject fractional, zero, negative, duplicate, malformed, or out-of-target
-  values as operational contract errors instead of guessing row IDs. Records
+- For row feedback only, canonicalize response IDs and frozen request ID strings
+  as arbitrary-precision positive decimal integers, match the request identities,
+  map each match back to the exact original request row key, and preserve backend
+  order while deduplicating equivalent IDs.
+- If metadata is missing, empty, malformed, fractional, non-positive, or contains
+  out-of-target IDs, keep `allowed: false` with `unauthorizedRecordIDList: []`;
+  never replace the confirmed refusal with a 502/contract error. Omit row
+  highlights rather than guessing or reporting a partially trusted list. Records
   reported as missing, deleted, or outside the current tenant are still
   permission-denied targets and must not be reclassified by UI copy.
 - In select-all mode (`selectAllMode=true`), preserve the documented opaque 403
   denial with an empty `unauthorizedRecordIDList`; this mode does not return
   `noPermissionRecordIds`.
-- Other upstream HTTP failures or business codes remain operational errors and
-  must not be downgraded to permission denial.
+- Apart from that select-all projection, relay completed HTTP errors with their
+  original status, Content-Type and response bytes. In explicit mode, a whole
+  object/operation refusal can be HTTP 403 with `reason: "permission_denied"`;
+  retain this marker, `permissionKey` and optional administrator contacts for the
+  host's scoped operation feedback. Do not replace the payload with code/message
+  alone, manufacture denied row IDs, or continue to the real write.
+- Unknown 403, 401, 503 and other business failures remain operational errors and
+  must not be downgraded to permission denial. HTTP status 403 alone is not a
+  permission classifier outside the established select-all projection.
 
-UI always shows `勾选范围中存在无权限数据，请检查勾选范围` and blocks
-opening the edit surface for a permission denial. Explicit mode marks only the
+For the stable `allowed: false` row/select-all result, UI shows
+`勾选范围中存在无权限数据，请检查勾选范围` and blocks
+opening the edit surface. Explicit mode marks only the
 exact normalized `unauthorizedRecordIDList` rows with the host error-red whole-row
-style. Select-all mode has no exact IDs and remains toast-only. Never mark the
+style when exact IDs are available. Unusable explicit metadata and select-all
+denial remain toast-only, and still block the real write. Never mark the
 complete selection or perform diagnostic requests to manufacture IDs.
 
 ## Batch update
@@ -122,8 +134,29 @@ target count. Select-all may return `null` when Make does not report affected
 rows; UI then uses the snapshot's frozen selected count for success text.
 
 The final write remains authoritative and may reject even after a successful
-precheck. Preserve its error status/message through the Service's documented
-error envelope.
+precheck. Preserve completed HTTP failure status, Content-Type and response
+bytes, including permission details, just as for precheck.
+
+### Completed action HTTP failures
+
+After the existing select-all 403 projection and before replacing an error with
+a host envelope, forward the completed response through the host's normal raw
+response boundary. For example, `CompletedMakeResponse` below is a host-owned
+response carrier, not an SDK or action-package export; the outer handler must
+send its original status, Content-Type and bytes.
+
+```js
+function preserveActionHttpFailure(response) {
+  if (response.status >= 400) throw new CompletedMakeResponse(response);
+}
+```
+
+This does not classify permission, parse a raw error message for UI, or change
+success/business-code decoding. Preserve code-first HTTP 200/code `20000032`
+denial with optional exact-ID feedback and the established select-all 403 result.
+The UI must stop on denied
+precheck, show one scoped notice only for confirmed `permission_denied`, and
+never automatically retry or replay delete/update after recovery.
 
 ## Boundary safety
 

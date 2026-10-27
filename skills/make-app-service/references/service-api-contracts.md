@@ -77,10 +77,13 @@ route-level test; this reference does not replace their own adapter and
 integration coverage.
 
 `record-write-permission` and `records/bulk` use the existing stable action
-contracts defined by `make-app-actions`. They are explicit exceptions to the
-direct-proxy/non-proxy response classification above: do not use this rule to
-change either route's established successful or failed response shape, including
-the documented action-specific error envelope.
+contracts defined by `make-app-actions`; do not replace their
+successful or failed response contracts with generic normalization. Keep HTTP200/code
+`20000032` exact-ID mapping and the established select-all 403 projection;
+outside that projection, completed HTTP failures preserve their original
+status, Content-Type and body, including `reason`, `permissionKey` and optional
+administrator contacts. Do not discard these fields in a code/message wrapper
+or classify an unknown 403 as permission denial.
 
 The selected Make AI assistant adapter is another explicit response-mode
 exception: use `make-ai-assistant` for its Make App v1 success/error contract

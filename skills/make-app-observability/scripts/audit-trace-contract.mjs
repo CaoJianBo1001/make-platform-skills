@@ -2,7 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
-const usage = `Usage: node audit-trace-contract.mjs <project-root> [--mode auto|direct|service-fronted]
+const usage = `Usage: node audit-trace-contract.mjs <project-root> [--mode auto|direct|service-fronted] [--allow-prerelease]
 Checks the default Make App Trace ID wiring. Run behavior and real AppShell visibility tests as well; source inspection cannot prove runtime correlation or card visibility.`;
 const args = process.argv.slice(2);
 if (args.includes('--help') || args.includes('-h')) {
@@ -12,9 +12,12 @@ if (args.includes('--help') || args.includes('-h')) {
 
 let projectRoot;
 let mode = 'auto';
+let allowPrerelease = false;
 for (let index = 0; index < args.length; index += 1) {
   const arg = args[index];
-  if (arg === '--mode') {
+  if (arg === '--allow-prerelease') {
+    allowPrerelease = true;
+  } else if (arg === '--mode') {
     mode = args[++index];
   } else if (arg.startsWith('--mode=')) {
     mode = arg.slice('--mode='.length);
@@ -112,7 +115,11 @@ if (uiPackage) {
 if (!version) {
   failures.push('observability_dependency_missing: UI must declare @qfei-design/make-app-observability');
 } else {
-  const match = /^(\^|~|>=|>|=)?(\d+)\.(\d+)\.(\d+)(?:\s+<\s*\d+\.\d+\.\d+)?$/.exec(version);
+  const stable = /^(\^|~|>=|>|=)?(\d+)\.(\d+)\.(\d+)(?:\s+<\s*\d+\.\d+\.\d+)?$/.exec(version);
+  const prerelease = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)-([0-9A-Za-z-]+(?:\.[0-9A-Za-z-]+)*)$/.exec(version);
+  const validPrerelease = prerelease && prerelease[4].split('.').every((part) => !/^\d+$/.test(part) || part === '0' || !part.startsWith('0'));
+  const match = stable ?? (allowPrerelease && validPrerelease
+    ? [version, '', prerelease[1], prerelease[2], prerelease[3]] : null);
   if (!match) {
     failures.push('observability_version_unverifiable: use a registry version range with a verifiable minimum');
   } else {
@@ -120,8 +127,8 @@ if (!version) {
     const major = Number(rawMajor);
     const minor = Number(rawMinor);
     const patch = Number(rawPatch) + (operator === '>' ? 1 : 0);
-    if (major === 0 && (minor < 1 || (minor === 1 && patch < 8))) {
-      failures.push('observability_version_too_old: require @qfei-design/make-app-observability >= 0.1.8 for the desktop and mobile viewport contract');
+    if (major === 0 && (minor < 1 || (minor === 1 && patch < 9))) {
+      failures.push('observability_version_too_old: require @qfei-design/make-app-observability >= 0.1.9 for the permission notice and viewport contract');
     }
   }
 }

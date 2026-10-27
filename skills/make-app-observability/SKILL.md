@@ -2,7 +2,7 @@
 name: make-app-observability
 description: Use when creating, integrating, reviewing, or debugging a Make App's default Trace ID chain, traceparent and X-Log-Id propagation, safe correlated logs, or @qfei-design/make-app-observability error notices. Every new Make App includes this baseline even when the user does not mention observability. Covers direct-gateway and Service-fronted Apps and AI transports when present. Does not own authentication, Service route design, AI protocol, tracing backend/exporter deployment, runtime packaging, or page layout.
 metadata:
-  version: 0.1.3
+  version: 0.1.7
 ---
 
 # make-app-observability
@@ -17,7 +17,8 @@ metadata:
 - Service 路由、UI-Service 业务合同和 Make adapter 交给 `make-app-service`；本 Skill 定义跨这些边界的 Trace 不变量。
 - AI 路由、流式事件和取消语义交给 `make-ai-assistant`；其已认证 JSON、SSE、二进制传输沿用同一追踪合同。
 - 发布脚本和交付门禁交给 `make-app-runtime`；该 Skill 调用本 Skill 的审计器。
-- 全局错误出口在持久应用根层的挂载、与宿主 overlay 的层级协调及真实 Shell 可见性验收交给 `makeui`；本 Skill 负责把安全的结构化请求错误交给该出口。`0.1.8+` 公共包负责桌面与手机 viewport 的默认定位、错误卡片和 Trace ID 展示规则，宿主不重写默认定位。
+- 全局错误出口在持久应用根层的挂载、与宿主 overlay 的层级协调及真实 Shell 可见性验收交给 `makeui`；本 Skill 负责把安全的结构化请求错误交给该出口。`0.1.9+` 公共包负责桌面与手机 viewport 的默认定位、错误卡片和 Trace ID 展示规则，宿主不重写默认定位。
+- 权限提示也复用此包的 React 入口；按 `makeui/references/permission-feedback.md` 验证实际安装版的 `MakeAppPermissionNotice`、CSS 和发布状态。权限范围与联系人仍分别归 `make-app-permission`、`make-app-auth`；不要把已知权限拒绝重复送入普通错误卡。
 
 ## 默认接入流程
 
@@ -26,7 +27,7 @@ metadata:
 3. Service-fronted App 在请求入口校验入站 Header，缺失或非法时生成安全 Trace ID；所有响应返回 `X-Log-Id`。向 Make Gateway 转发时只使用已校验且一致的追踪 Header，Service 安全日志带同一个 `traceId`。直连模式则由共享 UI 适配器把 Header 送到 Gateway。
 4. 统一错误出口区分 HTTP 非 2xx、网络异常和 HTTP 2xx 业务码异常。收到响应时在 Span 记录实际 HTTP 状态码；业务码失败和 HTTP 非 2xx 标记为错误，网络异常不虚构状态码。请求层及权限、Schema 等 Provider 到错误出口之间保留安全的 `kind/status/title/description/traceId`，不得降级成只有文案的字符串。使用公共包的 `MakeAppErrorNotice`，全局错误队列须由一个 `MakeAppErrorNoticeViewport` 包裹，页面内嵌错误卡片可单独使用。三类真实请求失败只要携带合法 Trace ID 都显示可复制的 ID。失败时优先保留本次请求创建的 ID，避免无响应的网络错误丢失关联信息。
 5. 当 App 使用 AI transport 时，JSON、SSE、文件和二进制请求也发送这两个 Header；HTTP 非 2xx 即使有响应体也要标记 Span 为错误。不能恢复通过 `__traceparent` 等 query 参数传递 Trace 的旧做法。
-6. 新接入或本次改造错误出口的 App 使用实际安装的 `@qfei-design/make-app-observability@0.1.8+`；这是桌面顶部 Toast、双端 portal 与完整内容可见性的交付基线。先补行为测试，再运行 `scripts/audit-trace-contract.mjs` 和 App 原有测试。审计检查声明版本与源代码接线，不能代替实际安装版本核对、真实请求及真实 AppShell 下错误卡片可见性的断言。
+6. 新建或本次改造反馈出口的 App 使用实际安装的 `@qfei-design/make-app-observability@0.1.10+`，默认安装范围为 `^0.1.10`；包负责 Toast 计时与隐藏，宿主通过 `noticeKey` 标识事件、`onClose` 清理队列，不另加计时器。未涉及反馈改造的存量 App 保留锁定版本，不因包发布自动升级。先补行为测试，再运行 `scripts/audit-trace-contract.mjs` 和 App 原有测试。审计检查声明版本与源代码接线，不能代替实际安装版本核对、计时行为、真实请求及真实 AppShell 下错误卡片可见性的断言。
 
 ## 按需阅读
 

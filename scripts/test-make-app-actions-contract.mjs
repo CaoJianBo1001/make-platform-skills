@@ -430,6 +430,26 @@ assert.match(
   'backend numeric denial IDs must normalize to canonical row keys without reordering',
 );
 assert.match(
+  serviceContract,
+  /20000032[^\n]*(?:alone|itself)[\s\S]{0,140}allowed:\s*false/i,
+  'the known refusal code alone must determine allowed:false independently of row metadata',
+);
+assert.match(
+  serviceContract,
+  /noPermissionRecordIds[^\n]*(?:decimal strings|十进制字符串)[^\n]*(?:numeric|数字)/i,
+  'denial row feedback must accept both string and numeric backend IDs',
+);
+assert.match(
+  serviceContract,
+  /(?:missing|malformed)[\s\S]{0,260}unauthorizedRecordIDList[^\n]*\[\][\s\S]{0,180}(?:502|contract error)/i,
+  'missing or unusable optional denial IDs must fall back to no row highlights rather than 502',
+);
+assert.doesNotMatch(
+  `${serviceContract}\n${testing}\n${serviceTesting}`,
+  /(?:malformed|out-of-target)[^\n]*(?:remains? an operational|fail as a contract error)|values as operational contract errors/i,
+  'invalid denial metadata must not override an already confirmed permission refusal',
+);
+assert.match(
   `${serviceContract}\n${makeDataAdapter}`,
   /noPermissionRecordIds[\s\S]{0,520}(?:lossless|无损)[\s\S]{0,320}(?:raw (?:JSON|response)|原始(?: JSON)?响应|number coercion|Number 强制转换|BigInt|任意精度)/i,
   'permission denial IDs must be decoded losslessly before JavaScript Number coercion',
