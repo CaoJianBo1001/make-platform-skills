@@ -37,10 +37,11 @@ precheck starts.
 
 ## Single delete
 
-Validate cached `data.record.delete` and local row permission, then show the
-delete confirmation. Use the host's authoritative delete Service route. A host
-may use the same precheck endpoint with `data.record.delete`, but must still call
-the final delete endpoint and must not add per-record diagnostics.
+Reuse the [shared single-delete controller and policy](action-permission-model.md#shared-single-delete)
+for both PC and phone. It validates cached `data.record.delete` and local row
+permission, freezes the target, confirms, and uses the same authoritative delete
+Service route. Only an existing host delete-precheck policy adds one precheck;
+no presentation adds its own request or per-record diagnostics.
 
 ## Opening batch edit
 

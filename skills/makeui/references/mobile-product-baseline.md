@@ -62,7 +62,7 @@
 - 新建／编辑／详情的字段骨架、日期、选择、Lookup、附件：`mobile-form-controls.md`
 - 列表卡片结构和 desktop/tablet 表格边界：`list-page-layout.md`
 - 全屏任务路由、dirty、保存和返回生命周期：`page-route-layout.md`
-- 单条编辑／删除权限与预检：加载 [`make-app-actions`](../../make-app-actions/)，并读取其中的 `mobile-card-actions.md` reference
+- 单条编辑／删除权限及 PC 共用控制器与预检策略：加载 [`make-app-actions`](../../make-app-actions/)，并读取其中的 `mobile-card-actions.md` reference
 
 ## 优先级
 

@@ -178,11 +178,11 @@ assert.match(
   /(单条编辑|single edit)[\s\S]{0,320}(make-app-actions)[\s\S]{0,320}(预检|precheck)/i,
   'phone card edit must reuse make-app-actions permission and precheck contracts',
 );
-assert.match(
-  mobileDefaults,
-  /(单条删除|single delete)[\s\S]{0,360}(MobileConfirmDialog)[\s\S]{0,360}(最终|final)[^\n]*(鉴权|authorization)/i,
-  'phone card delete must use confirmation and the authoritative delete endpoint',
-);
+const mobileDelete = mobileDefaults.match(/^- 单条删除[^\n]+/m)?.[0] ?? '';
+assert.match(mobileDelete, /action-permission-model\.md#shared-single-delete/,
+  'phone delete must route to the PC shared controller and authoritative delete contract');
+assert.match(mobileDelete, /MobileConfirmDialog/,
+  'phone delete changes the confirmation renderer only');
 assert.match(
   mobileDefaults,
   /(手机端|Phone)[^\n]*(不展示|隐藏)[^\n]*(分组|group)[^\n]*(排序|sort)/i,
@@ -606,9 +606,11 @@ assert.match(
 );
 assert.match(
   mobileDefaults,
-  /手机新建／编辑[^\n]*`MobileFormActionBar`[\s\S]{0,220}手机详情[^\n]*`MobileBottomActionBar`/,
+  /^- 手机新建／编辑[^\n]*`MobileFormActionBar`/m,
   'form submission and detail actions must use separate package primitives',
 );
+assert.match(mobileDefaults, /^- 手机详情默认使用 `MobileBottomActionBar`/m,
+  'record detail must keep its independently permissioned action bar');
 assert.match(
   skill,
   /\.\.\/make-app-actions\/[\s\S]{0,180}mobile-card-actions\.md/,
