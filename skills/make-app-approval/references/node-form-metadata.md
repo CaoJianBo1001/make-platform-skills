@@ -1,6 +1,6 @@
 # 节点字段转换合同与可执行样例
 
-本文件只负责 `bpm-node-form-metadata.data` 的字段规范化。请求场景、授权、错误透传及 Lookup 补查见 [Workflow 合同](workflow-api.md#审批节点字段元数据)；字段值仍来自任务 `formData`，新建字段权限仍来自启动配置，不能用此处元数据推导读写权限。
+本文件只负责 `bpm-node-form-metadata.data` 的字段规范化。请求场景、授权、错误透传及 Lookup 依赖见 [Workflow 合同](workflow-api.md#审批节点字段元数据)；字段值仍来自任务 `formData`，新建字段权限仍来自启动配置，不能用此处元数据推导读写权限。
 
 ## 来源与成功响应
 
@@ -8,7 +8,7 @@
 - [脱敏夹具](../scripts/fixtures/node-form-metadata.json) 保存 dev 成功响应的结构保真裁剪：`request` 为 START 请求；`response` 保留成功信封、定位和 TEXT/CURRENCY/SINGLE_SELECT/ID/LOOKUP 字段。标识与业务值已替换，不含记录数据、人员或凭据，不作为完整生产响应存档。
 - 行为验证的其他类型及异常输入是人工构造用例，明确区别于上述响应证据。TASK 用例模拟实例绑定的旧流程，不宣称这些模拟值来自真实任务。
 
-成功结构为 `{ code: 200, msg, data: { appKey, entityKey, processKey, nodeKey, nodeName, fields } }`。既有请求层先检查 HTTP 和业务码，按原合同透传失败，成功才将 `data` 交给转换器；不要把失败响应交给转换器后覆盖真实后端错误。
+成功结构为 `{ code: 200, msg, data: { appKey, entityKey, processKey, nodeKey, nodeName, fields, relations } }`。既有请求层先检查 HTTP 和业务码，按原合同透传失败，成功才将 `data` 交给转换器；不要把失败响应交给转换器后覆盖真实后端错误。
 
 ## 完整类型映射
 
@@ -33,7 +33,7 @@
 | SINGLE_DEPT | Make.Field.SingleDepartment | dept 的全部键，如 maxCount |
 | MULTI_DEPT | Make.Field.MultiDepartment | dept 的全部键，如 maxCount |
 | FILE | Make.Field.File | file 的全部键，如 maxCount |
-| LOOKUP | Make.Field.Lookup | lookup 的全部键；relationKey、targetFieldKey，以及若返回的 targetFieldType |
+| LOOKUP | Make.Field.Lookup | lookup 的全部键；relationKey、targetFieldKey，targetFieldType（依赖解析必须提供已确认的 Make.Field.* 类型） |
 
 表内属性是示例，不能按这些键白名单重建对象：原始专用配置、`properties`、`validations`、`capabilities` 及扩展属性全部保留。专用配置合入 properties；同名键两处都存在且值不同则报错，不静默覆盖。不要凭空补必填、精度、默认值或编辑能力。配置完整性与值校验仍由宿主已确认的字段合同执行。
 
@@ -78,7 +78,7 @@
 
 纯转换器不会证明字段授权完整：START 还要按启动配置顺序选出 readable 字段；TASK 仍按本次 `fieldPermission/actions` 投影。授权可见 key 缺少定义时停止，不能把空 fields 当作成功显示全部普通字段。节点额外定义不自动展示或赋予编辑权限。
 
-Lookup 此处仅保留已返回配置；关系两端/基数、目标字段完整定义仍按 [Lookup 依赖边界](workflow-api.md#lookup-依赖边界) 单独补齐。不得用普通 entity/Schema 回填 BPM 源字段，也不在 fixture 里伪造已内嵌的依赖。
+Lookup 配置和 `data.relations` 原样保留。使用 [Lookup 节点依赖](lookup-metadata.md) 的随包解析器校验选中字段所需关系及目标 key/type；不把辅助目标描述当作完整字段定义或节点授权。成功夹具已补入 2026-10-28 实测的同构关系，未伪造目标完整实体、选项或格式。BPM 不再回退普通 entity、relation 或 Schema。
 
 ## 行为验证与宿主适配
 

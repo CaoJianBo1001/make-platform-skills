@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成、任务详情办理和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.17
+  version: 0.2.19
 ---
 
 # Make App 前台审批完整接入
@@ -29,6 +29,8 @@ metadata:
 | Service 路由、Workflow Target、DTO、Long ID 与信封 | [接口合同](references/workflow-api.md) |
 | 节点字段完整枚举、配置保留、成功响应与异常边界 | [节点字段转换合同](references/node-form-metadata.md) |
 | Service 可复用纯转换、宿主转换验证及响应样例 | [参考转换器](assets/bpm-node-form-metadata.mjs)、[行为验证器](scripts/verify-node-form-metadata.mjs)、[脱敏夹具](scripts/fixtures/node-form-metadata.json) |
+| Lookup 节点内关系、目标最小描述与单/多选 | [依赖合同](references/lookup-metadata.md)、[纯解析器](assets/bpm-lookup-metadata.mjs)、[行为验证](scripts/verify-bpm-lookup-metadata.mjs) |
+| START 已有完整字段对象是否还需读取节点依赖 | [完整性判定](references/lookup-metadata.md#start-何时可以省略额外请求)、[行为验证](scripts/verify-bpm-start-metadata.mjs) |
 | 业务详情流程区、任务详情历史插槽、标准滚动加载与共用结果 | [审批历史](references/history.md)、[历史结果适配器](assets/history-result.mjs) |
 | 业务列表/详情流程状态、标题 Tag 和普通编辑锁 | [状态展示](references/status-display.md) |
 | 核验宿主已安装包的只读策略兼容性 | [包校验脚本](scripts/verify-task-detail-policy.mjs) |

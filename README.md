@@ -135,7 +135,11 @@ npx skills add qfeius/make-platform-skills --skill make-app-approval -g
 npx skills update make-app-approval
 ```
 
-生成规则和验证场景见 [make-app-approval](skills/make-app-approval/SKILL.md)。审批新建消费 `bpm-start-config.fields` 的 `readable/editable`，field 仅为 key 时由 Entity GetResource 补定义，不再与普通 `createFields`/IAM 字段集合求交；UI 与 Service 同步切换，保留应用、对象和新建操作资格。普通已有记录编辑仍沿用原 IAM/更新链路；任务办理从 fieldPermission/actions 取得授权，经 form 聚合任务与 Entity/Relation 元数据，Lookup 使用当前任务候选接口；不从权限过滤的 Schema 补齐，也不把完整实体字段并入普通权限缓存。Lookup/File 随 Workflow recordPatch 保存，不能普通 PATCH 补写。历史逐行保留“退回修改”等事件结果，业务当前状态独立；列表图标、列宽及滚动复用包能力。包、列表、任务详情、接口、记录生命周期及历史均有独立参考文件，全部从主入口可达。
+生成规则和验证场景见 [make-app-approval](skills/make-app-approval/SKILL.md)。审批新建消费 `bpm-start-config.fields` 的 `readable/editable`，不再与普通 `createFields`/IAM 字段集合求交；UI 与 Service 同步切换，保留应用、对象和新建操作资格。普通已有记录编辑仍沿用原 IAM/更新链路；任务办理从 fieldPermission/actions 取得授权，经 form 聚合任务与节点元数据，Lookup 使用当前任务候选接口。
+
+BPM 字段定义及 Lookup 依赖使用 `bpm-node-form-metadata`：新建按 START 场景补齐，任务使用 TASK 场景，请求与定位校验见 [节点元数据合同](skills/make-app-approval/references/workflow-api.md#审批节点字段元数据)。关系及目标 key/type 来自节点响应，完整性判定与权限边界见 [Lookup 依赖合同](skills/make-app-approval/references/lookup-metadata.md)。不回退普通 Entity/Relation 或 Schema 补齐，也不把节点定义并入普通权限缓存。
+
+任务中的 Lookup/File 随 Workflow recordPatch 保存，不能普通 PATCH 补写。历史逐行保留“退回修改”等事件结果，业务当前状态独立；列表图标、列宽及滚动复用包能力。包、列表、任务详情、接口、记录生命周期及历史均有独立参考文件，全部从主入口可达。
 
 自动发现需要当前 Agent 能看到已安装的 `make-app-approval`，并同步本次更新的 `makeui`、权限、Service、actions 和 DSL skill。仅把源码放在此仓库、或只升级已安装的旧技能，不代表新增技能已经进入新项目的可用技能目录。发布后按上方命令首次添加新技能并更新关联技能，使用仓库安装同步检查验证完整文件一致；未安装时也可在任务中明确提供本地 `SKILL.md` 路径要求读取。README 路由表是说明，实际生成入口还通过 `makeui`、`makedsl` 的正文路由到默认生成规则。
 

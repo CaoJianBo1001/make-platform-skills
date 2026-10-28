@@ -7,7 +7,7 @@
 | 路由（均以 /api 开头） | 请求与返回形状 |
 | --- | --- |
 | GET `/api/schema` | 普通业务运行时的权限过滤 Schema、对象流程绑定判定；不用于审批任务字段基础信息或任务附件类型核验 |
-| POST `/api/bpm/tasks/form` | `{ processInstanceId, taskId }`；先取任务并核验定位，再取 TASK 节点定义并补查必要 Lookup 依赖；返回 `{ ...Workflow原信封, metadata: 宿主MakeAppSchema }`，metadata 仅含可见字段和必要 Lookup 辅助定义 |
+| POST `/api/bpm/tasks/form` | `{ processInstanceId, taskId }`；先取任务并核验定位，再取 TASK 节点定义并解析内嵌的 Lookup 关系及目标 key/type；返回 `{ ...Workflow原信封, metadata: 宿主MakeAppSchema }`，metadata 仅含可见字段和必要 Lookup 辅助定义 |
 | POST `/api/bpm/tasks/lookup-options` | reference、fieldKey、可选 keyword/pagination；每次重查任务及目标读取权限，返回 `{ options, searchable, total }`，不复用普通源字段授权 |
 | GET `/api/entities/:entityKey/bpm-start-config` | 新建不带 recordID；返回规范化启动配置 |
 | POST `/api/entities/:entityKey/records` | 原创建接口；普通/审批模式在 Service 判定 |
@@ -48,17 +48,17 @@
 - 发起：`{ scene: "START", appKey: 部署配置, processKey: 启动配置.processKey }`。先取得权威 bpm-start-config，再读取最新已部署流程的发起节点定义；后端核验发起资格。
 - 任务：`{ scene: "TASK", processInstanceId, taskId }`。先校验任务所属应用及 reference，再读取实例绑定版本的节点定义；不使用当前对象绑定的新版流程或启动字段替代历史节点。
 
-成功信封为 `{ code: 200, msg, data: { appKey, entityKey, processKey, nodeKey, nodeName, fields } }`。fields 是当前节点可见/可编辑 key 的去重并集；空集合返回空数组。校验应用/对象定位，START 还须与启动配置的 processKey/startNodeKey 对齐；缺失或重复定义明确报错。接口不提供 formData、fieldPermission、actions；这些仍来自 bpm-task，readable/editable 仍来自 bpm-start-config，元数据不能扩大授权。
+成功信封为 `{ code: 200, msg, data: { appKey, entityKey, processKey, nodeKey, nodeName, fields, relations } }`。fields 是当前节点可见/可编辑 key 的去重并集；空集合返回空数组。校验应用/对象定位，START 还须与启动配置的 processKey/startNodeKey 对齐；缺失或重复定义明确报错。接口不提供 formData、fieldPermission、actions；这些仍来自 bpm-task，readable/editable 仍来自 bpm-start-config，元数据不能扩大授权。
 
 fields 必须保留完整 properties、validations、capabilities 及类型专用配置。在 Service 边界规范化 `fieldKey/fieldName/makeFieldType` 为宿主 key/name/type；数字 `type: 1` 不代表控件类型。完整的 18 种枚举映射、配置归位、脱敏响应、规范化示例和可执行参考见 [节点字段转换合同](node-form-metadata.md)。标准 Make.Field.* 与 makeFieldType 同时存在时核对一致性；未知枚举、冲突或非法结构明确报错，不能猜类型或丢校验。
 
-启动配置有可见字符串 key 时只请求一次 START 元数据；旧的完整字段对象响应无需额外请求。任务详情、办理前重读、任务附件类型校验及候选源字段使用 TASK 元数据；已完成/无动作任务仍可加载只读定义，不开放编辑、上传和候选。结果不写入普通 Schema 缓存，源定义失败不回退 entity/Schema；完成的上游错误保持 HTTP、业务码、Content-Type、正文和 Trace。
+启动配置的可见字段定义或所需 Lookup 依赖不齐时，只请求一次 START 元数据；旧的完整字段对象响应仍按 [START 完整性判定](lookup-metadata.md#start-何时可以省略额外请求) 检查所需关系及目标 key/type，全部齐全且定位一致才省略额外请求。任务详情、办理前重读、任务附件类型校验及候选源字段使用 TASK 元数据；已完成/无动作任务仍可加载只读定义，不开放编辑、上传和候选。结果不写入普通 Schema 缓存，源定义失败不回退 entity/Schema；完成的上游错误保持 HTTP、业务码、Content-Type、正文和 Trace。
 
 ### Lookup 依赖边界
 
-当前成功样例的 lookup 只有 relationKey/targetFieldKey，尚未包含关系两端/基数和目标字段完整定义。不能将“字段结构与 entity 一致”理解为已内嵌全部关系和目标对象。普通 entity 存在权限过滤，不能再保证它包含 BPM 源字段。
+2026-10-28 已核验 dev/test 的 START 和 dev 的 TASK 成功响应：`data.relations[]` 返回标准 `Make.Relation`，Lookup 字段的 `lookup`（规范化后 `properties`）包含 `relationKey/targetFieldKey/targetFieldType`。不再通过普通 `/meta/v1/relation`、`/meta/v1/entity` 或 Schema 补齐 BPM 字段依赖。test 当时没有可用任务样本，不能将 START 结果当作 test TASK 联调证据。
 
-已有集成暂保留最小依赖补查：`POST /meta/v1/relation` + GetResource、正文 `{ appKey, key: relationKey }`，校验关系身份、from/to.entityKey 和 cardinality；目标字段通过已有 Entity GetResource 查找。自关联已包含的目标定义可复用，否则仅补目标定义，不用它补 BPM 源字段。目标定义被过滤时明确失败，不能静默丢字段或放宽权限；需后端补充节点内 Lookup 所需关系定义及目标字段完整定义，并确认响应位置后才能移除这些补查。
+最小合同和实现见 [Lookup 节点依赖](lookup-metadata.md)、[纯依赖解析器](../assets/bpm-lookup-metadata.mjs)。关系需要 key、from/to.entityKey、from/to.cardinality；目标对象取当前对象的另一端，目标端 one/many 决定单选/多选。目标字段 key/type 足以定位候选列和判断现有文本搜索能力；无需为了选择记录强求目标实体完整定义。若要增加依赖 options、格式等配置的展示能力，先确认对应合同，不能自行伪造。
 
 候选记录仍按既有目标对象、目标字段和记录读取权限查询，不要求节点元数据返回全部候选。辅助定义不成为额外可见/可编辑字段。单次表单按关系/目标去重；单次搜索只解析当前 Lookup 链路，不为搜索加载所有字段的关系。无跨请求授权或元数据缓存。
 

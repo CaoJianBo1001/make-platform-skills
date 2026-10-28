@@ -212,7 +212,9 @@ Rules:
 
 ## Lookup options adapter/service
 
-Lookup option service should:
+本节 Schema 解析步骤只用于普通对象 Lookup。审批新建 START 与任务 TASK 统一按 [节点 Lookup 依赖合同](../../make-app-approval/references/lookup-metadata.md) 读取节点内关系和目标 key/type；每次候选读取重验相应启动字段/任务授权，并保留目标对象、字段和记录的读取权限，不通过普通 relation/entity/Schema 补齐 BPM 元数据。
+
+Ordinary Lookup option service should:
 
 1. read runtime schema
 2. find the source entity and lookup field
@@ -228,7 +230,7 @@ Rules:
 - target record reads still go through `/make/data/v1/record` with forwarded login context, not makecli
 - reject unsupported relation direction, non-lookup fields, and missing target metadata with 400
 - do not leak full target records into dropdown APIs by default
-- In create mode, resolve the Lookup source field from 普通新建的 `createFields` 或 审批新建的权威 启动配置 字段；resolve the Lookup target entity and target display fields from the target's visible `fields`. Do not expose a target field solely because it is creatable.
+- In ordinary create mode, resolve the Lookup source field from `createFields`; resolve the Lookup target entity and target display fields from the target's visible `fields`. Do not expose a target field solely because it is creatable. BPM source authorization and dependency resolution follow the START/TASK contract above; target read permission checks still apply.
 
 ## Lookup relation update service
 
