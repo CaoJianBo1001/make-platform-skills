@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成、任务详情办理和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.19
+  version: 0.2.20
 ---
 
 # Make App 前台审批完整接入
@@ -45,7 +45,7 @@ metadata:
 - **新建是运行时决策。** 成功取得的 Schema 对象含有效 `bpmDefinitionKey` 才进入审批新建分支。配置读取失败是错误态，不能等同未绑定。
 - **审批新建字段独立授权。** 使用 `bpm-start-config.fields` 的 `readable/editable`；字段只返回 key 时由 Service 用 `/workflow/v1/bpm-node-form-metadata` 的 START 场景补齐定义，再交给 UI。不与普通 IAM 字段集合或 `createFields` 求交。应用、对象、新建操作、关联目标和后台最终授权仍保留。
 - **任务办理另用当前节点授权。** 任务详情的 fieldPermission/actions 决定字段和动作；字段基础定义通过 `bpm-node-form-metadata` 的 TASK 场景读取，不从普通 entity 或 Schema 获取。节点字段定义不代表全部可见或可写；不能套普通编辑字段或启动节点字段，也不经普通记录 PATCH 保存任务修改。
-- **保存与首次发起分开。** 普通保存不发起；用户选择保存并发起时先取得已保存记录 ID，再首次发起。失败恢复不得重复创建或上传，配置变化不得自动提交历史记录。
+- **区分新建提交和已有记录发起。** 仅保存不发起；新建“保存并提交”使用一次 `bpm-process-submit`，不先普通创建再发起。已有记录仍用原 `bpm-process`。发起前查询当前登录人的所属部门，多部门时选择 `starterDepartmentId`；普通保存和任务 SUBMIT 不触发部门选择。错误沿用 code=200 成功、其他 code 显示对应信息的统一处理，不增加“核查流程”按钮；合并提交失败码不等于记录未创建，落库结果未确认时阻止重复创建，详见 [保存会话](references/initiation-contract.md)。
 - **已有记录的发起与保存独立。** 对象有有效 BPM 绑定、记录明确 UNSUBMITTED 且未锁定时，业务详情保留独立“发起审批”，不要求普通编辑权限且不执行普通保存；具备普通编辑资格时，编辑页另提供“保存”和“保存并提交”，沿用原 IAM、记录权限及原 ID。保存会话内的失败恢复仍只执行尚未完成的发起阶段。
 - **恢复与继续提交分开。** 已有记录仅明确 UNSUBMITTED 且未锁定时首次发起；RETURNING 通过当前任务 SUBMIT“继续提交”继续原实例。已撤回/拒绝/同意的记录不生成终态重新发起。
 - **撤回由真实发起人资格决定。** 读取最新流程及 starter，确认时重查；使用 appKey/entityKey/recordId 定位，不需要 bpmKey，不以业务申请人或普通编辑权限推断资格。

@@ -97,10 +97,20 @@ assert.match(initiation, /数字不能直接拼成 `Make\.Field\.\*`/,
   '数值标识不能被猜测为控件类型');
 assert.match(initiation, /发起前检查[^\n]*尚未发送[^\n]*重试[^\n]*recordID/,
   '发起请求前失败应保留已保存 ID 并允许重新检查');
-assert.match(initiation, /HTTP[^\n]*业务错误码[^\n]*明确拒绝[^\n]*结果未知/,
-  '审批结果分类必须同时依据 HTTP 与业务错误码及已确认协议');
-assert.match(initiation, /明确拒绝[^\n]*副作用[^\n]*重试资格/,
-  '明确失败不得被误认为无副作用或可直接重试');
+assert.match(initiation, /`code=200`[^\n]*其他 code[^\n]*`msg`[^\n]*HTTP 200/,
+  '业务成功和失败沿用统一 code/msg 合同，不能仅看 HTTP 状态');
+assert.match(initiation, /bpm-process-submit/,
+  '新建保存并提交须使用合并接口');
+assert.match(initiation, /不能先普通创建、再补发旧发起请求/,
+  '不得恢复两步创建发起链路');
+assert.match(initiation, /`POST \/data\/v1\/user`[^\n]*MakeService.GetResource[^\n]*userId/,
+  '发起部门须来自当前用户 GetResource');
+assert.match(initiation, /任务 `SUBMIT` 继续原实例，不重新选择发起部门/,
+  '部门选择不得扩大到任务继续提交');
+assert.match(initiation, /多个部门[^\n]*未选时禁用[^\n]*starterDepartmentId/,
+  '多部门必须明确选择后再发起');
+assert.match(initiation, /写请求超时、中断[^\n]*不自动重发创建/,
+  '业务失败处理不得移除未知写入结果的防重保护');
 assert.match(serviceContracts, /显式刷新成功[^\n]*普通读取[^\n]*新 Schema/,
   '显式刷新成功后普通读取应取得新 Schema');
 assert.match(serviceContracts, /旧请求[^\n]*失败[^\n]*不能[^\n]*删除[^\n]*新缓存/,
