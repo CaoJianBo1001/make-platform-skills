@@ -74,7 +74,7 @@ Do not pass the desktop `listToolbar`, `listContent`, CanvasTable host, or deskt
 Phone defaults:
 
 - card body click opens the full-screen detail task route and does not create record selection
-- writable cards load [`make-app-actions`](../../make-app-actions/) and use its `mobile-card-actions.md` reference for clicked-record edit/delete permission and precheck behavior
+- writable cards load [`make-app-actions`](../../make-app-actions/) and use its `mobile-card-actions.md` reference for clicked-record edit/delete permissions and the same host controller and precheck policy as PC
 - no CanvasTable, record checkbox, select-all, selection action bar, batch edit, or other batch operation
 - no group or sort trigger, even when the desktop/tablet View already supports those capabilities
 - search stays in one compact phone toolbar; when advanced filtering is enabled or requested, place its filter trigger beside search instead of stacking desktop buttons vertically. Use medium visual controls (`size="middle"`, the library's default medium size, or equivalent) with matching visible heights, not CSS-enlarged small controls, while retaining at least 44px touch targets. A `search-only` list has no filter trigger.

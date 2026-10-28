@@ -133,15 +133,42 @@ open-detail icon remains owned by `canvas-table-integration`.
 
 On phone, detail shows independent edit/delete actions through
 `MobileBottomActionBar` as defined in `mobile-card-actions.md`. Card actions do
-not replace detail actions. The following Drawer flow applies to desktop/tablet;
-phone task routes use that reference's mandatory edit/delete precheck lifecycle.
+not replace detail actions. Containers and confirmation UI may differ; phone
+and desktop/tablet reuse the same host edit/delete controllers, permission
+model, Service routes and error handling. Phone routes must not add an
+independent precheck or choose a different delete policy.
 
 Single edit requires the cached `data.record.update` permission, local selection
 validation, and one Service row-write precheck before opening the edit Drawer.
 
-Single delete requires cached `data.record.delete`, local validation, explicit
-confirmation, and the normal authoritative delete Service endpoint. If the host
-uses the row-write precheck for delete, send `data.record.delete` once; never
-replace final delete authorization with the precheck.
+Single delete follows the [shared single-delete contract](#shared-single-delete)
+in every presentation.
+
+## Shared single delete
+
+PC and phone use the same host delete controller. It owns cached
+`data.record.delete` and local row validation, one frozen target, confirmation,
+the existing precheck policy, the authoritative delete Service request,
+stale-target protection and error handling. Only the confirmation renderer and
+entry placement differ; mobile does not construct a second business pipeline.
+Keep the same route, request body, record identity, permission snapshot and
+failure semantics. Do not send presentation-dependent permission or API fields.
+
+The following labels describe existing host choices for regression coverage;
+they are not new configuration keys. Counts apply after local authorization,
+confirmation and target validity checks succeed:
+
+| Host delete policy | Precheck calls, PC/phone | Final delete calls, PC/phone |
+| --- | --- | --- |
+| `final-endpoint-only` | 0 | 1 |
+| `precheck-and-final` | 1 | 1 |
+
+If the existing PC controller has no delete precheck, phone adds none. If it
+uses `record-write-permission`, both views reuse that one call with
+`data.record.delete` and the same frozen target. Cancellation, local denial or
+a stale target sends no delete; precheck denial/error also sends no delete.
+Final endpoint denial remains authoritative in both policies; a successful
+precheck never grants deletion or triggers an automatic retry. Do not add
+per-record diagnostics or change the PC policy to accommodate phone UI.
 
 单条编辑使用 data.record.update，批量使用独立的 data.record.bulkUpdate 及其字段状态；批量不能额外要求单条 update。meta.field.update 只管字段结构，业务授权只使用文档列明的记录操作。只读、隐藏、脱敏、deny 和撤权必须在 UI 提交及 Service 写入两处拒绝；前端缓存不替代后端最终授权。

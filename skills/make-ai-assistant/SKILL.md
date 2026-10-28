@@ -2,7 +2,7 @@
 name: make-ai-assistant
 description: "Use when integrating, upgrading, debugging, or reviewing @qfei-design/make-ai-assistant in a Make App: Agent discovery, multi-session chat, streaming, file/image input, Service gateway routes, and package-owned UI. Does not own generic dialogs, model behavior, authentication or permission policy, DSL, or publishing."
 metadata:
-  version: 0.3.1
+  version: 0.3.3
 ---
 
 # Make AI Assistant
@@ -59,8 +59,10 @@ are independent; verify the actual installed version before implementation.
 For a Skill contract release, complete the independent forward test in
 `references/testing-and-pitfalls.md` before declaring this guidance ready.
 
+From this Skill's actual installation directory, use the target App's absolute project path:
+
 ```bash
-node skills/make-ai-assistant/scripts/audit-make-ai-assistant-project.mjs <project-root> \
+node scripts/audit-make-ai-assistant-project.mjs "<project-root>" \
   --expected-package-version=<resolved-exact-version>
 ```
 
@@ -68,6 +70,10 @@ The expected version is the actual installed resolution, not a range. A claim
 of broader model-input support needs separate deployed-model evidence. Verify
 published same-origin requests and response streaming against the target Dev App
 before reporting an integration complete.
+
+审计对 `MakeAiAssistant` 和 `AssistantPanel` 使用随包的 React 组件识别合同，支持函数、forwardRef、memo 及其组合，仍拒绝缺失、无效或循环包装。`createMakeAgentClient` 与 `createMakeAppAssistantTransport` 是普通工厂函数，继续严格校验为函数，不套组件识别规则。
+
+项目内的 `.agents/skills` 和 `.codex/skills` 是技能安装目录，不作为应用源码审计；其他业务源码继续按原规则检查。
 
 ## Reference map
 

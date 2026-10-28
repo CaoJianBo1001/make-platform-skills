@@ -5,7 +5,8 @@ desktop/tablet. Phone card/detail tests follow `mobile-card-actions.md`; shared
 permission independence and final Service authorization remain required.
 For phone single-record actions, also run its delayed-precheck A→B and A→B→A
 cases, including reversed completion and stale allow/deny/error; check the
-final write target against the frozen precheck target. Do not apply these
+final write target against the frozen target; delete precheck cases apply only
+when the common host controller uses that precheck. Do not apply these
 single-record cases to CanvasTable batch-selection behavior.
 
 ## TDD order
@@ -108,8 +109,10 @@ UI:
 
 - one row shows edit/delete; two rows show batch edit
 - desktop/tablet detail surface has no duplicate edit/delete actions
-- phone detail exposes independent edit/delete actions; when neither is allowed,
-  hide the entire bottom action bar, and never replace detail actions with card actions
+- phone detail exposes independent edit/delete actions; keep legal approval
+  start/withdraw actions even if ordinary edit/delete are unavailable. Hide the
+  whole bottom action bar only when no ordinary or approval action remains;
+  never replace detail actions with card actions
 - no-action bar, close, selected count, and row-alert cleanup
 - the default modal title is exactly `批量编辑`
 - batch field list enforces data.record.bulkUpdate fieldAccess and package capability
@@ -134,10 +137,17 @@ UI:
   visibly error red, then `clearRowColors` restores the underlying row state; run
   the same assertion for grouped tables when grouped actions are in scope
 - opaque precheck denial shows toast without marking the whole explicit selection
-- delete precheck HTTP 403 with confirmed `permission_denied` shows operation
+- with the common host delete-precheck policy enabled, precheck HTTP 403 with confirmed `permission_denied` shows operation
   guidance with embedded contacts or optional administrator lookup, preserves
   permitted page/confirmation UI, and sends zero real delete requests; an
   unknown 403 stays a request error, with no automatic retries or mutation replay
+- PC and phone invoke the same host delete controller with the same frozen
+  target, cached permissions, route/body and error handling. Cover both existing
+  host strategies: without precheck, confirmation then exactly one final delete;
+  with precheck, confirmation then one precheck and one final delete. Cancel,
+  local denial, stale target and precheck denial/error send zero deletes; final
+  delete denial never retries or changes target. Assert captured requests and
+  counts through the host controller/Service boundary, not a second toy pipeline.
 - selected-count fallback uses frozen count when select-all updatedCount is null
 
 ## Readiness blockers

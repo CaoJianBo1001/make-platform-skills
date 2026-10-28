@@ -60,7 +60,7 @@ Use the following desktop/tablet header grouping for Make approval surfaces. The
 
 | Surface | Left title group, in order | Right action group, in order |
 | --- | --- | --- |
-| Business record detail | Fullscreen toggle → `详情` mode badge → existing object/record title → approval status Tag | Authorized `撤回` or `发起审批` when applicable → icon-only close X |
+| Business record detail | Fullscreen toggle → `详情` mode badge → existing object/record title → approval status Tag | Eligible `发起审批` or authorized `撤回` → icon-only close X; standalone start does not require ordinary edit permission or save the record |
 | Business create/edit | Fullscreen toggle → `新建`/`编辑` mode badge → existing object title | Save → `保存并提交` when eligible → icon-only close X |
 | My approvals task detail | Fullscreen toggle → package-provided title, which contains `审批详情` followed by its status Tag | Package-provided authorized actions, in their supplied order → icon-only close X |
 

@@ -100,3 +100,7 @@ Lookup 从节点字段保留 relationKey/targetFieldKey；当前成功样例未�
 `renderLayout` 的 title 整体放在宿主左侧标题组的全屏控件之后；包提供的 title 已包含“审批详情”和紧随其后的状态 Tag，不拆出 Tag 放到右侧，也不额外生成第二个。actions 整体放在右侧操作组、宿主唯一的关闭 X 左侧，保留包提供的动作顺序和授权；不把状态 Tag 混入操作组。按 [审批头部布局](../../makeui/references/drawer-layout.md#approval-header-placement) 处理对齐、长标题及全屏。content 包含申请信息、history、意见，footer 当前为空，不另造固定办理底栏或二次确认区。提供宿主 TextArea 的 id/required/maxLength/受控回调，保留包的字段标红和意见聚焦。
 
 桌面/平板使用宿主 Drawer，支持全屏与遮罩关闭，加载/失败沿用同一容器；宽度遵守宿主或 `makeui`，不写死某示例项目比例。字段通过 fullWidth 和 renderFieldLabel 公开插槽处理整行及类型图标，优先使用包默认紧凑模板和宿主控件无边框模式，避免复制包 CSS。历史插槽使用 [历史合同](history.md)，不参与必填校验或授权判断。
+
+## 手机任务详情
+
+手机字段适配、同一控制器插槽、紧凑时间线、意见输入与固定表单底栏遵循 [移动端适配](mobile.md)，桌面继续本文既有合同。未发布新增 API 先核验实际产物，不能复制 Controller 或绕过节点授权。

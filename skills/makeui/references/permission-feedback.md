@@ -10,13 +10,17 @@ Read this for React App startup, route/data or operation denial presentation. Pe
 
 The package/Skill may be used before the administrator backend is deployed. Package availability is required; administrator-query availability is not. Render generic authorization guidance without blocking the App when the SDK method is missing or the endpoint is absent. Follow `make-app-auth/references/access-help.md#staggered-release-fallback` for lookup errors; this does not relax login, IAM or Schema checks.
 
+From this Skill's actual installation directory, pass the absolute path of the target App's installed package:
+
 ```sh
-node skills/makeui/scripts/verify-feedback-package-surface.mjs <installed-package-root>
+node scripts/verify-feedback-package-surface.mjs "<installed-package-root>"
 # Explicitly approved local alpha test only:
-node skills/makeui/scripts/verify-feedback-package-surface.mjs <installed-package-root> --allow-prerelease
+node scripts/verify-feedback-package-surface.mjs "<installed-package-root>" --allow-prerelease
 ```
 
 The verifier uses the host's installed React and `react-dom/server`. It checks exports and representative rendered states, not route authorization, mounted layout, browser interaction or live IAM. Keep portable host verification project-local or versioned; do not reference a developer's global Skill directory in CI.
+
+权限提示、错误提示和提示容器分别校验公开 ESM/CJS React 导出，使用与移动组件相同的函数、forwardRef、memo 及嵌套包装识别规则。缺失或无效导出仍失败；`normalizeMakeAppPermissionNotice` 是普通工具函数，必须保持可调用函数，不接受组件包装代替。
 
 ```tsx
 import { MakeAppPermissionNotice } from '@qfei-design/make-app-observability/react';
