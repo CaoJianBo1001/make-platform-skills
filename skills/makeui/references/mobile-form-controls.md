@@ -39,6 +39,8 @@
 
 对输入控件和只读值直接应用包样式 `.make-app-mobile-form-value`；对 flex 选择／日期触发器应用 `.make-app-mobile-form-value--trigger`，并保证内部值文本自身 `text-align: right`。组件库把真实 input 嵌套在包装器中时，必须对嵌套 input 设右对齐，不能只对外层 `.ant-form-item-control` 或包装器设 `justify-content: flex-end`。选择器候选行和字段标签不右对齐。
 
+共享字段行为及必须执行的初始头像、搜索取消、数值和两端回归见 [字段适配回归](field-adapter-regressions.md)。手机普通可编辑值区不沿用桌面 hover/focus 的灰底或编辑盒边框；只对宿主自己的控件限定样式，公共包控件通过公开 API 接入，保留键盘 `:focus-visible`。
+
 ## 字段控件决策
 
 手机字段必须继续满足 `component-usage.md` 的 host-form controlled contract：转发 `value/onChange/onBlur/id/disabled`，显示值、校验值和提交值一致。手机适配不得改变 Make 字段值结构或绕过权限字段集。
