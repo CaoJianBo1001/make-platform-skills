@@ -74,8 +74,10 @@ assert.match(permissionRuntime, /Resolve a Lookup source definition[^\n]*普通�
   'Lookup 元数据来源也须先按普通或审批模式区分');
 assert.match(serviceContracts, /For relation-backed `Make\.Field\.Lookup` during create[^\n]*普通新建[^\n]*`createFields`[^\n]*审批新建[^\n]*启动配置/,
   'Service 关系路由不得统一以普通 createFields 裁掉审批字段');
-assert.match(serviceAdapter, /In create mode[^\n]*普通新建[^\n]*`createFields`[^\n]*审批新建[^\n]*启动配置/,
-  'Lookup 候选源字段必须按新建模式解析');
+assert.match(serviceAdapter, /In ordinary create mode[^\n]*`createFields`/,
+  '普通 Lookup 候选源字段仍使用 createFields');
+assert.match(serviceAdapter, /审批新建 START[^\n]*任务 TASK[^\n]*lookup-metadata\.md[^\n]*启动字段\/任务授权/,
+  'BPM Lookup 候选应交接节点依赖合同并重验对应场景授权');
 
 assert.match(initiation, /"type": "Make\.Field\.Number"/,
   '实际启动字段样例应保留 Make.Field.Number 类型');

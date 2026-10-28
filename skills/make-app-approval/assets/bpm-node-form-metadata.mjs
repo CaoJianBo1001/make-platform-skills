@@ -10,6 +10,7 @@ const fieldTypes = Object.freeze({
   SINGLE_DEPT: 'Make.Field.SingleDepartment', MULTI_DEPT: 'Make.Field.MultiDepartment',
   FILE: 'Make.Field.File', LOOKUP: 'Make.Field.Lookup',
 });
+export const isBpmFieldType = value => typeof value === 'string' && Object.values(fieldTypes).includes(value);
 const propertyKeys = Object.freeze({
   ID: 'encoding', NUMBER: 'number', CURRENCY: 'currency', PERCENT: 'percent',
   DATE: 'date', DATE_TIME: 'date', DATE_RANGE: 'date',

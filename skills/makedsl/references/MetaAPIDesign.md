@@ -71,11 +71,13 @@ X-Make-Target: MakeService.GetResource
 
 请求字段是 `key`，不是 `entityKey`。成功响应为 `{ code: 200, msg, data: entity }`；校验 `data.key` 与 `data.appKey` 后读取 `data.properties.fields`。保留每个字段的 key/name/type/properties/validations，普通 CRUD 仍遵循 fields/createFields 与 IAM 合同。审批任务另走节点元数据，完整授权、缺失定义处理与附件校验见 [任务详情](../../make-app-approval/references/task-detail.md)。关系为独立元数据资源，不能把 Entity fields 当成完整关系集合。
 
-审批启动配置若仅返回 field key，通过 bpm-node-form-metadata 的 START 场景补基础定义，授权和顺序仍取启动配置；完整字段对象格式无需额外读取。普通 Schema 仍负责对象绑定判定与普通权限场景。
+审批启动配置若仅返回 field key，通过 bpm-node-form-metadata 的 START 场景补基础定义，授权和顺序仍取启动配置。完整字段对象仍需检查本次所需 Lookup 关系及目标 key/type；仅在字段、依赖和定位均校验通过后省略额外请求，具体见 [START 完整性判定](../../make-app-approval/references/lookup-metadata.md#start-何时可以省略额外请求)。普通 Schema 仍负责对象绑定判定与普通权限场景。
 
 ## Relation
 
-已知 relationKey 时，通过同一 Meta 网关 `POST /meta/v1/relation`，`X-Make-Target: MakeService.GetResource`，正文 `{ appKey, key: relationKey }` 读取单个关系。成功 data 为 Make.Relation，核验 key/appKey/type；`properties.from/to` 各含 entityKey/cardinality，目标基数取 one/many。再按需要读取目标 Entity 的目标字段定义，不从 Entity.fields 猜关系，也不把关系定义当作读取目标记录的授权。任务表单仅组合可见 Lookup 的必要定义；自关联和同目标读取只在单次请求内去重。
+普通业务元数据场景已知 relationKey 时，通过同一 Meta 网关 `POST /meta/v1/relation`，`X-Make-Target: MakeService.GetResource`，正文 `{ appKey, key: relationKey }` 读取单个关系。成功 data 为 Make.Relation，核验 key/appKey/type；`properties.from/to` 各含 entityKey/cardinality，目标基数取 one/many。再按普通场景需要读取目标 Entity 的目标字段定义，不从 Entity.fields 猜关系，也不把关系定义当作读取目标记录的授权。
+
+BPM 的 START/TASK 不使用上述普通 Meta 补查流程：按 [节点 Lookup 依赖合同](../../make-app-approval/references/lookup-metadata.md)，从 bpm-node-form-metadata 的 data.relations 与 Lookup 目标 key/type 取得依赖。缺失时明确报错，不回退普通 relation/entity/Schema；所需目标记录继续走既有 IAM/Data 读取授权。
 
 ## Schema
 

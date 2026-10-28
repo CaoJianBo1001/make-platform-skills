@@ -28,17 +28,17 @@ Workflow 已完成任务可能仍返回历史 `editPermission: { scope: "field",
 
 已实现的宿主聚合接点是 `POST /api/bpm/tasks/form`，body 仅 `{ processInstanceId, taskId }`；经宿主既有路由前缀适配后访问。返回 `{ ...Workflow原信封, metadata }`，其中 data 保持任务原文，metadata 使用宿主 `MakeAppSchema` 结构表达 `{ appName, schema: { appKey }, entities, relations }`。复用该数据结构不代表调用 Schema 接口。UI 的 loadDetail 每次只调聚合接口一次，组合 data 与 metadata；不再并行请求旧 detail 和 `/api/schema`。原 `/tasks/detail` 直接代理保留给原始响应消费者，聚合返回形状须写入 API 文档。
 
-聚合先校验 Workflow 任务访问结果及 appKey/taskId/processInstanceId，再读元数据；客户端不能覆盖 appKey/entityKey。已完成任务和没有 actions 的任务仍可只读查看。每次加载、刷新、办理前核查都重读，不跨请求缓存任务授权或节点元数据快照；只在单次编排内按 entityKey/relationKey 去重。独立关系可并行获取并保留稳定顺序，自关联优先复用节点中已有的目标定义。取消信号传递到所有上游，身份/应用/环境/任务切换时丢弃旧响应；任一上游失败不回退普通 entity/Schema 获取源字段、不自动重试，保留已完成上游错误的 HTTP、Content-Type、正文和 Trace。
+聚合先校验 Workflow 任务访问结果及 appKey/taskId/processInstanceId，再读元数据；客户端不能覆盖 appKey/entityKey。已完成任务和没有 actions 的任务仍可只读查看。每次加载、刷新、办理前核查都重读，不跨请求缓存任务授权或节点元数据快照；只在单次编排内按 entityKey/relationKey 去重。关系直接使用节点响应并保留稳定顺序，自关联辅助目标仅由已返回 key/type 描述。取消信号传递到所有上游，身份/应用/环境/任务切换时丢弃旧响应；任一上游失败不回退普通 entity/Schema 获取源字段、不自动重试，保留已完成上游错误的 HTTP、Content-Type、正文和 Trace。
 
-Lookup 从节点字段保留 relationKey/targetFieldKey；当前成功样例未内嵌关系及目标定义，暂按 [Lookup 依赖边界](workflow-api.md#lookup-依赖边界) 补查；通过 Meta `/meta/v1/relation` 的 GetResource、body `{ appKey, key: relationKey }` 读取关系，再通过 Entity GetResource 读取目标字段定义。校验 key/appKey/type、源实体是否位于 from/to 及目标 one/many 基数；仅装配可见 Lookup 必需的关系与目标字段。自关联为回显补充的目标字段不扩展 view/editPermission。Entity 响应不等于完整应用 relations；定义缺失时报错，不以元数据代替候选数据的读取权限。
+Lookup 从节点字段保留 relationKey/targetFieldKey/targetFieldType，从 `data.relations` 读取两端和基数；按 [Lookup 节点依赖](lookup-metadata.md) 生成局部最小目标描述，不补查普通 entity/relation/Schema。仅装配可见 Lookup 必需的关系与目标描述，自关联补充不扩展 view/editPermission。缺失或冲突时报错，不以元数据代替候选数据的读取权限。
 
 ### 任务 Lookup 候选
 
 任务字段控件复用宿主关联选择器，但注入任务候选 provider，不沿用普通 CRUD 的源字段授权接口。`POST /api/bpm/tasks/lookup-options` 接收 `{ processInstanceId, taskId, fieldKey, keyword?, pagination: { page, size } }`，返回 `{ options, searchable, total }`。仅携带任务定位与当前字段，Service 从任务取得应用/对象，不接受客户端替换。
 
-每次搜索/翻页先重读任务，确认 PENDING、有效动作、当前字段可见且可编辑，再读 TASK 节点元数据，并只补查当前字段的 Relation、目标 Entity；目标对象、显示字段和记录读取继续执行既有 IAM/Data 检查。权限撤销应在元数据和候选读取前拒绝，不能复用首次打开详情的授权。关键词变化也重新核查；一次搜索只解析当前 Lookup，无关可见字段关系失效不应阻断它。
+每次搜索/翻页先重读任务，确认 PENDING、有效动作、当前字段可见且可编辑，再读 TASK 节点元数据，并只解析当前字段的内嵌关系及目标 key/type；目标对象、显示字段和记录读取继续执行既有 IAM/Data 检查。权限撤销应在元数据和候选读取前拒绝，不能复用首次打开详情的授权。关键词变化也重新核查；一次搜索只解析当前 Lookup，无关可见字段关系失效不应阻断它。
 
-单次普通关联搜索复用一次任务、节点元数据、当前关系、目标实体、权限和候选读取；自关联目标定义不在节点 fields 中时才补查目标 Entity；避免为每次搜索加载整份任务表单及全部关系。UI provider 身份稳定，传递取消信号和当前 reference，保留真实 searchable、分页、名称回显与单/多选格式；无任务定位时报错，不回退普通候选。此规则不改变普通业务导航、CRUD 或审批新建合同。
+单次搜索复用一次任务、节点元数据、权限和候选读取；自关联也不补查目标 Entity。避免为每次搜索加载整份任务表单及全部关系。UI provider 身份稳定，传递取消信号和当前 reference，保留真实 searchable、分页、名称回显与单/多选格式；无任务定位时报错，不回退普通候选。此规则不改变普通业务导航和 CRUD；审批新建使用 START 节点的同一依赖合同。
 
 读取值与写入值分开。宿主适配已验证支持如下 Lookup 展示形状，保留 value/name/label 等已有名称及 isDeleted，不先压成 ID 再丢失回显信息：
 
