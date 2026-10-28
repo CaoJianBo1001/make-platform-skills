@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.48
+  version: 0.4.51
 ---
 
 # makeui
@@ -51,6 +51,7 @@ For mobile delivery, verify the actually installed package with [`scripts/verify
 | Frozen phone product standard and precedence over superseded proposals | `references/mobile-product-baseline.md` |
 | Mobile defaults, smooth desktop/mobile switching, mobile shell/navigation/workbench/task pages/pickers/list end state | `references/mobile-defaults.md` |
 | Phone create/edit/detail field adapters, date/time/select/lookup/file controls, task footer, overlay fit | `references/mobile-form-controls.md` |
+| 共享字段修复、初始人员头像缓存、数值提交及两端回归 | [字段适配回归](references/field-adapter-regressions.md) |
 | Installed mobile package iOS input, pinch zoom, attachment rendering, and 48px upload entry | `scripts/verify-mobile-package-surface.mjs` |
 | Component structure, module boundaries, page decomposition | `references/component-structure.md` |
 | App shell, sidebar, top header, viewport height chain | `references/app-shell-layout.md` |
