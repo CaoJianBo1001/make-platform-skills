@@ -12,7 +12,9 @@
 | GET `/api/entities/:entityKey/bpm-start-config` | 新建不带 recordID；返回规范化启动配置 |
 | POST `/api/entities/:entityKey/records` | 原创建接口；普通/审批模式在 Service 判定 |
 | POST `/api/entities/:entityKey/bpm-files/:fieldKey` | 新建预上传；multipart 重复 file，返回文件元数据数组 |
-| POST `/api/entities/:entityKey/records/:recordID/bpm-start` | `{}`；返回规范化流程发起结果 |
+| POST `/api/entities/:entityKey/bpm-submit` | `{ data, relations?, starterDepartmentId? }`；返回含字符串 recordId 的规范化流程发起结果 |
+| GET `/api/users/:userId` | 单人详情及所属部门；规范化结果见 [发起部门](initiation-contract.md#发起部门) |
+| POST `/api/entities/:entityKey/records/:recordID/bpm-start` | `{ starterDepartmentId? }`；返回规范化流程发起结果 |
 | POST `/api/entities/:entityKey/records/:recordID/bpm-withdraw` | `{comment}`；保留 Workflow 信封 |
 | POST `/api/bpm/process/detail` | 一个实例定位或一个业务记录定位；保留 Workflow 信封 |
 | POST `/api/bpm/tasks/query` | taskStatus、分页及可选条件；保留 data 数组和 pagination.total |
@@ -31,7 +33,9 @@
 | --- | --- | --- |
 | `/workflow/v1/bpm-node-form-metadata` | MakeService.GetResource | `{ scene: "START", appKey, processKey }` 或 `{ scene: "TASK", processInstanceId, taskId }` |
 | `/workflow/v1/bpm-start-config` | MakeService.GetResource | `{ appKey, entityKey }` |
-| `/workflow/v1/bpm-process` | MakeService.CreateResource | `{ appKey, entityKey, recordId }` |
+| `/workflow/v1/bpm-process-submit` | MakeService.CreateResource | `{ appKey, entityKey, bpmKey, data, starterDepartmentId? }`，仅新建提交 |
+| `/data/v1/user` | MakeService.GetResource | `{ userId }`，取得该人员的 departments |
+| `/workflow/v1/bpm-process` | MakeService.CreateResource | `{ appKey, entityKey, recordId, starterDepartmentId? }`，已有记录发起 |
 | `/workflow/v1/bpm-process` | MakeService.UpdateResource | `{ appKey, entityKey, recordId, comment }` |
 | `/workflow/v1/bpm-process` | MakeService.GetResource | `{ processInstanceId }` 或 `{ appKey, entityKey, recordId }` |
 | `/workflow/v1/bpm-task` | MakeService.ListResources | `{ appKey, viewType: 'MY', taskStatus, pagination, ...filters }` |
