@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.4.1
+// make-app-permission contract version: 0.4.4
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -58,6 +58,10 @@ async function withHarness(operation, initial, run) {
 }
 
 const denialSnapshots = operation => [
+  ['unlisted-field-without-wildcard', snapshot(operation, [permission(operation, {fieldAccess: {amount: ['readonly']}})])],
+  ...['readonly', 'hidden', 'partialMask', 'fullMask'].map(state => [
+    'singleton-' + state, snapshot(operation, [permission(operation, {fieldAccess: {'*': ['*'], title: [state]}})]),
+  ]),
   ['readonly', snapshot(operation, [permission(operation, {fieldAccess: {title: 'readonly'}})])],
   ['partial-mask', snapshot(operation, [permission(operation, {fieldAccess: {title: 'partialMask'}})])],
   ['full-mask', snapshot(operation, [permission(operation, {fieldAccess: {title: 'fullMask'}})])],
@@ -69,7 +73,7 @@ const denialSnapshots = operation => [
   ['metadata-wildcard', snapshot(operation, [permission('meta.field.*', {fieldAccess: {title: 'editable'}})])],
   ['incomplete-field-state', snapshot(operation, [permission(operation, {fieldAccess: {title: 'editable', amount: 'readonly'}}), {permissionKey: operation, resource: ENTITY, effect: 'allow'}])],
   ...['readonly', 'hidden', 'partialMask', 'fullMask'].flatMap(state => {
-    const results = [permission('data.*.*', {fieldAccess: {title: 'editable'}}), permission(operation, {fieldAccess: {title: state}})];
+    const results = [permission('data.*.*', {fieldAccess: {'*': ['*']}}), permission(operation, {fieldAccess: {title: [state]}})];
     return [
       ['coexisting-' + state, snapshot(operation, results)],
       ['coexisting-reversed-' + state, snapshot(operation, [...results].reverse())],
@@ -81,6 +85,28 @@ const denialSnapshots = operation => [
 ];
 
 const cases = [
+  ['multi_value_access_reaches_ui_and_service_without_priority_reduction', async operation => {
+    for (const states of [['readonly', 'editable'], ['hidden', 'partialMask', 'editable'], ['editable', 'readonly']]) {
+      await withHarness(operation, snapshot(operation, [permission(operation, {fieldAccess: {title: states, amount: ['readonly']}})]), async (host, requests, writes) => {
+        assert.deepEqual(await host.editableFieldKeys(), ['title']);
+        await host.submit({title: 'changed'});
+        assert.deepEqual(requests, [{title: 'changed'}]);
+        assert.deepEqual(writes, [{title: 'changed'}]);
+      });
+    }
+  }],
+  ['array_wildcard_reaches_writes_without_expanding_schema', async operation => {
+    const current = snapshot(operation, [permission(operation, {fieldAccess: {'*': ['*']}})], {fields: [fields[0]], editableFields: [fields[0]]});
+    current.access.permissions = current.access.permissions.map(row => ({...row, fieldAccess: {'*': ['*']}}));
+    await withHarness(operation, current, async (host, requests, writes) => {
+      assert.deepEqual(await host.editableFieldKeys(), ['title']);
+      await host.submit({title: 'array-grant', amount: 9, unknown: 'injected'});
+      assert.deepEqual(requests, [{title: 'array-grant'}]);
+      assert.deepEqual(writes, [{title: 'array-grant'}]);
+      await assert.rejects(async () => host.requestUpdate({title: 'allowed', amount: 9}));
+      assert.deepEqual(writes, [{title: 'array-grant'}]);
+    });
+  }],
   ['compatible_grants_reach_ui_submit_and_service_write', async operation => {
     for (const results of [
       [permission(operation, {fieldAccess: {title: 'editable', amount: 'readonly'}}), permission('data.*.*', {fieldAccess: {title: 'editable', amount: 'readonly'}})],
@@ -100,7 +126,7 @@ const cases = [
     }
   }],
   ['empty_and_sparse_field_maps_stay_within_schema', async operation => {
-    for (const fieldAccess of [{}, {amount: 'readonly'}]) {
+    for (const fieldAccess of [{}, {title: ['editable'], amount: ['readonly']}]) {
       const current = snapshot(operation, [permission(operation, {fieldAccess})], {fields: [fields[0]], editableFields: [fields[0]]});
       await withHarness(operation, current, async (host, requests, writes) => {
         assert.deepEqual(await host.editableFieldKeys(), ['title']);

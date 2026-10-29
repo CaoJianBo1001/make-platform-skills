@@ -13,13 +13,27 @@ assert.equal(typeof createPermissionLoader, 'function', 'adapter must delegate t
 const scope = 'make://tenant-1/meta/app/ContractApp';
 const row = { resource: scope, permissionKey: 'meta.entity.read', effect: 'allow', fieldAccess: {} };
 const dto = { principal: 'user:user-1', scope, permissions: [row] };
+// Sanitized wire shape observed through a real App IAM adapter (2026-10-29).
+const arrayDto = { ...dto, permissions: [{...row, fieldAccess: {'*': ['*'], title: ['readonly', 'creatable', 'editable'], secret: ['hidden']}}] };
+const unrelatedDto = { ...dto, permissions: [row,
+  {...row, resource: 'make://tenant-1/meta/app/OtherApp', fieldAccess: {title: []}},
+  {...row, permissionKey: 'data.record.export', fieldAccess: {title: ['unknown']}},
+] };
 const denial = { reason: 'permission_denied', permissionKey: 'meta.entity.read', data: {
   appAdministrators: [{ userId: 'admin-1', name: 'Administrator', avatarUrl: null }],
 } };
 
 const cases = [
   ['iam_success_envelope', { code: 200, msg: 'ok', data: dto }, dto],
+  ['iam_array_field_access_is_preserved', {code: 200, msg: 'ok', data: arrayDto}, arrayDto],
   ['empty_iam_is_authoritative', { code: 200, data: { ...dto, permissions: [] } }, { ...dto, permissions: [] }],
+  ['unrelated_rows_do_not_poison_selected_grants', {code: 200, data: unrelatedDto}, dto],
+  ...[undefined, null, [], {title: []}, {title: ['unknown']}, {title: ['readonly', 7]}].map((fieldAccess, index) => {
+    const invalidRow = {...row, fieldAccess};
+    if (fieldAccess === undefined) delete invalidRow.fieldAccess;
+    // Keep a valid row too: dropping only the invalid selected row is also an error.
+    return [`invalid_selected_field_access_${index}`, {code: 200, data: {...dto, permissions: [row, invalidRow]}}];
+  }),
   ['non_success_business_code', { code: 500, data: dto }],
   ...[undefined, null, {}, 7, { scope, permissions: 'invalid' }].map((data, index) => [
     `invalid_success_data_${index}`, { code: 200, data },
@@ -43,9 +57,14 @@ for (const [name, body, expected, httpStatus] of cases) {
       const actual = await load();
       assert.equal(actual?.scope, expected.scope);
       assert.ok(Array.isArray(actual.permissions));
-      assert.equal(actual.permissions.length, expected.permissions.length);
-      if (expected.permissions.length) {
-        for (const key of ['resource', 'permissionKey', 'effect']) assert.equal(actual.permissions[0][key], row[key]);
+      // A host may retain or discard these clearly unrelated rows. The valid
+      // selected grant must survive either path without relaxing row validation.
+      const actualRows = name === 'unrelated_rows_do_not_poison_selected_grants'
+        ? actual.permissions.filter(item=>item.resource === scope && item.permissionKey === row.permissionKey)
+        : actual.permissions;
+      assert.equal(actualRows.length, expected.permissions.length);
+      for (let index = 0; index < expected.permissions.length; index++) {
+        for (const key of ['resource', 'permissionKey', 'effect', 'fieldAccess']) assert.deepEqual(actualRows[index][key], expected.permissions[index][key]);
       }
     } else {
       await assert.rejects(load, error => {

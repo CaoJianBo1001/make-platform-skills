@@ -66,10 +66,10 @@ try {
 
   const mutations = [
     ['ignores-editable-schema', "(operation !== 'data.record.update' || editable.has(field.key))", 'true', /ui_refresh_removes_revoked_fields/],
-    ['raw-ui-payload', 'const payload = Object.fromEntries(Object.entries(values).filter(([key]) => allowed.has(key)));', 'const payload = values;', /ui_filters_injected_and_invisible_fields|empty_and_sparse_field_maps_stay_within_schema/],
+    ['raw-ui-payload', 'const payload = Object.fromEntries(Object.entries(values).filter(([key]) => allowed.has(key)));', 'const payload = values;', /ui_filters_injected_and_invisible_fields|empty_and_sparse_field_maps_stay_within_schema|array_wildcard_reaches_writes_without_expanding_schema/],
     ['stale-ui-allowlist', 'const editableFieldKeys = () => operationAllowed(ui, entityKey, operation) ? fieldKeys(ui, entityKey, operation) : [];', 'const cached = fieldKeys(ui, entityKey, operation); const editableFieldKeys = () => cached;', /ui_refresh_removes_revoked_fields/],
     ['stale-ui-submit-allowlist', 'const allowed = new Set(fieldKeys(ui, entityKey, operation));', 'const allowed = new Set(fieldKeys(snapshot, entityKey, operation));', /ui_refresh_removes_revoked_fields/],
-    ['missing-service-field-check', 'if (Object.keys(values).some(key => !allowed.has(key))) forbidden();', '', /service_rejects_injected_fields_atomically|empty_and_sparse_field_maps_stay_within_schema/],
+    ['missing-service-field-check', 'if (Object.keys(values).some(key => !allowed.has(key))) forbidden();', '', /service_rejects_injected_fields_atomically|empty_and_sparse_field_maps_stay_within_schema|array_wildcard_reaches_writes_without_expanding_schema/],
     ['service-trusts-ui', 'const allowed = new Set(fieldKeys(service, entityKey, operation));', 'const allowed = new Set(fieldKeys(ui, entityKey, operation));', /service_rejects_stale_ui_after_revoke/],
     ['ui-ignores-refresh', 'refreshUi: next => { ui = next; }', 'refreshUi: next => {}', /ui_refresh_removes_revoked_fields/],
     ['service-ignores-refresh', 'refreshService: next => { service = next; }', 'refreshService: next => {}', /service_rejects_stale_ui_after_revoke|ui_refresh_removes_revoked_fields/],
@@ -82,7 +82,8 @@ try {
   }
   const modelMutations = [
     ['reject-compatible-results', correctAdapterSource.replace('if (allows.length === 0) return false;', 'if (allows.length !== 1) return false;'), /compatible_grants_reach_ui_submit_and_service_write/],
-    ['sparse-map-as-allowlist', correctAdapterSource.replace("return allowedStates.has('editable');", "return Object.keys(fields).length === 0 && allowedStates.has('editable');"), /compatible_grants_reach_ui_submit_and_service_write|empty_and_sparse_field_maps_stay_within_schema/],
+    ['sparse-map-as-full-access', correctAdapterSource.replace('if (maps.every(fields => Object.keys(fields).length === 0)) return true;', 'if (states.length === 0) return true;'), /ui_refresh_removes_revoked_fields|service_rejects_stale_ui_after_revoke/],
+    ['require-all-array-members', correctAdapterSource.replace('return states.some(state =>', 'return states.every(state =>'), /multi_value_access_reaches_ui_and_service_without_priority_reduction/],
     ['missing-map-as-empty', correctAdapterSource.replace("if (!hasFieldAccess || item.fieldAccess === null || typeof item.fieldAccess !== 'object' || Array.isArray(item.fieldAccess)) return null;", "if (hasFieldAccess && (item.fieldAccess === null || typeof item.fieldAccess !== 'object' || Array.isArray(item.fieldAccess))) return null;").replace('Object.entries(item.fieldAccess);', 'Object.entries(item.fieldAccess ?? {});'), /ui_refresh_removes_revoked_fields/],
   ];
   for (const [name, source, failure] of modelMutations) {

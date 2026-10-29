@@ -42,15 +42,22 @@ Required field cases:
 | `data.record.bulkUpdate` only + bulk editable state | batch edit permitted; single update denied |
 | `data.record.*` / `data.*.*` | matches real record operations, respects field limits and deny |
 | metadata update only | no business edit grant |
-| readonly / hidden / partialMask / fullMask | writes rejected |
+| only readonly / hidden / partialMask / fullMask, without the operation's write member | writes rejected |
 | explicit operation deny / revoked grants | no UI request and no Service write |
-| valid empty field map or unlisted field, with operation allow | no extra field restriction; UI and Service still enforce Schema and host capabilities |
-| named field state plus `'*'` baseline | named state wins within that map; another applicable result cannot widen a restriction |
+| all applicable field maps empty, with operation allow | principal adds no extra field restriction; UI and Service still enforce Schema and host capabilities |
+| nonempty maps without requested field or wildcard | no field grant; never synthesize editable |
+| named field values plus `'*'` baseline | use applicable named values; use wildcard only if no named value exists |
 | selected row missing the entire field map, including beside a valid allow | invalidate the snapshot; no UI submit or Service persistence |
 | compatible exact and wildcard results coexist, in either order | field stays available; UI submit and Service write succeed |
-| a coexisting result returns readonly/hidden/mask | keep the restriction; stale UI and direct Service writes cannot persist |
-| principal response with readonly/hidden/mask | controls and submit cannot widen the returned restriction |
-| Schema collections vs principal scalar states | consume each response contract separately |
+| named readonly/hidden/mask without editable, beside a wildcard grant | named members control the field; stale UI and direct Service writes cannot persist |
+| readonly and editable coexist, either in one array or separate applicable results | edit capability remains; no obsolete priority reduction or first-result-only check |
+| principal `{"*": ["*"]}` | preserve through Service/UI loading; operation and field helpers accept it; UI submit and Service write still enforce Schema bounds |
+| single-element readonly/hidden/mask arrays | preserve the member restriction; reject injected or stale writes |
+| `["readonly","creatable"]` vs `["readonly","editable"]` | first permits create only; second permits edit only; both preserve structure visibility |
+| known multi-value arrays with hidden/mask members | preserve all members and evaluate operation capability; backend projection/masking remains effective |
+| Schema collections vs principal fieldAccess values | consume each response contract separately; do not reject valid IAM arrays |
+
+协议核对依据（2026-10-29）：真实 IAM 调用确认数组形态；PermissionService 的 `PrincipalPermissionItemResponse`、`mergeFieldAccessValues` 及多值响应测试确认保留/去重；共享 `PermissionFieldAccess` 与 Meta/Data 的字段消费代码确认按能力成员判断。当前 UI/Service 回归须覆盖相同数据经真实加载器、权限模型和提交边界，不以文档关键词或假造最终单值代替。权限服务 `c1d92d5e`（同字段实现也见 dev `3b052dc6`）、make-base dev `868d834b`、Meta dev `15bb4826`、Data dev `ed30755a` 为本次核对版本；这是证据记录，不要求应用访问源码仓库。
 
 ## Page and payload tests
 
@@ -108,11 +115,11 @@ Only override roots that differ from defaults; `sharedRoots` adds production sha
 
 `create calls` 列出识别数 `checked`、局部过滤证据数 `filtered`、来源未证明数 `unproven` 和待复核数 `review`。`checked=0` 报 `create_call_not_recognized`，先核对目录和创建接口配置；`create_payload_unverified_call` 列出已识别调用的文件、行号和载荷参数。跨回调 `prepare → create` 仍不追踪，无法证明时保留 FAIL（退出码 1）；不能直接断言业务授权缺失，也不能据此通过验收，需结合下述生产调用链测试复核。
 
-The audit additionally recognizes generation-based context refresh (permission → fresh Schema → atomic context publication), navigation filtered from that context's Schema, whole-content permission guards and row-clearing enabled hooks consumed by the table. It checks necessary boolean conditions, including parentheses and guarded alternatives: `true || readable`, inverted permissions and OR between independent required permissions cannot establish a gate. The hook's actual enabled argument must consume the gate; mentioning it in another argument does not count. A nullable context wrapper is recognized only with the corresponding context's guarded generation provider; production tests still verify actual mounting and identity changes.
+The audit additionally recognizes generation-based context refresh (permission → fresh Schema → atomic context publication), navigation filtered from that context's Schema, whole-content permission guards and row-clearing enabled hooks consumed by the table. The refreshing effect's dependency array may contain other members alongside its generation key, in any order; an unrelated effect cannot supply that dependency. It checks necessary boolean conditions, including parentheses and guarded alternatives: `true || readable`, inverted permissions and OR between independent required permissions cannot establish a gate. The hook's actual enabled argument must consume the gate; mentioning it in another argument does not count. A nullable context wrapper is recognized only with the corresponding context's guarded generation provider; production tests still verify actual mounting and identity changes.
 
 导航检查识别直接 visible/enabled 条件或当前项的 `meta.entity.read` 过滤集合，以及同文件/相对命名导入的一层函数组件集合参数透传。函数组件中的导航必须进入返回 JSX 或其中使用的局部 JSX/条件 JSX 变量；未使用的安全菜单不能为返回的原始菜单作证，同一识别到的函数视图内也不能用一个安全菜单掩盖另一个未过滤菜单。`permissionCheck || true`、取反和未消费的过滤结果不能作为证据。识别仅支持上述局部结构，不追踪集合别名链，也不证明整个应用的导航都正确。未获得有效证据时保留失败；这不是项目结构要求，不应为了通过扫描重构合法组件或放宽业务权限。
 
-Create checking follows the configured argument through local immutable aliases, DTO properties and simple expression helpers to a consumed allowlist filter. It also recognizes a local field-driven reducer when its actual field argument is filtered and its accumulator only receives that field's key. Unused builders, same-name values in another function/file, mutated aliases, raw spreads and an always-true filter predicate do not establish a safe write. A prepared `{data: values}` DTO is not itself a mutation; the consuming boundary determines the result. This is a bounded static check, not a full JavaScript interpreter: unsupported builders require inspecting the actual production call chain and extending recognition with positive **and negative** fixtures, not renaming application code or planting keywords.
+Create checking follows the configured argument through local immutable aliases, DTO properties and simple expression helpers to a consumed allowlist filter. It also recognizes a local field-driven reducer when its actual field argument is filtered and its accumulator only receives that field's key. Unused builders, same-name values in another function/file, mutated aliases, raw spreads and an always-true filter predicate do not establish a safe write. Checks include writes through local child aliases or shallow copies' shared children, and Set mutations before filtering, including optional/computed `add` calls; changing a copy's independent own property or a Set after the payload was materialized does not by itself invalidate the original payload. A prepared `{data: values}` DTO is not itself a mutation; the consuming boundary determines the result. This is a bounded static check, not a full JavaScript interpreter: unsupported builders require inspecting the actual production call chain and extending recognition with positive **and negative** fixtures, not renaming application code or planting keywords.
 
 For a conditional payload such as `approvalConfig ? sessionData : ordinaryFilteredData`, local analysis may prove only the ordinary branch. The tool reports `REVIEW_REQUIRED` with exit 2 rather than PASS. Keep that result separate from the manual review: trace the session's real input filtering and configured create call; exercise both branches through production UI/Service code with extra, hidden and read-only inputs; assert the exact outgoing payload and zero forbidden writes. Confirm that bypassing each filter makes those tests fail. Do not intersect approval fields with ordinary IAM just to satisfy the scanner. A manual review may resolve the identified branch with evidence, but cannot turn the CLI result into an automated pass; an unattended CI gate must keep the nonzero result until its recognizer and production contract are supported. Exit 1 denotes audit failure; exit 2 also denotes usage/configuration errors, which must be corrected and cannot be manually waived.
 
@@ -175,9 +182,9 @@ node skills/make-app-permission/scripts/write-permission-conformance-suite.mjs <
 
 Service 必须在持久化前独立验证当前记录操作和全部写入字段；混合合法/非法字段时整次拒绝，`onWrite` 调用次数为零。UI 更新白名单时可以只提交仍获授权的字段，但不能发送旧的 readonly/hidden 字段。
 
-套件同时覆盖普通与批量编辑：精确权限与数据通配授权可写，App/对象和通配/精确的兼容结果并存、交换顺序仍可写；合法空 map 或未列字段仍受 Schema 边界约束；额外字段、隐藏字段和 ID 不提交；只读、hidden、精确拒绝、撤权、仅元数据授权、所选结果缺少字段 map、Schema 移除及缺少可读权限不能写；记录操作与字段权限独立。特别保持 UI 在旧授权状态，只刷新 Service，验证旧提交已经产生请求但持久化次数仍为零。前端拒绝路径则要求请求数和写入数同时为零。
+套件同时覆盖普通与批量编辑：精确权限与数据通配授权可写，App/对象和通配/精确的兼容结果并存、交换顺序仍可写；全部适用 map 为空时仍受 Schema 边界约束，非空 map 未列且无通配的字段不授权；额外字段、不可见字段和 ID 不提交；仅只读/hidden/脱敏而无编辑能力、精确拒绝、撤权、仅元数据授权、所选结果缺少字段 map、Schema 移除及缺少可读权限不能写；记录操作与字段权限独立。特别保持 UI 在旧授权状态，只刷新 Service，验证旧提交已经产生请求但持久化次数仍为零。前端拒绝路径则要求请求数和写入数同时为零。
 
-仓库中的 `test-write-permission-conformance-suite.mjs` 以本地夹具验证这些边界，并注入原始表单提交、旧白名单、提交仍使用旧白名单、缺字段校验、Service 信任 UI、忽略 Schema 可编辑集合、忽略刷新等错误实现，也验证按 allow 数量拒绝、稀疏 map 被当白名单、缺失 map 被自动补空会失败。夹具自身通过仅证明套件有效，不代表任何存量业务项目已经通过。业务项目必须用生产适配器接入默认测试/CI，不能复制夹具作为验收实现；没有宿主证据时只可提交技能候选修复，不能声称已完成实际任务验证或发布。
+仓库中的 `test-write-permission-conformance-suite.mjs` 以本地夹具验证这些边界，并注入原始表单提交、旧白名单、提交仍使用旧白名单、缺字段校验、Service 信任 UI、忽略 Schema 可编辑集合、忽略刷新等错误实现，也验证按 allow 数量拒绝、要求数组全部成员都允许编辑、将未列且无通配的字段视为可写、缺失 map 被自动补空会失败。夹具自身通过仅证明套件有效，不代表任何存量业务项目已经通过。业务项目必须用生产适配器接入默认测试/CI，不能复制夹具作为验收实现；没有宿主证据时只可提交技能候选修复，不能声称已完成实际任务验证或发布。
 
 写入套件覆盖 Make App 的 update/bulkUpdate 控件、提交和 App Service 拒写边界。外部 Make API 被替换时，不能据此声称真实 Make API 的最终授权已经验证。普通创建还需独立 UI 提交与 Service 创建验证，尤其是 create-only、readonly/mask、越界字段及审批例外；不要求实现或测试 Console 配置能力。
 
@@ -197,7 +204,7 @@ Adapt the import/factory names to the host without adding a production test swit
 node scripts/principal-response-conformance-suite.mjs test/adapters/principal-response.mjs
 ```
 
-The loader resolves a validated `{scope,permissions,...}` DTO for successful IAM responses and rejects completed failures/malformed success; adapt a different existing host error-state API through its actual failure signal, not a synthetic successful empty result. The suite injects SDK transport responses, not a fake normalized model: success and empty envelopes, business errors with valid-looking data, invalid data, identity claims, and HTTP 401/403/503 including structured denial contacts. Keep a host integration test for the subsequent permission-to-Schema ordering and zero protected requests after invalid IAM.
+The loader resolves a validated `{scope,permissions,...}` DTO for successful IAM responses and rejects completed failures/malformed success; adapt a different existing host error-state API through its actual failure signal, not a synthetic successful empty result. The suite injects SDK transport responses, not a fake normalized model: success and empty envelopes, business errors with valid-looking data, invalid data, identity claims, and HTTP 401/403/503 including structured denial contacts. It also rejects missing/invalid `fieldAccess`, empty member arrays, unknown or non-string members in selected rows, even alongside a valid row; neither dropping the bad row nor returning successful empty grants is valid. Clearly unrelated rows remain outside selected-row validation, and valid empty grants/maps remain valid. Keep a host integration test for the subsequent permission-to-Schema ordering and zero protected requests after invalid IAM.
 
 ## Host gate integration
 

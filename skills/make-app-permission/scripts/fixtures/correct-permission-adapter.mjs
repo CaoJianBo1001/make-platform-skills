@@ -1,11 +1,16 @@
 import { registeredPermissionKeys } from '../permission-registry.mjs';
 // Test fixture only; host adapters must import production permission code.
 // Consume backend permission results without configuring policies, combining
-// resource maps, or ranking competing resources. Retain each returned restriction.
+// resource maps, or ranking competing resources. Retain every returned access value.
 export const correctAdapterSource = `
     const registered = new Set(${JSON.stringify(registeredPermissionKeys)});
     const APP = 'make://tenant-1/meta/app/TestApp';
-    const knownFieldAccess = new Set(['editable', 'readonly', 'partialMask', 'fullMask', 'hidden']);
+    const knownFieldAccess = new Set(['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask', 'hidden']);
+    const normalizeFieldState = (value) => {
+      const states = Array.isArray(value) ? value : [value];
+      if (states.length === 0 || states.some(state => typeof state !== 'string' || !knownFieldAccess.has(state.trim()))) return null;
+      return [...new Set(states.map(state => state.trim()))];
+    };
     const wildcardKeyMatches = (actual, expected) => {
       if (!registered.has(expected)) return false;
       if (actual === expected || actual === '*.*.*') return true;
@@ -41,11 +46,13 @@ export const correctAdapterSource = `
       if (matched.some((item) => item.effect === 'deny')) return false;
       const allows = matched.filter((item) => item.effect === 'allow');
       if (allows.length === 0) return false;
-      return allows.every(({fieldAccess: fields}) => {
-        if (Object.hasOwn(fields, fieldKey)) return allowedStates.has(fields[fieldKey]);
-        if (Object.hasOwn(fields, '*')) return allowedStates.has(fields['*']);
-        return allowedStates.has('editable');
-      });
+      const maps = allows.map(item => item.fieldAccess);
+      const exact = maps.filter(fields => Object.hasOwn(fields, fieldKey));
+      const states = exact.length
+        ? exact.flatMap(fields => fields[fieldKey])
+        : maps.flatMap(fields => fields['*'] ?? []);
+      if (maps.every(fields => Object.keys(fields).length === 0)) return true;
+      return states.some(state => state === '*' || allowedStates.has(state));
     };
     export const normalizeAccess = (payload) => {
       const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
@@ -93,10 +100,10 @@ export const correctAdapterSource = `
         const hasFieldAccess = Object.hasOwn(item, 'fieldAccess');
         if (!hasFieldAccess || item.fieldAccess === null || typeof item.fieldAccess !== 'object' || Array.isArray(item.fieldAccess)) return null;
         const entries = Object.entries(item.fieldAccess);
-        if (entries.some(([key, value]) => !key.trim() || typeof value !== 'string' || !knownFieldAccess.has(value.trim()))) return null;
+        if (entries.some(([key, value]) => !key.trim() || normalizeFieldState(value) === null)) return null;
         return {
           effect: item.effect,
-          fieldAccess: Object.fromEntries(entries.map(([key, value]) => [key.trim(), value.trim()])),
+          fieldAccess: Object.fromEntries(entries.map(([key, value]) => [key.trim(), normalizeFieldState(value)])),
           permissionKey: String(item.permissionKey),
           resource: String(item.resource),
         };
@@ -119,7 +126,7 @@ export const correctAdapterSource = `
       const matched = matches(access, entityKey, permissionKey);
       return !matched.some((item) => item.effect === 'deny') && matched.some((item) => item.effect === 'allow');
     };
-    export const canCreateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['editable']));
+    export const canCreateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['creatable']));
     export const canReadEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.read', new Set(['editable', 'readonly', 'partialMask', 'fullMask']));
     export const canUpdateEntityField = (access, entityKey, fieldKey, operation = 'data.record.update') => ['data.record.update', 'data.record.bulkUpdate'].includes(operation) && fieldAllowed(access, entityKey, fieldKey, operation, new Set(['editable']));
     export const isCreateCapableField = (field) => !new Set(['Make.Field.ID', 'IDField']).has(field.type) && !new Set([

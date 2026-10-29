@@ -41,6 +41,25 @@ test('generation context, schema navigation and query hook accept arbitrary iden
  assert.deepEqual(runtimeSignals(all), {refresh:true, route:true, navigation:true, rows:true});
  assert.deepEqual(runtimeSignals(all.map(s=>s.replaceAll('readable','allowed').replaceAll('useRecords','useInvoices').replaceAll('generation','revision').replaceAll('setGeneration','setRevision'))), runtimeSignals(all));
 });
+for (const dependencies of ['[key, show, clear]', '[show, key, clear]', '[show, clear, key]', '[\n show, key, clear,\n]', '[show, key, callbacks.clear]']) {
+ test(`refresh effect accepts its generation key among dependencies: ${dependencies}`, () => {
+  assert.deepEqual(runtimeSignals([provider.replace('[key]', dependencies), page, hook, nav]), runtimeSignals(all));
+ });
+}
+for (const dependencies of ['[]', '[show, clear]', '[keyExtra, show]', '["key", show]', '[state.key, show]', '[ready && key]']) {
+ test(`refresh effect requires an exact generation dependency: ${dependencies}`, () => {
+  assert.equal(runtimeSignals([provider.replace('[key]', dependencies)]).refresh, false);
+ });
+}
+test('another effect with the key cannot lend its dependency to the refresh effect', () => {
+ const input = provider.replace('[key]', '[show, clear]').replace('const value =', 'useEffect(() => { show(); }, [key]); const value =');
+ assert.equal(runtimeSignals([input]).refresh, false);
+});
+test('additional dependencies do not excuse stale state or a missing Schema refresh', () => {
+ for (const [before,after] of [['await getSchema({refresh:true})','cachedSchema'], ['state.key === key && state.value','state.value']]) {
+  assert.equal(runtimeSignals([provider.replace('[key]', '[show, key, clear]').replace(before,after)]).refresh, false);
+ }
+});
 for (const [name,index,before,after,key] of [
  ['no schema reload',0,'await getSchema({refresh:true})','cachedSchema','refresh'],
  ['stale context published',0,'state.key === key && state.value','state.value','refresh'],
