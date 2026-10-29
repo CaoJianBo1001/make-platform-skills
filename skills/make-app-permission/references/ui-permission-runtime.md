@@ -1,5 +1,7 @@
 # UI permission runtime
 
+权限及 Schema 初次加载、刷新校验的占位遵循 [区域加载态](../../makeui/references/app-shell-layout.md#区域加载态)：Shell 已挂载时填满主内容区并水平、垂直居中，尚未挂载时使用有完整高度的启动 fallback；禁止左上角裸文本。布局不得提前开放受保护内容，不改变 Provider 顺序、失败关闭及错误出口。
+
 以下普通编辑/更新字段规则不用于我的审批节点办理。任务表单按 [审批任务详情](../../make-app-approval/references/task-detail.md) 消费当前节点 fieldPermission/actions，字段定义读取 bpm-node-form-metadata 的 TASK 场景，不从普通 entity 或权限过滤的 Schema 补齐；节点定义不并入普通权限缓存。任务附件重查节点权限并用同一节点元数据来源校验类型，任务写入交 Workflow，不经普通记录更新门禁，也不以此放宽普通 CRUD。
 
 Use this reference for frontend permission providers, matching, route/action gates, field sets, payloads, and refresh.
