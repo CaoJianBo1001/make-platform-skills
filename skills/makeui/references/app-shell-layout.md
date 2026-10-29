@@ -7,6 +7,7 @@ This reference defines the desktop/tablet shell unless a section explicitly says
 ## Contents
 
 - [Structure](#structure)
+- [区域加载态](#区域加载态)
 - [Global error outlet](#global-error-outlet)
 - [Header](#header)
 - [Current user menu](#current-user-menu)
@@ -46,6 +47,18 @@ When no project-specific shell already exists, use the platform dense object-man
 - workspace header is flat, compact, and only shows the current title plus global right-side current-user menu/actions
 - content area starts with the local toolbar, then the table region
 - sidebar background color follows the existing project theme or design system; do not default to a dark sidebar unless the project or user asks for it
+
+## 区域加载态
+
+本节适用于桌面、平板和手机。刷新、权限校验、Schema、路由或局部数据加载的阻塞提示，必须在**所属区域内水平和垂直居中**，不能把“正在核验访问权限…”或 Loading 文本直接渲染在左上角、边缘或工具栏旁。
+
+- Shell 已挂载：权限与页面加载占据扣除侧栏、顶栏后的主内容区，不覆盖已授权的导航或头部。Shell 尚未挂载：启动 fallback 占据应用可用视口；不能让 Provider 的短文本撑出一个只有一行高的容器。
+- 表格、Drawer、Tab、卡片或弹窗的局部加载：使用该区域实际可见的内容槽位，扣除仍保留的标题、工具栏和操作栏；不能使用整个浏览器视口居中，也不能漂移到其他面板。滚动后仍以可见槽位为准，不以长内容总高度的中点定位。
+- 容器必须具有明确的可用高度：沿用 Shell 的高度链，flex/grid 子区使用可伸缩布局及 `min-height: 0`、`min-width: 0`；不能在高度未建立的父级下仅写 `height: 100%`，不能用任意固定像素高度或 `100vh` 替代局部剩余空间。替换内容时使用填满槽位的 grid/flex 居中；覆盖加载时，在可见槽位的 `position: relative` 容器内使用 `position: absolute; inset: 0; display: grid; place-items: center`。不强制所有实现都使用 absolute。
+- 复用宿主组件库的 Spinner/Spin，加载图标和简短说明作为一组居中，使用主题字号、颜色和间距；不引入新的 UI 库，不使用 Toast 代替区域加载态。状态使用 `role="status"`，所属区域按状态设置 `aria-busy`；不要反复播报。加载期间继续遵守权限门禁，不为了保留布局提前挂载未授权业务内容。
+- 按钮内的提交指示、输入框候选搜索和增量加载保留控件自身的局部反馈，不升级为整页遮罩。已有骨架屏可保留其内容结构；区域加载状态结束后移除占位或遮罩，失败与拒绝状态继续走原有错误/权限反馈合同，不能一直显示加载动画。
+
+宿主验收：在真实浏览器延迟权限、Schema 和局部请求，覆盖首次刷新、Shell 前后、Drawer/Tab、滚动及窗口尺寸变化，至少验证桌面和手机。用 `getBoundingClientRect` 比较加载组中心与所属可见区域中心，两个方向误差均不超过 2 CSS px；同时确认不遮挡区域外导航/操作、不新增页面滚动，成功/失败后加载态消失。文档回归检查只证明规范与交接存在，不能替代上述布局验收。
 
 ## Global error outlet
 
