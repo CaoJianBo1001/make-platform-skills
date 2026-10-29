@@ -57,102 +57,42 @@ test('主合同、手机历史和验收不能为同一结果按展示模式选�
   assert.match(read('skills/make-app-approval/SKILL.md'), /assets\/history-result\.mjs/);
 });
 
-test('审批历史只将事件的 processStatusAfter 交给 PC 公共状态函数，不读取 actionType 或当前状态', async () => {
+test('审批结果逐行取 actionResult，任何动作或流程状态都不能覆盖', async () => {
   const { formatApprovalHistoryResult } = await loadHistoryResult();
-  for (const status of ['IN_APPROVAL','APPROVED','REJECTED','CANCELLED','UNSUBMITTED',null,undefined,'','FUTURE_STATUS']) {
-    const input = Object.freeze({
-      processStatusAfter: status,
-      get actionType() { throw new Error('cannot use an action as the process result'); },
-      get processStatus() { throw new Error('cannot replace historical state with current state'); },
+  for (const actionResult of ['-', '已提交', '已同意', '已退回', '已拒绝', '已撤回', '后端新增结果']) {
+    const event = Object.freeze({ actionResult,
+      get processStatusAfter() { throw new Error('旧字段已移除'); },
+      get processStatus() { throw new Error('不能读取当前流程状态'); },
+      get actionType() { throw new Error('不能从动作推断结果'); },
     });
-    const expected = Object.freeze({label: `PC:${String(status)}`, tone:'neutral'});
-    const seen = [];
-    const actual = formatApprovalHistoryResult(input, value => { seen.push(value); return expected; });
-    assert.deepEqual(seen, [status]);
-    assert.equal(actual, expected, '普通状态保留 PC 公共函数结果，不新增手机映射或回退');
+    assert.equal(formatApprovalHistoryResult(event), actionResult);
   }
 });
 
-test('RETURNING 仅在共用历史适配中显示退回修改，不修改普通状态函数的返回对象', async () => {
+test('空结果只显示占位符，不从事件类型合成结果', async () => {
   const { formatApprovalHistoryResult } = await loadHistoryResult();
-  const pcDisplay = Object.freeze({label:'审批中', tone:'processing'});
-  assert.deepEqual(formatApprovalHistoryResult(Object.freeze({processStatusAfter:'RETURNING'}), status => {
-    assert.equal(status, 'RETURNING');
-    return pcDisplay;
-  }), {label:'退回修改', tone:'processing'});
-  assert.deepEqual(pcDisplay, {label:'审批中', tone:'processing'});
-});
-
-test('同意后仍在审批中、退回后继续提交都不能被动作名称覆盖历史结果', async () => {
-  const { formatApprovalHistoryResult } = await loadHistoryResult();
-  const format = status => Object.freeze({label:status === 'IN_APPROVAL' ? '审批中' : '状态未知',tone:'processing'});
-  for (const actionType of ['APPROVE','SUBMIT','RETURN','REJECT']) {
-    assert.equal(formatApprovalHistoryResult(Object.freeze({actionType,processStatusAfter:'IN_APPROVAL'}),format).label,'审批中');
+  for (const actionResult of [undefined, null, '', '  ', 0, {}]) {
+    assert.equal(formatApprovalHistoryResult(Object.freeze({eventType:'PROCESS_STARTED', actionResult})), '-');
   }
 });
 
-const historyFile = 'skills/make-app-approval/references/history.md';
-const virtualFile = 'skills/canvas-table-integration/references/virtual-table-patterns.md';
-const requireVirtualHistoryContract = () => {
-  const history = read(historyFile);
-  assert.match(history, /\]\(\.\.\/\.\.\/canvas-table-integration\/SKILL\.md\)/,
-    '历史表格必须交接给 CanvasTable 集成 Skill');
-  assert.match(history, /\]\(\.\.\/\.\.\/canvas-table-integration\/references\/virtual-table-patterns\.md#3-bootstrap-and-page-contract\)/,
-    '历史数据源必须遵守现有虚拟加载页码和首屏合同');
-};
-const loadStandardHistoryBridge = async (fetchPage, pageSize) => {
-  requireVirtualHistoryContract();
-  // 执行历史文档所引用的标准数据源示例，不在本测试另造页码转换或滚动加载器。
-  const source = [...read(virtualFile).matchAll(/```ts\n([\s\S]*?)\n```/g)]
-    .map(match => match[1]).find(code => code.includes('async function fetchTablePage('));
-  assert.ok(source, 'CanvasTable 标准必须提供可执行的数据源页码转换示例');
-  const module = await import(`data:text/javascript;base64,${Buffer.from(
-    `export const create = (fetchPage, pageSize) => { ${source}; return fetchTablePage; };`,
-  ).toString('base64')}`);
-  return module.create(fetchPage, pageSize);
-};
-
-test('历史表格必须复用 CanvasTable 标准虚拟加载，不再建立独立分页链路', () => {
-  requireVirtualHistoryContract();
+test('审批历史统一使用无分页快照与 CanvasTable 本地数据模式', () => {
+  const history = read('skills/make-app-approval/references/history.md');
+  assert.match(history, /TASK_PENDING/);
+  assert.match(history, /actionResult/);
+  assert.match(history, /不分页/);
+  assert.match(history, /setData/);
+  assert.match(history, /不配置.*virtualOptions/);
+  assert.match(history, /保留后端顺序/);
+  assert.match(history, /超过 20/);
+  assert.match(history, /CanvasTable 集成 Skill/);
+  assert.doesNotMatch(history, /pageIndex \+ 1|分页从 1 开始|pagination.total.*初始化/);
 });
 
-test('历史正文和验收不得要求上一页/下一页控件或按当前虚拟页行数收缩表格', () => {
-  for (const file of [historyFile, 'skills/make-app-approval/references/verification.md']) {
-    assert.doesNotMatch(read(file), /多页上一页\/下一页|单页隐藏分页栏|单页无分页栏、多页按 total 翻页|历史表格的独立分页|按当前页实际展示的记录确定内容高度/, file);
-  }
-});
-
-test('手机历史与验收必须指向同一个历史滚动加载合同', () => {
-  for (const file of [
-    'skills/make-app-approval/references/mobile.md',
-    'skills/make-app-approval/references/verification.md',
-  ]) {
-    assert.match(read(file), /\]\(history\.md#共享数据源与滚动加载\)/, file);
-  }
-});
-
-test('历史接入所引用的标准数据源将零基页转换一次，并保留页大小、取消信号和原结果', async () => {
-  const calls = [];
-  const response = Object.freeze({rows: Object.freeze([{eventId:'event'}]), total: 85});
-  const fetchTablePage = await loadStandardHistoryBridge(async input => {
-    calls.push(input);
-    return response;
-  }, 20);
-  const controller = new AbortController();
-  for (const pageIndex of [0, 1, 4]) {
-    assert.equal(await fetchTablePage(pageIndex, controller.signal), response);
-  }
-  assert.deepEqual(calls, [1, 2, 5].map(page => ({page, size:20, signal:controller.signal})));
-});
-
-test('历史标准数据源透传失败与取消，不伪造空历史、不自动重发或拉取全部页', async () => {
-  for (const error of [new Error('timeline failed'), new DOMException('cancelled', 'AbortError')]) {
-    let calls = 0;
-    const fetchTablePage = await loadStandardHistoryBridge(async () => {
-      calls += 1;
-      throw error;
-    }, 20);
-    await assert.rejects(fetchTablePage(0, new AbortController().signal), actual => actual === error);
-    assert.equal(calls, 1);
+test('手机历史和验收引用同一完整数据合同', () => {
+  for (const file of ['mobile', 'verification']) {
+    const doc = read(`skills/make-app-approval/references/${file}.md`);
+    assert.match(doc, /\]\(history\.md#共享数据源与滚动展示\)/);
+    assert.doesNotMatch(doc, /只读取事件 processStatusAfter|给定相同定位与页请求序列/);
   }
 });

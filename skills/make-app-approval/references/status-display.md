@@ -8,15 +8,30 @@
 | --- | --- | --- |
 | 字段缺失、`null` | 灰色 `-`，没有明确流程状态 | 不显示，不占标题空间 |
 | 明确 `UNSUBMITTED` | 未提交 | 显示中性“未提交” Tag |
-| `IN_APPROVAL`、`RETURNING` | 审批中 | 显示进行中语义 |
-| `APPROVED` | 已同意 | 显示成功语义 |
+| `IN_APPROVAL` | 审批中 | 显示进行中语义 |
+| `RETURNING` | 退回中 | 保留进行中语义，名称与审批中区分 |
+| `APPROVED` | 已通过 | 显示成功语义 |
 | `REJECTED` | 已拒绝 | 显示拒绝语义 |
 | `CANCELLED` | 已撤回 | 显示结束/撤回语义 |
 | 未识别值（含空字符串） | 状态未知 | 中性 Tag，不猜测完成结果 |
 
-以上映射只适用于记录的流程状态（或已确认动作响应的 `processStatus`），不能拿实例 `status`、任务状态、个人“同意”结果套用。`RETURNING` 仍属于审批中，不是未提交；撤回和继续提交的入口见 [记录生命周期](record-lifecycle.md)。
+以上映射只适用于记录的流程状态（或已确认动作响应的 `processStatus`），不能拿实例 `status`、任务状态、个人“同意”结果套用。`RETURNING` 是流程仍在运行的退回状态，名称为“退回中”，不是未提交；撤回和继续提交的入口见 [记录生命周期](record-lifecycle.md)。
 
-`APPROVED` 统一采用公共包的“已同意”。已核验的 0.2.10 根函数对 UNSUBMITTED 仍默认返回 `-`；宿主薄适配仅将明确 UNSUBMITTED 改为“未提交”，其余值复用 `getApprovalStatusDisplay`，不能改包源码。业务列表、详情字段和标题共用此适配器；`ApprovalStatus` 对 UNSUBMITTED 的默认值也需通过宿主 Tag 适配保持一致。历史事件另按 [审批历史](history.md) 将 RETURNING 展示为“退回修改”，不要把两种语境合并。
+六种流程状态使用上表后端确认名称，随包 [流程状态适配器](../assets/process-status.mjs) 复用 `getApprovalStatusDisplay` 的 tone 与缺失/未知值处理，仅统一已确认状态的 label。已安装包的名称可能仍为 APPROVED“已同意”、RETURNING“审批中”、UNSUBMITTED“-”；宿主通过公开布局和自己的状态标签接入同一薄适配，不修改包源码、不递归改写包内部 React 节点或用 CSS 替换文字。业务列表、详情字段、标题 Tag、已有筛选选项和审批任务详情的头部/摘要都使用相同名称。
+
+```js
+const display = formatApprovalProcessStatus(value, getApprovalStatusDisplay);
+// 宿主 Tag 使用 display.label 和原主题 tone；加载时仍保留原错误/重试布局。
+```
+
+任务详情通过公开 `renderLayout` 接入标题，按以下规则处理：
+
+- 已安装包的标题名称符合本合同，可完整复用 `slots.title`。需要修正文案且存在 detail 时，用 `slots.detail.processStatus` 和共享状态适配器在宿主生成完整的标题与标签组，替换原 title；不同时渲染两组，不拆改包内部 React 节点。
+- 加载或失败且无 detail 时保留 `slots.title`，不猜测状态；原 content 的加载、错误与重试仍由同一控制器提供。
+- 替换时保留既有标题的语义、字号、字重和间距；窄宽度、全屏及加载前后保持一致。标题后只展示一个状态 Tag，缺失状态不占位。
+- 数据、actions、content、footer 和权限继续由原控制器管理，不为了修正文案绕开授权。手机 header/summary 同样从公开 detail 接入共享适配器，不另写一份映射；无 detail 时也保留原 title。
+
+历史事件按 [审批历史](history.md) 直接展示 actionResult（如“已同意”“已退回”），不套流程状态名称。
 
 缺失状态显示 `-`，不能据此显示发起按钮；读取失败应展示错误/重试，不能用 `-` 假装读取成功。仅保存返回 UNSUBMITTED 才显示未提交，不产生“已保存”“待补充”之类的流程状态。旧数据若返回空字符串，不能把它升级为 UNSUBMITTED 或获得发起资格。
 

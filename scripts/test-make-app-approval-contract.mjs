@@ -133,4 +133,26 @@ assert.ok(localLinks('skills/make-app-approval/references/mobile.md')
 assert.match(listContract, /presentation="mobile"/);
 assert.match(listContract, /不得由流程状态推断/);
 assert.match(listContract, /不复制一套列表\/分页 Controller/);
+// 这里只验证跨文档指导一致性；状态行为由 test-approval-process-status 和宿主真实组件测试覆盖。
+const statusContractPath = 'skills/make-app-approval/references/status-display.md';
+assert.doesNotMatch(read('skills/make-app-approval/references/task-detail.md'), /`renderLayout` 的 title 整体放在/,
+  '任务详情不得再无条件要求使用包旧标题');
+assert.doesNotMatch(read('skills/makeui/references/drawer-layout.md'), /For package task detail, place the complete `renderLayout\.title`/,
+  'Drawer 指导不得覆盖审批状态适配合同');
+for (const file of [
+  'skills/make-app-approval/references/task-detail.md',
+  'skills/make-app-approval/references/mobile.md',
+  'skills/make-app-approval/references/verification.md',
+  'skills/makeui/references/drawer-layout.md',
+]) {
+  assert.ok(localLinks(file).includes(statusContractPath), `${file} 的标题规则须交接共享流程状态合同`);
+}
+const statusContract = read(statusContractPath);
+assert.match(statusContract, /slots\.detail\.processStatus/);
+assert.match(statusContract, /无 detail[^\n]*slots\.title/,
+  '未取得详情时必须保留原包标题，不推断状态');
+assert.match(statusContract, /字号[^\n]*字重/,
+  '公开插槽替换标题必须保留原排版，不只核对文字');
+assert.doesNotMatch(read('skills/make-app-approval/references/mobile.md'), /renderExistingMobileHeader\(slots\.title\)/,
+  '手机页头须接收公开详情数据，不能只传无法修正文案的旧 ReactNode');
 console.log('审批 skill 可发现性与引用闭包检查通过');
