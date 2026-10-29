@@ -124,7 +124,7 @@ If no field metadata exists, stop and call out the missing UI dependency instead
 
 ### Permission-derived field-set handoff
 
-以下 edit 字段与必填规则用于普通业务记录表单。我的审批任务按 [当前节点字段与动作合同](../../make-app-approval/references/task-detail.md) 消费 fieldPermission/actions，Meta Entity GetResource 补字段定义，不从权限过滤的 Schema 获取，不展示节点未授权的实体字段；不能改用普通 edit/IAM 或启动配置。RETURN 跳过业务字段校验，其余任务动作按该合同区分必填校验与已修改数值校验。
+以下 edit 字段与必填规则用于普通业务记录表单。我的审批任务按 [当前节点字段与动作合同](../../make-app-approval/references/task-detail.md) 消费 fieldPermission/actions，bpm-node-form-metadata 的 TASK 场景补字段定义，不从普通 entity/Schema 获取，不展示节点未授权的字段；不能改用普通 edit/IAM 或启动配置。RETURN 跳过业务字段校验，其余任务动作按该合同区分必填校验与已修改数值校验。
 
 任务 Lookup 复用关联选择器外观并注入任务候选 provider，每次查询携带当前任务 reference，不能沿用普通 CRUD 源字段查询。包直接渲染的字段错误与宿主控件内部错误分别对齐输入区，避免嵌套缩进；意见区保持自己的对齐。审批列表四列图标和动态列宽由包提供，宿主历史表格才复用字段类型图标配置。
 
@@ -196,7 +196,8 @@ Form validation owns decimal-limit failures before persistence. Do not treat a D
 - Accept only plain decimal text equivalent to `[+-]?(?:\d+(?:\.\d+)?|\.\d+)` at the commit/submit boundary. Count every digit after the decimal point, including trailing zeroes, toward the configured limit. Reject scientific notation, grouping separators, currency/percent symbols, a trailing decimal point, and other formatted text as invalid numeric input.
 - Configure the numeric component with the resolved limit when its public API supports it, but do not rely on a formatter that silently destroys the user's extra digits before validation can see them. If the component exposes only an already-rounded number, use its string/raw-input mode or a host wrapper that preserves the raw text.
 - Validate on change or blur and again at the form submit boundary. On overflow, mark the field invalid, show the field-level message `最多保留 N 位小数`, block that invalid submit and its persistence API request. Candidate searches, metadata reads, and other unrelated read-only requests remain allowed.
-- After raw-text validation succeeds, parse with a finite-number guard or submit the backend-approved pure numeric string. Never count decimal places from a JavaScript `number` or from `String(parsedNumber)`.
+- Apply declared `field.validations.minimum` / `maximum` with exact decimal-text comparison before conversion; do not invent missing business bounds. Check equality and just-outside values without floating-point rounding.
+- After raw-text validation succeeds, preserve the existing write contract. For JSON numbers, require decimal-value equivalence with the serialized number and block value-changing conversion or underflow. Use a pure numeric string only when the write API explicitly supports it; a string in a read response is not sufficient evidence. Never count decimal places from a JavaScript `number` or from `String(parsedNumber)`.
 - The default policy forbids silent rounding. Automatic rounding is allowed only when the host project has an explicit product/backend contract for it; the normalized value must be written back and shown to the user before submit.
 - Empty/null handling remains owned by required/optional validation. Skip decimal-place counting for an empty raw input; for every non-empty value, validate raw syntax and decimal places before parsing.
 
@@ -321,6 +322,7 @@ On phones, present user and department fields through `MobileIdentityField` from
 
 - `SingleUser` / `SingleDepartment`: pass `selectionMode="single"`; the field omits “确定”. Selection, selected-chip removal, and clear immediately call the field `onChange` with the committed snapshot and close.
 - `MultiUser` / `MultiDepartment`: pass `selectionMode="multiple"`; the package owns transient open-session draft state, and “确定” remains the only call to the field `onChange`. Selection, chip removal, and clear do not write the host form; cancelling discards them.
+- 初始已选人员也要在候选到达时缓存姓名/头像，而非只在确认后缓存。搜索、取消、重开不得丢失照片；新响应缺头像不覆盖已有值，缓存按会话隔离且只保留已选 ID。与数值提交和桌面/手机样式一起执行 [字段适配回归](field-adapter-regressions.md)。
 - Pass committed ids as `value`, labels/avatar metadata as `selectedItems`, and current remote results as `items`. Normalize single empty selection to the host field's empty value; submit user ids or department ids, not labels. Forward package `onChange` and `onBlur` into the host-form controlled adapter once; do not add a second effect or close-path commit.
 - Multi-value create/edit triggers render wrapped tags rather than joined/truncated text. User items show avatar or deterministic initials fallback; department items show the standard circular abbreviation in both selected chips and candidate rows.
 - If a special composition directly uses `MobileSearchPickerSheet`, the host must manage draft `selectedKeys`/`selectedItems` and commit only the `onConfirm(payload)` snapshot. This low-level exception must not replace `MobileIdentityField` for ordinary user/department fields.

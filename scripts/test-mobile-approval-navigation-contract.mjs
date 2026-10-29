@@ -68,7 +68,7 @@ test('导航最多五项，保留原始顺序、对象引用和输入列表', ()
 
 test('对象或 AI 可用性变化后重新组合，审批标识与路由对象保持稳定', () => {
   const withWorkbench = compose(4, true);
-  const fewerObjects = compose(3, true);
+  const fewerObjects = compose(2, true);
   const withoutAssistant = compose(4, false);
   assert.equal(withWorkbench.at(-1), workbenchItem);
   assert.equal(fewerObjects.includes(workbenchItem), false);

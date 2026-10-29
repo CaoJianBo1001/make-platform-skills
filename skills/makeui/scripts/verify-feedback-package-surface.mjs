@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { isReactComponentExport } from './react-component-contract.mjs';
 
 const exportFile = (root, entry, condition, code) => {
   const target = typeof entry === 'string' ? entry : entry?.[condition] ?? entry?.default;
@@ -42,12 +43,19 @@ export async function verifyFeedbackPackageSurface(directory, { allowPrerelease 
   const React = require('react');
   const { renderToStaticMarkup } = require('react-dom/server');
   const { MakeAppPermissionNotice, MakeAppErrorNotice, MakeAppErrorNoticeViewport } = await import(pathToFileURL(esm).href);
-  assert.equal(typeof MakeAppPermissionNotice, 'function', 'feedback_component_missing');
-  assert.equal(typeof require(cjs).MakeAppPermissionNotice, 'function', 'feedback_cjs_component_missing');
+  const cjsComponents = require(cjs);
+  for (const [component, code] of [
+    [MakeAppPermissionNotice, 'feedback_component_missing'],
+    [cjsComponents.MakeAppPermissionNotice, 'feedback_cjs_component_missing'],
+    [MakeAppErrorNotice, 'feedback_existing_error_component_missing'],
+    [cjsComponents.MakeAppErrorNotice, 'feedback_cjs_error_component_missing'],
+    [MakeAppErrorNoticeViewport, 'feedback_existing_viewport_missing'],
+    [cjsComponents.MakeAppErrorNoticeViewport, 'feedback_cjs_viewport_missing'],
+  ]) {
+    assert.ok(isReactComponentExport(component), code);
+  }
   const core = await import(pathToFileURL(coreEsm).href);
   assert.equal(typeof core.normalizeMakeAppPermissionNotice, 'function', 'feedback_normalizer_missing');
-  assert.equal(typeof MakeAppErrorNotice, 'function', 'feedback_existing_error_component_missing');
-  assert.equal(typeof MakeAppErrorNoticeViewport, 'function', 'feedback_existing_viewport_missing');
   const traceId = '1234567890abcdef1234567890abcdef';
   const oldError = renderToStaticMarkup(React.createElement(MakeAppErrorNotice, { kind: 'network', title: '请求失败', traceId }));
   assert.ok(oldError.includes(traceId), 'feedback_existing_trace_display_missing');

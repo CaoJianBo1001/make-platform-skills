@@ -2,7 +2,7 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, fieldAccess, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.4.1
+  version: 0.4.3
 ---
 
 # make-app-permission
@@ -35,7 +35,7 @@ Read [permission-boundaries.md](references/permission-boundaries.md#platform-aut
 
 ## Required contract
 
-本节的 `createFields ∩ data.record.create 字段状态` 规则适用于普通新建。对象有有效 `bpmDefinitionKey` 时，先按 [make-app-approval](../make-app-approval/SKILL.md) 选择审批新建分支：UI 和 Service 均以启动配置授权字段为准，不再与普通 IAM 字段集合求交；应用、对象及新建操作权限仍保留。此例外不扩展到普通已有记录编辑，也不把“我的审批”固定导航作为业务对象菜单权限项。详细合同见 [审批新建字段](../make-app-approval/references/initiation-contract.md)。我的审批节点办理另按 [任务详情授权](../make-app-approval/references/task-detail.md) 使用当前任务 fieldPermission/actions，字段定义来自未做字段权限裁剪的 Meta Entity GetResource，不从 Schema 补字段、不套普通 update 字段或启动节点权限；Workflow 执行最终授权。完整实体元数据不写回普通 Schema/权限缓存。节点附件预上传重查任务授权，发起人撤回依据最新流程 starter；这些能力不放宽普通 CRUD。
+本节的 `createFields ∩ data.record.create 字段状态` 规则适用于普通新建。对象有有效 `bpmDefinitionKey` 时，先按 [make-app-approval](../make-app-approval/SKILL.md) 选择审批新建分支：UI 和 Service 均以启动配置授权字段为准，不再与普通 IAM 字段集合求交；应用、对象及新建操作权限仍保留。此例外不扩展到普通已有记录编辑，也不把“我的审批”固定导航作为业务对象菜单权限项。详细合同见 [审批新建字段](../make-app-approval/references/initiation-contract.md)。我的审批节点办理另按 [任务详情授权](../make-app-approval/references/task-detail.md) 使用当前任务 fieldPermission/actions，字段定义来自 bpm-node-form-metadata 的 TASK 场景，不从普通 entity/Schema 补字段、不套普通 update 字段或启动节点权限；Workflow 执行最终授权。节点元数据不写回普通 Schema/权限缓存。节点附件预上传重查任务授权，发起人撤回依据最新流程 starter；这些能力不放宽普通 CRUD。
 
 - Expose `/api/make/app/principal/permission`; have Service call `/api/make/iam/v1/principal/permission` with App scope, `MakeService.GetResource`, and the established login context. This is a direct Make proxy: return every completed IAM response unchanged, including 2xx/4xx/5xx status, Content-Type, and body. Do not request tenant-root scope or upstream platform permission filters. Before strict normalization, classify rows with `references/permission-boundaries.md`: ignore only clearly unrelated rows, and fail closed for every selected or unclassifiable row.
 - Current-context-based tenant resolution follows `make-app-auth/references/service-fronted-mode.md#current-context-consumption`. Only the actual App-scoped IAM response is the principal-permission result, not auth compatibility claims.
