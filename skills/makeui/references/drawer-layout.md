@@ -62,13 +62,15 @@ Use the following desktop/tablet header grouping for Make approval surfaces. The
 | --- | --- | --- |
 | Business record detail | Fullscreen toggle → `详情` mode badge → existing object/record title → approval status Tag | Eligible `发起审批` or authorized `撤回` → icon-only close X; standalone start does not require ordinary edit permission or save the record |
 | Business create/edit | Fullscreen toggle → `新建`/`编辑` mode badge → existing object title | Save → `保存并提交` when eligible → icon-only close X |
-| My approvals task detail | Fullscreen toggle → package-provided title, which contains `审批详情` followed by its status Tag | Package-provided authorized actions, in their supplied order → icon-only close X |
+| My approvals task detail | Fullscreen toggle → `审批详情` title followed by one status Tag, following the approval status contract below | Package-provided authorized actions, in their supplied order → icon-only close X |
 
 Do not add unavailable actions merely to fill these slots. Save/recovery labels, eligibility and disabled/loading states remain owned by the approval contracts. Preserve selection-bar ownership of ordinary edit/delete. If fullscreen is absent, omit only that control and keep the other items in order.
 
 Keep title text and its status Tag adjacent, vertically centered and in normal document flow. The title group may take the remaining width (`min-width: 0`); long title text may ellipsize with its full text available via tooltip. Keep the Tag from shrinking and keep the right action group compact. Do not stretch a title/Tag pair with `justify-content: space-between`, `margin-left: auto` or absolute positioning that moves the Tag beside the right-hand buttons. Missing status removes the Tag and its gap.
 
-For package task detail, place the complete `renderLayout.title` after the host fullscreen control. The package already includes its status Tag: do not split it into the action group or append a duplicate Tag. Place the complete `renderLayout.actions` before the host close control. Keep the same header grouping in loading/error states and fullscreen mode. Contextual commands stay in the header; do not add a second bottom action bar on desktop/tablet.
+任务详情的标题和状态名称遵循 [审批状态展示合同](../../make-app-approval/references/status-display.md#展示合同)：包标题文案已符合合同时可复用完整的 `slots.title`；需要修正文案且有 detail 时，用公开 `slots.detail.processStatus` 和共享适配器替换整个标题组，无 detail 的加载/失败态保留原 title。标题组位于宿主全屏控件之后，保持既有标题语义、字号、字重及间距；不拆改包内部节点、不追加重复 Tag，也不将 Tag 放入右侧操作组。此处只规定布局，不维护第二套状态映射。
+
+Place the complete `renderLayout.actions` before the host close control. Keep actions/content/footer and the original controller unchanged when adapting the title. Keep the same header grouping in loading/error states and fullscreen mode. Contextual commands stay in the header; do not add a second bottom action bar on desktop/tablet.
 
 Scope responsive control sizing to its surface: business detail actions stay compact when a desktop/tablet window narrows; they must not inherit enlarged create/edit form buttons. Phone task-page placement continues to follow the mobile contract.
 

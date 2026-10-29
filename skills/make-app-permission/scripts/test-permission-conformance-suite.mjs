@@ -32,11 +32,14 @@ try {
   assert.match(correctResult.output, /permission conformance: PASS/);
 
   for (const [name, source, failure] of [
-    ['sparse-map-as-allowlist', correctAdapterSource.replace("return allowedStates.has('editable');", "return Object.keys(fields).length === 0 && allowedStates.has('editable');"), /empty_and_sparse_maps_add_no_unlisted_field_restriction/],
+    ['reject-all-field-arrays', correctAdapterSource.replace('const states = Array.isArray(value)', 'if (Array.isArray(value)) return null; const states = Array.isArray(value)'), /metadata_read_does_not_grant_or_revoke_data_creation/],
+    ['all-arrays-as-wildcard', correctAdapterSource.replace('return [...new Set(states.map(state => state.trim()))];', "return ['*'];"), /create_field_uses_record_create_state/],
+    ['first-array-member-only', correctAdapterSource.replace('return [...new Set(states.map(state => state.trim()))];', 'return [states[0].trim()];'), /principal_multi_value_access_is_operation_specific/],
+    ['sparse-map-as-full-access', correctAdapterSource.replace('if (maps.every(fields => Object.keys(fields).length === 0)) return true;', 'if (states.length === 0) return true;'), /empty_and_sparse_maps_have_distinct_bounds/],
     ['missing-map-as-empty', correctAdapterSource.replace("if (!hasFieldAccess || item.fieldAccess === null || typeof item.fieldAccess !== 'object' || Array.isArray(item.fieldAccess)) return null;", "if (hasFieldAccess && (item.fieldAccess === null || typeof item.fieldAccess !== 'object' || Array.isArray(item.fieldAccess))) return null;").replace('Object.entries(item.fieldAccess);', 'Object.entries(item.fieldAccess ?? {});'), /missing_field_access_is_not_normalized_to_an_empty_map/],
     ['reject-compatible-results', correctAdapterSource.replace('if (allows.length === 0) return false;', 'if (allows.length !== 1) return false;'), /compatible_permission_results_do_not_cancel_each_other/],
-    ['widen-returned-restrictions', correctAdapterSource.replace('return allows.every(({fieldAccess: fields}) => {', 'return allows.some(({fieldAccess: fields}) => {'), /returned_restrictions_are_preserved_with_compatible_grants/],
-    ['read-first-result-only', correctAdapterSource.replace('return allows.every(({fieldAccess: fields}) => {', 'return allows.slice(0, 1).every(({fieldAccess: fields}) => {'), /returned_restrictions_are_preserved_with_compatible_grants/],
+    ['require-all-array-members', correctAdapterSource.replace('return states.some(state =>', 'return states.length > 0 && states.every(state =>'), /principal_multi_value_access_is_operation_specific/],
+    ['read-first-result-only', correctAdapterSource.replace('const maps = allows.map(item => item.fieldAccess);', 'const maps = allows.slice(0, 1).map(item => item.fieldAccess);'), /compatible_permission_results_do_not_cancel_each_other|returned_access_values_are_consumed_without_priority_ranking/],
   ]) {
     assert.notEqual(source, correctAdapterSource, name + ' mutation must change the fixture');
     const result = runSuite(writeAdapter(name + '.mjs', source));
@@ -47,7 +50,7 @@ try {
   const updateExpression = "fieldAllowed(access, entityKey, fieldKey, operation, new Set(['editable']))";
   for (const [name, source, failure] of [
     ['metadata-fallback', correctAdapterSource.replace(updateExpression, updateExpression + " || fieldAllowed(access, entityKey, fieldKey, 'meta.field.update', new Set(['editable']))"), /metadata_wildcards_never_grant_business_edit/],
-    ['exact-field-deny-ignored', correctAdapterSource.replace('.filter((item) => wildcardKeyMatches(item.permissionKey, permissionKey))', ".filter((item) => !(item.effect === 'deny' && item.permissionKey === 'data.record.update')).filter((item) => wildcardKeyMatches(item.permissionKey, permissionKey))"), /business_field_exact_deny_overrides_data_wildcards/],
+    ['exact-field-deny-ignored', correctAdapterSource.replace('.filter((item) => wildcardKeyMatches(item.permissionKey, permissionKey))', ".filter((item) => !(item.effect === 'deny' && item.permissionKey === 'data.record.update')).filter((item) => wildcardKeyMatches(item.permissionKey, permissionKey))"), /business_field_exact_deny_overrides_data_wildcards|principal_array_wildcard_keeps_named_restrictions_and_operation_bounds/],
   ]) {
     assert.notEqual(source, correctAdapterSource, name + ' mutation must change the fixture');
     const result = runSuite(writeAdapter(name + '.mjs', source));
@@ -108,9 +111,9 @@ try {
   assert.notEqual(noGlobalWildcardResult.status, 0);
   assert.match(noGlobalWildcardResult.output, /operation_global_permission_wildcard_allows/);
 
-  const schemaStateAdapter = writeAdapter('schema-state-as-principal.mjs', correctAdapterSource.replace(
-    "new Set(['editable', 'readonly', 'partialMask', 'fullMask', 'hidden'])",
-    "new Set(['creatable', 'editable', 'readonly', 'partialMask', 'fullMask', 'hidden'])",
+  const schemaStateAdapter = writeAdapter('unknown-state-as-principal.mjs', correctAdapterSource.replace(
+    "new Set(['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask', 'hidden'])",
+    "new Set(['unexpected', '*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask', 'hidden'])",
   ));
   const schemaStateResult = runSuite(schemaStateAdapter);
   assert.notEqual(schemaStateResult.status, 0);
@@ -118,13 +121,13 @@ try {
 
   for (const [name, replacement] of [
     ['create-from-metadata', "fieldAllowed(access, entityKey, fieldKey, 'meta.field.read', new Set(['editable']))"],
-    ['create-readonly', "fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['editable', 'readonly', 'partialMask', 'fullMask']))"],
+    ['create-readonly', "fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['creatable', 'editable', 'readonly', 'partialMask', 'fullMask']))"],
   ]) {
-    const source = correctAdapterSource.replace("fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['editable']))", replacement);
+    const source = correctAdapterSource.replace("fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['creatable']))", replacement);
     assert.ok(source !== correctAdapterSource, name + ' mutation must change fixture');
     const result = runSuite(writeAdapter(name + '.mjs', source));
     assert.notEqual(result.status, 0, name);
-    assert.match(result.output, /record_create_deny_blocks_create_fields|create_field_uses_record_create_state|record_create_field_access_does_not_grant_meta_read/);
+    assert.match(result.output, /metadata_read_does_not_grant_or_revoke_data_creation|record_create_deny_blocks_create_fields|create_field_uses_record_create_state|record_create_field_access_does_not_grant_meta_read/);
   }
 
   const noParentResourceAdapter = writeAdapter(

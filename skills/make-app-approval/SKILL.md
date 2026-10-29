@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成、任务详情办理和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.21
+  version: 0.2.22
 ---
 
 # Make App 前台审批完整接入
@@ -31,7 +31,7 @@ metadata:
 | Service 可复用纯转换、宿主转换验证及响应样例 | [参考转换器](assets/bpm-node-form-metadata.mjs)、[行为验证器](scripts/verify-node-form-metadata.mjs)、[脱敏夹具](scripts/fixtures/node-form-metadata.json) |
 | Lookup 节点内关系、目标最小描述与单/多选 | [依赖合同](references/lookup-metadata.md)、[纯解析器](assets/bpm-lookup-metadata.mjs)、[行为验证](scripts/verify-bpm-lookup-metadata.mjs) |
 | START 已有完整字段对象是否还需读取节点依赖 | [完整性判定](references/lookup-metadata.md#start-何时可以省略额外请求)、[行为验证](scripts/verify-bpm-start-metadata.mjs) |
-| 业务详情流程区、任务详情历史插槽、标准滚动加载与共用结果 | [审批历史](references/history.md)、[历史结果适配器](assets/history-result.mjs) |
+| 业务详情流程区、任务详情历史插槽、完整时间线与共用结果 | [审批历史](references/history.md)、[历史结果适配器](assets/history-result.mjs) |
 | 业务列表/详情流程状态、标题 Tag 和普通编辑锁 | [状态展示](references/status-display.md) |
 | 核验宿主已安装包的只读策略兼容性 | [包校验脚本](scripts/verify-task-detail-policy.mjs) |
 | 已完成/无动作任务的宿主只读策略参考代码 | [参考适配器](assets/task-detail-policy.mjs)（先读任务详情合同） |
@@ -47,7 +47,7 @@ metadata:
 - **任务办理另用当前节点授权。** 任务详情的 fieldPermission/actions 决定字段和动作；字段基础定义通过 `bpm-node-form-metadata` 的 TASK 场景读取，不从普通 entity 或 Schema 获取。节点字段定义不代表全部可见或可写；不能套普通编辑字段或启动节点字段，也不经普通记录 PATCH 保存任务修改。
 - **区分新建提交和已有记录发起。** 仅保存不发起；新建“保存并提交”使用一次 `bpm-process-submit`，不先普通创建再发起。已有记录仍用原 `bpm-process`。发起前查询当前登录人的所属部门，多部门时选择 `starterDepartmentId`；普通保存和任务 SUBMIT 不触发部门选择。错误沿用 code=200 成功、其他 code 显示对应信息的统一处理，不增加“核查流程”按钮；合并提交失败码不等于记录未创建，落库结果未确认时阻止重复创建，详见 [保存会话](references/initiation-contract.md)。
 - **已有记录的发起与保存独立。** 对象有有效 BPM 绑定、记录明确 UNSUBMITTED 且未锁定时，业务详情保留独立“发起审批”，不要求普通编辑权限且不执行普通保存；具备普通编辑资格时，编辑页另提供“保存”和“保存并提交”，沿用原 IAM、记录权限及原 ID。保存会话内的失败恢复仍只执行尚未完成的发起阶段。
-- **恢复与继续提交分开。** 已有记录仅明确 UNSUBMITTED 且未锁定时首次发起；RETURNING 通过当前任务 SUBMIT“继续提交”继续原实例。已撤回/拒绝/同意的记录不生成终态重新发起。
+- **恢复与继续提交分开。** 已有记录仅明确 UNSUBMITTED 且未锁定时首次发起；RETURNING 通过当前任务 SUBMIT“继续提交”继续原实例。已撤回/拒绝/通过的记录不生成终态重新发起。
 - **撤回由真实发起人资格决定。** 读取最新流程及 starter，确认时重查；使用 appKey/entityKey/recordId 定位，不需要 bpmKey，不以业务申请人或普通编辑权限推断资格。
 - **状态来自记录。** `qfei_process_instance_status` 是只读系统字段；不新建同名 DSL 业务字段，不用业务状态、任务结果、锁字段或当前绑定推导流程状态。
 - **审批中记录禁止普通编辑。** 审批中、退回运行态或明确锁定的记录隐藏普通编辑按钮/菜单，单元格不得进入编辑或接受迟到提交；入口、保存及后台写入共同执行 [禁编合同](references/status-display.md#锁与范围)。不把新建发起字段权限扩展到普通编辑，也不误禁当前节点授权的任务办理。终态编辑政策沿用宿主已确认合同，本 skill 不另行改写。

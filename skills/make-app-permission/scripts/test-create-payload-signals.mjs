@@ -25,6 +25,32 @@ test('reassignment or mutation invalidates the consumed alias',()=>{
  fail(audit(`const payload = ${filter}; const input = payload; payload.secret = data.secret; return saveBusinessRecord(entity,input);`));
  fail(audit(`const payload = ${filter}; const input = payload; input.secret = data.secret; return saveBusinessRecord(entity,payload);`));
 });
+for (const [name,change] of [
+ ['child alias', 'const alias=payload.data; alias.secret=data.secret; function unused(){const alias=payload.data;}'],
+ ['shallow copy', 'const copy={...payload,}; copy.data.secret=data.secret;'],
+ ['shallow copy with an own property', 'const copy={...payload, trace:"test"}; copy.data.secret=data.secret;'],
+ ['computed child alias', 'const alias=payload["data"]; alias["secret"]=data.secret;'],
+]) test(`post-filter injection through ${name} cannot pass`,()=>{
+ const body=`const payload={data:${filter}}; ${change} return saveBusinessRecord(entity,payload);`;
+ const submitted=new Function('data','createFields','entity','saveBusinessRecord',source(body)+'; return submit(data);');
+ // The same snippet must really add the unauthorized key, not just resemble a write.
+ return submitted({title:'allowed',secret:'injected'},[{key:'title'}],'order',(_entity,payload)=>{
+  assert.deepEqual(Object.keys(payload.data),['title','secret']);
+  fail(audit(body));
+ });
+});
+for (const mutation of ['creatableFieldKeys.add("secret")', 'creatableFieldKeys?.["add"]("secret")', 'const allowed=creatableFieldKeys; allowed?.["add"]("secret")']) {
+ test(`a modified allowlist cannot establish filtering: ${mutation}`,()=>fail(audit(`${mutation}; return saveBusinessRecord(entity,${filter});`)));
+}
+test('read-only uses, independent copy properties and later allowlist changes remain valid',()=>{
+ for (const change of [
+  'const alias=payload.data; Object.keys(alias);',
+  'const copy={...payload, trace:"test"}; copy.trace="changed";',
+  'const copy={...payload}; copy.data={secret:"local-only"};',
+  'const alias=payload.data; function unused(){const alias={}; alias.secret="local";}',
+  'creatableFieldKeys.add("later");',
+ ]) pass(audit(`const payload={data:${filter}}; ${change} return saveBusinessRecord(entity,payload);`));
+});
 test('a shadowing parameter cannot borrow an outer payload definition',()=>fail(audit(`const payload = ${filter}; function nested(payload) { return saveBusinessRecord(entity,payload); }`)));
 test('a guarded block does not shadow the payload',()=>pass(audit(`const payload = ${filter}; if (payload) { return saveBusinessRecord(entity,payload); }`)));
 test('another function or file cannot lend an allowlist to the write',()=>{

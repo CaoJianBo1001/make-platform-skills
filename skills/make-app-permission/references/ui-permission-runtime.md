@@ -1,5 +1,7 @@
 # UI permission runtime
 
+权限及 Schema 初次加载、刷新校验的占位遵循 [区域加载态](../../makeui/references/app-shell-layout.md#区域加载态)：Shell 已挂载时填满主内容区并水平、垂直居中，尚未挂载时使用有完整高度的启动 fallback；禁止左上角裸文本。布局不得提前开放受保护内容，不改变 Provider 顺序、失败关闭及错误出口。
+
 以下普通编辑/更新字段规则不用于我的审批节点办理。任务表单按 [审批任务详情](../../make-app-approval/references/task-detail.md) 消费当前节点 fieldPermission/actions，字段定义读取 bpm-node-form-metadata 的 TASK 场景，不从普通 entity 或权限过滤的 Schema 补齐；节点定义不并入普通权限缓存。任务附件重查节点权限并用同一节点元数据来源校验类型，任务写入交 Workflow，不经普通记录更新门禁，也不以此放宽普通 CRUD。
 
 Use this reference for frontend permission providers, matching, route/action gates, field sets, payloads, and refresh.
@@ -59,21 +61,21 @@ Provide pure helpers:
 
 Use only the documented data/meta keys consumed by this App. The permission backend supplies the configured result; UI helpers apply it to routes, controls and submit allowlists. Keep policy aggregation, configuration validation and unrelated project authorization out of the App.
 
-Do not require exactly one matching allow result. Compatible exact/wildcard results keep the field available; any applicable returned hidden/readonly/masked restriction still applies to its read/write dimension. Keep result maps separate and make the outcome independent of response order. UI submit and App Service validation use the same rule.
+Do not require exactly one matching allow result. Preserve the returned access arrays and use the named-field/wildcard lookup and operation-specific membership rules in the response reference. Do not restore state priority or require every member to allow the operation. UI submit and App Service validation use the same rule, independent of response order.
 
-Schema aggregate eligibility states only; these are not the principal response format:
+Field eligibility by dimension (each still requires its operation and Schema bound):
 
 ```text
-create:  *, creatable, editable
-read:    *, editable, readonly, partialMask, fullMask
+create:  *, creatable
+meta.field.read structure: *, editable, readonly, partialMask, fullMask
 update:  *, editable
 ```
 
-Principal responses follow the five-state scalar map in [the bundled response contract](service-principal-permission.md#response-and-field-access). Schema aggregate eligibility does not define this response format. Never include `creatable` in readable or editable states.
+Principal responses carry arrays of supported members, including multi-value arrays, as specified in [the bundled response contract](service-principal-permission.md#response-and-field-access). Normalize legacy strings to arrays; preserve every member and test the capability required by the operation. `creatable` alone grants neither ordinary metadata visibility nor editing; `editable` alone does not grant creation. Data API value-read permission and masking remain server responsibilities.
 
-A valid empty `fieldAccess` map or an unlisted field adds no field restriction after the matching operation is allowed. Use a named state before `'*'` within the same map. As defined in [the response contract](permission-boundaries.md#platform-authority-and-response-formats), default editable still requires the corresponding Schema collection and host capability; never enumerate arbitrary payload keys as authorized fields.
+Collect applicable named-field members before wildcard members. Nonempty maps without either entry do not grant the field. When all applicable maps are empty, the principal + Schema consumption may add no further restriction, as defined in [the response contract](permission-boundaries.md#platform-authority-and-response-formats); it still cannot expand Schema or host capabilities. Never enumerate arbitrary payload keys as authorized fields.
 
-For selected rows, missing `fieldAccess` is an incomplete response, not an empty map; no omission compatibility is documented. Fail the whole access snapshot closed rather than inserting `{}`. Explicit `null`, a non-object, an array container, a blank field key, an unknown scalar state, or any non-scalar field state is also malformed IAM data. Reject invalid effects, non-three-part permission keys, missing/non-App scopes, arbitrary namespaces, and wildcard tenant/App resources as well; never discard a malformed selected row while keeping sibling allows or normalize malformed selected input into an effective allow. Classify and ignore clearly unrelated rows before this validation; null/primitive envelopes or rows and non-array `permissions` must deny without throwing.
+For selected rows, missing `fieldAccess` is incomplete, not an empty map. Fail the snapshot closed rather than inserting `{}`. Explicit `null`, a non-object, an array used as the map itself, a blank field key, an empty state array, or an unknown/non-string member is malformed. Supported multi-value arrays are valid. Report invalid input visibly instead of successful empty grants. Reject invalid effects, non-three-part permission keys, missing/non-App scopes, arbitrary namespaces, and wildcard tenant/App resources; never discard a malformed selected row while keeping sibling allows. Classify clearly unrelated rows before validation; pure normalization of null/primitive envelopes or rows and non-array `permissions` must deny without throwing.
 
 ## Route and operation gates
 
@@ -190,7 +192,7 @@ Fail closed when either permission or Schema refresh fails.
 
 - Ordinary create form reads `fields` or `editableFields` instead of `createFields`; approval create form ignores the authorized start-config fields.
 - Missing ordinary `createFields` falls back to visible fields, or missing approval start-config falls back to ordinary fields.
-- Ordinary create fields use metadata operations, omit `createFields`, allow readonly/masked writes, or treat `creatable` as readable; approval create reapplies the ordinary field intersection.
+- Ordinary create fields use metadata operations, omit `createFields`, allow writes without `creatable|*`, or treat `creatable` alone as readable; approval create reapplies the ordinary field intersection.
 - Edit skips visibility, ignores supplied `editableFields`, or batch edit borrows the single-update field gate.
 - Entries are hidden by writable-field count.
 - Submit expands raw form values or relation values without a latest allowlist.

@@ -65,7 +65,7 @@ Never log Cookie, Authorization, token, API key, or full signed URL values.
 
 ## Response and field access
 
-本节完整定义 Make App 消费的 IAM 响应格式；字段默认态及多条结果的消费规则见 [本地权限合同](permission-boundaries.md#platform-authority-and-response-formats)。The wire success is a `{code: 200, data: ...}` envelope, not the bare identity returned by auth `current-context`. A representative complete IAM response is:
+本节定义经真实接口、权限服务及下游消费源码核实的 IAM 响应合同；字段默认态及多条结果的消费规则见 [本地权限合同](permission-boundaries.md#platform-authority-and-response-formats)。The wire success is a `{code: 200, data: ...}` envelope, not the bare identity returned by auth `current-context`. The following response uses the array shape observed through a real App Service IAM adapter (identifiers replaced):
 
 ```json
 {
@@ -77,12 +77,10 @@ Never log Cookie, Authorization, token, API key, or full signed URL values.
     "permissions": [
       {
         "permissionKey": "data.record.update",
-        "resource": "make://<tenantId>/meta/app/<appKey>/entity/<entityKey>",
+        "resource": "make://<tenantId>/*/app/<appKey>",
         "effect": "allow",
         "fieldAccess": {
-          "displayname": "editable",
-          "username": "readonly",
-          "id_card": "hidden"
+          "*": ["*"]
         }
       }
     ]
@@ -99,19 +97,30 @@ Consume `fieldAccess` according to [the App response contract](permission-bounda
 - `meta.entity.read` controls Schema-present entity navigation and its dynamic route.
 - `meta.field.read` controls field structure visibility; it cannot grant business creation or update.
 - `data.record.read` controls record requests and server field projection/masking; denial replaces the record-reading business content, preserving authorized navigation.
-- `data.record.create` controls ordinary creation; Schema `createFields` contains create-eligible fields (`creatable|editable|*` in aggregation). Workflow approval creation keeps its own field authorization.
+- `data.record.create` controls ordinary creation; Schema `createFields` contains create-eligible fields (`creatable|*`). `editable` alone does not grant creation. Workflow approval creation keeps its own field authorization.
 - `data.record.update` plus its field state controls ordinary edit; preserve Schema `editableFields`. `data.record.bulkUpdate` and its field state control batch edit independently.
 - `meta.field.create/update` exist for Schema structure operations. Neither grants business value writes.
 
-principal fieldAccess 使用五态单值 map；不要将 Schema 聚合的 creatable、多 access 数组或通配 access 搬入该响应合同。该接口不处理 dataCondition，因此不能替代具体请求的最终行级授权。
+`fieldAccess` 是 `Record<string, string[]>`。2026-10-29 经真实 App Service 在 dev/default 调用本接口观察到 `{"*": ["*"]}`；权限服务的 `PrincipalPermissionItemResponse` 也声明 `map[string][]string`，`mergeFieldAccessValues` 保留全部命中值并去重，不再按状态优先级覆盖。旧字符串仅作为历史兼容输入归一为单元素数组，不能反过来限制当前响应。
 
-同一 App/对象/操作可能命中多条已返回结果。Make App 不因命中多条 allow 而拒绝字段，也不能借另一条 allow 放宽已返回的字段限制；响应条目的先后顺序不改变访问资格。操作允许与字段只读分别处理，字段限制不改写为整个操作被拒绝。
+| 检查维度 | 数组成员要求 |
+| --- | --- |
+| 普通创建字段 | 包含 `creatable` 或 `*` |
+| 普通更新/批量更新字段 | 包含 `editable` 或 `*` |
+| `meta.field.read` 的字段结构可见性 | 包含 `readonly`、`editable`、`partialMask`、`fullMask` 或 `*`；仅 `creatable` 不补普通可见性 |
+| Data API 的业务值读取 | 下游按 `readonly` 或 `*` 判断，并执行投影、脱敏和行条件；不由前端自行重建数据权限 |
+
+合法成员为 `* / hidden / readonly / creatable / editable / partialMask / fullMask`。纯权限模型保留数组，可按首次出现顺序去重；接口透传层保持原响应。不能 `String(array)`、`join()`、取首项、选“最高优先级”或要求全部成员都允许。`["readonly","editable"]` 保留编辑能力，`["readonly","creatable"]` 可创建而不可编辑；只有 readonly/hidden/mask、没有对应写能力的字段仍不可写。`*` 只用于当前匹配操作，不代替其他操作、Schema 或宿主能力。
+
+脱敏成员必须保留给展示链路，不能把能力判断结果改写成未脱敏原值，也不能把脱敏占位直接作为编辑原值提交。该接口不能替代具体请求的最终行级授权。未知成员仍按合同不支持处理，保留原响应并反馈，不能按字符串真值自动放行。
+
+同一 App/对象/操作命中多条结果时，先处理该操作的显式 deny，再消费 allow 中返回的字段能力。具名字段值存在时收集所有适用结果中该字段的数组；不存在时收集 `'*'` 基线。按上表的成员资格判断，不能按响应顺序选择一条，也不对不同状态重建优先级。保留原始结果，不产生新权限或合并策略配置。
 
 Do not make the UI readiness transition depend on every row returned by IAM. Apply the deterministic selection table in `permission-boundaries.md` before strict row validation: only clearly unrelated rows may be ignored, while selected and unclassifiable rows fail closed. Ignored rows must never grant or deny App access or block the subsequent Schema request. Keep the Service request App-scoped; local response selection is not a reason to add a tenant-root scope or upstream platform permission filter.
 
-For a valid `fieldAccess` map, `{}` or an unlisted field adds no field restriction after the matching operation is allowed; a named state takes precedence over `'*'` in that map. Apply the Schema bounds and host capabilities in [the field contract](permission-boundaries.md#independent-field-dimensions). An unlisted field is not automatically outside the grant, and default editable never authorizes an arbitrary submitted field.
+所有适用 allow 的字段 map 都为 `{}` 时，Meta 的 principal 消费链把它视为不额外限制，仍以对应 Schema 集合和宿主能力为上限。非空 map 中未列字段且没有 `'*'` 时，不自行补 editable；一个空 map 也不能覆盖其他结果的具名字段限制。此默认只用于 principal + Schema 的应用消费，不照搬到 Data API 的 `/decision/plan`：实际数据请求仍由后端逐字段校验。见 [字段边界](permission-boundaries.md#independent-field-dimensions)。
 
-For selected current-App business rows, a missing `fieldAccess` property is an incomplete response, not `{}`. The documented response supplies a map and defines no omission compatibility; fail closed instead of inserting an empty map. Explicit `null`, a non-object, an array container, a blank field key, an unknown scalar state, or any non-scalar field state is also invalid and must fail the whole access snapshot closed at the Service validation or UI normalization boundary. Do not silently discard a malformed selected row while keeping sibling allows. Also reject a selected row with an invalid effect, non-three-part permissionKey, arbitrary namespace, or wildcard tenant/App resource instead of guessing intent. Null/primitive payloads or rows and non-array `permissions` must produce a denied snapshot without throwing.
+For selected current-App business rows, a missing `fieldAccess` property is an incomplete response, not `{}`; fail closed instead of inserting an empty map. Explicit `null`, a non-object, an array used as the entire map, a blank field key, an empty state array, a non-string member or an unknown state stops the snapshot at the consuming validation/normalization boundary, with visible feedback rather than successful empty grants. Known multi-value arrays are valid. The Service proxy still forwards the original response. Do not discard a malformed selected row while keeping sibling allows. Reject invalid effects, non-three-part permission keys, arbitrary namespaces or wildcard tenant/App resources instead of guessing intent. Pure normalization of null/primitive payloads or rows and non-array `permissions` denies without throwing; the loading boundary reports the invalid response.
 
 The Service preserves resources such as `make://<tenantId>/*/app/<appKey>`; UI segment matching treats that namespace wildcard as the same current App family represented by response scope.
 

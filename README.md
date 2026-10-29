@@ -121,7 +121,7 @@ Codex 判断优先级：
 
 ### make-app-approval
 
-根据已确认需求中的实际写入或审批处理能力生成/复用“我的审批”入口，完整接入审批新建与保存并提交、未提交记录发起/恢复、发起人撤回、我的审批 npm 包列表/节点办理、退回后的继续提交、历史和业务状态/标题 Tag。审批包与 CanvasTable 的接入基线以[包与列表合同](skills/make-app-approval/references/package-and-list.md)为准；无当前流程或任务不删除入口。已撤回、已拒绝、已同意的记录不增加终态重新发起。
+根据已确认需求中的实际写入或审批处理能力生成/复用“我的审批”入口，完整接入审批新建与保存并提交、未提交记录发起/恢复、发起人撤回、我的审批 npm 包列表/节点办理、退回后的继续提交、历史和业务状态/标题 Tag。审批包与 CanvasTable 的接入基线以[包与列表合同](skills/make-app-approval/references/package-and-list.md)为准；无当前流程或任务不删除入口。已撤回、已拒绝、已通过的记录不增加终态重新发起。
 
 新 skill 首次安装：
 
@@ -139,7 +139,7 @@ npx skills update make-app-approval
 
 BPM 字段定义及 Lookup 依赖使用 `bpm-node-form-metadata`：新建按 START 场景补齐，任务使用 TASK 场景，请求与定位校验见 [节点元数据合同](skills/make-app-approval/references/workflow-api.md#审批节点字段元数据)。关系及目标 key/type 来自节点响应，完整性判定与权限边界见 [Lookup 依赖合同](skills/make-app-approval/references/lookup-metadata.md)。不回退普通 Entity/Relation 或 Schema 补齐，也不把节点定义并入普通权限缓存。
 
-任务中的 Lookup/File 随 Workflow recordPatch 保存，不能普通 PATCH 补写。历史逐行保留“退回修改”等事件结果，业务当前状态独立；列表图标、列宽及滚动复用包能力。包、列表、任务详情、接口、记录生命周期及历史均有独立参考文件，全部从主入口可达。
+任务中的 Lookup/File 随 Workflow recordPatch 保存，不能普通 PATCH 补写。历史一次读取完整列表（含实际待办），逐行直接展示 actionResult（如“已退回”），业务当前状态独立；列表图标、列宽及滚动复用包能力。包、列表、任务详情、接口、记录生命周期及历史均有独立参考文件，全部从主入口可达。
 
 自动发现需要当前 Agent 能看到已安装的 `make-app-approval`，并同步本次更新的 `makeui`、权限、Service、actions 和 DSL skill。仅把源码放在此仓库、或只升级已安装的旧技能，不代表新增技能已经进入新项目的可用技能目录。发布后按上方命令首次添加新技能并更新关联技能，使用仓库安装同步检查验证完整文件一致；未安装时也可在任务中明确提供本地 `SKILL.md` 路径要求读取。README 路由表是说明，实际生成入口还通过 `makeui`、`makedsl` 的正文路由到默认生成规则。
 

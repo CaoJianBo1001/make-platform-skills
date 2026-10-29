@@ -1,54 +1,49 @@
 # 审批历史与业务详情流程区
 
-当前审批包只提供 `ApprovalTaskDetail.history` 插槽，**没有历史表格组件或 timeline provider 导出**。历史由宿主实现、查询只读 Workflow 时间线，不伪造任务记录或复制流程设计器。
+当前审批包只提供 `ApprovalTaskDetail.history` 插槽，**没有历史表格组件或 timeline provider 导出**。历史由宿主实现，查询只读 Workflow 时间线，不复制流程设计器。
 
 ## 定位与数据
 
 - 我的审批详情：使用已核验 task detail 的 processInstanceId，标题“审批记录”。
 - 业务对象详情：使用 entityKey + recordId，标题“审批流程”；应用已接入且记录有非空、非 UNSUBMITTED 状态时查询。当前对象解绑不删除历史入口。
-- 请求经宿主 Service → `bpm-timeline / MakeService.ListResources`，实例定位与记录定位二选一，后者由 Service 注入 appKey；后端分页从 1 开始，默认每页 20。前端页码转换与加载遵守下方共用数据源合同，不由 View 各自定义。
-- 校验 data 数组、非负安全整数 pagination.total、非空 eventId 及实例匹配。按记录定位时校验返回事件属于同一实例；不能将多个实例混在同一表格而不说明。
-- 保留后端顺序、重复节点与轮次。不要按 nodeKey 合并，不拼当前待办，不用 actionType 推导流程结果。
+- 请求经宿主 Service → `bpm-timeline / MakeService.ListResources`，实例定位与记录定位二选一，后者由 Service 注入 appKey；接口不分页，一次返回完整 data 数组，没有 pagination。新调用不发送 pagination；旧参数按后端合同兼容忽略，不校验页码、补默认值或转发。
+- 校验 data 数组、非空 eventId 及实例匹配。按记录定位时校验返回事件属于同一实例，不能把多个实例混在同一表格。
+- 事件包含 PROCESS_STARTED、TASK_ACTION、TASK_PENDING。保留后端顺序、重复节点与轮次，不按 nodeKey 合并，不自行按 eventTime 重排；后端把实际待办置顶，历史随后按后端顺序返回，不补造尚未创建的未来节点。
+- TASK_PENDING 的 operator 表示待审批人，eventTime/comment 不返回，actionResult 为 `-`；历史 operator 表示实际操作人。operator 缺失时显示 `-`，只返回 userId 时保留 ID，不额外查人；不得另取 assignee/candidateUsers 拼接记录。
 
 ## 两个展示落点
 
 | 落点 | 按顺序展示 |
 | --- | --- |
-| 我的审批“审批记录” | 节点名称/轮次（nodeName）、审批时间（eventTime）、审批结果（processStatusAfter）、审批人（operator.userName）、审批意见（comment） |
-| 业务详情“审批流程” | 节点名称（nodeName）、审批人（operator.userName）、审批时间（eventTime）、审批结果（processStatusAfter）、审批意见（comment） |
+| 我的审批“审批记录” | 节点名称/轮次（nodeName）、审批时间（eventTime）、审批结果（actionResult）、审批人（operator）、审批意见（comment） |
+| 业务详情“审批流程” | 节点名称（nodeName）、审批人（operator）、审批时间（eventTime）、审批结果（actionResult）、审批意见（comment） |
 
-只展示这五项，不添加序号、节点状态、关闭原因或推测轮次；名称采用后端 nodeName。时间按宿主格式，缺省值 `-`。事件的 processStatusAfter 是历史值，不能拿当前实例状态覆盖它，也不能因结果异常就在前端硬编码 PROCESS_STARTED 的状态。时间线固定列直接消费事件，不为读取历史额外请求 Entity 字段定义。
+只展示这五项，不添加序号、节点状态、关闭原因或推测轮次。名称取 nodeName，时间按宿主格式，缺省值 `-`；operator 优先 userName。固定列直接消费事件，不为读取历史请求 Entity 或节点表单字段定义。
 
-PC 和手机的两个历史落点共用以下逐行结果适配，表格与时间线只改变布局。退回后的 SUBMIT 行只按它自己的 processStatusAfter 展示，不能按 actionType 推断或重写前面的退回行。
+历史表头复用宿主字段类型图标与 CanvasTable 公开 prefixRender：nodeName 为 Text、eventTime 为 DateTime、actionResult 为 SingleSelect、operator 为 SingleUser、comment 为 TextArea。两种列序共用图标映射，不复制包内部 SVG 或引入另一套图标库。
 
-历史表头复用宿主字段类型图标和 CanvasTable 的公开 prefixRender：nodeName 为 Text、eventTime 为 DateTime、processStatusAfter 为 SingleSelect、operator 为 SingleUser、comment 为 TextArea。两种列序使用同一图标映射；保留原列标题，不复制审批包内部 SVG 或引入第二套图标库。历史图标由宿主负责，任务列表四列图标已由审批包提供。
+桌面/平板复用宿主只读 CanvasTable，底边闭合，内容超过可用高度时内部滚动，不增加上一页/下一页、页码、页大小选择器或总数文案。手机沿用 [移动端适配](mobile.md#紧凑审批时间线) 的紧凑时间线，空意见隐藏；两端共用数据、授权和结果适配。
 
-桌面/平板复用宿主 CanvasTable，只读、底边闭合，按标准虚拟滚动加载历史，不增加上一页/下一页、页码、页大小选择器或总数文案。手机使用 [移动端适配](mobile.md#紧凑审批时间线) 的紧凑时间线，滚动续载，空意见隐藏，不强制 Canvas；两端共用数据源、授权和历史结果适配。
+## 共享数据源与滚动展示
 
-## 共享数据源与滚动加载
+复用 [CanvasTable 集成 Skill](../../canvas-table-integration/SKILL.md) 的标准本地数据接入：完整列表通过公开 `setData` 提交，不配置远端分页 `virtualOptions` 或 `data:load`。我的审批任务列表仍使用独立的分页合同，由审批包负责；不要把 timeline 的变更应用到任务列表或 Lookup 候选查询。
 
-历史表格使用 [CanvasTable 集成 Skill](../../canvas-table-integration/SKILL.md) 的既有宿主接入，读取其 [首屏与页码合同](../../canvas-table-integration/references/virtual-table-patterns.md#3-bootstrap-and-page-contract)，并按同一文档的加载生命周期、缓存、取消和上下文重置规则实现。根据实际安装产物的公开能力选择请求身份或旧版 page-only 路径，不在审批 Skill 复制加载器、调度算法或另造历史专用分页控制器。我的审批任务列表仍由审批包拥有，宿主仅为两个历史落点接入标准数据源。
-
-- PC 与手机共用既有 timeline 查询函数、Service 路由、定位、页大小、响应校验与权限；上下文包含应用/租户、身份、权限代次、环境、实例或记录定位及页大小。PC 由表格请求所需页，手机由时间线滚动请求后续页，展示触发不同不改变业务查询合同，不额外读取逐条详情。
-- CanvasTable 页码保持零基，只在宿主数据源边界将 `pageIndex` 转为后端 `pagination.page = pageIndex + 1`；手机复用同一数据源及转换，不再次加一。不修改 Service/Workflow 的一基页码，不为滚动加载增加接口。
-- 首次查询的 `pagination.total` 初始化 `virtualOptions.totalRowCount`，页大小与真实请求一致；首批行按标准首屏缓存及 `data:load` 生命周期提交，不再重复请求首批或额外请求总数。零条结果合法，不能等待行数大于零才完成加载或创建空表格。
-- `data:load`、成功写入、失败/取消释放 pending 页及最新 total 的原子更新全部按标准公开合同处理；需要时使用该标准的大数据调度和缓存边界，不在历史 View 中自行拼接 PC 虚拟页。失败保留已加载内容并可重试，不伪造空历史；同一上下文的同一在途页不重复请求，不一次性循环拉完全部页。
-- 手机将成功取得的后续页按后端顺序展示，保留事件标识、重复节点与轮次；仍用同一 total 判断是否还有数据，不通过当前缓存或单页行数冒充总数。切换定位、身份或环境时按标准取消旧请求并隔离迟到结果，关闭时清理监听与请求。
+- PC/手机共用同一个查询函数、Service 路由、定位、校验、取消与错误处理。一次加载完整数组，不依赖 pagination.total，也不截取前 20 条；超过 20 条、同节点多任务及会签都必须保留。
+- 同一上下文的首屏请求去重，切换展示方式不额外请求详情。上下文包括应用/租户、身份、权限代次、环境和实例/记录定位；切换或关闭时取消旧请求，迟到结果不得覆盖新上下文。
+- 请求失败不伪造成空列表，不自动循环重试；沿用宿主错误提示与手动重试。权限拒绝清理旧数据。合法空数组仍完成加载并显示空态/表头。
+- 手机直接映射完整事件数组，滚动不再续发请求；Canvas 滚动仅绘制已有数据，不循环拉页或依赖旧分页缓存。刷新重新查询一次完整快照。
 
 ## 共享历史结果
 
-将事件的 `processStatusAfter` 交给审批包根入口的 `getApprovalStatusDisplay`，PC 表格与手机时间线均调用同一宿主适配器。随包 [历史结果参考适配器](../assets/history-result.mjs) 只在历史中将 RETURNING 的标签覆盖为“退回修改”，其余值及 tone 原样沿用公共函数；不修改公共函数返回的对象，也不改业务记录状态或标题 Tag。公共函数中 RETURNING 仍为“审批中”。
+后端 `actionResult` 就是“审批结果”展示文本，`processStatusAfter` 已移除。PC 表格和手机时间线共用随包 [历史结果参考适配器](../assets/history-result.mjs)，返回字符串；不调用流程状态函数，不从 actionType、当前实例状态或事件类型推导结果。
 
 ```js
-import { getApprovalStatusDisplay } from '@qfei-design/make-app-approval';
 // formatApprovalHistoryResult 来自随包参考适配器，接入宿主公共历史模块。
-const result = formatApprovalHistoryResult(event, getApprovalStatusDisplay);
-// PC 单元格和手机 item.result 共用 result.label 及既有主题的 tone 映射。
+const result = formatApprovalHistoryResult(event);
+// PC 单元格与手机 item.result 直接使用 result。
 ```
 
-IN_APPROVAL →“审批中”、APPROVED →“已同意”、REJECTED →“已拒绝”、CANCELLED →“已撤回”；UNSUBMITTED 和 null/undefined 显示 `-`，未知值（含空字符串）按公共函数显示“状态未知”。不得以事件 actionType、当前实例状态或手机专用映射兜底。此规则只定义历史的流程结果，不改变任务动作或任务列表按其已确认响应展示的完成动作。
-
-两个 View 对同一页使用相同事件与结果，保留原定位、权限、eventId、顺序和分页参数；不因选择展示模式增加详情查询或改写事件。加载触发遵守前文共享数据源合同。
+后端正常文本包括：已提交、已同意、已拒绝、已退回、已撤回、`-`。它们用于验收，不是前端重新映射动作的枚举；未知非空文本原样保留，缺失/空白值只显示 `-`。同意后流程仍在审批中时该行仍显示后端“已同意”；退回后再次提交保留原退回行和新提交行。业务记录的流程状态及标题 Tag 继续遵守 [状态与锁](status-display.md)，不受此调整影响。
 
 ## 五列填满可用宽度
 
@@ -56,22 +51,22 @@ IN_APPROVAL →“审批中”、APPROVED →“已同意”、REJECTED →“�
 
 以五列可读基础宽度为下限，测量容器内容区的实际可用宽度（按宿主布局扣除边框和实际占位的滚动条）。容器宽于基础列宽之和时，将剩余宽度平均分给五列：`extra = max(0, availableWidth - sum(baseWidths))`，各列为 `baseWidth + extra / 5`；整数像素的余数分配到现有列，确保总宽与可用宽度一致。容器更窄时保留基础宽度与表格横向滚动，不强行压缩文字或引入页面横向滚动。
 
-通过宿主已有尺寸监听，在可测量时从不可变基础列配置派生新 columns，使用已安装 CanvasTable 的公开 `updateProps({ columns, canvasWidth, canvasHeight })` 与 `updateCanvasSize(...)` 更新原实例。仅更新画布宽度不会自动重新分配五列；不能将派生列宽写回基础配置，也不能重复基于上次扩展后的列宽累计增宽。全屏、缩窄和重新显示均需重算，不因尺寸变化清空缓存、重跑首屏或销毁重建表格；新进入视口的未缓存页仍由标准 `data:load` 按需加载。
+通过宿主已有尺寸监听，在可测量时从不可变基础列配置派生新 columns，使用已安装 CanvasTable 的公开 `updateProps({ columns, canvasWidth, canvasHeight })` 与 `updateCanvasSize(...)` 更新原实例。仅更新画布宽度不会自动重新分配五列；不能将派生列宽写回基础配置，也不能重复基于上次扩展后的列宽累计增宽。全屏、缩窄和重新显示均需重算，不因尺寸变化重跑查询或销毁重建表格；继续绘制已取得的完整列表。
 
 此处是宿主自建历史表格的列宽规则；我的审批任务列表的四列由 npm 包负责，继续遵守 [包与列表](package-and-list.md) 的公开尺寸合同，不在包外重复实现其列宽逻辑。
 
 ## 高度与纵向滚动
 
-以下约束适用于桌面/平板的两个宿主历史表格。`pagination.total` 提供虚拟行数与滚动范围，容器高度仍受宿主详情布局上限约束，不能把全部远端行铺成页面高度。根据权威总数和组件实际布局判断内容是否可容纳：少量记录按内容展开，容纳表头、数据行和组件实际底部预留；超过上限时保持受限视口，在表格内滚动并加载未缓存页。不能按当前虚拟页、末页或缓存行数收缩视口和滚动范围。滚动到数据末尾时末行必须完整可见，不能被容器裁切或横向滚动条遮挡。高度上限沿用宿主详情布局约定，不规定平台统一的固定像素或行数。
+以下约束适用于两个宿主历史表格。完整数组长度决定行数与滚动范围，容器仍受宿主详情布局上限约束。少量记录按内容展开，容纳表头、数据行和实际底部预留；超过上限时保持受限视口，在表格内滚动。末行必须完整可见，不被容器或横向滚动条遮挡。高度上限沿用宿主约定，不规定平台统一像素或行数。
 
 根据已安装 CanvasTable 的公开参数与类型配置行高、表头高度及适用的最小画布尺寸，确认这些参数在真实布局和滚动计算中实际生效；不能仅凭 `style` 中的同名值或“表头高度 + 行数 × 行高”的公式认定高度正确。计算还须考虑组件实际预留、边框及实际占位的滚动条，使用公开能力接入，不依赖内部属性或修改包实现。
 
-沿用现有尺寸监听与公开更新路径处理普通抽屉、全屏、窄容器及隐藏后重新显示。权威总数减少或可视区变大时，将超出新范围的滚动位置收敛到有效范围；仍有效的位置继续保留，不因同一实例刷新或全屏切换无条件回到顶部。空态保持可读，不能保留旧数据的滚动范围；高度变化不另造实例、不清空已加载页或重跑首屏，新视口缺失页按标准加载。
+沿用现有尺寸监听与公开更新路径处理普通抽屉、全屏、窄容器及隐藏后重新显示。完整列表行数减少或可视区变大时，将超出新范围的滚动位置收敛到有效范围；仍有效的位置继续保留，不因同一实例刷新或全屏切换无条件回到顶部。空态保持可读，不能保留旧数据的滚动范围；高度变化不另造实例或重跑查询，继续使用完整数据。
 
 **保留组件自带的底部预留**，它不属于必须消除的空白，不要求提供关闭预留的配置，也不通过裁切隐藏来冒充无滚动。具体预留随安装版本核验；固定补偿值、固定可见行数或滚动探测等项目兼容方案不能写成通用接入要求。是否满足上述结果，按 [高度与滚动验收](verification.md#历史表格高度与滚动) 判断。
 
 ## 生命周期与容器
 
-加载、失败重试和真实空态独立；关闭、切换实例/身份/环境取消请求，旧响应不能污染新上下文。Canvas 在容器可测量且标准首屏/总数合同就绪后启用虚拟模式，提前返回的数据按首屏合同保留，不以非空行数为门禁；全屏只调整尺寸并按需加载新视口缺失页，卸载清理表格与观察器。撤回成功后刷新业务历史；办理成功后按宿主关闭/刷新机制更新任务历史。
+加载、失败重试和真实空态独立；关闭、切换实例/身份/环境取消请求，旧响应不能污染新上下文。Canvas 在容器可测量后创建并提交完整数据，提前返回的数据仍需保留，不以非空行数为门禁；全屏只调整尺寸，卸载清理表格与观察器。撤回成功后刷新业务历史；办理成功后按宿主关闭/刷新机制更新任务历史。
 
 任务正文顺序为申请信息 → 审批记录 → 审批意见，history 只读、不参与字段校验。0.2.10 插槽仍默认有“审批流程”标题；宿主已有“审批记录”标题时仅保留一个。优先采用包后续公开标题配置；基线需要时仅在审批详情宿主作用域处理重复标题和间距，禁止全局隐藏 h3、改 node_modules 或另造流程图。

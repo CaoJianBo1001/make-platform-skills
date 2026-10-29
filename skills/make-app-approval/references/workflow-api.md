@@ -21,7 +21,7 @@
 | POST `/api/bpm/tasks/detail` | `{ processInstanceId, taskId }`；保留 Workflow 原始信封，任务 UI 加载改用 form 聚合接口 |
 | POST `/api/bpm/tasks/actions` | 任务 reference、actionType、comment、recordPatch、RETURN 的 targetNodeKey；保留 Workflow 信封 |
 | POST `/api/bpm/tasks/:processInstanceId/:taskId/files/:fieldKey` | multipart file；任务授权预上传，返回文件元数据数组 |
-| POST `/api/bpm/timeline/query` | 一个定位与 `pagination: {page,size}`；保留 data 与 pagination.total |
+| POST `/api/bpm/timeline/query` | 一个实例或业务记录定位；不分页，保留完整 data、actionResult 和 TASK_PENDING |
 
 不要假定所有 API 都直接返回 data 或都带信封。启动配置/首次发起是宿主规范化结果；原始任务、流程详情、撤回、时间线保留 Workflow 信封；任务 form 成功时保留 data 并增加 metadata，lookup-options 是规范化结果。聚合是宿主编排，不是新增 Workflow Target；失败保留上游 HTTP/业务错误，不把失败变为空元数据。UI provider 在声明的边界解析一次，不能多次猜测 `data.data`。
 
@@ -41,7 +41,7 @@
 | `/workflow/v1/bpm-task` | MakeService.ListResources | `{ appKey, viewType: 'MY', taskStatus, pagination, ...filters }` |
 | `/workflow/v1/bpm-task` | MakeService.GetResource | `{ processInstanceId, taskId }` |
 | `/workflow/v1/bpm-task` | MakeService.CreateResource | `{ processInstanceId, taskId, actionType, comment, recordPatch, targetNodeKey? }` |
-| `/workflow/v1/bpm-timeline` | MakeService.ListResources | 一个实例或业务记录定位，加 pagination |
+| `/workflow/v1/bpm-timeline` | MakeService.ListResources | 一个实例或业务记录定位；无 pagination，返回完整事件数组 |
 
 实例定位与业务记录定位二选一，不混传；业务记录定位的 appKey 由 Service 注入。任务详情/动作只带已声明 reference，不擅自追加 bpmKey、客户端 appKey 或另一个记录身份。服务端继续对实例和任务执行访问授权，不能因路径有 ID 就允许访问。
 
@@ -68,7 +68,7 @@ fields 必须保留完整 properties、validations、capabilities 及类型专�
 
 ## 参数与响应
 
-- recordID→recordId 仅在边界改名，业务记录/任务/实例 ID 始终为字符串。分页 page 从 1 开始，size 1–200。
+- recordID→recordId 仅在边界改名，业务记录/任务/实例 ID 始终为字符串。任务列表与 Lookup 候选分页 page 从 1 开始，size 1–200；timeline 不分页，旧 pagination 兼容忽略。
 - 列表允许 recordId、entityKey、starterId、assigneeId、processStatus、startDate、endDate 等已声明条件；页面只生成 [列表合同](package-and-list.md) 中的默认条件。两个页签只请求 PENDING/COMPLETED；Service 支持 CLOSED 不代表 UI 要额外查询它。
 - 人员过滤：UI/Service DTO 用十进制字符串；Service 校验 Long 范围（有符号 64 位），转给 Workflow 时用无损 JSON 整数编码，例如 `lossless-json` 的 LosslessNumber。不能 `Number(id)` 后 JSON.stringify，也不能以姓名替代 ID。保留已有 lossless 响应解析。
 - 日期为空省略；当前 Workflow 请求为 `YYYY-MM-DD HH:mm:ss`，自然日边界按 [列表合同](package-and-list.md) 转换一次，不自行换时区。

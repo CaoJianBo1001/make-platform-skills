@@ -97,9 +97,9 @@ For an entity that has `meta.entity.read` and readable fields but lacks `data.re
 按 Make App 已接入的响应合同消费数据：
 
 1. 权限过滤后的 Schema 已提供 `fields`、`createFields`、`editableFields`。Make App 保留并使用这些集合，分别用于可见字段、普通创建和普通编辑；Schema 的 `creatable`、通配 access 与多 access 资格格式不改变 principal 接口的响应类型。
-2. `/principal/permission` 的 `fieldAccess` 使用五态单值 map：`hidden|fullMask|partialMask|readonly|editable`。Make App 消费后端返回的访问态，不能把 readonly、隐藏或脱敏放宽为可写。完整请求、响应及校验规则见上面的本地 principal 接口合同。
+2. `/principal/permission` 的 `fieldAccess` 是字段到访问值数组的 map，包含 `* / hidden / readonly / creatable / editable / partialMask / fullMask`；字符串仅作历史兼容输入。按对应操作检查数组成员，不能将多值压成一个最终态：创建要求 `creatable|*`，更新要求 `editable|*`，仅 `editable` 不授予创建。结构可见性、业务值读取及脱敏分开，详见本地 principal 接口合同。
 
-对应操作已 allow 时，合法空 map `{}` 或未列出的字段不增加字段限制；有 `'*'` 时先使用其基线，具名字段覆盖同一 map 的基线。这里的默认 editable 不能增加 Schema 集合外的字段，也不能代替记录操作资格或宿主字段能力。单条编辑仍受 `fields ∩ meta.field.read ∩ editableFields` 约束，批量使用其独立操作状态。
+对应操作已 allow 后，收集所有适用结果中的具名字段访问值；不存在具名字段时才用 `'*'` 基线，非空 map 未列且无通配的字段不授权。只有全部适用 map 为空时，principal 的 Meta 消费链才按不额外限制处理，仍不得增加 Schema 集合外的字段。不能把该默认搬到 Data API 决策计划。单条编辑受 `fields ∩ meta.field.read ∩ editableFields` 约束，批量使用其独立操作状态。
 
 权限后端返回已聚合的权限结果，每行包含 `permissionKey`、`resource`、`effect` 和 `fieldAccess`；不同资源的结果独立保留。App 的权限接口保持原始返回结果，不合并不同资源、不重算配置规则、不增加资源覆盖优先级。多条适用结果的应用消费规则见下文 Matching and validation。具体记录的行级条件、数据投影、脱敏和最终拒写由 Make API 执行；本 Skill 不要求 App 新增决策接口或实现后台配置判断。
 
@@ -123,9 +123,9 @@ createFields missing means empty, with no fallback to fields. `editableFields` �
 - 先验证精确 App scope，再按上文选择权限行。选中或无法分类的行格式错误时整份快照 fail closed，不能丢弃坏行后保留 sibling allow。
 - `effect` 只允许 allow/deny；selected key 为合法三段形式。明确无关的权限点不能授予、拒绝或阻断当前业务权限。资源仅接受已确认的当前 App 家族，保留 namespace alias；不猜测 tenant/App 通配或任意 namespace。
 - 请求 entity/field 必须是具体非空字符串，不能用 `*`、null、数字、数组或对象做查询标识。
-- 多条已返回的允许结果可以同时适用于当前对象和操作；条目数量不能撤销权限。读取字段时保留每条适用结果已返回的限制：另一条 allow 不能放宽 hidden，写入也不能放宽 readonly 或脱敏状态。不合并资源或重排资源优先级，结果顺序不改变控件和提交行为。
+- 多条返回结果按上面的具名/通配规则取得访问值集合，再按操作所需成员判断，结果顺序不改变资格。`readonly` 与 `editable` 共存不撤销编辑能力；`hidden`/脱敏成员保留，不被转换丢失，也不当作旧式最高优先级覆盖其他成员。原始结果保持分开，不重建策略配置或资源优先级。
 - 已解析的无行条件操作 deny 优先于 allow；字段 hidden/readonly/mask 使用字段态表示，不把字段限制改写为整操作 deny。
-- principal 解析必须保留服务端五态单值，不能用 String(value) 把状态数组转换为合法状态。合法空 map 和未列字段按上文默认态消费；它们不是字段白名单。所选行缺失整个 `fieldAccess` 属性与 `{}` 不同：文档没有省略该属性的兼容约定，应用按响应格式不完整失败关闭，不补成空 map。null、数组容器、未知状态或非标量字段态也失败关闭。
+- principal 解析按 [响应合同](service-principal-permission.md#response-and-field-access) 验证七种合法成员并保留多值，不能统一拒绝数组或用 String(value) 强制转换。所选行缺失整个 `fieldAccess` 属性与 `{}` 不同，按响应不完整失败关闭，不补成空 map。null、数组作为整个 map、空值数组、未知或非字符串成员仍不允许；不丢弃坏行保留其他 allow。
 - 当前权限、Schema 与提交应绑定同一用户、App、对象及刷新代际；不能借用另一操作或旧响应。
 
 ## Route and backend boundaries
@@ -139,13 +139,13 @@ createFields missing means empty, with no fallback to fields. `editableFields` �
 ## Common mistakes
 
 - 用不存在的字段权限点、元数据更新权限或管理员授权修复业务编辑。
-- 把记录操作 allow 当作所有字段可写，忽略 readonly/hidden/mask。
-- 将 Schema 的访问态说明搬到 principal 响应，或由 App 重做后端聚合。
+- 把记录操作 allow 或非空数组当作字段可写，未检查对应写能力；或使用旧优先级让 readonly 覆盖同时返回的 editable。
+- 从 Schema 集合或策略配置推断 principal 中不存在的权限，或由 App 重做后端策略聚合。
 - 新建回退到 fields；批量字段套用单条 update 权；只过滤控件却提交整个表单。
 - 只隐藏菜单，缺少直达路由门禁；刷新权限却保留旧 Schema、草稿和请求。
 
 ## 业务数据编辑统一规则
 
-单条编辑检查 `data.record.update`，批量检查独立的 `data.record.bulkUpdate`。字段能否写入还必须由该操作的当前字段状态决定。前端控件、提交白名单和 Service 使用一致规则：最新授权可见字段、对应操作允许字段、宿主编辑能力的交集。显式拒绝、readonly、hidden、partialMask/fullMask 或撤权后都不能写入。
+单条编辑检查 `data.record.update`，批量检查独立的 `data.record.bulkUpdate`。字段访问值还须包含 `editable` 或 `*`。前端控件、提交白名单和 Service 使用一致规则：最新授权可见字段、对应操作允许字段、宿主编辑能力的交集。显式拒绝、撤权、或只有 readonly/hidden/mask 而无编辑能力时都不能写入；多个合法值共存不按旧优先级互相覆盖。
 
-UI 提交前重算最新白名单；Service 不信任 UI 过滤，对全部提交字段独立检查。DataService 最终执行行条件和写入授权：record 拒绝 403；命中 readonlyFields 的写入整单 422，不能静默丢弃。普通单条 update 的 Schema editableFields 与 bulkUpdate 决策不能互相替代。禁止通过扩大为 `*.*.*` 或授予应用管理员绕过。
+UI 提交前重算最新白名单；Service 不信任 UI 过滤，对全部提交字段独立检查。DataService 最终执行行条件和写入授权，不具备权限时整单拒绝，不能静默丢弃字段；沿用统一错误链路保留真实 status/code 和提示，不根据字段状态臆造错误码。普通单条 update 的 Schema editableFields 与 bulkUpdate 决策不能互相替代。禁止通过扩大为 `*.*.*` 或授予应用管理员绕过。

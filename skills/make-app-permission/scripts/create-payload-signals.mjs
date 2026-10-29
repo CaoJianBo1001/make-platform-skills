@@ -59,24 +59,82 @@ function parameterShadows(source,name,parentScope,currentScope,start,at) {
   });
 }
 
-function mutatedBeforeUse(source,name,start,end) {
-  const mask = codeMask(source);
-  const aliases = new Map([[name,start]]);
-  for (const declaration of declarations(source)) {
-    if (declaration.index > start && declaration.index < end && aliases.has(unwrap(declaration.expression))) aliases.set(declaration.name,declaration.end);
+// Read a local member chain, including optional/computed access. Calls and
+// arbitrary expressions are deliberately not followed across functions.
+function memberChain(source,start) {
+  let end = start;
+  const members = [];
+  while (end < source.length) {
+    const tail = source.slice(end);
+    const dot = tail.match(/^\s*(?:\?\.|\.)\s*([A-Za-z_$][\w$]*)/);
+    if (dot) { members.push(dot[1]); end += dot[0].length; continue; }
+    const bracket = tail.match(/^\s*(?:\?\.\s*)?\[/);
+    if (!bracket) break;
+    const open = end + bracket[0].length - 1, close = closingIndex(source,open);
+    if (close < 0) break;
+    const key = source.slice(open + 1,close).trim();
+    members.push(key.match(/^['"]([A-Za-z_$][\w$]*)['"]$/)?.[1] ?? null);
+    end = close + 1;
   }
-  return [...aliases].some(([alias,aliasStart])=>{
-    const escaped = escapePattern(alias);
-    const suffix = mask.slice(aliasStart,end);
-    const assignment = String.raw`(?:=(?!=|>)|[+?&|*/-]=|\+\+|--)`;
-    return new RegExp(`\\b${escaped}\\s*(?:${assignment}|\\.[\\w$]+\\s*${assignment}|\\[[^\\]]*\\]\\s*${assignment})|\\bObject\\.(?:assign|defineProperty)\\s*\\(\\s*${escaped}\\b|\\bdelete\\s+${escaped}\\b`).test(suffix);
+  return {end,members};
+}
+
+function mutatedBeforeUse(source,name,start,end) {
+  const mask = codeMask(source), definitions = declarations(source);
+  const root = definitions.find(item=>item.name === name && item.end === start);
+  if (!root) return true;
+  // Key by declaration, not name: a later same-name local must not erase an
+  // earlier alias. Depth 2 means a shallow copy shares children, not own slots.
+  const aliases = new Map([[root.index,0]]);
+  const visible = (name,at) => {
+    const scope = scopeAt(mask,at);
+    const found = definitions.filter(item=>item.name === name && item.end < at && containsScope(scopeAt(mask,item.index),scope)).at(-1);
+    return found && !parameterShadows(mask,name,scopeAt(mask,found.index),scope,found.end,at) ? found : null;
+  };
+  const reference = (expression,at) => {
+    const value = unwrap(expression), name = value.match(new RegExp(`^(${identifier})\\b`))?.[1];
+    if (!name) return null;
+    const chain = memberChain(value,name.length), binding = visible(name,at);
+    if (value.slice(chain.end).trim() || !binding || !aliases.has(binding.index)) return null;
+    return {depth:chain.members.length,minimum:aliases.get(binding.index)};
+  };
+  for (const declaration of definitions) {
+    if (declaration.index <= start || declaration.end >= end) continue;
+    const direct = reference(declaration.expression,declaration.index);
+    if (direct) { aliases.set(declaration.index,Math.max(0,direct.minimum - direct.depth)); continue; }
+    const value = unwrap(declaration.expression);
+    if (!value.startsWith('{') || closingIndex(value,0) !== value.length - 1) continue;
+    const shared = splitTopLevel(value.slice(1,-1),',').filter(entry=>entry.startsWith('...'))
+      .map(entry=>reference(entry.slice(3),declaration.index)).filter(Boolean);
+    if (shared.length) aliases.set(declaration.index,Math.min(...shared.map(item=>Math.max(2,item.minimum - item.depth))));
+  }
+  for (const declaration of definitions.filter(item=>aliases.has(item.index))) {
+    const minimum = aliases.get(declaration.index);
+    for (const match of mask.slice(declaration.end,end).matchAll(new RegExp(`\\b${escapePattern(declaration.name)}\\b`,'g'))) {
+      const at = declaration.end + match.index;
+      if (/\bconst\s*$/.test(mask.slice(0,at))) continue;
+      if (visible(declaration.name,at)?.index !== declaration.index) continue;
+      const chain = memberChain(source,at + declaration.name.length), depth = chain.members.length;
+      const tail = mask.slice(chain.end,end).trimStart();
+      const assignment = /^(?:=(?!=|>)|(?:\?\?|&&|\|\||\*\*|[+?&|*/%^-])=|\+\+|--)/.test(tail);
+      if (depth >= minimum && (assignment || /\bdelete\s*$/.test(mask.slice(0,at)))) return true;
+      if (depth >= minimum && /^(?:add|delete|clear)$/.test(chain.members.at(-1) ?? '')
+        && /^(?:\?\.\s*)?\(/.test(tail)) return true;
+    }
+  }
+  return calls(source,'Object\\.(?:assign|defineProperty)').some(call=>{
+    if (call.index <= start || call.index >= end) return false;
+    const target = reference(call.args[0] ?? '',call.index);
+    return target && target.depth + 1 >= target.minimum;
   });
 }
 
 function declaredFieldSet(source,name,at) {
   const mask = codeMask(source), scope = scopeAt(mask,at);
-  return /creatable|create.*field|writable.*field/i.test(name)
-    && declarations(source).some(item=>item.name === name && item.index < at && containsScope(scopeAt(mask,item.index),scope));
+  const declaration = declarations(source).filter(item=>item.name === name && item.end < at && containsScope(scopeAt(mask,item.index),scope)).at(-1);
+  return /creatable|create.*field|writable.*field/i.test(name) && Boolean(declaration
+    && !parameterShadows(mask,name,scopeAt(mask,declaration.index),scope,declaration.end,at)
+    && !mutatedBeforeUse(source,name,declaration.end,at));
 }
 
 function fieldCollectionProof(source,expression,at,trail = new Set()) {

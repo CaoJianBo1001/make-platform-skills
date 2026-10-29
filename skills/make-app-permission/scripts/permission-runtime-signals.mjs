@@ -1,6 +1,6 @@
 // Additional, bounded static signals for context-driven hosts. These are not a
 // JS interpreter: page/provider/hook behavior still needs production tests.
-import { identifier as id, escapePattern as esc, stripComments, calls, declarations, parseCall, requiresGate, deniesWithoutGate, splitTopLevel, unwrap } from './permission-source-expressions.mjs';
+import { identifier as id, escapePattern as esc, stripComments, calls, closingIndex, declarations, parseCall, requiresGate, deniesWithoutGate, splitTopLevel, unwrap } from './permission-source-expressions.mjs';
 const matches = (text, pattern) => [...text.matchAll(new RegExp(pattern, 'gs'))];
 const has = (text, pattern) => new RegExp(pattern, 's').test(text);
 
@@ -9,10 +9,14 @@ function generationRefresh(source) {
     const key = matches(source, String.raw`const\s+(${id})\s*=\s*[^;\n]*\b${esc(generation)}\b`)[0]?.[1];
     if (!key) return false;
     return has(source, String.raw`refresh\s*:\s*\(\)\s*=>\s*${esc(setter)}\((${id})\s*=>\s*\1\s*\+\s*1\)`)
-      && has(source, String.raw`\.then\(async\b[\s\S]*?const\s+schema\s*=\s*await\s+${id}\([^;]*refresh\s*:\s*true[^;]*\);[\s\S]*?value\s*:\s*\{[^}]*\bschema\s*:`)
+      && calls(source,'useEffect').some(effect => {
+        const dependencies = unwrap(effect.args[1] ?? '');
+        return dependencies.startsWith('[') && closingIndex(dependencies,0) === dependencies.length - 1
+          && splitTopLevel(dependencies.slice(1,-1),',').includes(key)
+          && has(effect.args[0] ?? '', String.raw`\.then\(async\b[\s\S]*?const\s+schema\s*=\s*await\s+${id}\([^;]*refresh\s*:\s*true[^;]*\);[\s\S]*?value\s*:\s*\{[^}]*\bschema\s*:`);
+      })
       && has(source, String.raw`\.key\s*===\s*${esc(key)}\s*&&\s*${id}\.value\s*\?[^;]*:\s*null`)
-      && has(source, String.raw`if\s*\(!(${id})\)\s*return\s+<[^;]+;[\s\S]*?<${id}\.Provider\s+value=\{\1\}>[^;]*key=\{${esc(key)}\}`)
-      && has(source, String.raw`\},\s*\[${esc(key)}\]\)`);
+      && has(source, String.raw`if\s*\(!(${id})\)\s*return\s+<[^;]+;[\s\S]*?<${id}\.Provider\s+value=\{\1\}>[^;]*key=\{${esc(key)}\}`);
   });
 }
 

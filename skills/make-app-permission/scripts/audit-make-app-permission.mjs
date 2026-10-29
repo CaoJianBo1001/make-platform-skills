@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.4.1
+// make-app-permission contract version: 0.4.4
 import fs from 'node:fs';
 import path from 'node:path';
 import { calls, codeMask as maskJavaScriptNonCode, identifier, stripComments, unwrap } from './permission-source-expressions.mjs';
@@ -198,7 +198,7 @@ function checkUiContract() {
   const stringificationFiles = findFieldAccessStateStringificationFiles(uiRuntimeFiles);
   if (stringificationFiles.length > 0) {
     failures.push(
-      `field_access_state_stringified: validate scalar fieldAccess states; reject state arrays instead of coercing them to text (${stringificationFiles.join(', ')})`,
+      `field_access_state_stringified: validate fieldAccess members explicitly; preserve supported array semantics instead of coercing arrays to text (${stringificationFiles.join(', ')})`,
     );
   }
   if (!namedFunctionUsesPermissionKey(uiSources, 'canCreateEntityField', /(?:DATA_RECORD_CREATE|data\.record\.create)/)) {
