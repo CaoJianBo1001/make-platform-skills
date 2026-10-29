@@ -16,7 +16,7 @@
 
 以上映射只适用于记录的流程状态（或已确认动作响应的 `processStatus`），不能拿实例 `status`、任务状态、个人“同意”结果套用。`RETURNING` 仍属于审批中，不是未提交；撤回和继续提交的入口见 [记录生命周期](record-lifecycle.md)。
 
-`APPROVED` 统一采用公共包的“已同意”。0.2.7 根函数对 UNSUBMITTED 默认返回 `-`；宿主薄适配仅将明确 UNSUBMITTED 改为“未提交”，其余值复用 `getApprovalStatusDisplay`，不能改包源码。业务列表、详情字段和标题共用此适配器；`ApprovalStatus` 对 UNSUBMITTED 的默认值也需通过宿主 Tag 适配保持一致。历史事件另按 [审批历史](history.md) 将 RETURNING 展示为“退回修改”，不要把两种语境合并。
+`APPROVED` 统一采用公共包的“已同意”。已核验的 0.2.10 根函数对 UNSUBMITTED 仍默认返回 `-`；宿主薄适配仅将明确 UNSUBMITTED 改为“未提交”，其余值复用 `getApprovalStatusDisplay`，不能改包源码。业务列表、详情字段和标题共用此适配器；`ApprovalStatus` 对 UNSUBMITTED 的默认值也需通过宿主 Tag 适配保持一致。历史事件另按 [审批历史](history.md) 将 RETURNING 展示为“退回修改”，不要把两种语境合并。
 
 缺失状态显示 `-`，不能据此显示发起按钮；读取失败应展示错误/重试，不能用 `-` 假装读取成功。仅保存返回 UNSUBMITTED 才显示未提交，不产生“已保存”“待补充”之类的流程状态。旧数据若返回空字符串，不能把它升级为 UNSUBMITTED 或获得发起资格。
 
