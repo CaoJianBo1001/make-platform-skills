@@ -25,10 +25,10 @@ for (const directory of directories) {
 assert.deepEqual(violations, [], 'Make App instructions and examples must use documented data/meta permission keys; platform administration and invalid literals are outside this Skill scope');
 console.log('permission instruction source authority: PASS');
 
-// The official principal response contains final scalar field states. Schema
-// multi-access values are a separate contract and must not appear in this DTO.
+// Check examples against supported wire forms, including the live singleton
+// wildcard array. This is an example check, not evidence of backend semantics.
 const principalReference = fs.readFileSync(path.join(root, 'skills/make-app-permission/references/service-principal-permission.md'), 'utf8');
-const finalFieldStates = new Set(['hidden', 'fullMask', 'partialMask', 'readonly', 'editable']);
+const finalFieldStates = new Set(['*', 'creatable', 'hidden', 'fullMask', 'partialMask', 'readonly', 'editable']);
 let responseExamples = 0;
 for (const match of principalReference.matchAll(/```json\s*\n([\s\S]*?)\n```/g)) {
   const payload = JSON.parse(match[1]);
@@ -36,7 +36,10 @@ for (const match of principalReference.matchAll(/```json\s*\n([\s\S]*?)\n```/g))
   responseExamples++;
   for (const permission of payload.data.permissions) {
     for (const state of Object.values(permission.fieldAccess ?? {})) {
-      assert.ok(typeof state === 'string' && finalFieldStates.has(state), 'principal response fieldAccess must use the documented five scalar states');
+      const supported = Array.isArray(state)
+        ? state.length > 0 && state.every(value => finalFieldStates.has(value))
+        : typeof state === 'string' && finalFieldStates.has(state);
+      assert.ok(supported, 'principal examples must use supported field values; arrays are not invalid by themselves');
     }
   }
 }

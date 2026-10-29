@@ -831,8 +831,8 @@ try {
   });
   const stringifiedFieldAccessOutput = runAudit(stringifiedFieldAccessRoot, { expectFailure: true });
   assert.match(stringifiedFieldAccessOutput, /field_access_state_stringified/);
-  assert.match(stringifiedFieldAccessOutput, /validate scalar fieldAccess states; reject state arrays/,
-    'audit guidance must not tell the host to preserve invalid principal state arrays');
+  assert.match(stringifiedFieldAccessOutput, /validate fieldAccess members explicitly; preserve supported array semantics/,
+    'audit must reject string coercion without instructing hosts to reject valid IAM arrays');
 
   const textHelperStringifiedAccessRoot = createFixture('text-helper-stringified-access', {
     app: goodFiles.app,

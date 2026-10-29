@@ -18,10 +18,12 @@ try {
   const access = (...permissions) => model.normalizeAccess({scope, permissions});
   const visible = row('meta.field.read', {title: 'readonly'});
   const update = access(visible, row('data.record.update', {title: 'editable'}));
-  assert.equal(update.permissions.find(permission => permission.permissionKey === 'data.record.update').fieldAccess.title, 'editable', 'the App preserves the scalar result supplied by the backend');
-  for (const state of [['readonly', 'editable'], 'creatable', '*']) {
-    assert.equal(model.canUseEntityOperation(access(row('data.record.update', {title: state})), 'order', 'data.record.update'), false, 'Schema access syntax must not authorize a principal response');
-  }
+  assert.deepEqual(update.permissions.find(permission => permission.permissionKey === 'data.record.update').fieldAccess.title, ['editable'], 'scalar compatibility normalizes to an array without changing meaning');
+  assert.equal(model.canUpdateEntityField(access(row('data.record.update', {title: ['readonly', 'editable']})), 'order', 'title'), true);
+  assert.equal(model.canUpdateEntityField(access(row('data.record.update', {title: ['creatable']})), 'order', 'title'), false);
+  assert.equal(model.canCreateEntityField(access(row('data.record.create', {title: ['creatable']})), 'order', 'title'), true);
+  assert.equal(model.canCreateEntityField(access(row('data.record.create', {title: ['editable']})), 'order', 'title'), false);
+  assert.equal(model.canUpdateEntityField(access(row('data.record.update', {title: ['*']})), 'order', 'title'), true);
   const configuration = model.normalizeAccess({scope, statements: [{effect: 'allow', permissionKeys: ['data.record.update'], resources: [scope]}]});
   assert.equal(model.canUseEntityOperation(configuration, 'order', 'data.record.update'), false, 'the App consumes permission results, not configuration statements');
   assert.equal(model.canUpdateEntityField(update, 'order', 'title'), true, 'real data.record.update and editable field state must allow edit');
