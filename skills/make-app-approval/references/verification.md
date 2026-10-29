@@ -121,7 +121,7 @@
 | 场景 | 可观察断言 |
 | --- | --- |
 | 干净安装与构建 | UI/Service 使用兼容正式包和公开入口，CSS 可加载；不依赖本地 tgz/补丁，React 不重复安装 |
-| 审批包 0.2.7 与 CanvasTable 1.3.2 | 核对实际安装、peer 和锁文件一致；只升级审批包而沿用 1.3.1 不算完成；Service 根入口无 UI 依赖 |
+| 审批包 0.2.10 与 CanvasTable 1.3.2 | 核对实际安装、peer 和锁文件一致；只升级审批包而沿用 1.3.1 不算完成；Service 根入口无 UI 依赖 |
 | 两个页签、长 recordId、同一记录多个任务 | PENDING/COMPLETED、viewType MY；recordId 原字符串精确匹配，taskId 为行 key，不合并任务、不补查 CLOSED |
 | 日期范围及长人员 ID | 最终 Workflow 正文使用空格自然日边界；人员过滤无损 Long 整数，清空省略，不使用姓名 |
 | 四列列表和筛选 | 不展示流程状态列/筛选；查询草稿、重置、申请人候选、页签切换行为正确 |

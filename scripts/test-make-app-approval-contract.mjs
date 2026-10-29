@@ -131,7 +131,6 @@ assert.ok(localLinks('skills/make-app-approval/references/mobile.md')
   .includes('skills/make-app-approval/references/history.md'),
   '手机历史必须路由到 PC 共用历史合同，行为由共享结果适配器回归验证');
 assert.match(listContract, /presentation="mobile"/);
-assert.match(listContract, /尚未发布/);
 assert.match(listContract, /不得由流程状态推断/);
 assert.match(listContract, /不复制一套列表\/分页 Controller/);
 console.log('审批 skill 可发现性与引用闭包检查通过');

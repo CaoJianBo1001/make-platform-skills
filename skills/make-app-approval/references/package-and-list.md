@@ -1,12 +1,13 @@
 # 审批包与我的审批列表
 
-适用于完整接入或升级任务中心。本文基于已核对的 `@qfei-design/make-app-approval@0.2.7` 公开产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为，不能只依据文档中的旧“尚未发布”或“状态筛选”说明。
+适用于完整接入或升级任务中心。本文基于已核对的 `@qfei-design/make-app-approval@0.2.10` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
 
 ## 依赖与职责
 
 - UI 安装审批包和兼容的 `@qfei-design/canvas-table`；本基线使用 CanvasTable `1.3.2`，审批包声明 `^1.3.2` peer，无动画滚动校正依赖此能力，不能沿用 1.3.1。审批包 React peer 为 `^18.2.0 || ^19.0.0`，运行环境兼容性由 `make-app-runtime` 核对，不能为接包擅自迁移整个项目。
 - Service 如消费状态、禁编或撤回校验函数，也安装同一审批包版本，只加载根入口。依赖与锁文件可在干净环境重装；生产不依赖开发机路径、未发布 tgz、node_modules 修改或未随构建分发的补丁。
 - 应用入口一次导入 `@qfei-design/make-app-approval/styles.css`，表格样式沿用宿主 CanvasTable 接入。Ant Design/dayjs 是包的示例依赖，不要求宿主更换 UI 库。
+- 0.2.10 发布包携带 `examples/field-adapters`，包含人员缓存、数值原文校验和 `use-input-modality.ts`。这些是宿主源码适配示例，按 [字段适配回归](../../makeui/references/field-adapter-regressions.md) 复用已有控件与校验，不当作新的 npm 公开子路径导入。
 
 | 公开入口 | 使用内容 |
 | --- | --- |
@@ -52,7 +53,7 @@ Service 固定当前部署 `appKey` 和 `viewType: MY`。已完成是当前用�
 | `applicationTime` | `processStartedAt`，按应用时区格式化为 `YYYY-MM-DD HH:mm:ss` |
 | 返回 `total` | 信封的 `pagination.total`，非负安全整数，不能用本页 rows.length 替代 |
 
-列表固定四列：申请单ID、业务表单、申请人、申请时间，另有序号和详情入口。审批包 `0.2.7` 不展示流程状态列或状态筛选；`statusOptions` 和 `processStatus` 查询字段只是兼容接口，不主动恢复该 UI。业务对象列表的“流程状态”仍按 [状态展示](status-display.md) 保留。
+桌面列表固定四列：申请单ID、业务表单、申请人、申请时间，另有序号和详情入口。本基线不展示流程状态列或状态筛选；`statusOptions` 和 `processStatus` 查询字段只是兼容接口，不主动恢复该 UI。业务对象列表的“流程状态”仍按 [状态展示](status-display.md) 保留。
 
 ## 宿主控件与布局
 
@@ -72,7 +73,7 @@ Service 固定当前部署 `appKey` 和 `viewType: MY`。已完成是当前用�
 
 非活动 Tabs 面板不得参与布局或占用高度；宿主设置 `display: flex` 等布局样式时，须保留非活动面板的隐藏行为。
 
-0.2.6–0.2.7 的尺寸、列宽和图标行为由包负责，宿主保持高度链及公开 themeKey，不增加第二套 ResizeObserver、列宽计算或私有 Canvas 操作：
+本基线的桌面尺寸、列宽和图标行为由包负责，宿主保持高度链及公开 themeKey，不增加第二套 ResizeObserver、列宽计算或私有 Canvas 操作：
 
 - 四列已内置标识、文本、单用户、日期时间图标；不再由宿主叠加图标，也不把包内列函数当作公开导出。
 - 基础列宽为 260/180/170/220px，序号区 64px，合计 894px。宽容器的剩余空间平均分配给四列，窄容器保留基础宽度和横向滚动；这是此包版本的行为，不是其他业务表格的通用列宽。
@@ -81,7 +82,7 @@ Service 固定当前部署 `appKey` 和 `viewType: MY`。已完成是当前用�
 
 ## 多端边界
 
-正式 `0.2.7` 不包含手机卡片能力；本轮源码新增的 `MyApprovalsPage presentation="mobile"` 尚未发布。接入前核对实际安装产物的类型和行为；不能只根据本节向旧版本传参并宣称适配完成。用户未授权发布时，可用临时配置解析本地构建产物验证，验证依赖与正式依赖分开说明，不改变生产安装合同。
+已核验的 0.2.10 发布产物包含 `MyApprovalsPage presentation="mobile"` 和详情布局插槽 `detail/sections/actionItems`。0.2.7 不包含这些手机能力；旧版本先核对并升级到具备所需能力的正式产物，不能直接传入不存在的参数。审批包与 `make-app-mobile` 分别核验，不能因审批包升级就认定移动组件包也已支持所有控件。
 
 支持该能力的产物中，宿主由已有响应式上下文选择 `presentation="mobile"`，桌面/平板不传或传 `desktop`。手机公共卡片、列表查询状态、滚动追加、失败重试与下拉刷新归审批包；宿主只提供手机基础控件适配、导航、provider 和详情容器，不复制一套列表/分页 Controller。不生成不存在的 `MobileMyApprovalsPage` 导出。
 
@@ -91,4 +92,4 @@ Service 固定当前部署 `appKey` 和 `viewType: MY`。已完成是当前用�
 - 手机列表内部滚动，临近底部追加，保留同一记录的不同任务；加载更多提供可点击后备入口，失败保留已加载卡片并重试。顶部下拉刷新沿用已应用条件，无独立刷新按钮；切换条件/身份取消旧请求，详情开关不刷新列表。
 - 日期范围、人员搜索复用宿主移动控件，弹层不被列表裁切；使用现有主题，不能为复刻截图另加品牌色。根导航及账号入口由 makeui/宿主保持一份。
 
-手机详情、字段、审批记录、意见输入框、固定操作栏与导航统一遵循 [移动端适配](mobile.md)。本轮源码新增的 `detail/sections/actionItems` 仍是未发布能力；不能向旧产物虚构参数。桌面/平板保留原控件、容器与操作位置。
+手机详情、字段、审批记录、意见输入框、固定操作栏与导航统一遵循 [移动端适配](mobile.md)。通过已发布的 `detail/sections/actionItems` 组合宿主 View，继续复用包的办理控制器；桌面/平板保留原控件、容器与操作位置。
