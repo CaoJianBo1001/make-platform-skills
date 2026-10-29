@@ -36,6 +36,8 @@
 
 使用随包 [纯布局适配器](../assets/mobile-detail-layout.mjs) 组合公开插槽；它不读取字段值、不请求、不生成授权动作。宿主接入时沿用已有页头及桌面 renderLayout。hasFieldErrors 是现有字段校验结果，不能另写数值转换；provider 仍在序列化、附件预上传和发送动作前复核全部已修改字段，禁用按钮不能替代提交边界校验。
 
+宿主页头接收公开 slots，按 [流程状态标题合同](status-display.md#展示合同) 使用 detail 中的真实状态；需要修正文案时替换标题组，不同时保留旧 Tag。无 detail 时保留 slots.title；沿用原标题排版，不改变控制器、字段及动作。
+
 ```tsx
 import type { ApprovalTaskDetailProps } from '@qfei-design/make-app-approval/detail';
 // composeApprovalTaskLayout 来自随包参考适配器；两个 renderExisting... 是宿主已有容器接线。
@@ -43,7 +45,7 @@ const renderLayout: NonNullable<ApprovalTaskDetailProps['renderLayout']> = (slot
   if (presentation !== 'mobile') return renderExistingDesktopLayout(slots);
   const view = composeApprovalTaskLayout(slots, { presentation, hasFieldErrors });
   return <MobileDetailPage
-    header={renderExistingMobileHeader(slots.title)}
+    header={renderExistingMobileHeader(slots)}
     sections={view.sections}
     trailingContent={view.content ?? <>{view.opinion}{view.feedback}</>}
     footer={view.actions.length > 0 ? <MobileFormActionBar size="small" actions={view.actions} /> : null}
@@ -55,10 +57,10 @@ const renderLayout: NonNullable<ApprovalTaskDetailProps['renderLayout']> = (slot
 
 ## 紧凑审批时间线
 
-- 仅手机历史 View 使用 make-app-mobile 的 MobileTimeline，宿主仅映射 items，不再复制时间线 JSX/CSS；按 [共享数据源与滚动加载](history.md#共享数据源与滚动加载) 复用 PC 的 timeline 查询、授权、页大小、页码转换、取消和重试。手机滚动续载而非手动翻页，不合并重复节点/轮次，不另造接口或逐条读取详情。
+- 仅手机历史 View 使用 make-app-mobile 的 MobileTimeline，宿主仅映射 items，不再复制时间线 JSX/CSS；按 [共享数据源与滚动展示](history.md#共享数据源与滚动展示) 复用 PC 的 timeline 完整查询、授权、取消和重试。一次获取全部事件，滚动不追加请求，不合并重复节点/轮次，不另造接口或逐条读取详情。
 - 节点标题与结果同排，标题突出、结果使用既有主题；审批人与完整时间合并为弱化文字行，窄屏允许换行。圆点用细线连接，最后节点不继续连线，缩小记录间距。
 - 意见有内容时直接显示普通文字；空、纯空白或既有空值占位符 `-` 不展示，不显示“审批意见：—”，不增加底色卡片。保留换行与长文本折行。
-- 结果与 PC 共用 [历史结果适配](history.md#共享历史结果)：只读取事件 processStatusAfter，沿用公共状态函数及历史 RETURNING 的“退回修改”标签，不以 actionType 或当前实例状态替代。两端使用同一事件、定位和分页，手机只改变布局与空意见展示。
+- 结果与 PC 共用 [历史结果适配](history.md#共享历史结果)：直接显示事件 actionResult，未知文本原样保留，空值为 `-`，不以 actionType 或当前实例状态替代。两端使用同一完整事件列表与定位，手机只改变布局与空意见展示。
 
 ## 业务对象详情中的审批区域
 
