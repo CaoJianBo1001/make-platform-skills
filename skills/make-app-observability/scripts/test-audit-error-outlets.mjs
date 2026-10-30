@@ -19,15 +19,21 @@ const write = (root, file, text) => {
   const target = path.join(root, file); mkdirSync(path.dirname(target), { recursive: true }); writeFileSync(target, text);
 };
 let id = 0;
-const run = (files) => {
+const run = (files, options = {}) => {
+  const { withoutSatisfiesApi = false, ...spawnOptions } = options;
   const root = path.join(temp, String(++id));
   write(root, 'apps/ui/package.json', '{}');
   mkdirSync(path.join(root, 'apps/ui/node_modules'), { recursive: true });
-  symlinkSync(path.dirname(tsDirectory), path.join(root, 'apps/ui/node_modules/typescript'));
+  if (withoutSatisfiesApi) {
+    write(root, 'apps/ui/node_modules/typescript/index.js',
+      `module.exports = { ...require(${JSON.stringify(path.dirname(tsDirectory))}), isSatisfiesExpression: undefined };`);
+  } else {
+    symlinkSync(path.dirname(tsDirectory), path.join(root, 'apps/ui/node_modules/typescript'));
+  }
   write(root, 'apps/ui/src/outlet.tsx', `import {MakeAppErrorNotice,MakeAppErrorNoticeViewport} from '@qfei-design/make-app-observability/react';
     export const Outlet=()=> <MakeAppErrorNoticeViewport><MakeAppErrorNotice title="失败" /></MakeAppErrorNoticeViewport>;`);
   for (const [file, text] of Object.entries(files)) write(root, `apps/ui/src/${file}`, text);
-  const result = spawnSync(process.execPath, [audit, root], { encoding: 'utf8' });
+  const result = spawnSync(process.execPath, [audit, root], { encoding: 'utf8', ...spawnOptions });
   return { code: result.status, output: `${result.stdout}${result.stderr}` };
 };
 const imports = `import {MakeAppErrorNotice as Card} from '@qfei-design/make-app-observability/react';`;
@@ -156,4 +162,226 @@ test('含中文和空格的安装路径可以运行自测（默认解析及 CI �
     assert.equal(result.status, 0, `${ci ? 'CI' : '默认'} 路径解析失败\n${result.stdout}${result.stderr}`);
     assert.match(result.stdout, /# pass 1\b/, '子进程必须实际执行路径回归，不能全部跳过');
   }
+});
+
+for (const rethrow of ['throw inner', 'throw new Error("请求失败", {cause: inner})']) {
+  test(`嵌套请求异常重抛不能被外层本地校验声明豁免：${rethrow}`, () => {
+    const result = run({ 'nested.ts': `async function save(){try{try{await fetch('/api/save')}catch(inner){${rethrow}}}catch(error){
+      // make-error-outlet-local-validation: 仅校验当前字段，不执行网络请求
+      messageApi.error(error.message);
+    }}` });
+    assert.equal(result.code, 1, result.output);
+    assert.match(result.output, /request_error_string_toast/);
+  });
+}
+for (const name of ['fetch', 'request', 'requestJson']) {
+  test(`同名本地函数 ${name} 不冒充请求来源`, () => {
+    const result = run({ 'local.ts': `function ${name}(input){return JSON.parse(input)}function validate(){try{${name}(input)}catch(error){
+      // make-error-outlet-local-validation: 仅解析当前字段，不执行网络请求
+      messageApi.error(error.message);
+    }}` });
+    assert.equal(result.code, 0, result.output);
+  });
+}
+test('同名本地函数来源未获确认时仍需核查', () => {
+  const result = run({ 'local.ts': `function fetch(input){return JSON.parse(input)}function validate(){try{fetch(input)}catch(error){messageApi.error(error.message)}}` });
+  assert.equal(result.code, 1, result.output);
+  assert.match(result.output, /exception_toast_origin_unverified/);
+});
+test('本地请求包装函数不能利用声明绕过真实 fetch', () => {
+  const result = run({ 'remote.ts': `const request=()=>fetch('/api/save');async function save(){try{await request()}catch(error){
+    // make-error-outlet-local-validation: 仅校验当前字段，不执行网络请求
+    messageApi.error(error.message);
+  }}` });
+  assert.equal(result.code, 1, result.output);
+  assert.match(result.output, /request_error_string_toast/);
+});
+test('内部已完整处理的请求异常不污染后续本地校验', () => {
+  const result = run({ 'local.ts': `async function validate(){try{try{await fetch('/api/save')}catch(inner){console.error(inner)}JSON.parse(input)}catch(error){
+    // make-error-outlet-local-validation: 请求异常已在内部处理，这里仅校验当前字段
+    messageApi.error(error.message)}}` });
+  assert.equal(result.code, 0, result.output);
+});
+test('重抛又在内部被捕获时，不将已消化请求传播给外层', () => {
+  const result = run({ 'local.ts': `async function validate(){try{try{await fetch('/api/save')}catch(inner){try{throw inner}catch(handled){console.error(handled)}}JSON.parse(input)}catch(error){
+    // make-error-outlet-local-validation: 内部已处理请求，这里仅解析当前字段
+    messageApi.error(error.message);
+  }}` });
+  assert.equal(result.code, 0, result.output);
+});
+test('本地请求包装函数经别名调用也不能被声明豁免', () => {
+  const result = run({ 'remote.ts': `function send(){return fetch('/api/save')}const request=send;async function save(){try{await request()}catch(error){
+    // make-error-outlet-local-validation: 仅校验当前表单字段
+    messageApi.error(error.message);
+  }}` });
+  assert.equal(result.code, 1, result.output);
+  assert.match(result.output, /request_error_string_toast/);
+});
+
+for (const member of ["request:()=>fetch('/api/save')", "async request(){return await fetch('/api/save')}", 'request:send']) {
+  test(`对象成员请求包装保持来源：${member}`, () => {
+    const result = run({ 'remote.ts': `const send=()=>fetch('/api/save');const api={${member}};async function save(){try{await api.request()}catch(error){
+      // make-error-outlet-local-validation: 仅校验当前字段，不执行网络请求
+      messageApi.error(error.message);
+    }}` });
+    assert.equal(result.code, 1, result.output);
+    assert.match(result.output, /request_error_string_toast/);
+  });
+}
+for (const body of [
+  "try{await fetch('/api/save')}catch(inner){console.error(inner)}JSON.parse(input)",
+  "try{try{await fetch('/api/save')}catch(inner){throw inner}}catch(handled){console.error(handled)}JSON.parse(input)",
+]) {
+  test(`包装函数内已处理的请求不污染外层校验：${body}`, () => {
+    const result = run({ 'local.ts': `async function request(){${body}}async function save(){try{await request()}catch(error){
+      // make-error-outlet-local-validation: 请求异常已内部处理，这里仅校验字段
+      messageApi.error(error.message);
+    }}` });
+    assert.equal(result.code, 0, result.output);
+  });
+}
+test('对象内纯本地校验支持限定声明', () => {
+  const result = run({ 'local.ts': `const api={request:(input)=>JSON.parse(input)};function validate(){try{api.request(input)}catch(error){
+    // make-error-outlet-local-validation: 仅解析当前字段，不执行网络请求
+    messageApi.error(error.message);
+  }}` });
+  assert.equal(result.code, 0, result.output);
+});
+test('包装函数捕获后重抛仍保留请求来源', () => {
+  const result = run({ 'remote.ts': `async function request(){try{await fetch('/api/save')}catch(error){throw new Error('请求失败',{cause:error})}}async function save(){try{await request()}catch(error){
+    // make-error-outlet-local-validation: 仅校验当前字段，不执行网络请求
+    messageApi.error(error.message);
+  }}` });
+  assert.equal(result.code, 1, result.output);
+  assert.match(result.output, /request_error_string_toast/);
+});
+for (const asyncPrefix of ['', 'async ']) {
+  test(`try 内直接返回请求 Promise 不能冒充已捕获异常：${asyncPrefix || '同步包装'}`, () => {
+    const result = run({ 'remote.ts': `${asyncPrefix}function request(){try{return fetch('/api/save')}catch(error){console.error(error)}}async function save(){try{await request()}catch(error){
+      // make-error-outlet-local-validation: 仅校验当前字段，不执行网络请求
+      messageApi.error(error.message);
+    }}` });
+    assert.equal(result.code, 1, result.output);
+    assert.match(result.output, /request_error_string_toast/);
+  });
+}
+
+for (const binding of [
+  "const request=()=>fetch('/api/save');const api={request};",
+  "const request=(()=>fetch('/api/save'));const api={request};",
+  "const api={request:(()=>fetch('/api/save'))};",
+  "const request=(()=>fetch('/api/save'));const api={request:(request)};",
+]) {
+  test(`简写或括号请求包装不能被本地声明豁免：${binding}`, () => {
+    const result = run({ 'remote.ts': `${binding}async function save(){try{await api.request()}catch(error){
+      // make-error-outlet-local-validation: 仅校验当前字段，不执行网络请求
+      messageApi.error(error.message);
+    }}` });
+    assert.equal(result.code, 1, result.output);
+    assert.match(result.output, /request_error_string_toast/);
+  });
+}
+test('直接调用带括号的请求包装仍保留来源', () => {
+  const result = run({ 'remote.ts': `const request=(()=>fetch('/api/save'));async function save(){try{await (request)()}catch(error){
+    // make-error-outlet-local-validation: 仅校验当前字段，不执行网络请求
+    messageApi.error(error.message);
+  }}` });
+  assert.equal(result.code, 1, result.output);
+  assert.match(result.output, /request_error_string_toast/);
+});
+for (const declaration of ['const request=((input)=>JSON.parse(input));const api={request};', 'const api={request:((input)=>JSON.parse(input))};']) {
+  test(`同类本地解析包装保留限定声明：${declaration}`, () => {
+    const result = run({ 'local.ts': `${declaration}function validate(){try{api.request(input)}catch(error){
+      // make-error-outlet-local-validation: 仅解析当前字段，不执行网络请求
+      messageApi.error(error.message);
+    }}` });
+    assert.equal(result.code, 0, result.output);
+  });
+}
+
+for (const expression of ['fetch as typeof fetch', '<typeof fetch>fetch', 'fetch!', 'fetch satisfies typeof fetch', '((fetch as typeof fetch)!)']) {
+  test(`类型包装不改变真实请求来源：${expression}`, () => {
+    const result = run({ 'remote.ts': `const request=(${expression});async function save(){try{await request('/api/save')}catch(error){
+      // make-error-outlet-local-validation: 仅校验当前字段，不执行网络请求
+      messageApi.error(error.message);
+    }}` });
+    assert.equal(result.code, 1, result.output);
+    assert.match(result.output, /request_error_string_toast/);
+  });
+}
+test('类型包装的纯本地函数仍可用限定声明', () => {
+  const result = run({ 'local.ts': `const request=(((input)=>JSON.parse(input)) as (value:string)=>unknown);function validate(){try{request(input)}catch(error){
+    // make-error-outlet-local-validation: 仅解析当前字段，不执行网络请求
+    messageApi.error(error.message);
+  }}` });
+  assert.equal(result.code, 0, result.output);
+});
+test('二十四层共享调用图在有界时间内完成且仍要求核查未知来源', () => {
+  let code = 'function base(){JSON.parse(input)}';
+  let previous = 'base';
+  for (let index = 0; index < 24; index++) {
+    code += `function layer${index}(){${previous}();${previous}()}`;
+    previous = `layer${index}`;
+  }
+  code += `function validate(){try{${previous}()}catch(error){messageApi.error(error.message)}}`;
+  const result = run({ 'shared.ts': code }, { timeout: 5000 });
+  assert.equal(result.code, 1, result.output || '共享调用图超时或异常退出');
+  assert.match(result.output, /exception_toast_origin_unverified/);
+});
+test('循环调用图内真实请求不会被负缓存掩盖，两个入口都须拦截', () => {
+  const result = run({ 'remote.ts': `function a(){b();fetch('/api/save')}function b(){a()}
+    function saveA(){try{a()}catch(error){
+      // make-error-outlet-local-validation: 仅校验当前字段
+      messageApi.error(error.message);
+    }}
+    function saveB(){try{b()}catch(error){
+      // make-error-outlet-local-validation: 仅校验当前字段
+      messageApi.error(error.message);
+    }}` });
+  assert.equal(result.code, 1, result.output);
+  assert.equal((result.output.match(/FAIL request_error_string_toast/g) ?? []).length, 2, result.output);
+});
+test('无请求循环图终止分析并保留未知来源门禁', () => {
+  const result = run({ 'local.ts': `function a(){b()}function b(){a()}function validate(){try{a()}catch(error){messageApi.error(error.message)}}` }, { timeout: 5000 });
+  assert.equal(result.code, 1, result.output);
+  assert.match(result.output, /exception_toast_origin_unverified/);
+});
+test('请求入口的正缓存不污染先访问的本地分支', () => {
+  const result = run({ 'mixed.ts': `function local(){JSON.parse(input)}function remote(){fetch('/api/save')}function mixed(){remote();local()}
+    function save(){try{mixed()}catch(error){
+      // make-error-outlet-local-validation: 仅校验字段
+      messageApi.error(error.message);
+    }}
+    function validate(){try{local()}catch(error){
+      // make-error-outlet-local-validation: 仅解析当前字段，不执行网络请求
+      messageApi.error(error.message);
+    }}` });
+  assert.equal(result.code, 1, result.output);
+  assert.equal((result.output.match(/FAIL request_error_string_toast/g) ?? []).length, 1, result.output);
+});
+test('已缓存的本地分支不掩盖兄弟分支中的请求', () => {
+  const result = run({ 'mixed.ts': `function local(){JSON.parse(input)}function remote(){fetch('/api/save')}function mixed(){local();remote()}
+    function validate(){try{local()}catch(error){
+      // make-error-outlet-local-validation: 仅解析当前字段，不执行网络请求
+      messageApi.error(error.message);
+    }}
+    function save(){try{mixed()}catch(error){
+      // make-error-outlet-local-validation: 仅校验字段
+      messageApi.error(error.message);
+    }}` });
+  assert.equal(result.code, 1, result.output);
+  assert.equal((result.output.match(/FAIL request_error_string_toast/g) ?? []).length, 1, result.output);
+});
+
+test('缺少 satisfies API 时普通请求仍按审计失败处理而非崩溃', () => {
+  const result = run({ 'remote.ts': `async function save(){try{await fetch('/api/save')}catch(error){messageApi.error(error.message)}}` }, { withoutSatisfiesApi: true });
+  assert.equal(result.code, 1, result.output);
+  assert.match(result.output, /FAIL request_error_string_toast/);
+  assert.match(result.output, /status: FAIL/);
+  assert.doesNotMatch(result.output, /TypeError|isSatisfiesExpression is not a function/);
+});
+test('缺少 satisfies API 时合法本地解析保持通过', () => {
+  const result = run({ 'local.ts': `function validate(input){try{JSON.parse(input)}catch(error){messageApi.error(error.message)}}` }, { withoutSatisfiesApi: true });
+  assert.equal(result.code, 0, result.output);
+  assert.match(result.output, /status: PASS/);
 });

@@ -42,7 +42,14 @@ for (const file of files) {
     if (ts.isIdentifier(node)) return [checker.getSymbolAtLocation(node)].filter(Boolean);
     return node.elements.flatMap(element => ts.isOmittedExpression(element) ? [] : bindingSymbols(element.name));
   };
+  const unwrapExpression = expression => {
+    while (expression && (ts.isParenthesizedExpression(expression) || ts.isAsExpression(expression)
+      || ts.isTypeAssertionExpression(expression) || ts.isNonNullExpression(expression)
+      || (typeof ts.isSatisfiesExpression === 'function' && ts.isSatisfiesExpression(expression)))) expression = expression.expression;
+    return expression;
+  };
   const importedRequest = expression => {
+    expression = unwrapExpression(expression);
     if (ts.isPropertyAccessExpression(expression)) return importedRequest(expression.expression);
     if (!ts.isIdentifier(expression)) return false;
     return (checker.getSymbolAtLocation(expression)?.declarations ?? []).some(declaration => {
@@ -52,16 +59,108 @@ for (const file of files) {
       return false;
     });
   };
+  // 缓存只在本文件、本次 Program 内使用；仅复用已完成的摘要/可达性结果。
+  const requestSummaries = new Map();
+  const requestResults = new Map();
+  const resolveRequestTarget = expression => {
+    expression = unwrapExpression(expression);
+    if (importedRequest(expression)) return { direct: true };
+    const target = ts.isPropertyAccessExpression(expression) ? expression.name : expression;
+    const propertySymbol = checker.getSymbolAtLocation(target);
+    const shorthand = propertySymbol?.declarations?.find(ts.isShorthandPropertyAssignment);
+    const symbol = shorthand ? checker.getShorthandAssignmentValueSymbol(shorthand) : propertySymbol;
+    if (symbol?.declarations?.length) return { symbol };
+    const name = ts.isIdentifier(target) ? target.text : '';
+    return { direct: /^(?:fetch|request|requestJson|requestMake[A-Z]\w*)$/.test(name) };
+  };
+  const summarizeRequestSymbol = symbol => {
+    if (requestSummaries.has(symbol)) return requestSummaries.get(symbol);
+    const summary = { direct: false, dependencies: new Set() };
+    const addTarget = expression => {
+      const target = resolveRequestTarget(expression);
+      summary.direct ||= target.direct === true;
+      if (target.symbol) summary.dependencies.add(target.symbol);
+    };
+    for (const declaration of symbol.declarations) {
+      const value = unwrapExpression(ts.isVariableDeclaration(declaration) || ts.isPropertyAssignment(declaration)
+        ? declaration.initializer : declaration);
+      if (!value) continue;
+      if (ts.isIdentifier(value) || ts.isPropertyAccessExpression(value)) {
+        addTarget(value);
+      } else if (ts.isFunctionLike(value) && value.body) {
+        visitEscapingSource(value.body, node => {
+          if (ts.isCallExpression(node)) addTarget(node.expression);
+        });
+      }
+    }
+    requestSummaries.set(symbol, summary);
+    return summary;
+  };
   const isRequestCall = expression => {
-    const name = ts.isIdentifier(expression) ? expression.text : ts.isPropertyAccessExpression(expression) ? expression.name.text : '';
-    return /^(?:fetch|request|requestJson|requestMake[A-Z]\w*)$/.test(name) || importedRequest(expression);
+    const target = resolveRequestTarget(expression);
+    if (!target.symbol) return target.direct === true;
+    if (requestResults.has(target.symbol)) return requestResults.get(target.symbol);
+    const pending = [target.symbol];
+    const visited = new Set();
+    let found = false;
+    while (pending.length) {
+      const symbol = pending.pop();
+      if (visited.has(symbol)) continue;
+      visited.add(symbol);
+      if (requestResults.has(symbol)) {
+        if (requestResults.get(symbol)) { found = true; break; }
+        continue;
+      }
+      const summary = summarizeRequestSymbol(symbol);
+      if (summary.direct) { found = true; break; }
+      for (const dependency of summary.dependencies) pending.push(dependency);
+    }
+    if (found) {
+      // 不能把已访问的无关分支一起记为请求来源。
+      requestResults.set(target.symbol, true);
+    } else {
+      // 完整遍历可达子图后才能缓存 false；循环回边本身不是负结论。
+      for (const symbol of visited) requestResults.set(symbol, false);
+    }
+    return found;
+  };
+  // 外层 catch 与局部包装函数共用同一异常来源遍历，避免两套规则漂移。
+  const visitEscapingSource = (node, callback) => {
+    if (ts.isFunctionLike(node)) return;
+    callback(node);
+    if (ts.isTryStatement(node)) {
+      if (!node.catchClause || hasEscapingThrow(node.catchClause.block)) {
+        visitEscapingSource(node.tryBlock, callback);
+      } else {
+        // return fetch() 返回的 Promise 拒绝不受本层同步 catch 保护；return await 才受保护。
+        const visitReturns = child => {
+          if (ts.isFunctionLike(child)) return;
+          if (ts.isReturnStatement(child) && child.expression) {
+            const expression = unwrapExpression(child.expression);
+            if (!ts.isAwaitExpression(expression)) visitEscapingSource(expression, callback);
+            return;
+          }
+          ts.forEachChild(child, visitReturns);
+        };
+        visitReturns(node.tryBlock);
+      }
+      if (node.catchClause) visitEscapingSource(node.catchClause.block, callback);
+      if (node.finallyBlock) visitEscapingSource(node.finallyBlock, callback);
+      return;
+    }
+    ts.forEachChild(node, child => visitEscapingSource(child, callback));
+  };
+  const escapingThrows = new WeakMap();
+  const hasEscapingThrow = block => {
+    if (escapingThrows.has(block)) return escapingThrows.get(block);
+    let found = false;
+    visitEscapingSource(block, node => { if (ts.isThrowStatement(node)) found = true; });
+    escapingThrows.set(block, found);
+    return found;
   };
   const classifyCatchSource = node => {
     let localOperation = false, onlyLocal = true, hasRequest = false;
-    const inspect = child => {
-      // 函数体和内部已经处理过的 try 不属于当前 catch 的直接异常来源。
-      if (ts.isFunctionLike(child)) return;
-      if (ts.isTryStatement(child)) { if (child.finallyBlock) inspect(child.finallyBlock); if (child.catchClause) inspect(child.catchClause.block); else inspect(child.tryBlock); return; }
+    visitEscapingSource(node.parent.tryBlock, child => {
       if (ts.isCallExpression(child)) {
         hasRequest ||= isRequestCall(child.expression);
         const expression = child.expression;
@@ -74,9 +173,7 @@ for (const file of files) {
       }
       if (ts.isAwaitExpression(child) || ts.isYieldExpression(child) || ts.isTaggedTemplateExpression(child)) onlyLocal = false;
       if (ts.isNewExpression(child) || ts.isThrowStatement(child)) onlyLocal = false;
-      ts.forEachChild(child, inspect);
-    };
-    inspect(node.parent.tryBlock);
+    });
     const comments = ts.getLeadingCommentRanges(source.text, node.block.getStart(source) + 1) ?? [];
     const reason = comments.map(comment => source.text.slice(comment.pos, comment.end))
       .map(comment => /^\/\/\s*make-error-outlet-local-validation:\s*(.+)$/.exec(comment)?.[1]?.trim())
