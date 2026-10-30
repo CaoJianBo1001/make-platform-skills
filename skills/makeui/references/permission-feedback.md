@@ -64,6 +64,8 @@ There is no npm `showForbidden`, `useAppAdministrators` or automatic 403 interce
 
 `help`, `notice`, callbacks and `AppPermissionFeedback` above are host-owned. Import `MakeAppErrorNoticeViewport` from the same `/react` entry when used; reuse the existing outlet rather than nesting or duplicating it. The package owns timing and hiding; the host owns queue deduplication, action context and removal of the matching item in `onClose`. Do not add a second host timer. Allocate `notice.id` once per event and pass it as both React key and `noticeKey`, including for ordinary `MakeAppErrorNotice`; this prevents unrelated rerenders or newly created callback references from extending the lifetime. A same-text new event gets a new id. Administrator loading itself must not reset the timer. Use the public `duration` prop for an intentional lifetime override. Select inline or Toast for one rejection rather than duplicating both messages.
 
+When explicitly migrating existing feedback, follow [error outlet migration](../../make-app-observability/references/error-outlet-migration.md): operation Toasts reuse the root outlet, including Toasts produced through host adapters. Do not retain a page-local floating message container for packaged error or permission cards. Keep intentional inline/page guidance persistent and local validation in its existing surface.
+
 ## Toast 生命周期
 
 统一遵循 [Toast 默认关闭与宿主接线](../../make-app-observability/references/package-integration.md#toast-默认关闭与宿主接线)。不能仅凭 `0.1.9` 版本号认定已支持自动关闭；先核对目标发布产物的公开文档、类型和挂载行为，新 API 尚未发布时报告发布阻断。
