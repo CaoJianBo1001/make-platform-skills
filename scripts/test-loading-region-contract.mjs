@@ -11,4 +11,5 @@ for (const requirement of ['水平和垂直居中', 'Shell 尚未挂载', '主�
 for (const file of ['skills/makeui/SKILL.md', 'skills/make-app-permission/references/ui-permission-runtime.md', 'skills/make-app-auth/SKILL.md']) {
   assert.match(read(file), /app-shell-layout\.md#区域加载态/, `${file} 必须交接统一加载布局合同`);
 }
+assert.match(read('skills/makeui/SKILL.md'), /存量项目.*提前返回.*权限守卫.*Provider/, '存量项目检查须覆盖权限守卫和 Provider 的提前返回分支');
 console.log('区域加载态文档合同通过；实际几何居中需宿主浏览器验收');
