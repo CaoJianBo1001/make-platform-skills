@@ -51,7 +51,7 @@ Compiler integration:
 - empty condition rows do not compile
 - invalid field identifiers do not compile
 - search group merges with advanced filter through `AND`
-- `compileListFilter` returns `undefined` for no valid expression
+- `compileListFilter` returns `undefined` only for a genuinely empty filter; invalid non-empty trees throw
 
 UI behavior:
 
@@ -127,3 +127,8 @@ Service and integration:
 - changing an operator to empty/not-empty leaves an old value error on the row
 - missing fixed top header and bottom footer, or placing header/footer actions inside the scrollable condition body, is a blocker/regression for advanced filter delivery
 - full-panel scroll makes `清空所有`, `+ 添加条件`, `+ 添加条件组`, or `确认` scroll away from the user
+
+
+## 修复版筛选合同（必读）
+
+详见 [条件组回显与编译异常](roundtrip-and-errors.md)：实际修复产物门槛、保存/查询分离、括号原文保留、后端结构和值范围、编译失败停止请求及真实宿主验收。此合同优先于历史版本基线；包内负责逻辑，不在宿主复制实现。

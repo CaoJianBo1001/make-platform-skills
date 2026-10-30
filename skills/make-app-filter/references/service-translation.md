@@ -36,7 +36,7 @@ const query = filter ? { filter } : {};
 
 When using a GET route, JSON-encode the `filter` query value if the host API expects query strings.
 
-If no valid expression exists, omit `filter`.
+Only when compilation succeeds with a genuinely empty filter, omit `filter`; compilation errors must stop the request.
 
 Invalid empty values:
 
@@ -49,7 +49,7 @@ Invalid empty values:
 ## CEL subset
 
 The package owns CEL output. Do not hand-concatenate expression strings in the host.
-Treat `compileListFilter` as the sole compiler and send its returned filter object
+For records queries, treat `compileListFilter` as the compiler and send its returned filter object
 unchanged to Service/backend. Do not parse, distribute, normalize, or otherwise
 rewrite boolean expressions in the host. If the backend rejects current package
 output, report a package/backend contract mismatch and fix that shared boundary.
@@ -59,8 +59,7 @@ advanced filtering is enabled, its applied state are passed to `compileListFilte
 unchanged. Exact comparison, collection, range, empty-check, and boolean-grouping
 syntax belongs to package tests and published package documentation.
 
-System variables remain right-hand values such as `_currentUser`,
-`_currentUserDepartment`, `_today`, or `_now`; do not use them as field keys.
+Editable system variables use only the package-supported structured `_currentUser` value on supported single-user operators; backend-only variables are not fake editable values.
 DateRange, File, and resolved Lookup fields are supported by the `1.0.0` package
 baseline through the same compiler path.
 
@@ -69,8 +68,8 @@ Use `parseCelToAdvancedFilter` only for supported expression echo or deep-link c
 ## Safety rules
 
 - Field keys must match the package field-key pattern.
-- Unsupported field/operator combinations compile to no expression.
-- Conditions with missing field, operator, or required value compile to no expression.
+- Unsupported field/operator combinations fail the entire compilation; stop requests and preserve applied state.
+- Conditions with missing field, operator, or required value fail the entire compilation.
 - DateRange, File, and Lookup may be exposed only when the installed package publicly supports their field/operator semantics. Unknown field types are not compiled.
 - Empty/not-empty expressions must follow backend field-type semantics. Do not invent `size(field)` forms for scalar fields or target-field paths for Lookup.
 - Lookup filters reference the Lookup field key on the current Entity, not `lookupField.targetField`, `targetEntity.field`, or other cross-object paths.
@@ -88,3 +87,8 @@ Service should:
 - log only safe context, never tokens or raw signed URLs
 
 Use `make-app-service` for route implementation, adapter logging, and Service tests.
+
+
+## 修复版筛选合同（必读）
+
+详见 [条件组回显与编译异常](roundtrip-and-errors.md)：实际修复产物门槛、保存/查询分离、括号原文保留、后端结构和值范围、编译失败停止请求及真实宿主验收。此合同优先于历史版本基线；包内负责逻辑，不在宿主复制实现。

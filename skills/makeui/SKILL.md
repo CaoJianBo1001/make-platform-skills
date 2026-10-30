@@ -9,6 +9,8 @@ metadata:
 
 区域阻塞加载统一遵循 [区域加载态](references/app-shell-layout.md#区域加载态)：在所属可见区域内水平、垂直居中，建立有效高度，覆盖刷新时的权限与 Schema 校验及局部面板加载。
 
+存量项目涉及加载或访问反馈布局时，先检查提前返回分支，包含权限守卫、认证／Schema Provider、路由 fallback 及局部面板；不能只检查业务页面内部的 Spin。发现左上角裸文本或单行高度的加载容器时，按上述区域合同修复并验收，保留原授权与请求行为。
+
 For React permission denial presentation, read `references/permission-feedback.md` and use the verified `MakeAppPermissionNotice` from `@qfei-design/make-app-observability/react` with the package CSS through one host adapter; do not recreate its UI. New or explicitly upgraded feedback integrations use `0.1.10+` and package-owned Toast timing with host event identity/queue cleanup; preserve untouched legacy Apps' locked versions. Respect the registry/local-prerelease gate. Presentation uses `variant` (`toast`, `inline`, `page`), independently of permission `scope`. For object/fixed-page read denial, preserve authorized navigation and the global identity header, but replace the entire business content slot including its title, toolbar, table headers, cards, forms and dialogs. Operation-only denial preserves allowed business UI and input. Read `make-app-permission/references/scoped-route-feedback.md`; only no authorized App entry permits full-page App denial. Keep the host's existing desktop/mobile and global error outlet contracts.
 
 Use this skill for Make App frontend UI work in `apps/ui`. The default stack is React + Vite + React Router, but `makeui` only owns UI structure and presentation decisions.

@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成、任务详情办理和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.22
+  version: 0.2.24
 ---
 
 # Make App 前台审批完整接入
@@ -32,7 +32,8 @@ metadata:
 | Lookup 节点内关系、目标最小描述与单/多选 | [依赖合同](references/lookup-metadata.md)、[纯解析器](assets/bpm-lookup-metadata.mjs)、[行为验证](scripts/verify-bpm-lookup-metadata.mjs) |
 | START 已有完整字段对象是否还需读取节点依赖 | [完整性判定](references/lookup-metadata.md#start-何时可以省略额外请求)、[行为验证](scripts/verify-bpm-start-metadata.mjs) |
 | 业务详情流程区、任务详情历史插槽、完整时间线与共用结果 | [审批历史](references/history.md)、[历史结果适配器](assets/history-result.mjs) |
-| 业务列表/详情流程状态、标题 Tag 和普通编辑锁 | [状态展示](references/status-display.md) |
+| 业务列表/详情流程状态、标题 Tag 和普通编辑限制 | [状态展示与禁编合同](references/status-display.md)、[旧包兼容适配器](assets/record-write-policy.mjs) |
+| 升级后核验 UI/Service 实际安装包的普通记录禁编行为 | [公开入口验证器](scripts/verify-record-write-policy.mjs)（参数为宿主包目录，检查 ESM/CJS，不替代入口及保存回归） |
 | 核验宿主已安装包的只读策略兼容性 | [包校验脚本](scripts/verify-task-detail-policy.mjs) |
 | 已完成/无动作任务的宿主只读策略参考代码 | [参考适配器](assets/task-detail-policy.mjs)（先读任务详情合同） |
 | 手机列表、混合编辑详情、时间线、底栏和导航 | [移动端适配](references/mobile.md)、[纯布局适配器](assets/mobile-detail-layout.mjs)（同时读取 makeui 手机规范） |
@@ -50,7 +51,7 @@ metadata:
 - **恢复与继续提交分开。** 已有记录仅明确 UNSUBMITTED 且未锁定时首次发起；RETURNING 通过当前任务 SUBMIT“继续提交”继续原实例。已撤回/拒绝/通过的记录不生成终态重新发起。
 - **撤回由真实发起人资格决定。** 读取最新流程及 starter，确认时重查；使用 appKey/entityKey/recordId 定位，不需要 bpmKey，不以业务申请人或普通编辑权限推断资格。
 - **状态来自记录。** `qfei_process_instance_status` 是只读系统字段；不新建同名 DSL 业务字段，不用业务状态、任务结果、锁字段或当前绑定推导流程状态。
-- **审批中记录禁止普通编辑。** 审批中、退回运行态或明确锁定的记录隐藏普通编辑按钮/菜单，单元格不得进入编辑或接受迟到提交；入口、保存及后台写入共同执行 [禁编合同](references/status-display.md#锁与范围)。不把新建发起字段权限扩展到普通编辑，也不误禁当前节点授权的任务办理。终态编辑政策沿用宿主已确认合同，本 skill 不另行改写。
+- **审批中及已通过记录禁止普通编辑。** `IN_APPROVAL`、`RETURNING`、`APPROVED` 或明确锁定的记录隐藏普通编辑按钮/菜单，单元格不得进入编辑或接受迟到提交；已通过即使解锁也保持只读。入口、保存及后台写入共同执行 [禁编合同](references/status-display.md#锁与范围)，旧包未覆盖 APPROVED 时由统一宿主适配器补齐。不把新建发起字段权限扩展到普通编辑，也不误禁当前节点授权的任务办理；已拒绝、已撤回不因本条规则新增禁编。
 
 ## 与现有 Skill 配合
 
