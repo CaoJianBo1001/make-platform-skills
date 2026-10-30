@@ -14,7 +14,7 @@
 
 ### 已完成任务与无动作任务的只读归一化
 
-Workflow 已完成任务可能仍返回历史 `editPermission: { scope: "field", fields: [...] }`，这不授予当前编辑资格。已核验的包 0.2.10 中，`readApprovalTaskDetail` 仍不保留 `taskStatus`，字段是否可编辑取决于 editPermission；只传 `actions: []` 会去掉按钮，但不会自动去掉编辑控件。
+Workflow 已完成任务可能仍返回历史 `editPermission: { scope: "field", fields: [...] }`，这不授予当前编辑资格。已核验的包 0.2.11 中，`readApprovalTaskDetail` 仍不保留 `taskStatus`，字段是否可编辑取决于 editPermission；只传 `actions: []` 会去掉按钮，但不会自动去掉编辑控件。
 
 宿主在每次 loadDetail 中先保留原任务 taskStatus，按上述合同组装并用 `readApprovalTaskDetail` 校验原权限/动作。校验通过后，仅 `taskStatus === "PENDING"` 且存在当前有效 actions 时保留编辑权限；其他情况将交给包的 `editPermission` 收紧为 `{ scope: "NONE" }`，actions 置空。保留 viewPermission、可见字段和值；不要在校验前覆盖历史权限而掩盖 editable 越过 visible 等非法响应。可复用 [只读策略参考适配器](../assets/task-detail-policy.mjs)，它接收包公开的 decoder，不复制包实现。
 
