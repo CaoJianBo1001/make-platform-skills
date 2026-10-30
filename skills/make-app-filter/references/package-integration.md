@@ -10,6 +10,8 @@ established; sibling sort/group Preset work remains owned by their Skills.
 
 ## Package version baseline
 
+历史功能下限仅用于辨认已有能力；本次接入必须先通过 [修复产物门槛](roundtrip-and-errors.md#修复产物门槛)，不能仅安装下列最低版本后宣称条件组问题已修复。
+
 Use `@qfei-design/make-app-filter@^1.0.0` for compiler-only and desktop/tablet advanced-filter integrations. This baseline covers Lookup filtering with source-field CEL expressions and the fixed panel structure. Phone advanced filtering uses `@qfei-design/make-app-filter@^1.1.0` and `@qfei-design/make-app-mobile@^0.1.11` together. The mobile package adds the filter Sheet and Select in 0.1.10, then the 32px Select/date-trigger fit and direct date-trigger `className` in 0.1.11. Filter 1.1.0 makes all injected `middle` controls 32px and marks controls in `layout="mobile"` with a mobile-scoped class. Verify the resolved public exports and types before integrating; declared ranges alone are insufficient.
 
 ## Public package surface
@@ -110,6 +112,7 @@ Lookup as `targetField`; unresolved and nested Lookup fields remain unsupported.
 ```tsx
 import {
   cloneFilterGroup,
+  compileAdvancedFilterToCel,
   compileListFilter,
 } from "@qfei-design/make-app-filter";
 import {
@@ -145,10 +148,12 @@ function AdvancedFilterPopover({
   candidateSources,
   filterableFields,
   onApplyError,
+  onCompileError,
   onApplyGroup,
   onPersistError,
   persistFilter,
   renderTrigger,
+  searchText,
 }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -191,12 +196,21 @@ function AdvancedFilterPopover({
     if (!validation.valid) return;
 
     const nextValue = cloneFilterGroup(controller.draftValue);
+    let filter;
+    try {
+      const expression = compileAdvancedFilterToCel(nextValue, filterableFields);
+      filter = expression ? { expression } : null;
+      compileListFilter({ advancedFilter: nextValue, fields: filterableFields, searchText });
+    } catch (error) {
+      onCompileError(error);
+      return;
+    }
     const requestId = Symbol("filter-preset-save");
     saveRequestRef.current = requestId;
     setSaving(true);
 
     try {
-      await persistFilter(nextValue, requestId);
+      await persistFilter({ filter }, requestId);
     } catch (error) {
       if (activeRef.current && saveRequestRef.current === requestId) {
         try {
@@ -249,7 +263,7 @@ function AdvancedFilterPopover({
 
 Host CSS should size only the outer container, for example width, max-height, and overflow. Do not duplicate package panel internals in host CSS.
 
-`persistFilter(nextValue, requestId)` only PATCHes the Preset through the shared
+`persistFilter({ filter }, requestId)` receives the already compiled sparse payload (no search, sort or group) and only PATCHes the Preset through the shared
 host Preset coordinator. That coordinator registers every filter/sort request ID,
 removes only the request that settled, and owns shared pending/error state. The
 panel-local `saveRequestRef` only prevents duplicate filter confirmation.
@@ -257,6 +271,7 @@ panel-local `saveRequestRef` only prevents duplicate filter confirmation.
 `onApplyGroup` synchronously replaces applied state after success; records reload
 from an effect/query key derived from permission-aware object context plus
 `appliedGroup`. Do not request records inside `persistFilter`.
+`onCompileError` shows validation/compilation failures before any PATCH or applied-state update. `searchText` is the current session search input, used only for query preflight; it is never persisted. Later search changes must use the same guarded query builder, not a throwing render/useMemo.
 `onPersistError` handles only PATCH failures; `onApplyError` separately owns
 synchronous applied-state callback failures after persistence has succeeded.
 
@@ -299,3 +314,8 @@ When migrating an older project, a small local shim may preserve old function na
 - package-manager or deployment policy in host apps
 - saved views or saved filter persistence
 - local filtering of already loaded Make record rows
+
+
+## 修复版筛选合同（必读）
+
+详见 [条件组回显与编译异常](roundtrip-and-errors.md)：实际修复产物门槛、保存/查询分离、括号原文保留、后端结构和值范围、编译失败停止请求及真实宿主验收。此合同优先于历史版本基线；包内负责逻辑，不在宿主复制实现。

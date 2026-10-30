@@ -2,7 +2,7 @@
 name: make-app-filter
 description: "Use when generating, integrating, reviewing, or debugging Make App record-list keyword search through Service filter.expression or advanced/conditional/table/header filtering with @qfei-design/make-app-filter. Triggered by 列表搜索, 关键词搜索, 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, CEL/DNF, field-type operators, candidate values, and filter Preset save/echo. In search-only mode, use the package compiler without a filter panel or Preset lifecycle. In advanced-filter mode, use the package panel, permission-aware Entity Preset, and desktop/tablet CanvasTable header linkage; phone uses the mobile panel layout. Consume make-app-permission list access. When make-app-actions is present, a successfully applied filter must clear its selection and invalidate pending work; drafts and failures preserve selection. Does not own page layout, CanvasTable internals, Service route implementation, sorting, grouping, auth, runtime, DSL, Make CLI, or table cell editing."
 metadata:
-  version: 0.1.20
+  version: 0.1.21
 ---
 
 # make-app-filter
@@ -36,7 +36,7 @@ Choose the mode before following the workflow. Panel, controller, filter Preset 
 
 1. Treat any Make record-list request containing "筛选", "高级筛选", "条件筛选", "表格筛选", "表头筛选", "列头筛选", or "按字段筛选" as the same filtering requirement. Desktop/tablet implement both the package-backed toolbar advanced filter and CanvasTable header linkage. Phone uses the package-backed top filter entry without CanvasTable/header linkage.
 2. Locate the host UI package, usually `apps/ui/package.json`. If no UI package exists, stop and report the missing host package.
-3. Ensure `@qfei-design/make-app-filter@^1.0.0` is installed for compiler-only or desktop/tablet use. Phone advanced filtering uses `@qfei-design/make-app-filter@^1.1.0` together with `@qfei-design/make-app-mobile@^0.1.11`, after the host compatibility gate. The former supplies 32px `middle` controls and mobile-scoped control classes; the latter supplies `MobileFilterSheet`, `MobileFilterSelect`, and date-trigger `className`. Check the resolved filter package's public React declaration for the `"mobile"` layout; earlier filter 1.0.0–1.0.3 lack it. Search-only phone lists need only the public core compiler, without either mobile panel gate. Do not substitute default/stacked layout or hand-write package internals.
+3. First apply the repaired-artifact gate in [roundtrip-and-errors.md](references/roundtrip-and-errors.md); the following version ranges describe historical feature floors only and cannot prove repaired group echo or error handling. Ensure `@qfei-design/make-app-filter@^1.0.0` is installed for compiler-only or desktop/tablet use. Phone advanced filtering uses `@qfei-design/make-app-filter@^1.1.0` together with `@qfei-design/make-app-mobile@^0.1.11`, after the host compatibility gate. The former supplies 32px `middle` controls and mobile-scoped control classes; the latter supplies `MobileFilterSheet`, `MobileFilterSelect`, and date-trigger `className`. Check the resolved filter package's public React declaration for the `"mobile"` layout; earlier filter 1.0.0–1.0.3 lack it. Search-only phone lists need only the public core compiler, without either mobile panel gate. Do not substitute default/stacked layout or hand-write package internals.
 4. Read package docs before designing code. Prefer installed package docs; if the host is working in the package repo, read source docs.
 5. In advanced-filter mode, import `@qfei-design/make-app-filter/styles.css` once in the host UI entry; search-only compiler use does not need panel styles.
 6. Both modes use the package core compiler. Advanced-filter mode additionally uses package panel, controller, adapter, validation, and CEL parse APIs. Do not copy or hand-write these capabilities in the host.
@@ -98,6 +98,10 @@ Required read procedure for installed `1.0.0+` packages:
 | Service route implementation and adapter tests | Use `make-app-service` |
 | Writable-list selection actions and applied-query invalidation | Use `make-app-actions` |
 
+## 修复版接入合同
+
+接入前必读 [条件组回显与编译异常](references/roundtrip-and-errors.md)，按实际修复产物验证，历史版本门槛不能替代该合同。保存高级筛选用 compileAdvancedFilterToCel，查询搜索组合用 compileListFilter；任何编译失败均停止请求，不得降级。
+
 ## Hard rules
 
 - Do not create new Make advanced-filter implementations in host apps. No hand-written Filter IR helpers, operator matrix, validator, CEL compiler/parser, or advanced filter panel when the package provides it.
@@ -106,7 +110,7 @@ Required read procedure for installed `1.0.0+` packages:
 - New integrations use the core API from `@qfei-design/make-app-filter`; advanced-filter integrations additionally use `@qfei-design/make-app-filter/react` and optional `@qfei-design/make-app-filter/adapters/antd`.
 - Advanced-filter integrations import `@qfei-design/make-app-filter/styles.css` once. Search-only compiler use does not require panel styles. Host CSS may style the outer overlay/container, but must not fork package internals unless fixing a host-specific containment issue.
 - New filter output uses `filter: { expression: string }`. If `compileListFilter` returns `undefined`, omit `filter`.
-- `compileListFilter` is the only host-facing search/advanced-filter compiler. Send its result unchanged; do not parse, redistribute, or rewrite CEL/DNF in host code.
+- `compileListFilter` is the records-query search/advanced-filter compiler; persist advanced-only drafts with `compileAdvancedFilterToCel`. Send its result unchanged; do not parse, redistribute, or rewrite CEL/DNF in host code.
 - The backend Record list handler reads only `filter.expression` from the `Expression` object and treats missing, `null`, or blank expressions as no filter.
 - Do not send `filter: []`, `filter: {}`, `{ expression: "" }`, blank raw filter strings, or old object-array DSL.
 - Do not filter Make record lists locally. List filtering goes through Service/backend filter APIs.

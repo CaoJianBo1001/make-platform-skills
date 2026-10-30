@@ -84,7 +84,7 @@ Filter confirmation follows:
 
 ```text
 validate package draft
-  -> compile advanced-filter expression
+  -> compileAdvancedFilterToCel(draft, fields), then preflight current search with compileListFilter
   -> PATCH Entity Preset with only { filter }
   -> save success for the active entityKey
   -> replace applied filter
@@ -142,3 +142,8 @@ Cover:
 - concurrent sparse filter/sort saves keep saving active until all requests settle
 - each concurrent save removes only its own request ID and preserves sibling errors
 - sort and group dimensions are not overwritten
+
+
+## 修复版筛选合同（必读）
+
+详见 [条件组回显与编译异常](roundtrip-and-errors.md)：实际修复产物门槛、保存/查询分离、括号原文保留、后端结构和值范围、编译失败停止请求及真实宿主验收。此合同优先于历史版本基线；包内负责逻辑，不在宿主复制实现。
