@@ -5,12 +5,13 @@ import { dirname, join, resolve } from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 
-if (process.argv.length !== 3) {
-  console.error('Usage: node verify-record-write-policy.mjs <host-package-directory>');
+const compatibilityMode = process.argv.length === 4 && process.argv[3] === '--compat';
+if (process.argv.length !== 3 && !compatibilityMode) {
+  console.error('Usage: node verify-record-write-policy.mjs <host-package-directory> [--compat]');
   process.exit(2);
 }
 
-console.log('Checking installed approval package ordinary-record policy (ESM/CJS)');
+console.log(`Checking installed approval package ordinary-record policy (ESM/CJS, ${compatibilityMode ? 'compat reference' : 'native'})`);
 try {
   const packageName = '@qfei-design/make-app-approval';
   const require = createRequire(resolve(process.argv[2], 'package.json'));
@@ -37,13 +38,19 @@ try {
   ];
   const states = [
     ['APPROVED', 'approved'], ['IN_APPROVAL', 'in-progress'], ['RETURNING', 'in-progress'],
-    ['REJECTED', null], ['CANCELLED', null], ['UNSUBMITTED', null],
+    ['REJECTED', 'ended'], ['CANCELLED', 'ended'], ['UNSUBMITTED', null],
     [undefined, null], [null, null], ['', null], ['unknown', null],
   ];
+  const compatibilityPolicy = compatibilityMode
+    ? (await import(new URL('../assets/record-write-policy.mjs', import.meta.url))).getOrdinaryRecordWriteRestriction
+    : null;
   let cases = 0;
   for (const [format, sdk] of modules) {
-    const restrict = sdk.getRecordApprovalWriteRestriction;
-    assert.equal(typeof restrict, 'function', `${format}: missing public restriction function`);
+    const packageRestriction = sdk.getRecordApprovalWriteRestriction;
+    assert.equal(typeof packageRestriction, 'function', `${format}: missing public restriction function`);
+    const restrict = compatibilityMode
+      ? (record, options) => compatibilityPolicy(record, packageRestriction, options)
+      : packageRestriction;
     for (const approvalEnabled of [true, false, undefined]) {
       for (const locked of [true, false, null, undefined]) {
         for (const [status, reason] of states) {

@@ -10,11 +10,12 @@ const verifier = fileURLToPath(new URL('../skills/make-app-approval/scripts/veri
 const policy = `function restriction(record) {
   if (record.qfei_is_locked === true) return { reason: 'locked', message: '锁定' };
   if (record.qfei_process_instance_status === 'APPROVED') return { reason: 'approved', message: '该数据审批已通过，不可编辑' };
+  if (['REJECTED', 'CANCELLED'].includes(record.qfei_process_instance_status)) return { reason: 'ended', message: '审批已结束，不可编辑' };
   if (['IN_APPROVAL', 'RETURNING'].includes(record.qfei_process_instance_status)) return { reason: 'in-progress', message: '审批中' };
   return null;
 }`;
 
-function check({ esm = policy, cjs = policy, copy = false } = {}) {
+function check({ esm = policy, cjs = policy, copy = false, compat = false } = {}) {
   const host = mkdtempSync(join(tmpdir(), 'approval-write-verifier-'));
   try {
     const packageDir = join(host, 'node_modules/@qfei-design/make-app-approval');
@@ -26,9 +27,15 @@ function check({ esm = policy, cjs = policy, copy = false } = {}) {
     }));
     writeFileSync(join(packageDir, 'public.mjs'), `${esm}\nexport { restriction as getRecordApprovalWriteRestriction };`);
     writeFileSync(join(packageDir, 'public.cjs'), `${cjs}\nexports.getRecordApprovalWriteRestriction = restriction;`);
-    const script = copy ? join(host, 'verify-record-write-policy.mjs') : verifier;
-    if (copy) copyFileSync(verifier, script);
-    return spawnSync(process.execPath, [script, host], { encoding: 'utf8', timeout: 10000 });
+    const script = copy ? join(host, 'skill/scripts/verify-record-write-policy.mjs') : verifier;
+    if (copy) {
+      mkdirSync(join(host, 'skill/scripts'), { recursive: true }); copyFileSync(verifier, script);
+      if (compat) {
+        mkdirSync(join(host, 'skill/assets'), { recursive: true });
+        copyFileSync(new URL('../skills/make-app-approval/assets/record-write-policy.mjs', import.meta.url), join(host, 'skill/assets/record-write-policy.mjs'));
+      }
+    }
+    return spawnSync(process.execPath, [script, host, ...(compat ? ['--compat'] : [])], { encoding: 'utf8', timeout: 10000 });
   } finally {
     rmSync(host, { recursive: true, force: true });
   }
@@ -51,7 +58,7 @@ for (const format of ['esm', 'cjs']) {
 
 for (const [name, faulty] of [
   ['锁定优先级失效', policy.replace('if (record.qfei_is_locked === true)', 'if (false)')],
-  ['误禁其他终态', policy.replace('return null;', "return { reason: 'approved', message: '只读' };")],
+  ['误禁未提交及未知状态', policy.replace('return null;', "return { reason: 'approved', message: '只读' };")],
   ['丢失退回中保护', policy.replace("['IN_APPROVAL', 'RETURNING']", "['IN_APPROVAL']")],
   ['修改传入记录', policy.replace('function restriction(record) {', "function restriction(record) { record.changed = true;")],
 ]) {
@@ -61,3 +68,18 @@ for (const [name, faulty] of [
     assert.match(result.stderr, /FAIL/);
   });
 }
+
+for (const format of ['esm', 'cjs']) for (const status of ['REJECTED', 'CANCELLED']) {
+  test(`${format} 原生放行 ${status} 的包不能通过新产品合同`, () => {
+    const old = policy.replace("['REJECTED', 'CANCELLED']", status === 'REJECTED' ? "['CANCELLED']" : "['REJECTED']");
+    const result = check({ [format]: old });
+    assert.notEqual(result.status, 0); assert.match(result.stderr, new RegExp(status));
+  });
+}
+test('0.2.11 形态的旧包经兼容模式可覆盖全部三终态，随包复制可执行', () => {
+  const old = policy.replace("['REJECTED', 'CANCELLED']", '[]');
+  const native = check({ esm: old, cjs: old });
+  assert.notEqual(native.status, 0);
+  const result = check({ esm: old, cjs: old, compat: true, copy: true });
+  assert.equal(result.status, 0, result.stderr); assert.match(result.stdout, /compat/);
+});

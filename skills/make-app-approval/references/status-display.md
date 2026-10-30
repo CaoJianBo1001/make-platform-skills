@@ -58,25 +58,30 @@ const display = formatApprovalProcessStatus(value, getApprovalStatusDisplay);
 
 ## 锁与范围
 
-宿主统一禁编判断：`qfei_is_locked === true` 或 `qfei_process_instance_status` 为 `IN_APPROVAL` / `RETURNING` / `APPROVED` 即禁止普通编辑。即使锁字段为 false/缺失，审批运行态及已通过记录仍禁编；即使状态为 `-`，明确锁定仍禁编。判断不依赖当前 `bpmDefinitionKey`、审批展示开关、是否生成了状态列或普通 update 权限是否允许。
+宿主统一禁编判断：`qfei_is_locked === true` 或 `qfei_process_instance_status` 为 `IN_APPROVAL` / `RETURNING` / `APPROVED` / `REJECTED` / `CANCELLED` 即禁止普通编辑。即使锁字段为 false/缺失，审批运行态及已通过、已拒绝、已撤回记录仍禁编；即使状态为 `-`，明确锁定仍禁编。判断不依赖当前 `bpmDefinitionKey`、审批展示开关、是否生成了状态列或普通 update 权限是否允许。
 
 - 记录行菜单、单条选择操作栏、手机卡片及宿主原有详情编辑入口均**不渲染编辑按钮/菜单项**，不能只置灰或点击后提示。当前选择范围内有已知禁编记录时，隐藏针对该选择的批量编辑入口；不能静默剔除这些记录后改写其他记录。跨页/全选未加载记录仍由原预检与最终写接口校验，不把已加载记录都可编辑当作全范围授权。普通行级 IAM 拒绝的反馈规则仍由 make-app-actions 管理。
-- 表格按记录判定，不因同列其他行可编辑而开放禁编行，也不把整张表全部禁用。鼠标双击、键盘和程序化入口在挂载编辑器前均须检查；被拒绝时通过公开取消接口结束，不挂载编辑控件。保存、draft 接收及 `edit:end` 等最终提交回调按稳定记录 ID 读取最新宿主记录，再查同一禁编条件，不能使用激活时的旧行快照。已经打开的普通表单/单元格观察到记录进入审批、变为 APPROVED 或锁定后，停止编辑并拒绝旧会话继续提交；不得再发起业务更新或附件上传，也不接受旧会话的迟到成功回填。
+- 表格按记录判定，不因同列其他行可编辑而开放禁编行，也不把整张表全部禁用。鼠标双击、键盘和程序化入口在挂载编辑器前均须检查；被拒绝时通过公开取消接口结束，不挂载编辑控件。保存、draft 接收及 `edit:end` 等最终提交回调按稳定记录 ID 读取最新宿主记录，再查同一禁编条件，不能使用激活时的旧行快照。已经打开的普通表单/单元格观察到记录进入审批、变为 APPROVED、REJECTED、CANCELLED 或锁定后，停止编辑并拒绝旧会话继续提交；不得再发起业务更新或附件上传，也不接受旧会话的迟到成功回填。
 - 隐藏入口不能替代授权：直接编辑路由、旧按钮回调和并发期间变更的状态也不能绕过限制；Service/平台最终写入口须依据权威状态与锁拒绝普通更新，拒绝响应按现有错误合同反馈。预检或前端缓存不能代替最终写校验。
 
-`APPROVED` 已通过明确只读；`REJECTED`、`CANCELLED` 等其他状态仍沿用普通 IAM、锁及宿主原有政策，不将“已通过不可编辑”扩大为所有终态不可编辑。撤回成功也不能本地强改锁或提前恢复编辑。删除资格继续按独立删除权限及后端合同判断，不从隐藏编辑按钮推导。
+`APPROVED`、`REJECTED`、`CANCELLED` 三种终态按产品确认全部禁止普通编辑，独立于锁字段和普通 IAM 允许结果。撤回成功不能恢复编辑。删除资格继续按独立删除权限及后端合同判断，不从隐藏编辑按钮推导。
 
 ### 公共包与宿主适配
 
-已核验的 0.2.11 发布包由 `getRecordApprovalWriteRestriction` 统一提供上述禁编规则：明确锁定优先返回 `locked`，运行态返回 `in-progress`，已通过返回 `approved` 和“该数据审批已通过，不可编辑”。已升级且行为验证通过的宿主复用公开入口，不再重复补写 APPROVED 分支；保留已有统一导出模块供各普通编辑调用点使用：
+0.2.11 的 `getRecordApprovalWriteRestriction` 只原生覆盖明确锁定、运行态和 APPROVED；未锁定的 REJECTED、CANCELLED 仍返回 null，不满足三终态只读合同。当前宿主将随包 [兼容适配器](../assets/record-write-policy.mjs) 复制到已有共享模块旁，统一委托包函数；UI 和 Service 的普通编辑入口及保存检查均复用此模块，不混用直调旧包的旁路：
 
 ```js
-export { getRecordApprovalWriteRestriction } from '@qfei-design/make-app-approval';
+import { getRecordApprovalWriteRestriction as packageRestriction } from '@qfei-design/make-app-approval';
+import { getOrdinaryRecordWriteRestriction } from './record-write-policy.mjs';
+export const getRecordApprovalWriteRestriction = (record, options) =>
+  getOrdinaryRecordWriteRestriction(record, packageRestriction, options);
 ```
 
-升级时同步 UI/Service 的正式依赖与锁文件，并更新对旧包 APPROVED 返回 null 的测试断言。分别以 UI、Service 包目录为参数执行 [公开入口验证器](../scripts/verify-record-write-policy.mjs)，检查实际 ESM/CJS 行为，再用 [禁编矩阵](verification.md#普通编辑禁编矩阵) 验证按钮隐藏、表格激活/提交、直接编辑路由和保存前检查；这些调用点不能随兼容分支一起删除。新增 `approved` 原因需要消费方的穷举分支同步；返回 null 仍需原有 IAM 判断。
+适配器保留公共包原有限制及异常，只在包返回 null 时补齐三种终态；APPROVED 返回 approved，REJECTED/CANCELLED 返回既有公开原因 ended，提示分别为“该数据审批已拒绝，不可编辑”和“该数据审批已撤回，不可编辑”。消费方穷举分支须支持 approved/ended；null 仍需原有 IAM 判断。它是参考源码，不是 npm 新导出，不修改 node_modules。
 
-0.2.10 及尚未核验能力的旧包不能假定已覆盖本合同。确需保持旧版时使用随包 [旧包兼容适配器](../assets/record-write-policy.mjs)，由一个宿主模块统一委托包函数并补充 APPROVED，所有普通编辑调用点使用该模块；不能混用直调旧包的旁路。适配器是参考源码，不是 npm 新导出；不修改 node_modules。新包验证失败时先查明实际安装产物，不能静默恢复兼容分支来掩盖升级失败。
+分别以 UI、Service 包目录为参数执行 [公开入口验证器](../scripts/verify-record-write-policy.mjs)：默认模式检查实际 ESM/CJS 原生行为，0.2.11 对新合同失败属于已知缺口；追加 `--compat` 检查实际安装包与随包参考适配器的组合。兼容模式通过不代表真实宿主已接线，必须再按 [禁编矩阵](verification.md#普通编辑禁编矩阵) 验证实际入口、保存和最终写接口。不能把参考测试当成应用验收。
+
+未来升级时同步 UI/Service 依赖与锁文件，只有实际发布产物原生通过完整三终态矩阵后才可移除补充分支，保留宿主统一入口及所有调用点。当前不声明任何新版已发布或已修复。
 
 普通禁编升级不改变 [流程状态名称适配](#展示合同) 和 [已完成任务只读适配](task-detail.md#已完成任务与无动作任务的只读归一化)，不得一并删除。若后端最终写校验尚未发布，明确报告缺口，不把前端已隐藏入口描述为后端已禁止修改。
 

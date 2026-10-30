@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成、任务详情办理和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.24
+  version: 0.2.25
 ---
 
 # Make App 前台审批完整接入
@@ -51,7 +51,7 @@ metadata:
 - **恢复与继续提交分开。** 已有记录仅明确 UNSUBMITTED 且未锁定时首次发起；RETURNING 通过当前任务 SUBMIT“继续提交”继续原实例。已撤回/拒绝/通过的记录不生成终态重新发起。
 - **撤回由真实发起人资格决定。** 读取最新流程及 starter，确认时重查；使用 appKey/entityKey/recordId 定位，不需要 bpmKey，不以业务申请人或普通编辑权限推断资格。
 - **状态来自记录。** `qfei_process_instance_status` 是只读系统字段；不新建同名 DSL 业务字段，不用业务状态、任务结果、锁字段或当前绑定推导流程状态。
-- **审批中及已通过记录禁止普通编辑。** `IN_APPROVAL`、`RETURNING`、`APPROVED` 或明确锁定的记录隐藏普通编辑按钮/菜单，单元格不得进入编辑或接受迟到提交；已通过即使解锁也保持只读。入口、保存及后台写入共同执行 [禁编合同](references/status-display.md#锁与范围)，旧包未覆盖 APPROVED 时由统一宿主适配器补齐。不把新建发起字段权限扩展到普通编辑，也不误禁当前节点授权的任务办理；已拒绝、已撤回不因本条规则新增禁编。
+- **审批运行态及三种终态禁止普通编辑。** `IN_APPROVAL`、`RETURNING`、`APPROVED`、`REJECTED`、`CANCELLED` 或明确锁定的记录隐藏普通编辑按钮/菜单，单元格不得进入编辑或接受迟到提交；已通过、已拒绝、已撤回即使解锁也保持只读。入口、保存及后台写入共同执行 [禁编合同](references/status-display.md#锁与范围)。公共包 0.2.11 尚未原生覆盖已拒绝、已撤回，须统一宿主适配；不把普通禁编套到当前节点授权的任务办理，删除资格仍独立判断。
 
 ## 与现有 Skill 配合
 

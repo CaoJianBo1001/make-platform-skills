@@ -8,8 +8,8 @@
 - Service 如消费状态、禁编或撤回校验函数，也安装同一审批包版本，只加载根入口。依赖与锁文件可在干净环境重装；生产不依赖开发机路径、未发布 tgz、node_modules 修改或未随构建分发的补丁。
 - 应用入口一次导入 `@qfei-design/make-app-approval/styles.css`，表格样式沿用宿主 CanvasTable 接入。Ant Design/dayjs 是包的示例依赖，不要求宿主更换 UI 库。
 - 0.2.10 发布包携带 `examples/field-adapters`，包含人员缓存、数值原文校验和 `use-input-modality.ts`。这些是宿主源码适配示例，按 [字段适配回归](../../makeui/references/field-adapter-regressions.md) 复用已有控件与校验，不当作新的 npm 公开子路径导入。
-- 0.2.11 已将未锁定的 APPROVED 纳入普通禁编，返回 `reason: "approved"` 和“该数据审批已通过，不可编辑”；锁定优先级和运行态限制保持不变。按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 复用包判断，保留入口隐藏、表格及保存前校验；不能因包已支持就删除宿主调用点。
-- UI/Service 同步升级依赖与锁文件，并分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)；将旧包对 APPROVED 返回 null 的契约断言更新为已通过禁编，同时保留其他状态、锁优先级及节点任务授权回归。`reason` 穷举需补齐 `approved`。本次不改变状态显示名称和已完成任务只读适配。
+- 0.2.11 原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
+- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.11 原生检查失败是已知缺口；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
 
 | 公开入口 | 使用内容 |
 | --- | --- |
