@@ -21,4 +21,6 @@ node skills/make-app-observability/scripts/audit-trace-contract.mjs <project-roo
 
 审计器保留 `0.1.9` 的历史兼容下界，不强制升级未改造的存量 App；它通过不代表 Toast 自动关闭已验收。新建或本次改造反馈出口按接入文档安装 `0.1.10+`，并运行上述生命周期回归。
 
+新建或本次明确统一反馈出口时，另按 [错误出口迁移](error-outlet-migration.md) 运行 `audit-error-outlets.mjs` 及其正反向测试，检查新旧 Toast 并存。原 Trace 审计的 viewport 存在性检查不能替代该清点，也不能证明列表、写操作等实际失败路径已接入根出口。
+
 新 App 将审计器复制或包装进项目本地 `scripts/`，以 `trace:audit` 接入项目 `verify:publish`。复制后保留审计测试，并在项目中增加真实请求及真实 AppShell 错误可见性、计时的行为测试，将这些测试纳入发布门禁。存量 App 在本次接入 Trace 时使用既有包管理器和发布命令，纳入等价门禁；不要为 Trace 接入单独迁移运行时。审计失败时先修复接线，不能只添加关键词或空组件让检查通过。审计通过但缺少上述可见性测试，不得声称错误出口已验收。

@@ -29,6 +29,10 @@ metadata:
 5. 当 App 使用 AI transport 时，JSON、SSE、文件和二进制请求也发送这两个 Header；HTTP 非 2xx 即使有响应体也要标记 Span 为错误。不能恢复通过 `__traceparent` 等 query 参数传递 Trace 的旧做法。
 6. 新建或本次改造反馈出口的 App 使用实际安装的 `@qfei-design/make-app-observability@0.1.10+`，默认安装范围为 `^0.1.10`；包负责 Toast 计时与隐藏，宿主通过 `noticeKey` 标识事件、`onClose` 清理队列，不另加计时器。未涉及反馈改造的存量 App 保留锁定版本，不因包发布自动升级。先补行为测试，再运行 `scripts/audit-trace-contract.mjs` 和 App 原有测试。审计检查声明版本与源代码接线，不能代替实际安装版本核对、计时行为、真实请求及真实 AppShell 下错误卡片可见性的断言。
 
+7. 本次明确改造请求错误反馈时，按 [存量错误出口迁移](references/error-outlet-migration.md) 清点并迁移全部相关入口，将请求错误 Toast 收敛到根层同一队列；删除旧卡片工厂，保留常驻内嵌态和本地校验。将新增出口审计及正反向测试纳入项目门禁，不能仅凭存在一个 viewport 或给旧容器补时长宣称迁移完成。
+
+Toast 自动关闭与宿主队列清理按 [生命周期合同](references/package-integration.md#toast-默认关闭与宿主接线) 接入；目标产物须验证公开 API 与实际计时行为。
+
 ## 按需阅读
 
 | 工作 | 读取 |
@@ -36,6 +40,7 @@ metadata:
 | 安装公共包、公开入口、错误状态与桌面/移动全局出口 | `references/package-integration.md` |
 | UI、Service、Gateway 和 AI 的 Trace 链路及安全边界 | `references/trace-chain.md` |
 | 行为测试、静态审计、发布检查和排障 | `references/testing-and-audit.md` |
+| 存量请求错误出口清点、统一迁移与重复出口门禁 | `references/error-outlet-migration.md` |
 
 安装或升级时，先从目标 App 已安装包的 `package.ai.json` 读取 `readOrder`，按声明顺序阅读公开文档；不要从包内 `src` 或 `dist` 深层导入，也不要把本 Skill 写的示例当成高于目标安装版本的公开 API。
 

@@ -64,6 +64,14 @@ There is no npm `showForbidden`, `useAppAdministrators` or automatic 403 interce
 
 `help`, `notice`, callbacks and `AppPermissionFeedback` above are host-owned. Import `MakeAppErrorNoticeViewport` from the same `/react` entry when used; reuse the existing outlet rather than nesting or duplicating it. The package owns timing and hiding; the host owns queue deduplication, action context and removal of the matching item in `onClose`. Do not add a second host timer. Allocate `notice.id` once per event and pass it as both React key and `noticeKey`, including for ordinary `MakeAppErrorNotice`; this prevents unrelated rerenders or newly created callback references from extending the lifetime. A same-text new event gets a new id. Administrator loading itself must not reset the timer. Use the public `duration` prop for an intentional lifetime override. Select inline or Toast for one rejection rather than duplicating both messages.
 
+When explicitly migrating existing feedback, follow [error outlet migration](../../make-app-observability/references/error-outlet-migration.md): operation Toasts reuse the root outlet, including Toasts produced through host adapters. Do not retain a page-local floating message container for packaged error or permission cards. Keep intentional inline/page guidance persistent and local validation in its existing surface.
+
+## Toast 生命周期
+
+统一遵循 [Toast 默认关闭与宿主接线](../../make-app-observability/references/package-integration.md#toast-默认关闭与宿主接线)。不能仅凭 `0.1.9` 版本号认定已支持自动关闭；先核对目标发布产物的公开文档、类型和挂载行为，新 API 尚未发布时报告发布阻断。
+
+支持该合同的包默认 3 秒关闭权限 Toast，`duration` 单位为秒，0 常驻；权限 inline/page 始终常驻。宿主不重复设置计时器，通过 onClose 删除对应队列项；每次通知使用新的稳定 noticeKey，普通重渲染保持不变，重复触发同文案也重新计时。宿主适配器须转发 duration/noticeKey/onClose，不另建计时链路或因关闭重放业务操作。这两项属性仅在已确认支持的产物上使用；既有包表面校验器不证明计时能力，仍须按 observability 的行为验收要求验证。
+
 ## Host contact adapter example
 
 The following `AppPermissionFeedback` is **App-owned example code**, not another npm export. `auth` is the established SDK instance; `contextKey` comes from the host's verified identity/tenant/App/environment generation, not browser token parsing. Keep the denial payload in event state rather than rebuilding it on every render. Validate contact response items in the host API boundary before using this typed example.

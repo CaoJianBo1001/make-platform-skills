@@ -21,3 +21,16 @@ Core 的 `normalizeMakeAppTraceId`、`shouldDisplayMakeAppTraceId` 和 `normaliz
 共享请求层应产生包含 `kind/status/title/description/traceId` 的安全结构化错误；网络异常没有响应时 `status` 可缺省，`description` 也可按需要缺省。权限、Schema 等 Provider 可以另存加载状态，但必须把可用字段保留到全局或页面内嵌错误出口；不能仅保存“加载失败”字符串，也不能把原始 Error 对象或上游响应正文直接交给组件。仅当卡片实际收到并展示有效 ID 时，页面文案才可提示用户复制 Trace ID。
 
 共享错误出口应覆盖所有 Make 业务页面。页面直接调用 `message.error`、自己拼 Trace ID 复制按钮，或者只在少数页面使用公共卡片，均不满足统一展示合同。保留 App 已有的非业务表单校验展示，不把本地输入错误伪装为服务故障。
+
+存量 App 本次明确改造反馈出口时，按 [迁移清单与门禁](error-outlet-migration.md) 验收全部相关入口。公共卡片放在旧浮动消息容器里仍是另一个 Toast 出口，显式补三秒时长只能修复生命周期，不能替代统一迁移。
+
+## Toast 默认关闭与宿主接线
+
+以下生命周期按主仓库的 `0.1.10+` 接入基线执行，仍须核对目标 registry 的实际发布产物。不能仅凭 `0.1.9` 版本号认定已支持自动关闭；原有 `0.1.9` 基线只证明既有展示能力，不证明新增 duration/noticeKey API。新建或升级错误出口时，先按安装包的公开文档、类型及实际挂载行为确认本节能力；产物尚不支持时报告发布阻断，不向旧组件盲传新属性，不复制源码或另加宿主计时器伪造新能力。区分源码能力、目标 registry 发布状态与目标 App 验收结果；现有锁文件和部署不会因新版本发布自动更新。
+
+- 包负责计时：`MakeAppErrorNoticeViewport` 默认 `duration={3}`，即 3 秒；其中的错误卡片继承该时长，单条 `duration` 优先，单位为秒，`0` 为常驻。无 viewport 的内嵌错误默认常驻，可显式覆盖；权限 Toast 即使独立渲染也默认 3 秒，权限 `inline/page` 始终常驻并忽略 duration。不要为页面内权限提示增加自动关闭。
+- 宿主不重复设置计时器；通过每条通知的 `onClose` 删除对应队列项，自动和手动关闭共用同一清理路径。清理只影响该条通知，不能清空其他新通知、重试业务请求、改变权限或清除表单。手动关闭会取消该条计时；卸载不调用 onClose。移除旧的宿主 Toast timeout，并排查显式 `duration={0}` 是否确需常驻。
+- 每次触发分配新的稳定 `noticeKey`（字符串或数字），作为该事件的标识；同一事件的普通重渲染保持该值，不能在 render 中生成随机标识。相同文案及相同 Trace ID 的新事件也用新 key，从触发重新计算完整时长。建议 React 队列 key 同样使用事件 ID。兼容未传 noticeKey 的旧宿主时，新的 onClose 引用会被当作新通知；普通渲染创建新回调可能意外延长计时，因此优先传显式 noticeKey。
+- 需要更长阅读或复制 Trace ID 的场景，使用已确认的公开 duration 调整时长或设为 0；关闭提示不等于解决原请求失败，页面错误态和重试能力仍独立保留。
+
+宿主全局错误队列中，每条卡片通过 `noticeKey={notice.id}` 和 `onClose={() => removeNotice(notice.id)}` 绑定同一事件，removeNotice 使用宿主现有队列更新方式只删除该 ID。不要按 title 或 traceId 去重成同一通知身份；业务去重规则仍由宿主决定。

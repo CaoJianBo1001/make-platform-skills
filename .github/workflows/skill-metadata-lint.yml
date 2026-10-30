@@ -48,6 +48,7 @@ jobs:
           npm exec --yes --ignore-scripts --package=typescript@5.9.3 \
             --package=react@19.2.8 --package=react-dom@19.2.8 -- sh -ec '
             export MAKE_FEEDBACK_TEST_DEPENDENCIES="$(dirname "$(dirname "$(command -v tsc)")")"
+            node --test skills/make-app-observability/scripts/test-audit-error-outlets.mjs
             node --test skills/makeui/scripts/test-verify-feedback-package-surface.mjs
             node skills/makeui/scripts/test-feedback-sdk-types.mjs "$(command -v tsc)"
           '
