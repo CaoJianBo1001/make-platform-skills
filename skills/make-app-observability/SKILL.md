@@ -2,7 +2,7 @@
 name: make-app-observability
 description: Use when creating, integrating, reviewing, or debugging a Make App's default Trace ID chain, traceparent and X-Log-Id propagation, safe correlated logs, or @qfei-design/make-app-observability error notices. Every new Make App includes this baseline even when the user does not mention observability. Covers direct-gateway and Service-fronted Apps and AI transports when present. Does not own authentication, Service route design, AI protocol, tracing backend/exporter deployment, runtime packaging, or page layout.
 metadata:
-  version: 0.1.6
+  version: 0.1.7
 ---
 
 # make-app-observability
@@ -28,6 +28,8 @@ metadata:
 4. 统一错误出口区分 HTTP 非 2xx、网络异常和 HTTP 2xx 业务码异常。收到响应时在 Span 记录实际 HTTP 状态码；业务码失败和 HTTP 非 2xx 标记为错误，网络异常不虚构状态码。请求层及权限、Schema 等 Provider 到错误出口之间保留安全的 `kind/status/title/description/traceId`，不得降级成只有文案的字符串。使用公共包的 `MakeAppErrorNotice`，全局错误队列须由一个 `MakeAppErrorNoticeViewport` 包裹，页面内嵌错误卡片可单独使用。三类真实请求失败只要携带合法 Trace ID 都显示可复制的 ID。失败时优先保留本次请求创建的 ID，避免无响应的网络错误丢失关联信息。
 5. 当 App 使用 AI transport 时，JSON、SSE、文件和二进制请求也发送这两个 Header；HTTP 非 2xx 即使有响应体也要标记 Span 为错误。不能恢复通过 `__traceparent` 等 query 参数传递 Trace 的旧做法。
 6. 新接入或本次改造错误出口的 App 使用实际安装的 `@qfei-design/make-app-observability@0.1.9+`；这是权限提示、桌面顶部 Toast、双端 portal 与完整内容可见性的交付基线。先补行为测试，再运行 `scripts/audit-trace-contract.mjs` 和 App 原有测试。审计检查声明版本与源代码接线，不能代替实际安装版本核对、真实请求及真实 AppShell 下错误卡片可见性的断言。
+
+Toast 自动关闭与宿主队列清理按 [生命周期合同](references/package-integration.md#toast-默认关闭与宿主接线) 接入：支持产物默认 3 秒，包计时、宿主 onClose 清理，每次事件使用新 noticeKey；不要将未确认发布的新 API 归入现有版本。
 
 ## 按需阅读
 

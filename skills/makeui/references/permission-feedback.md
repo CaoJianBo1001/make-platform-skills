@@ -1,6 +1,6 @@
 # Permission feedback package
 
-Read this for React App startup, route/data or operation denial presentation. Permission scope belongs to `make-app-permission`; identity and current-App administrator lookup belong to `make-app-auth`. The shared observability package owns presentation only, not navigation, authorization, HTTP, form state or Toast queue/duration policy.
+Read this for React App startup, route/data or operation denial presentation. Permission scope belongs to `make-app-permission`; identity and current-App administrator lookup belong to `make-app-auth`. The shared observability package owns presentation only, not navigation, authorization, HTTP, form state or Toast queue policy; supported package builds own auto-dismiss timers.
 
 ## Install and release gate
 
@@ -40,6 +40,7 @@ Import the CSS once in the host UI entry, shared with the existing error card. D
 | `administratorStatus` | `ready`, `loading`, `error`; default `ready` |
 | `retryStatus` | `idle`, `checking`, `denied`, `error`, `restored`; host-controlled |
 | `onRetry`, `onClose` | Host callbacks; retry appears only for inline/page, close only for Toast; absent callbacks produce no fabricated buttons |
+| `duration`, `noticeKey` | 仅用于已验证支持生命周期合同的产物：时长单位为秒，0 常驻；事件标识在本次通知期间稳定，重新触发换新值；inline/page 忽略 duration |
 | `title`, `description` | Optional business-appropriate text; successful state uses the recovery title |
 | `illustration` | Optional ReactNode; undefined uses the icon, null omits it |
 | `className`, `style` | Host container/theme handoff, never a new permission engine |
@@ -55,11 +56,17 @@ There is no npm `showForbidden`, `useAppAdministrators` or automatic 403 interce
 <AppPermissionFeedback {...help} variant="inline" scope="operation" onRetry={refreshAccess} />
 // Short operation feedback: existing persistent outlet owns queue and dismissal.
 <MakeAppErrorNoticeViewport>
-  <AppPermissionFeedback {...help} variant="toast" scope="operation" operationName="导出" onClose={dismissNotice} />
+  <AppPermissionFeedback {...help} variant="toast" scope="operation" operationName="导出" noticeKey={notice.id} onClose={dismissNotice} />
 </MakeAppErrorNoticeViewport>
 ```
 
-`help`, callbacks and `AppPermissionFeedback` above are host-owned. Import `MakeAppErrorNoticeViewport` from the same `/react` entry when used; reuse the existing outlet rather than nesting or duplicating it. Follow the installed package's public viewport/portal contract, not a copied demo layout. The host owns duration, queue deduplication and action context; the Toast component does not start a timer or portal itself. Select inline or Toast for one rejection rather than duplicating both messages.
+`notice.id` 是本次事件的稳定 ID；该 Toast 示例要求已验证支持 noticeKey 的包产物。`help`, callbacks and `AppPermissionFeedback` above are host-owned. Import `MakeAppErrorNoticeViewport` from the same `/react` entry when used; reuse the existing outlet rather than nesting or duplicating it. Follow the installed package's public viewport/portal contract, not a copied demo layout. The host owns queue deduplication, action context and onClose cleanup; supported package builds own the Toast timer, while the viewport owns its portal. Select inline or Toast for one rejection rather than duplicating both messages.
+
+## Toast 生命周期
+
+统一遵循 [Toast 默认关闭与宿主接线](../../make-app-observability/references/package-integration.md#toast-默认关闭与宿主接线)。不能仅凭 `0.1.9` 版本号认定已支持自动关闭；先核对目标发布产物的公开文档、类型和挂载行为，新 API 尚未发布时报告发布阻断。
+
+支持该合同的包默认 3 秒关闭权限 Toast，`duration` 单位为秒，0 常驻；权限 inline/page 始终常驻。宿主不重复设置计时器，通过 onClose 删除对应队列项；每次通知使用新的稳定 noticeKey，普通重渲染保持不变，重复触发同文案也重新计时。宿主适配器须转发 duration/noticeKey/onClose，不另建计时链路或因关闭重放业务操作。这两项属性仅在已确认支持的产物上使用；既有包表面校验器不证明计时能力，仍须按 observability 的行为验收要求验证。
 
 ## Host contact adapter example
 
