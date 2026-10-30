@@ -123,7 +123,7 @@ For published/vibe Apps, auth integration is not complete until the agent or pla
 - Startup `forbidden` with old text, new JSON without reason, embedded/empty/missing contacts and a future explicit reason; the original payload survives, optional help failure stays local, and no IAM/Schema/business request occurs. Keep the existing relogin behavior for SDK session-expiry states.
 - Old SDK with a new backend: embedded contacts still display; a missing query method makes no request and retains generic help even when the endpoint exists. Test both runtime decoding and TypeScript compatibility without requiring a new SDK.
 - Unknown business 403, including one with contacts but no documented permission reason, still follows the request-error path rather than App-entry feedback. Add the startup and business-negative cases to the host's default test/CI gate; the repository executes both guide examples in `scripts/test-startup-denial-contract.mjs`.
-- Unified-login API 401/403 with `apiAuthRedirect: true` redirects through SDK login once.
+- Unified-login API 401 with `apiAuthRedirect: true` follows the SDK's existing session recovery and loop protection. A confirmed business permission denial must not trigger another login or redirect; optional contact lookup failures stay local.
 - Unified-login unauthenticated state does not loop redirects.
 - Business-request 401 from schema/list/create/update/delete enters the shared expired-session handler.
 - Make backend calls are routed through the shared adapter; no raw `window.fetch('/api/make/...')` outside the fixed AI v1 byte bridge, and no scattered unhandled `auth.api` calls in UI components.

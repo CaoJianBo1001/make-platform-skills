@@ -1,11 +1,11 @@
 # Permission feedback package
 
-Read this for React App startup, route/data or operation denial presentation. Permission scope belongs to `make-app-permission`; identity and current-App administrator lookup belong to `make-app-auth`. The shared observability package owns presentation only, not navigation, authorization, HTTP, form state or Toast queue policy; supported package builds own auto-dismiss timers.
+Read this for React App startup, route/data or operation denial presentation. Permission scope belongs to `make-app-permission`; identity and current-App administrator lookup belong to `make-app-auth`. The shared observability package owns presentation and Toast timing/hiding, not navigation, authorization, HTTP, form state or the host queue.
 
 ## Install and release gate
 
-- Use `MakeAppPermissionNotice` from `@qfei-design/make-app-observability/react`; do not add a separate feedback dependency. The dependency baseline is `0.1.9`; after verifying it in the intended registry, install with `corepack pnpm add @qfei-design/make-app-observability@0.1.9` in the resolved UI package, or the host package manager's equivalent. Do not change the host runtime or introduce a second lockfile.
-- A planned release, source version or local tarball is **not proof of registry publication**. Verify the actual `0.1.9` registry artifact before declaring the permission component available. Without a registry-resolvable version exposing this API, report a package release blocker rather than silently installing an old version. Only an explicitly approved local test may install a supplied tarball; do not commit a developer-specific tarball path or use Git/source copying as a release fallback.
+- Use `MakeAppPermissionNotice` from `@qfei-design/make-app-observability/react`; do not add a separate feedback dependency. New or explicitly upgraded feedback integrations use the `0.1.10` lifecycle baseline; after verifying it in the intended registry, install with `corepack pnpm add @qfei-design/make-app-observability@^0.1.10` in the resolved UI package, or the host package manager's equivalent. Do not change the host runtime or introduce a second lockfile. Preserve untouched legacy Apps and their existing lockfiles; a new npm release does not update an existing lockfile or deployed bundle. An explicit dependency/lockfile upgrade, tests and redeployment are required.
+- A planned release, source version or local tarball is **not proof of registry publication**. Verify the actual selected `0.1.10+` registry artifact before declaring automatic Toast dismissal available. If packaged prose still says an API is unreleased, resolve availability from the verified registry artifact and its actual public exports/types, not stale release wording. Without a registry-resolvable version exposing this API, report a package release blocker rather than silently installing an old version. Only an explicitly approved local test may install a supplied tarball; do not commit a developer-specific tarball path or use Git/source copying as a release fallback.
 - Verify the actual installed artifact, including public JS, TypeScript and CSS entries, rather than trusting a version string or template. Use the script below; `--allow-prerelease` is reserved for that explicit local-test opt-in and never proves publication.
 
 The package/Skill may be used before the administrator backend is deployed. Package availability is required; administrator-query availability is not. Render generic authorization guidance without blocking the App when the SDK method is missing or the endpoint is absent. Follow `make-app-auth/references/access-help.md#staggered-release-fallback` for lookup errors; this does not relax login, IAM or Schema checks.
@@ -40,7 +40,8 @@ Import the CSS once in the host UI entry, shared with the existing error card. D
 | `administratorStatus` | `ready`, `loading`, `error`; default `ready` |
 | `retryStatus` | `idle`, `checking`, `denied`, `error`, `restored`; host-controlled |
 | `onRetry`, `onClose` | Host callbacks; retry appears only for inline/page, close only for Toast; absent callbacks produce no fabricated buttons |
-| `duration`, `noticeKey` | 仅用于已验证支持生命周期合同的产物：时长单位为秒，0 常驻；事件标识在本次通知期间稳定，重新触发换新值；inline/page 忽略 duration |
+| `duration` | Toast seconds; default viewport value or 3; 0 is persistent; ignored for permission inline/page |
+| `noticeKey` | Unique host event id; changes for every new notification, including identical content; ordinary rerenders retain it |
 | `title`, `description` | Optional business-appropriate text; successful state uses the recovery title |
 | `illustration` | Optional ReactNode; undefined uses the icon, null omits it |
 | `className`, `style` | Host container/theme handoff, never a new permission engine |
@@ -56,11 +57,12 @@ There is no npm `showForbidden`, `useAppAdministrators` or automatic 403 interce
 <AppPermissionFeedback {...help} variant="inline" scope="operation" onRetry={refreshAccess} />
 // Short operation feedback: existing persistent outlet owns queue and dismissal.
 <MakeAppErrorNoticeViewport>
-  <AppPermissionFeedback {...help} variant="toast" scope="operation" operationName="导出" noticeKey={notice.id} onClose={dismissNotice} />
+  <AppPermissionFeedback {...help} key={notice.id} noticeKey={notice.id}
+    variant="toast" scope="operation" operationName="导出" onClose={() => dismissNotice(notice.id)} />
 </MakeAppErrorNoticeViewport>
 ```
 
-`notice.id` 是本次事件的稳定 ID；该 Toast 示例要求已验证支持 noticeKey 的包产物。`help`, callbacks and `AppPermissionFeedback` above are host-owned. Import `MakeAppErrorNoticeViewport` from the same `/react` entry when used; reuse the existing outlet rather than nesting or duplicating it. Follow the installed package's public viewport/portal contract, not a copied demo layout. The host owns queue deduplication, action context and onClose cleanup; supported package builds own the Toast timer, while the viewport owns its portal. Select inline or Toast for one rejection rather than duplicating both messages.
+`help`, `notice`, callbacks and `AppPermissionFeedback` above are host-owned. Import `MakeAppErrorNoticeViewport` from the same `/react` entry when used; reuse the existing outlet rather than nesting or duplicating it. The package owns timing and hiding; the host owns queue deduplication, action context and removal of the matching item in `onClose`. Do not add a second host timer. Allocate `notice.id` once per event and pass it as both React key and `noticeKey`, including for ordinary `MakeAppErrorNotice`; this prevents unrelated rerenders or newly created callback references from extending the lifetime. A same-text new event gets a new id. Administrator loading itself must not reset the timer. Use the public `duration` prop for an intentional lifetime override. Select inline or Toast for one rejection rather than duplicating both messages.
 
 ## Toast 生命周期
 

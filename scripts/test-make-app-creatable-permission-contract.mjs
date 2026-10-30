@@ -204,8 +204,8 @@ assert.match(
 );
 assert.match(
   authRequestAdapter,
-  /SDK owns the normal unified-login 401\/403 redirect/i,
-  'the SDK must retain the established unified-login redirect handling for 401 and 403',
+  /preserve the SDK's established session-recovery and redirect checks/i,
+  'session recovery must remain SDK-owned without treating every business 403 as a login challenge',
 );
 assert.match(
   authLogoutAnd401,

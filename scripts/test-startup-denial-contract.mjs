@@ -10,6 +10,13 @@ const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
 const renderStartup = new AsyncFunction('auth', 'renderApp', 'renderLoginExpired', 'renderForbidden', 'renderLoading', startupBody);
 const contacts = [{ userId: 'admin-1', name: '管理员一', avatarUrl: null }];
 
+test('auth prose does not require login for every business 403', () => {
+  for (const source of [startup, requests]) {
+    assert.doesNotMatch(source, /401\/403[^\n]*redirects?[^\n]*(?:login|once)|unified-login 401\/403 redirect/iu);
+    assert.match(source, /(?:confirmed|classified) business permission denial[^\n]*must not[^\n]*(?:login|redirect)/iu);
+  }
+});
+
 for (const payload of [
   '无权限，请联系应用管理员授权',
   { code: 403, msg: '无权限，请联系应用管理员授权', data: { appAdministrators: contacts } },
