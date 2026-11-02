@@ -16,7 +16,6 @@ const read = (relativePath) => {
 const metaApiDesign = read('skills/makedsl/references/MetaAPIDesign.md');
 const dataApiDesign = read('skills/makedsl/references/DataAPIDesign.md');
 const serviceAdapter = read('skills/make-app-service/references/make-data-adapter.md');
-const serviceAuth = read('skills/make-app-auth/references/service-fronted-mode.md');
 const authAuditTest = read('skills/make-app-auth/scripts/test-audit-auth-contract.mjs');
 
 assert.match(
@@ -65,21 +64,8 @@ assert.match(
   'make-app-service schema adapter guidance must require target header and config appKey body',
 );
 
-assert.doesNotMatch(
-  serviceAuth,
-  /fetch\(`\$\{localPreviewBaseUrl\}\/meta\/v1\/schema`,\s*\{\s*headers:/,
-  'make-app-auth local-preview schema fetch must not rely on default GET',
-);
-assert.match(
-  serviceAuth,
-  /schemaHeaders\.set\('X-Make-Target',\s*'MakeService\.GetResource'\);[\s\S]*fetch\(`\$\{localPreviewBaseUrl\}\/meta\/v1\/schema`,\s*\{[\s\S]*method:\s*'POST'[\s\S]*headers:\s*schemaHeaders[\s\S]*body:\s*JSON\.stringify\(\{\s*appKey:/,
-  'make-app-auth local-preview schema fetch must use POST, target header, and appKey body',
-);
-assertNoDefaultFetchForMakePath(
-  serviceAuth,
-  /\/(?:meta\/v1\/schema|data\/v1\/record)/,
-  'make-app-auth service-fronted-mode.md',
-);
+// Auth documentation is executed by test-auth-app-context.mjs, including
+// method, target header and body assertions without binding a wrapper name.
 assertNoDefaultFetchForMakePath(
   authAuditTest,
   /\/data\/v1\/record/,

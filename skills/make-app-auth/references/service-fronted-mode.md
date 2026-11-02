@@ -113,6 +113,8 @@ browser -> /api/make/auth/** -> App Service -> http://make-gateway/make/auth/**
 browser -> /api/make/oauth/** -> App Service -> http://make-gateway/make/oauth/**
 ```
 
+Use the existing Make client with the [shared App context contract](auth-app-context.md) for upstream calls in this mode.
+
 Service code running inside the cluster must call k8s-internal make-gateway routes without the external `/api` prefix. UI code must not call internal routes directly.
 
 Published runtime must not reuse makecli public gateway settings. `MAKE_API_BASE_URL` / `MAKE_SERVER_URL` in deployed Service containers are k8s internal gateway origins, and Service adds `/make` before calling auth, meta, or data APIs.
@@ -141,13 +143,15 @@ Published `GET /make/auth/current-context` succeeds with HTTP 200 and a **bare**
 {"userId":"user-1","tenantId":"tenant-1","appId":"AppKey"}
 ```
 
+`appId` is the historical response field name; its value is the App's `appKey`. Do not rename it or compare it with a separate database App ID.
+
 Apply this contract only when a Service already consumes current-context, such as an existing tenant-resolution or download prerequisite. Do not add another authentication request when trusted config/context already supplies the required identity. Keep SDK login, auth namespace proxies and gateway admission unchanged.
 
 The Service consumer must not apply the Meta/Data `{code,data}` parser or unconditionally read `.data`; SDK normalization does not cover this separate consumer.
 
 | Current-context result | Service behavior |
 | --- | --- |
-| Valid bare identity | Validate non-empty string `userId`/`tenantId` and `appId` against trusted `MAKE_APP_KEY`; continue to the intended upstream with the same session/host context |
+| Valid bare identity | Require non-empty string `userId`/`tenantId`; absent/null/blank `appId` is an unbound App context, not an authentication failure. A non-empty string must match configured `MAKE_APP_KEY`; reject other types. Use configured appKey for the intended IAM scope and preserve session/host context |
 | Completed auth failure, such as 401/403/503 | Stop and preserve its status, Content-Type and body, including the login challenge |
 | Malformed successful body or conflicting App | Stop with a safe Service contract error (502), not the successful identity response |
 
@@ -229,6 +233,7 @@ applyForwardedHostContext(businessHeaders, inboundHeaders);
 
 Internal make-gateway URLs must not use the external `/api` prefix:
 
+<!-- make-upstream-example: published -->
 ```ts
 const makeAuthBaseUrl = 'http://make-gateway/make';
 const makeBusinessBaseUrl = 'http://make-gateway/make';
@@ -236,8 +241,9 @@ businessHeaders.set('Content-Type', 'application/json');
 businessHeaders.set('X-Make-Target', 'MakeService.ListResources');
 const recordPayload = { appKey: config.appKey, entityKey, fields, pagination };
 
-await fetch(`${makeAuthBaseUrl}/auth/current-context`, { headers: authHeaders });
-await fetch(`${makeBusinessBaseUrl}/data/v1/record`, {
+// makeFetch is the host's existing shared Make client.
+await makeFetch(`${makeAuthBaseUrl}/auth/current-context`, { headers: authHeaders, redirect: 'manual' });
+await makeFetch(`${makeBusinessBaseUrl}/data/v1/record`, {
   method: 'POST',
   headers: businessHeaders,
   body: JSON.stringify(recordPayload)
@@ -246,6 +252,7 @@ await fetch(`${makeBusinessBaseUrl}/data/v1/record`, {
 
 Local-preview URLs are different because they leave the user's machine through the public gateway resolved by makecli:
 
+<!-- make-upstream-example: local-preview -->
 ```ts
 const publicGatewayOrigin = readMakecliResolveJson().make_api_origin;
 const localPreviewBaseUrl = `${publicGatewayOrigin}/api/make`;
@@ -256,12 +263,13 @@ const dataHeaders = new Headers(makecliTokenHeaders);
 dataHeaders.set('Content-Type', 'application/json');
 dataHeaders.set('X-Make-Target', 'MakeService.ListResources');
 
-await fetch(`${localPreviewBaseUrl}/meta/v1/schema`, {
+// Reuse the same configured makeFetch from the shared Make client above.
+await makeFetch(`${localPreviewBaseUrl}/meta/v1/schema`, {
   method: 'POST',
   headers: schemaHeaders,
   body: JSON.stringify({ appKey: config.appKey })
 });
-await fetch(`${localPreviewBaseUrl}/data/v1/record`, {
+await makeFetch(`${localPreviewBaseUrl}/data/v1/record`, {
   method: 'POST',
   headers: dataHeaders,
   body: JSON.stringify(recordPayload)
@@ -291,6 +299,7 @@ These checks belong to the agent, generated tests, CI, or publish pipeline. Do n
 - UI uses `createMakeAppAuth({ gatewayBaseUrl: "/api/make", unifiedLogin: true, apiAuthRedirect: true })`, then calls `auth.api("/app/**")` for Service-owned business routes.
 - Service calls internal business routes such as `http://make-gateway/make/meta/**` and `http://make-gateway/make/data/**`.
 - Service calls internal auth routes such as `http://make-gateway/make/auth/**`.
+- Run the [shared App context verification](auth-app-context.md#verification).
 - Service does not call k8s-internal `/api/make/auth/**`, `/api/make/oauth/**`, `/api/make/meta/**`, or `/api/make/data/**`; `/api/make` is only for browser/ingress access.
 - Local preview calls makecli resolve `make_api_origin` with `/api/make/**`, not k8s-internal `/make/**`.
 - Published mode and local preview mode are both covered by contract tests; tests must fail if `MAKE_APP_LOCAL_PREVIEW=false` still routes upstream calls through `/api/make`.

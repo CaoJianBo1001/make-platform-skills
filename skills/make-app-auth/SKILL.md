@@ -2,7 +2,7 @@
 name: make-app-auth
 description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user/account-drawer auth wiring, current-context identity, Feishu-container logout visibility, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. Preserve authenticated context for the default /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for account surfaces and make-app-permission for single-app permission enforcement.
 metadata:
-  version: 0.1.22
+  version: 0.1.27
 ---
 
 # make-app-auth
@@ -72,6 +72,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - Do not silently downgrade generated Apps from unified login because local OAuth prerequisites are missing; report the blocker.
 - Before reporting publish/login readiness, verify the auth path with the agent or platform checks. Do not leave domain access, DevTools, k8s logs, or cookie inspection as user-only validation steps.
 - For Service-fronted Apps, `/api/make/auth/**` and `/api/make/oauth/**` are required namespace-level Service proxy contracts under the published App Service prefix, not optional convenience routes or endpoint-by-endpoint allowlists.
+- For Service-to-Gateway appKey injection, follow the [shared App context contract](references/auth-app-context.md).
 - Every Service-fronted Make App must ensure the default `/api/make/app/principal/permission` route receives the established browser session context.
 - Do not implement auth readiness by adding a broad `/api/make/**` passthrough. Only auth/oauth are default transparent namespaces; Service-owned business requests stay under explicit `/api/make/app/**` routes, and unknown `/api/make/**` paths fail closed.
 - For Service-fronted Apps, Service must preserve the App host context for every make-gateway call: derive `X-Forwarded-Host` from inbound `Host`, do not trust client-supplied `X-Forwarded-Host`, add `X-Forwarded-Proto`, and share the same helper for auth and business proxy requests.
@@ -101,6 +102,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - Shared request adapter and 401/403 handling: `references/request-adapter.md`
 - Default unified login mode: `references/unified-login-mode.md`
 - Service-fronted unified-login mode: `references/service-fronted-mode.md`
+- Service-to-Gateway appKey injection: [shared App context](references/auth-app-context.md)
 - 401, 403, and logout behavior: `references/logout-and-401.md`
 - Auth incident diagnosis: `references/troubleshooting.md`
 - Minimal Service-fronted route-shape example: `references/service-fronted-node-example.md`; read it only after `references/service-fronted-mode.md`.

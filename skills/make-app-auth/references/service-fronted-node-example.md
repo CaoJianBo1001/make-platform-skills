@@ -45,6 +45,7 @@ export const listRecords = (entityKey: string, payload: unknown) =>
 - `/api/make/auth/**` and `/api/make/oauth/**` forward to the published
   make-gateway auth namespace. Preserve the upstream status, `Set-Cookie`, and
   `Location`; use manual redirect handling.
+  Apply the [shared App context contract](auth-app-context.md) in the existing Make client.
 - `/api/make/app/**` contains explicitly registered Service business routes.
   Do not create a broad `/api/make/**` passthrough; unmatched paths fail closed.
 - `MAKE_APP_LOCAL_PREVIEW=true` may provide only the documented local preview
@@ -63,6 +64,7 @@ client-provided forwarded-host header.
 - Local-preview paths use `makecli configure resolve` and server-side credentials
   only; published paths use the internal `/make/**` scope.
 - Query strings do not bypass the local-preview path guard.
+- Run the [shared App context checks](auth-app-context.md#verification).
 - Unknown `/api/make/**` routes return a closed failure response.
 
 Read `service-fronted-mode.md` for the full local-preview matrix, proxy rules,
