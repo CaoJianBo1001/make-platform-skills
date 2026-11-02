@@ -1,8 +1,8 @@
 ---
 name: make-app-group
-description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. When make-app-actions is present, a successfully applied group must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
+description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 列表分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. When make-app-actions is present, a successfully applied group must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Statistical aggregation uses make-app-service. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
 metadata:
-  version: 0.1.7
+  version: 0.1.8
 ---
 
 # make-app-group
@@ -13,6 +13,8 @@ CanvasTable grouped rendering as one integrated capability.
 
 This Skill owns the consumer contract and grouping semantics. Related Skills own
 their implementation surfaces.
+
+For counts, sums, averages, or grouped chart metrics, use `make-app-service` and its aggregate API reference. This Skill groups record lists for browsing and expansion.
 
 This capability is a desktop/tablet presentation. The standard 手机／phone card list does not render a 分组 trigger, `GroupTableComponent`, grouped CanvasTable, or grouped leaf navigation. If a desktop Preset already has an applied group, keep that saved/draft state intact while the phone View requests ordinary ungrouped records; do not clear the Preset merely because the width changed.
 

@@ -55,6 +55,10 @@ Response Body 格式如下：
 > 返回 App 及其下全部 Entity、Relation 的聚合结果，其中字段通过 `Entity.properties.fields` 返回。  
 > `entities` 和 `relations` 的结构与上方定义保持一致。
 
+字段的运行时 `capabilities` 用于选择查询能力：`groupable` 表示列表分组，`aggregable` 表示可用作[聚合统计](DataAPIDesign.md#聚合统计-record-数据)的 `group[].fieldKey` 维度，两者独立。Lookup 可以 `groupable=false`、`aggregable=true`，按关联记录 ID 聚合。
+
+`aggregable` 不控制 `aggregates[].fieldKey` 的指标资格；指标按函数与字段类型校验，也不因该标志获得读取权限。旧版 Schema 缺少 `aggregable` 时表示能力未知，不等同于 `false`。保留 Schema 返回的能力信息，无需在 DSL 或聚合请求中提交这些派生标志。
+
 ```http
 POST https://dev-make.qtech.cn/api/make/meta/v1/schema
 ```

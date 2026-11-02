@@ -1,8 +1,8 @@
 ---
 name: makecli
-description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, read build/deployment logs, entities, relations, records, inspect resources, switch backend context, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"发布到 production\", \"promote\", \"部署进度\", \"构建状态\", \"构建日志\", \"部署日志\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", \"切换环境\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
+description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, read build/deployment logs, entities, relations, records, query server-side statistics (统计、汇总、分组统计), inspect resources, switch backend context, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"发布到 production\", \"promote\", \"部署进度\", \"构建状态\", \"构建日志\", \"部署日志\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", \"切换环境\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.7.1
+  version: 0.7.3
 ---
 
 # makecli — Make Platform CLI
@@ -65,12 +65,20 @@ User request arrives
     |
     +- App overview + environment URLs? --> app info <appKey>
     |
+    +- Counts / sums / averages / grouped statistics? --> record aggregate
+    |
     +- Data CRUD? --> record commands
     |
     +- Delete resource / one-off operation? --> Imperative Workflow
     |
     +- Query / inspect? --> list/get/schema commands
 ```
+
+## Workflow: Statistics
+
+For statistics over matching Make records, push supported calculations into `record aggregate`. Read [the aggregate command reference and query choices](references/cli-reference.md#server-side-aggregate), inspect the current Schema for dimensions and metric inputs, and choose a precise, simple plan with reasonable read cost. Omit `--group-json` for a global total; use `pagination.total` to distinguish all groups from a Top N result.
+
+When building a Vibe App, use `make-app-service` to call the Data API from the App Service; the CLI is for development and verification.
 
 ## Workflow: Declarative Schema (Primary)
 
