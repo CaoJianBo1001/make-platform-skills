@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成、任务详情办理和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.25
+  version: 0.2.26
 ---
 
 # Make App 前台审批完整接入
@@ -27,6 +27,7 @@ metadata:
 | 包版本、公开入口、控件适配、我的审批列表与筛选 | [包与列表](references/package-and-list.md) |
 | 节点字段、同意/拒绝/退回/继续提交、任务附件及失败恢复 | [任务详情与办理](references/task-detail.md) |
 | Service 路由、Workflow Target、DTO、Long ID 与信封 | [接口合同](references/workflow-api.md) |
+| 配置/详情读取、发起、办理及撤回的业务错误提示 | [公共错误文案合同](../make-app-observability/references/business-error-message.md)，同时保留本 Skill 的失败恢复规则 |
 | 节点字段完整枚举、配置保留、成功响应与异常边界 | [节点字段转换合同](references/node-form-metadata.md) |
 | Service 可复用纯转换、宿主转换验证及响应样例 | [参考转换器](assets/bpm-node-form-metadata.mjs)、[行为验证器](scripts/verify-node-form-metadata.mjs)、[脱敏夹具](scripts/fixtures/node-form-metadata.json) |
 | Lookup 节点内关系、目标最小描述与单/多选 | [依赖合同](references/lookup-metadata.md)、[纯解析器](assets/bpm-lookup-metadata.mjs)、[行为验证](scripts/verify-bpm-lookup-metadata.mjs) |
@@ -60,6 +61,7 @@ metadata:
 | [makeui](../makeui/SKILL.md) | Shell、导航、Drawer/手机任务页、宿主字段控件与外观；本 skill 定义审批分支、包接线、字段与动作合同 |
 | [make-app-permission](../make-app-permission/SKILL.md) | 普通 IAM、应用/对象/操作权限；审批新建与任务办理分别消费 Workflow 授权，普通 CRUD 不受放宽 |
 | [make-app-service](../make-app-service/SKILL.md) | 请求、登录、配置、缓存、Trace 与透传；本 skill 提供 Workflow 接口映射及节点/附件授权边界 |
+| [make-app-observability](../make-app-observability/SKILL.md) | 公共业务 msg/message、Trace 与统一错误出口；审批包的操作建议不能覆盖后端原因，文案不决定失败恢复资格 |
 | [make-app-actions](../make-app-actions/SKILL.md) | 普通记录操作入口、预检及批量能力；消费同一锁判断，不复制审批任务动作 |
 | [canvas-table-integration](../canvas-table-integration/SKILL.md) | 桌面列表的只读系统列；手机沿用卡片，不为状态展示新增表格 |
 | [makedsl](../makedsl/SKILL.md) | 业务对象建模；不为流程状态或锁补业务字段，不生成流程定义 |

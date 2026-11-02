@@ -89,6 +89,8 @@ Lookup 从节点字段保留 relationKey/targetFieldKey/targetFieldType，从 `d
 
 进行中互斥；失败不自动重发。通过 `onRequestError(error, {operation, message, resultUnknown})` 接入宿主统一错误/Trace 出口，仅提示一次。字段和意见错误留在控件旁并聚焦，不作为网络 Toast；首次加载无授权时保留重试，不显示伪造动作。动作请求失败后保留当前按钮、可编辑草稿和意见，再点击仍先核查；结果未知不宣称未执行。取消/切换范围导致的过期请求不弹错、不刷新新任务。成功后包锁定当前动作界面，宿主关闭详情并刷新列表/相关业务记录；刷新失败应提示“办理成功，刷新未完成”，不能重办同一动作。
 
+宿主从实际失败响应提取公共 `msg`，按接口兼容 `message`，再交给 Trace 出口；具体规则见 [公共错误文案合同](../../make-app-observability/references/business-error-message.md)。回调上下文中的 `message` 是操作建议，不得覆盖后端原因。未知错误码仍保留有效公共原因；是否可以重试、结果是否未知保持独立判断。
+
 ## 任务附件
 
 预上传接口以 processInstanceId、taskId、fieldKey 定位。Service 重取任务，校验当前应用/任务/实例、PENDING 任务、有效动作、该字段可见且可编辑，再按上述 TASK 节点元数据合同确认 File 类型及限制；不能使用 Schema 核验源字段、套普通记录更新权限，也不能让浏览器指定任意 entityKey/recordID。
