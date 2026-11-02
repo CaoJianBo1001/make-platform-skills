@@ -104,6 +104,8 @@ unnecessary personal data. Do not solve an unsafe upstream contract by silently
 rewriting it in Service; block the route release and have the Make backend owner
 correct the upstream response contract.
 
+UI 对已确认公共错误体按 [公共业务错误文案合同](../../make-app-observability/references/business-error-message.md) 提取 `msg`，按接口兼容 `message`。Service 保持原始失败响应，宿主也不能按错误码或固定文案白名单覆盖有效原因；不得将响应透传理解为把完整响应对象、堆栈或凭据直接交给组件。
+
 ## Logging
 
 Add logs at boundary functions:

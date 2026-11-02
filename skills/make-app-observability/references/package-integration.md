@@ -1,6 +1,8 @@
 # 公共包接入
 
-新建或本次改造反馈出口的 UI 包默认依赖 `@qfei-design/make-app-observability@^0.1.10`，以获得包内 Toast 自动关闭。`^` 只选择兼容范围内的版本，不会更新已有 lockfile 或线上 App；升级必须显式更新依赖和锁文件、复跑验证并重新发布。未涉及反馈改造的存量 App 保留其锁定版本。历史版本中，`0.1.5` 支持 business Trace ID，`0.1.7` 开始双端 portal，`0.1.8` 提供桌面顶部 Toast，`0.1.9` 提供权限提示；这些能力不证明已具备 `0.1.10` 的计时生命周期。使用现有 App 已声明的包管理器和锁文件；新建 App 按 `make-app-runtime` 的运行时基线安装。先核对目标 registry、锁文件和实际安装包，再读取其 `package.ai.json`，按 `readOrder` 阅读公开文档并核对 React peer 依赖。不要根据另一个包仓库或旧安装产物推测 API。若仓库无法解析所需版本，报告包发布阻断，不用旧版、Git 或宿主 CSS 伪造包的新能力。
+新建或本次改造反馈出口的 UI 包默认依赖 `@qfei-design/make-app-observability@^0.1.11`，同步公共业务错误文案合同并保留包内 Toast 自动关闭。`^` 只选择兼容范围内的版本，不会更新已有 lockfile 或线上 App；升级必须显式更新依赖和锁文件、复跑验证并重新发布。未涉及反馈改造的存量 App 保留其锁定版本。历史版本中，`0.1.5` 支持 business Trace ID，`0.1.7` 开始双端 portal，`0.1.8` 提供桌面顶部 Toast，`0.1.9` 提供权限提示；这些能力不证明已具备 `0.1.10` 的计时生命周期。使用现有 App 已声明的包管理器和锁文件；新建 App 按 `make-app-runtime` 的运行时基线安装。先核对目标 registry、锁文件和实际安装包，再读取其 `package.ai.json`，按 `readOrder` 阅读公开文档并核对 React peer 依赖。不要根据另一个包仓库或旧安装产物推测 API。若仓库无法解析所需版本，报告包发布阻断，不用旧版、Git 或宿主 CSS 伪造包的新能力。
+
+已核对 npm 正式产物：`0.1.11` 相比 `0.1.10` 补充公共业务错误文案与安全边界说明，React 运行代码及类型未变；Toast 计时能力仍以 `0.1.10` 为起点。推荐新接入采用新版文档，不将本次文档更新描述为必须升级才能获得新的运行能力。
 
 公开入口只有包根入口、`/react` 和 `/styles.css`。UI 入口导入样式一次。React 错误出口使用 `MakeAppErrorNotice`；一个全局错误队列使用一个 `MakeAppErrorNoticeViewport` 包裹。在 `0.1.9+`，桌面和手机均将队列 portal 到 `document.body`；首次 SSR 与 hydration 在原位置渲染，挂载后才 portal。默认布局由包负责：桌面顶部居中的 Toast 距顶部至少 `24px` 并避让安全区，手机水平居中且垂直居中偏上；`--make-app-error-center-offset` 只调整手机偏移。四边留出安全区和间距，长错误内容或长队列在 viewport 内滚动，卡片即使有宿主 DOM wrapper 也保持布局与交互。不要给 viewport 添加全屏定位 wrapper，也不要用宿主样式覆盖默认 `position`、`inset`、`padding`；升级旧 App 时移除这些遗留覆盖。`0.1.10+` 由包管理关闭计时与隐藏；宿主保留错误队列、`onClose` 后的状态清理、重试和安全文案，不再叠加 `setTimeout`。普通错误卡片不提供 `onRetry` 属性或重试按钮，宿主应按 `makeui` 的页面错误态规则呈现重试操作，不能把它当作全局卡片的一部分。页面内嵌错误仍复用同一错误卡片。
 
@@ -16,7 +18,7 @@
 | `network` | 请求未取得 HTTP 响应 | 展示本次请求有效 ID |
 | `business` | HTTP 2xx 但业务码失败 | 展示有效 ID |
 
-Core 的 `normalizeMakeAppTraceId`、`shouldDisplayMakeAppTraceId` 和 `normalizeMakeAppErrorNotice` 可供非 React 逻辑使用。包只接收宿主已经转成安全文案的标题和说明；不要把原始 Error、上游响应正文或服务内部堆栈交给组件。包本身不创建 Trace ID、不发 HTTP 请求、不保存错误状态，也不导出 Span。
+Core 的 `normalizeMakeAppTraceId`、`shouldDisplayMakeAppTraceId` 和 `normalizeMakeAppErrorNotice` 可供非 React 逻辑使用。包接收宿主从公共业务错误协议提取的标题和说明；按 [公共错误文案合同](business-error-message.md) 保留有效 `msg`，按接口兼容 `message`。不要将整个 Error、完整响应对象或内部堆栈交给组件，也不能借“安全文案”按错误码或固定白名单覆盖公共原因。包本身不创建 Trace ID、不发 HTTP 请求、不保存错误状态，也不导出 Span。
 
 共享请求层应产生包含 `kind/status/title/description/traceId` 的安全结构化错误；网络异常没有响应时 `status` 可缺省，`description` 也可按需要缺省。权限、Schema 等 Provider 可以另存加载状态，但必须把可用字段保留到全局或页面内嵌错误出口；不能仅保存“加载失败”字符串，也不能把原始 Error 对象或上游响应正文直接交给组件。仅当卡片实际收到并展示有效 ID 时，页面文案才可提示用户复制 Trace ID。
 

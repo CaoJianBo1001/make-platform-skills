@@ -15,4 +15,13 @@ for (const source of [integration, feedback]) {
 assert.doesNotMatch(feedback, /Toast component does not start a timer|host owns duration/);
 assert.match(verification, /自动关闭.*队列/);
 assert.match(verification, /noticeKey/);
-console.log('Toast 生命周期文档合同通过；发布和宿主行为须独立验证');
+
+// 推荐版本与能力起点分开：0.1.11 同步公共文案合同，计时能力始于 0.1.10。
+const skill = read('skills/make-app-observability/SKILL.md');
+for (const source of [skill, integration]) {
+  assert.match(source, /\^0\.1\.11/);
+  assert.doesNotMatch(source, /\^0\.1\.10/);
+}
+assert.match(integration, /0\.1\.11[^\n]*公共[^\n]*文案/);
+assert.match(integration, /0\.1\.10[^\n]*计时/);
+console.log('Toast 生命周期及推荐版本合同通过；发布和宿主行为须独立验证');
