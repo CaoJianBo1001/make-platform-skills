@@ -363,12 +363,20 @@ makecli record list --app crm --entity order --filter "owner == _currentUser"   
 makecli record list --app crm --entity order --sort-json '[{"fieldKey":"createdAt","order":"desc"}]'
 ```
 
-- `aggregate` is a server-side GROUP BY over one entity; `--group-json` (dimensions) + `--aggregates-json` (metrics, required) decide the columns. Omit `--group-json` for a single global row.
+### Server-side aggregate
+
+Use aggregation for the calculations it can express. When one request is insufficient, consider an equivalent query on the appropriate entity, combining aggregate results, or computing from a filtered `record list` with only the needed fields and complete required pages. Use existing pagination totals, expected transfer size and query frequency to judge cost; a small exact detail calculation is valid. For large, frequent calculations beyond these options, recommend a dedicated backend query or maintained summary. Explain any approximation or changed business scope before adopting it.
+
+See [query-planning examples](../../makedsl/references/DataAPIDesign.md#不能直接表达时的方案选择) for period comparisons, median calculations and composition limits. An argument, authentication or permission error is handled as that error, rather than treated as evidence that the calculation is unsupported.
+
+- `aggregate` is a server-side GROUP BY over one entity; `--group-json` (dimensions) + `--aggregates-json` (metrics, required) decide the columns. Omit `--group-json` for a global aggregate.
+  - choose dimensions from Schema `capabilities.aggregable`, independently of list `groupable`; a missing capability means unknown on older servers. Metric eligibility follows the aggregate function's field types, not this dimension flag
   - group element: `{"fieldKey","granularity"?,"alias"?}` — `granularity` only on Date fields: `day|week|month|quarter|year`; same field twice needs distinct `alias`; at most 3 dimensions
   - aggregates element: `{"fieldKey"?,"aggregate","alias"}` — `count` (no fieldKey) | `countDistinct` | `sum`/`avg` (Number/Currency/Percent) | `min`/`max` (numeric or Date/DateTime); `alias` required, unique across all columns; at most 10 metrics
   - `--filter` runs before aggregation (WHERE, same CEL as `list`); `--aggregate-filter` runs after (HAVING) and may only reference metric aliases
   - sort element: `{"alias":..}` or `{"fieldKey":..}` + `"order":"asc|desc"`; default is all dimensions ascending
-  - rows: dimension columns are `{value,label}` (null group → `label: "未填写"`), metric columns are raw JSON numbers; `pagination.total` counts groups, not records
+  - rows: dimension columns are `{value,label}` (null group → `label: "未填写"`); numeric metrics are raw JSON numbers, Date/DateTime `min`/`max` are formatted strings, and empty-value metrics can be `null`. Lookup group `value` is the related record ID; keep it distinct from its display `label`
+  - `pagination.total` counts groups, not records; the default page contains 10 groups, with at most 1000 per page. Fetch remaining pages for complete results. Prefer querying global `avg` or `countDistinct` directly; combining group results requires matching sums and non-null counts for averages, or disjoint key sets for distinct counts
 
 ```bash
 makecli record aggregate --app crm --entity order \

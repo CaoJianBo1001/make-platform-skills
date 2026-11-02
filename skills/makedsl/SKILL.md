@@ -2,7 +2,7 @@
 name: makedsl
 description: Use when designing or generating Make platform DSL YAML — defining apps, entities, fields, relations, views, or record schemas. Also triggered by requests like "建模", "建表", "加字段", "定义关联", or "生成 DSL". Does not deploy resources (use makecli), build frontend UI (makeui), implement Service/API code (make-app-service), handle auth (make-app-auth), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior (use canvas-table-integration).
 metadata:
-  version: 0.2.5
+  version: 0.2.7
 ---
 
 # makedsl usage
@@ -29,6 +29,7 @@ Use `canvas-table-integration` for CanvasTable display, columns, renderers, or c
 | --- | --- |
 | Make Meta API schema access | `references/MetaAPIDesign.md` |
 | Make Data API and relation payloads | `references/DataAPIDesign.md` |
+| Single-Entity aggregate API, dimensions, metrics, Lookup and NULL | [聚合统计](references/DataAPIDesign.md#聚合统计-record-数据); App integration belongs to `make-app-service` |
 | Relation declarations | `references/RelationDesign.md` |
 | Base field DSL and lookup fields | `references/FieldDesign.md` |
 | User field design | `references/UserFieldDesign.md` |
