@@ -129,4 +129,6 @@ Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建�
 
 2026-10-30：在独立 beta 合并分支整合 canvas/skill；保留 beta 聚合查询与 TAP 报告器修复，保留三终态禁编、Toast 生命周期和错误审计增强，不向 canvas/skill 回灌 beta 提交。
 
+2026-11-02：统一公共业务错误 msg/message 提取及审批/Service 交接，不以文案决定权限、重试或落库结果；可观测包推荐 ^0.1.11，保留 0.1.10 计时能力起点及存量锁定版本。审批包仍为 0.2.11 并保留三终态兼容适配，Service Skill 更新至 0.2.19 避免与 beta 聚合指导版本重复。
+
 [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md

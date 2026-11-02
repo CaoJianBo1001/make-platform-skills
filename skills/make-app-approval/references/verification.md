@@ -4,6 +4,8 @@
 
 节点字段转换先执行 `node skills/make-app-approval/scripts/verify-node-form-metadata.mjs`，覆盖随包 [转换合同](node-form-metadata.md) 的真实参考函数；宿主可传入桥接自身转换代码的 ESM 文件复用同一测试。仓库 `scripts/test-bpm-node-form-metadata-behavior.mjs` 另验证故障注入会被发现，CI 的 `scripts/test-*.mjs` 入口会自动运行。`test-bpm-node-form-metadata-contract.mjs` 仅检查文档来源与链接，不作为转换行为或真实 Workflow 联调证据。
 
+审批配置/详情读取、发起、办理、撤回错误按 [公共文案验收](../../make-app-observability/references/business-error-message.md#宿主验收) 验证真实宿主链路。同一错误码使用不同原因和联系人，覆盖 HTTP 200 业务失败及 4xx/5xx；原因、码和 Trace 均可见，包的操作建议不覆盖原因，失败仍不自动重发。保留原有落库结果和任务恢复回归。
+
 ## 默认生成决策场景
 
 | 已确认需求 | 应观察的结果 |
