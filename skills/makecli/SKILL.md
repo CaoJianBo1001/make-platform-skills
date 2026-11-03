@@ -2,7 +2,7 @@
 name: makecli
 description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, read build/deployment logs, entities, relations, records, query server-side statistics (统计、汇总、分组统计), inspect resources, switch backend context, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"发布到 production\", \"promote\", \"部署进度\", \"构建状态\", \"构建日志\", \"部署日志\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", \"切换环境\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.7.2
+  version: 0.7.3
 ---
 
 # makecli — Make Platform CLI

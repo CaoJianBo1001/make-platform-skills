@@ -5,6 +5,18 @@ import test from 'node:test';
 
 const read = (file) => fs.readFileSync(new URL(`../${file}`, import.meta.url), 'utf8');
 const loadLayout = () => import('../skills/make-app-approval/assets/mobile-detail-layout.mjs');
+
+test('详情接线示例将宿主 tablet 映射为包支持的 desktop，手机仍为 mobile', () => {
+  const markdown = read('skills/make-app-approval/references/mobile.md');
+  const source = [...markdown.matchAll(/```tsx\n([\s\S]*?)\n```/g)]
+    .map(match => match[1]).find(code => code.includes('<ApprovalTaskDetail'));
+  const expression = source?.match(/<ApprovalTaskDetail\b[\s\S]*?presentation=\{([^}]+)\}/)?.[1];
+  assert.ok(expression, '执行实际 JSX 中传给审批包的 presentation 表达式');
+  const evaluate = new Function('presentation', `return (${expression});`);
+  for (const [mode, expected] of [['mobile', 'mobile'], ['tablet', 'desktop'], ['desktop', 'desktop']]) {
+    assert.equal(evaluate(mode), expected, `宿主 ${mode} 的包展示参数`);
+  }
+});
 const loadStartIntents = async () => {
   const markdown = read('skills/make-app-approval/references/record-lifecycle.md');
   const source = [...markdown.matchAll(/```js\n([\s\S]*?)\n```/g)]
