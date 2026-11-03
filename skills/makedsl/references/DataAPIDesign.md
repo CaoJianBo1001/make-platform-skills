@@ -588,6 +588,109 @@ Response Body
 - 分页查询中的每条元素结构与单条查询的 `data` 完全一致，只是顶层从对象变成数组，数组中的单条数据根据字段类型不同，返回结构也会不同，详见：`常规字段类型返回结构示例` 和 `派生字段类型返回结构示例`
 - `pagination.total` 表示满足当前筛选条件的总记录数，而不是当前页记录数
 
+### 聚合统计 Record 数据
+
+对单个 Entity 做服务端聚合，支撑仪表盘、图表和 AI 分析。需要匹配记录的数量、求和、均值、去重计数或分组指标时优先使用本接口；列表折叠与逐层展开使用 Record 分组查询，需要明细时使用 Record 查询。
+
+```http
+POST https://dev-make.qtech.cn/api/make/data/v1/aggregate
+Content-Type: application/json
+X-Make-Target: MakeService.ListResources
+```
+
+复用既有 Make 请求的认证上下文和网关地址；示例字段需替换为实际 Schema 中的字段。
+
+```json
+{
+  "appKey": "<APP_KEY>",
+  "entityKey": "order",
+  "group": [
+    { "fieldKey": "status" },
+    { "fieldKey": "orderDate", "granularity": "month", "alias": "month" }
+  ],
+  "aggregates": [
+    { "aggregate": "count", "alias": "orderCount" },
+    { "fieldKey": "amount", "aggregate": "sum", "alias": "totalAmount" }
+  ],
+  "filter": { "expression": "status != 'draft'" },
+  "aggregateFilter": { "expression": "totalAmount > 10000" },
+  "sort": [{ "alias": "totalAmount", "order": "desc" }],
+  "pagination": { "page": 1, "size": 10 }
+}
+```
+
+#### 维度与指标
+
+- `group` 可省略或为 `[]`，表示全局聚合；最多 3 项。维度使用 Schema 的 `capabilities.aggregable`，与列表 `groupable` 独立，见 [Schema 字段能力](MetaAPIDesign.md#schema)。
+- 分组元素为 `{fieldKey, granularity?, alias?}`，不含 `order`。`granularity` 仅用于 `Make.Field.Date`，支持 `day/week/month/quarter/year`；自然日/月/季/年桶分别形如 `2026-03-05`、`2026-03`、`2026-Q1`、`2026`。周桶为该周周一日期，例如 `2026-03-02`，跨年不拆周；日期桶的 `label=value`。
+- `aggregates` 必填且为 1–10 项。指标 `alias` 必填；维度输出名默认 `fieldKey`，同字段不同日期粒度需用 `alias` 区分，全部输出列名不得重复。
+
+| `aggregate` | `fieldKey` / 类型 |
+| --- | --- |
+| `count` | 不传 `fieldKey`，统计记录数 |
+| `countDistinct` | 单值字段；不支持多值、File、RichText、Formula、Rollup、Count；Lookup 按关联记录 ID 去重 |
+| `sum`、`avg` | Number、Currency、Percent |
+| `min`、`max` | Number、Currency、Percent、Date、DateTime |
+
+指标资格按函数与字段类型判断，不要求指标字段 `aggregable=true`。
+
+#### 过滤、排序与分页
+
+- `filter: {expression}` 在聚合前过滤原始记录（WHERE），使用现有 Record 筛选表达式；`aggregateFilter: {expression}` 在聚合后过滤分组（HAVING），只引用已声明的数值指标 alias。本接口不使用列表下钻的 `groupFilter`。
+- `sort` 元素为 `{alias, order}` 或 `{fieldKey, order}`，引用本次输出列，`order` 为 `asc/desc`。省略时全部维度升序；服务端追加维度决胜排序。
+- `pagination` 默认 `page=1,size=10`，每页最多 1000 组。`pagination.total` 是符合条件的分组数，不是记录数。需要完整图表时按 total 取完分组；Top N 场景只取所需页。全局 `avg/countDistinct` 优先直接请求对应指标；组合已有分组结果时按下方方案保留必要统计量与去重语义。
+
+#### 响应与空值
+
+```json
+{
+  "code": 200,
+  "msg": "Aggregate records success",
+  "data": [
+    {
+      "status": { "value": "completed", "label": "已完成" },
+      "month": { "value": "2026-03", "label": "2026-03" },
+      "orderCount": 128,
+      "totalAmount": 125300.5
+    }
+  ],
+  "pagination": { "page": 1, "size": 10, "total": 1 }
+}
+```
+
+每行是一个分组，维度为 `{value,label}`；空值组保留 `value:null,label:"未填写"`。数值指标使用原始存储值计算，返回 JSON number，至多 4 位小数（HALF_EVEN），不套用 Record 的 Currency/Percent 展示换算；`count/countDistinct` 为整数，Date/DateTime 的 `min/max` 按字段格式返回字符串。
+
+`countDistinct` 忽略 NULL；`sum/avg/min/max` 忽略 NULL，全部为空或无记录时返回 `null`；无记录时 `count/countDistinct` 为 0。展示或业务计算时保留这种区别。
+
+#### Lookup 与错误处理
+
+Lookup 始终引用当前 Entity 的字段 key：分组 `value` 是关联记录 ID，`label` 为 `targetFieldKey` 展示值（目标字段为空时回退 ID）；同名记录仍是不同组。过滤按 `targetFieldKey` 的类型和值处理，排序按 `sortByFieldKey`、未配置时按 `targetFieldKey`；不能把三个用途统一当作 ID 筛选或排序。
+
+维度支持严格一对一 FK 两侧，或标准 one→many FK 的 TO/many 侧；无有效关联或目标记录已删除时进入空值组。聚合主体保持单个 Entity，不支持通过 `targetEntity.field` 对 many 侧目标集合求指标；这类需求通常改为对明细 Entity 聚合。
+
+失败沿用 Make 的 `code/msg/data` 包装。参数错误可能在 `data.errors` 中提供 `{path,message,suggestion}`，据此修正对应参数后重试；保留原统计目标与筛选口径。权限或执行错误按原错误反馈，不当作 0 或完整结果。
+
+#### 不能直接表达时的方案选择
+
+保持业务口径，优先下推可表达的计算，再选择实现简单、读取成本合理的精确方案。接口是通用计算基础，允许应用补充业务计算。
+
+| 情况 | 方案与例子 |
+| --- | --- |
+| 换一个等价查询即可表达 | 例如每个订单的明细金额合计：对明细 Entity 聚合，按其订单 Lookup 分组 |
+| 少量汇总结果足够 | 同比/环比先取得两个业务周期的汇总并对齐后计算；占比先取同口径分组金额及全局金额，再由 Service 计算 |
+| 必须逐条计算且范围合理 | 例如中位数、连续活跃天数：按必要时间范围、筛选及字段读取完整所需明细，在 Service 精确计算；临时分析也可由 Agent 处理 CLI 查询结果 |
+| 数据量大、查询频繁，组合或明细计算仍不经济 | 给出专用后端查询、派生字段或定期统计表的具体建议，说明新增维护工作和可接受的数据刷新延迟 |
+
+结合已有分页 `total`、预计传输量和查询频率判断成本；无需固定记录数门槛或每次额外发起 count。聚合、记录读取可以混合使用，仅补取计算所缺的数据；具体数据规模较小时也可直接采用更简单的明细方案。
+
+在接口上限内尽量合并同一 Entity、同一筛选下的兼容指标，按维度批量分组，减少逐个客户或部门查询。
+
+组合时保持原统计范围、权限与 NULL 口径：全局平均值优先直接查询，由分组汇总计算时使用同口径的和与非空计数；去重数不能在集合可能重叠时直接相加；独立的二维汇总不能还原四维联合分布。
+
+可以按原口径完成的常规组合直接推进；采用近似或改变口径前明确说明。涉及新增字段、统计表或专用接口时，先给出实现及维护成本建议。参数、认证或权限失败按原错误处理，不能据此认定需求超出聚合能力。
+
+权威契约：[AgenticDSL Data API 聚合统计](https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/DataAPIDesign.md#聚合统计-record-数据)。
+
 ### 分页查询 User 数据
 
 用于查询当前组织内可见的用户候选项，常用于 `Make.Field.SingleUser` 和 `Make.Field.MultiUser` 字段填写前的用户选择器。

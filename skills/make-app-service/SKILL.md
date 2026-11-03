@@ -1,6 +1,6 @@
 ---
 name: make-app-service
-description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
+description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts, including server-side aggregation for dashboards, charts and 统计/汇总. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
   version: 0.2.19
 ---
@@ -42,6 +42,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 | Schema 缓存刷新、进行中请求复用与取消的组合场景 | `references/service-api-contracts.md`、`references/testing-and-safety.md` |
 | Service folder structure, layering, logging, errors | `references/service-layering.md` |
 | Make Data API adapter rules, schema `fields` / `createFields`, records, files, lookup, candidates | `references/make-data-adapter.md` |
+| Dashboards, charts, counts, sums, averages, grouped statistics / 聚合统计 | [Aggregate statistics](references/make-data-adapter.md#aggregate-statistics) |
 | Test requirements, contract checks, safety review | `references/testing-and-safety.md` |
 | Single-app permission proxy, Make IAM principal permission, app-scope permission payloads | Use `make-app-permission` |
 | Auth proxy, cookies, unified login, 401/403 behavior | Use `make-app-auth` |

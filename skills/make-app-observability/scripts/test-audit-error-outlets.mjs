@@ -158,7 +158,7 @@ test('含中文和空格的安装路径可以运行自测（默认解析及 CI �
     const env = { ...process.env }; delete env.MAKE_FEEDBACK_TEST_DEPENDENCIES;
     delete env.NODE_TEST_CONTEXT;
     if (ci) env.MAKE_FEEDBACK_TEST_DEPENDENCIES = path.join(root, 'ui/node_modules');
-    const result = spawnSync(process.execPath, ['--test', '--test-name-pattern=保留唯一全局出口', path.join(scripts, 'test-audit-error-outlets.mjs')], { encoding: 'utf8', env });
+    const result = spawnSync(process.execPath, ['--test', '--test-reporter=tap', '--test-name-pattern=保留唯一全局出口', path.join(scripts, 'test-audit-error-outlets.mjs')], { encoding: 'utf8', env });
     assert.equal(result.status, 0, `${ci ? 'CI' : '默认'} 路径解析失败\n${result.stdout}${result.stderr}`);
     assert.match(result.stdout, /# pass 1\b/, '子进程必须实际执行路径回归，不能全部跳过');
   }

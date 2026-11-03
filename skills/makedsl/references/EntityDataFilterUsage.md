@@ -4,7 +4,7 @@
 
 ## 核心规则
 
-- 仅列表查询支持 `filter`，包括 Record 列表以及受限的 User / Department 候选列表。
+- `filter` 支持 Record 列表、[聚合统计](DataAPIDesign.md#聚合统计-record-数据)的聚合前过滤，以及受限的 User / Department 候选列表；聚合后的指标筛选另用 `aggregateFilter`。
 - Record 列表必须使用后端筛选，不要在前端拉全量数据后自行过滤。
 - `filter` 必须是对象形态：`{ "expression": "<CEL>" }`。
 - 省略 `filter`、传 `null`、省略 `filter.expression`、或 `filter.expression` 为空白字符串，均表示不筛选。

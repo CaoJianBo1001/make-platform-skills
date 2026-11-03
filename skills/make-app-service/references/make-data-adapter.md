@@ -192,6 +192,12 @@ Rules:
 - ordinary grouped leaf records should call records mode with `group` omitted or `null`; never send `group: []`
 - do not mutate formatted UI display labels into submit payloads
 
+## Aggregate statistics
+
+For dashboard metrics, charts, or AI analysis over matching Make records, prefer the server-side aggregate API when it expresses the requested calculation. Read the bundled [Data API aggregate contract](../../makedsl/references/DataAPIDesign.md#聚合统计-record-数据); the [upstream design](https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/DataAPIDesign.md#聚合统计-record-数据) is the authoritative reference.
+
+Call `POST /data/v1/aggregate` with `X-Make-Target: MakeService.ListResources` through the existing Make adapter. Reuse its runtime path scope, configured `appKey`, login context, cancellation, and response handling. Push supported calculations down, then perform any needed result combination or reasonably sized detail calculation in the Service; UI consumes the resulting business metrics. Read [query-planning examples](../../makedsl/references/DataAPIDesign.md#不能直接表达时的方案选择) when a single aggregate cannot meet the requirement. Record-list expansion and `groupFilter` remain the separate `make-app-group` workflow.
+
 ## User and department adapters
 
 Default candidate adapter contracts:

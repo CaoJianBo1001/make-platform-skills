@@ -29,6 +29,7 @@ Use `canvas-table-integration` for CanvasTable display, columns, renderers, or c
 | --- | --- |
 | Make Meta API schema access | `references/MetaAPIDesign.md` |
 | Make Data API and relation payloads | `references/DataAPIDesign.md` |
+| Single-Entity aggregate API, dimensions, metrics, Lookup and NULL | [聚合统计](references/DataAPIDesign.md#聚合统计-record-数据); App integration belongs to `make-app-service` |
 | Relation declarations | `references/RelationDesign.md` |
 | Base field DSL and lookup fields | `references/FieldDesign.md` |
 | User field design | `references/UserFieldDesign.md` |
