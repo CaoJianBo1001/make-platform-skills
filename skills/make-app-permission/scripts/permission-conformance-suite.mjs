@@ -1,5 +1,5 @@
 #!/usr/bin/env node
-// make-app-permission contract version: 0.2.9
+// make-app-permission contract version: 0.4.4
 import assert from 'node:assert/strict';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
@@ -73,7 +73,7 @@ const cases = [
   }],
   ['invalid_requested_identifiers_fail_closed', () => {
     const current = access(
-      permission('*.*.*', { fieldAccess: { '*': '*' }, resource: '*' }),
+      permission('*.*.*', { fieldAccess: { '*': 'editable' }, resource: '*' }),
     );
     for (const entityKey of [undefined, null, 7, {}, [], '', '   ', '*']) {
       assert.equal(adapter.canUseEntityOperation(current, entityKey, 'data.record.read'), false);
@@ -104,7 +104,7 @@ const cases = [
   ['operation_segment_permission_wildcard_allows', () => {
     const current = access(permission('*.record.create', { resource: APP_RESOURCE }));
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
-    assert.equal(adapter.canUseEntityOperation(current, 'order', 'meta.record.create'), true);
+    assert.equal(adapter.canUseEntityOperation(current, 'order', 'meta.record.create'), false);
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.update'), false);
   }],
   ['operation_deny_wins', () => {
@@ -114,25 +114,15 @@ const cases = [
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
   }],
-  ['operation_deny_does_not_deny_read_derived_create_field', () => {
-    const current = access(
-      permission('data.record.create'),
-      permission('data.record.create', { effect: 'deny' }),
-      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
-    );
+  ['record_create_deny_blocks_create_fields', () => {
+    const current = access(permission('data.record.create'), permission('data.record.create', {effect: 'deny'}), permission('meta.field.read'));
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
-  }],
-  ['read_field_deny_does_not_deny_record_create_operation', () => {
-    const current = access(
-      permission('data.record.create'),
-      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
-      permission('meta.field.read', { effect: 'deny' }),
-    );
-    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
-  }],
-  ['namespace_resource_wildcard_matches', () => {
+  }],  ['metadata_read_does_not_grant_or_revoke_data_creation', () => {
+    const current = access(permission('data.record.create', {fieldAccess: {title: ['creatable']}}), permission('meta.field.read', {effect: 'deny'}));
+    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
+  }],  ['namespace_resource_wildcard_matches', () => {
     const current = access(permission('data.record.read', {
       resource: 'make://tenant-1/*/app/TestApp',
     }));
@@ -209,52 +199,41 @@ const cases = [
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
   }],
-  ['create_field_uses_meta_field_read_dimension', () => {
+  ['create_field_uses_record_create_state', () => {
     const current = access(
-      permission('meta.field.read', { fieldAccess: { createOnly: 'creatable' } }),
-      permission('meta.field.read', { fieldAccess: { visibleOnly: 'readonly' } }),
-      permission('meta.field.update', { fieldAccess: { editableOnly: 'editable' } }),
+      permission('data.record.create', {fieldAccess: {createOnly: ['creatable'], editable: ['editable'], readonly: ['readonly'], masked: ['partialMask'], hidden: ['hidden']}}),
+      permission('meta.field.read', {fieldAccess: {visibleOnly: 'readonly'}}),
     );
-    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'createOnly'), true);
+    for (const field of ['editable', 'readonly', 'masked', 'hidden']) assert.equal(adapter.canCreateEntityField(current, 'order', field), false);
+  }],  ['record_create_field_access_does_not_grant_meta_read', () => {
+    const current = access(permission('data.record.create', {fieldAccess: {createOnly: ['creatable']}}));
     assert.equal(adapter.canCreateEntityField(current, 'order', 'createOnly'), true);
     assert.equal(adapter.canReadEntityField(current, 'order', 'createOnly'), false);
-    assert.equal(adapter.canUpdateEntityField(current, 'order', 'createOnly'), false);
-    assert.equal(adapter.canReadEntityField(current, 'order', 'visibleOnly'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'visibleOnly'), true);
-    assert.equal(adapter.canUpdateEntityField(current, 'order', 'editableOnly'), true);
-    assert.equal(adapter.canReadEntityField(current, 'order', 'editableOnly'), false);
-  }],
-  ['record_create_field_access_does_not_grant_meta_read', () => {
-    const current = access(permission('data.record.create', {
-      fieldAccess: { createOnly: 'creatable' },
-    }));
-    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'createOnly'), false);
-  }],
-  ['legacy_meta_field_create_does_not_grant_create_field', () => {
+  }],  ['legacy_meta_field_create_does_not_grant_create_field', () => {
     const current = access(permission('meta.field.create', {
-      fieldAccess: { title: 'creatable' },
+      fieldAccess: { title: 'editable' },
     }));
     assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
   }],
   ['read_dimension_access_states', () => {
     const current = access(permission('meta.field.read', {
       fieldAccess: {
-        creatable: 'creatable',
+        hidden: 'hidden',
         editable: 'editable',
         masked: 'partialMask',
       },
     }));
-    assert.equal(adapter.canReadEntityField(current, 'order', 'creatable'), false);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'creatable'), true);
+    assert.equal(adapter.canReadEntityField(current, 'order', 'hidden'), false);
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'hidden'), false);
     assert.equal(adapter.canReadEntityField(current, 'order', 'editable'), true);
     assert.equal(adapter.canReadEntityField(current, 'order', 'masked'), true);
   }],
-  ['record_update_field_access_does_not_grant_meta_update', () => {
+  ['record_update_state_grants_edit_without_metadata_update', () => {
     const current = access(permission('data.record.update', {
       fieldAccess: { title: 'editable' },
     }));
-    assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), true);
     assert.equal(adapter.canReadEntityField(current, 'order', 'title'), false);
   }],
   ['read_derived_create_with_named_hidden_exception', () => {
@@ -265,13 +244,37 @@ const cases = [
       }),
     );
     assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'secret'), false);
+    assert.equal(adapter.canReadEntityField(current, 'order', 'title'), true);
+    assert.equal(adapter.canReadEntityField(current, 'order', 'secret'), false);
   }],
-  ['empty_field_access_is_unrestricted_in_dimension', () => {
-    const current = access(permission('meta.field.read'));
-    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), false);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
+  ['empty_and_sparse_maps_have_distinct_bounds', () => {
+    for (const [permissionKey, check] of [
+      ['data.record.create', current => adapter.canCreateEntityField(current, 'order', 'title')],
+      ['meta.field.read', current => adapter.canReadEntityField(current, 'order', 'title')],
+      ['data.record.update', current => adapter.canUpdateEntityField(current, 'order', 'title')],
+      ['data.record.bulkUpdate', current => adapter.canUpdateEntityField(current, 'order', 'title', 'data.record.bulkUpdate')],
+    ]) {
+      for (const fieldAccess of [{}, {amount: 'readonly'}]) {
+        const current = access(permission(permissionKey, {fieldAccess}));
+        assert.equal(adapter.canUseEntityOperation(current, 'order', permissionKey), true);
+        assert.equal(check(current), Object.keys(fieldAccess).length === 0, permissionKey + ': sparse maps require a named or wildcard field entry');
+      }
+    }
+    const restricted = access(permission('data.record.update', {fieldAccess: {'*': 'readonly', title: 'editable'}}));
+    assert.equal(adapter.canUpdateEntityField(restricted, 'order', 'title'), true);
+    assert.equal(adapter.canUpdateEntityField(restricted, 'order', 'amount'), false);
+    assert.equal(adapter.canUpdateEntityField(access(), 'order', 'title'), false);
+  }],
+  ['missing_field_access_is_not_normalized_to_an_empty_map', () => {
+    const valid = permission('data.record.update', {fieldAccess: {title: 'editable'}});
+    for (const extra of [{}, {fieldAccess: undefined}]) {
+      const incomplete = {permissionKey: 'data.record.update', resource: ENTITY_RESOURCE, effect: 'allow', ...extra};
+      const current = access(valid, incomplete);
+      assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.update'), false, 'incomplete selected result must invalidate the snapshot');
+      assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
+    }
+    const otherApp = {permissionKey: 'data.record.update', resource: 'make://tenant-1/meta/app/OtherApp/entity/order', effect: 'allow'};
+    assert.equal(adapter.canUpdateEntityField(access(valid, otherApp), 'order', 'title'), true, 'classify unrelated results before validating their field map');
   }],
   ['invalid_field_access_fails_closed', () => {
     const current = adapter.normalizeAccess(basePayload([
@@ -314,6 +317,10 @@ const cases = [
     for (const fieldAccess of [
       { title: 'unexpected' },
       { title: [] },
+      { title: [7] },
+      { title: [['*']] },
+      { title: null },
+      { title: ['unexpected'] },
       { title: ['creatable', 7] },
     ]) {
       const current = adapter.normalizeAccess(basePayload([
@@ -329,15 +336,48 @@ const cases = [
       assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
     }
   }],
-  ['valid_field_access_state_lists_are_preserved', () => {
-    const current = access(
-      permission('meta.field.read', { fieldAccess: { title: ['creatable', 'readonly'] } }),
-      permission('meta.field.read', { fieldAccess: { title: ['readonly', 'editable'] } }),
-      permission('meta.field.update', { fieldAccess: { title: ['readonly', 'editable'] } }),
-    );
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
+  ['principal_multi_value_access_is_operation_specific', () => {
+    for (const values of [['readonly', 'editable'], ['readonly', 'creatable'], ['hidden', 'readonly', 'creatable', 'editable', 'partialMask', 'fullMask'], ['*', 'hidden']]) {
+      for (const states of [values, [...values].reverse()]) {
+        const current = access(...['meta.field.read', 'data.record.create', 'data.record.update']
+          .map(key => permission(key, {fieldAccess: {title: states}})));
+        assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.update'), true);
+        assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), states.includes('*') || states.includes('creatable'));
+        assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), states.includes('*') || states.includes('editable'));
+        assert.equal(adapter.canReadEntityField(current, 'order', 'title'), true);
+        assert.deepEqual(current.permissions[0].fieldAccess.title, states, 'preserve all members; no priority reduction');
+      }
+    }
+  }],
+  ['principal_singleton_arrays_preserve_field_permissions', () => {
+    for (const state of ['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask', 'hidden']) {
+      const fieldAccess = {'*': [state]};
+      const current = access(...['meta.field.read', 'data.record.create', 'data.record.update', 'data.record.bulkUpdate']
+        .map(key => permission(key, {fieldAccess})));
+      assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.update'), true, state + ': valid singleton must not erase the operation');
+      assert.equal(adapter.canReadEntityField(current, 'order', 'title'), !['hidden', 'creatable'].includes(state), state);
+      assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), ['*', 'creatable'].includes(state), state);
+      for (const key of ['data.record.update', 'data.record.bulkUpdate']) {
+        assert.equal(adapter.canUpdateEntityField(current, 'order', 'title', key), ['*', 'editable'].includes(state), state);
+      }
+    }
+  }],
+  ['principal_array_wildcard_keeps_named_restrictions_and_operation_bounds', () => {
+    const fieldAccess = {'*': ['*'], title: ['readonly'], secret: ['hidden']};
+    const current = access(permission('meta.field.read', {fieldAccess}), permission('data.record.update', {fieldAccess}));
     assert.equal(adapter.canReadEntityField(current, 'order', 'title'), true);
-    assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), true);
+    assert.equal(adapter.canReadEntityField(current, 'order', 'secret'), false);
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'secret'), false);
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'amount'), true);
+    assert.equal(adapter.canCreateEntityField(current, 'order', 'amount'), false);
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'amount', 'data.record.bulkUpdate'), false);
+    const denied = access(permission('data.record.update', {fieldAccess: {'*': ['*']}}), permission('data.record.update', {effect: 'deny'}));
+    assert.equal(adapter.canUpdateEntityField(denied, 'order', 'amount'), false);
+  }],
+  ['principal_scalar_field_states_are_preserved', () => {
+    const current = access(permission('data.record.update', {fieldAccess: {title: 'editable'}}));
+    assert.deepEqual(current.permissions[0].fieldAccess.title, ['editable']);
   }],
   ['blank_field_key_poison_entire_access', () => {
     const current = adapter.normalizeAccess(basePayload([
@@ -460,76 +500,53 @@ const cases = [
       assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
     }
   }],
-  ['most_specific_read_allow_restricts_parent_create_field_range', () => {
-    const current = access(
-      permission('meta.field.read', { fieldAccess: {}, resource: APP_RESOURCE }),
-      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
-    );
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'amount'), false);
+  ['compatible_permission_results_do_not_cancel_each_other', () => {
+    for (const [permissionKey, wildcard, state, check] of [
+      ['data.record.create', 'data.*.*', 'creatable', current => adapter.canCreateEntityField(current, 'order', 'title')],
+      ['meta.field.read', 'meta.*.*', 'readonly', current => adapter.canReadEntityField(current, 'order', 'title')],
+      ['data.record.update', 'data.*.*', 'editable', current => adapter.canUpdateEntityField(current, 'order', 'title')],
+      ['data.record.bulkUpdate', 'data.*.*', 'editable', current => adapter.canUpdateEntityField(current, 'order', 'title', 'data.record.bulkUpdate')],
+    ]) {
+      for (const results of [
+        [permission(permissionKey, {fieldAccess: {title: state}}), permission(wildcard, {fieldAccess: {title: state}})],
+        [permission(permissionKey, {resource: APP_RESOURCE}), permission(permissionKey, {fieldAccess: {title: state}})],
+        [permission(wildcard, {fieldAccess: {amount: 'readonly'}}), permission(permissionKey, {fieldAccess: {title: state}})],
+      ]) {
+        for (const permissions of [results, [...results].reverse()]) {
+          const current = access(...permissions);
+          assert.equal(adapter.canUseEntityOperation(current, 'order', permissionKey), true);
+          assert.equal(check(current), true, permissionKey + ': adding a compatible backend result cannot revoke access');
+        }
+      }
+    }
   }],
-  ['entity_wildcard_allow_restricts_app_allow', () => {
-    const current = access(
-      permission('meta.field.read', { fieldAccess: {}, resource: APP_RESOURCE }),
-      permission('meta.field.read', {
-        fieldAccess: { title: 'readonly' },
-        resource: `${APP_RESOURCE}/entity/*`,
-      }),
-    );
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'amount'), false);
+  ['returned_access_values_are_consumed_without_priority_ranking', () => {
+    for (const operation of ['data.record.update', 'data.record.bulkUpdate']) {
+      for (const state of ['readonly', 'hidden', 'partialMask', 'fullMask']) {
+        const results = [permission('data.*.*', {fieldAccess: {title: 'editable'}}), permission(operation, {fieldAccess: {title: state}})];
+        for (const permissions of [results, [...results].reverse()]) {
+          const current = access(...permissions);
+          assert.equal(adapter.canUseEntityOperation(current, 'order', operation), true);
+          assert.equal(adapter.canUpdateEntityField(current, 'order', 'title', operation), true, state + ': returned editable membership remains available');
+        }
+      }
+    }
+    const visibleAndHidden = [permission('meta.field.read', {fieldAccess: {title: 'readonly'}}), permission('meta.*.*', {fieldAccess: {title: 'hidden'}})];
+    for (const permissions of [visibleAndHidden, [...visibleAndHidden].reverse()]) assert.equal(adapter.canReadEntityField(access(...permissions), 'order', 'title'), true);
+    const namedOverWildcard = [permission('data.record.update', {fieldAccess: {'*': ['*']}}), permission('data.record.update', {fieldAccess: {title: ['readonly']}})];
+    for (const permissions of [namedOverWildcard, [...namedOverWildcard].reverse()]) assert.equal(adapter.canUpdateEntityField(access(...permissions), 'order', 'title'), false);
   }],
-  ['same_specificity_allow_fields_union', () => {
+  ['backend_aggregated_field_results_are_consumed', () => {
     const current = access(
-      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
-      permission('meta.field.read', { fieldAccess: { amount: 'readonly' } }),
+      permission('meta.field.read', {fieldAccess: {title: 'readonly', amount: 'readonly', secret: 'hidden'}}),
+      permission('data.record.update', {fieldAccess: {title: 'editable', amount: 'readonly', secret: 'hidden'}}),
     );
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'amount'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'secret'), false);
-  }],
-  ['namespace_alias_same_specificity_allow_union', () => {
-    const current = access(
-      permission('meta.field.read', {
-        fieldAccess: { title: 'readonly' },
-        resource: ENTITY_RESOURCE,
-      }),
-      permission('meta.field.read', {
-        fieldAccess: { amount: 'readonly' },
-        resource: 'make://tenant-1/*/app/TestApp/entity/order',
-      }),
-    );
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'amount'), true);
-  }],
-  ['same_specificity_named_hidden_overrides_wildcard', () => {
-    const current = access(
-      permission('data.record.create'),
-      permission('meta.field.read', { fieldAccess: { '*': 'readonly' } }),
-      permission('meta.field.read', { fieldAccess: { secret: 'hidden' } }),
-    );
-    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'secret'), false);
-  }],
-  ['same_specificity_named_hidden_overrides_named_allow', () => {
-    const current = access(
-      permission('data.record.create'),
-      permission('meta.field.read', { fieldAccess: { title: 'readonly' } }),
-      permission('meta.field.read', { fieldAccess: { title: 'hidden' } }),
-    );
-    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
-  }],
-  ['same_specificity_named_hidden_overrides_unrestricted_allow', () => {
-    const current = access(
-      permission('data.record.create'),
-      permission('meta.field.read', { fieldAccess: {} }),
-      permission('meta.field.read', { fieldAccess: { title: 'hidden' } }),
-    );
-    assert.equal(adapter.canUseEntityOperation(current, 'order', 'data.record.create'), true);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'title'), false);
-    assert.equal(adapter.canCreateEntityField(current, 'order', 'amount'), true);
+    assert.equal(adapter.canReadEntityField(current, 'order', 'title'), true);
+    assert.equal(adapter.canReadEntityField(current, 'order', 'amount'), true);
+    assert.equal(adapter.canReadEntityField(current, 'order', 'secret'), false);
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), true);
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'amount'), false);
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'secret'), false);
   }],
   ['system_id_and_audit_fields_are_not_create_capable', () => {
     for (const type of ['Make.Field.ID', 'IDField']) {
@@ -564,13 +581,59 @@ const cases = [
       'create_user', 'create_time', 'update_user', 'update_time',
       'qfei_create_user', 'qfei_create_time', 'qfei_update_user', 'qfei_update_time',
     ];
-    const current = access(permission('meta.field.update', {
+    const current = access(permission('data.record.update', {
       fieldAccess: Object.fromEntries(auditKeys.map((key) => [key, 'editable'])),
     }));
     for (const key of auditKeys) {
       assert.equal(adapter.canUpdateEntityField(current, 'order', key), true);
       assert.equal(adapter.isEditCapableField({ key, type: 'Make.Field.Text' }), true);
     }
+  }],
+  ['business_field_update_exact_and_data_wildcards', () => {
+    for (const key of ['data.record.update', 'data.record.*', 'data.*.*']) {
+      const current = access(permission(key, { fieldAccess: { title: 'editable', secret: 'hidden' } }));
+      assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), true);
+      assert.equal(adapter.canUpdateEntityField(current, 'order', 'secret'), false);
+      assert.equal(adapter.canUpdateEntityField(current, 'order', 'other'), false, 'a sparse map without a matching wildcard does not grant an unlisted field');
+    }
+  }],
+  ['other_record_operations_never_grant_business_edit', () => {
+    for (const key of ['data.record.read', 'data.record.create', 'data.record.delete', 'data.record.export']) {
+      assert.equal(adapter.canUpdateEntityField(access(permission(key)), 'order', 'title'), false);
+    }
+  }],
+  ['bulk_update_is_independent', () => {
+    const bulk = access(permission('data.record.bulkUpdate', {fieldAccess: {title: 'editable'}}));
+    assert.equal(adapter.canUpdateEntityField(bulk, 'order', 'title', 'data.record.bulkUpdate'), true);
+    assert.equal(adapter.canUpdateEntityField(bulk, 'order', 'title'), false);
+    const single = access(permission('data.record.update'));
+    assert.equal(adapter.canUpdateEntityField(single, 'order', 'title', 'data.record.bulkUpdate'), false);
+  }],
+  ['metadata_update_never_grants_business_edit', () => {
+    const current = access(permission('meta.field.update'));
+    assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
+  }],
+  ['metadata_wildcards_never_grant_business_edit', () => {
+    for (const key of ['meta.field.*', 'meta.*.*']) {
+      const current = access(permission(key, { fieldAccess: { title: 'editable' } }));
+      assert.equal(adapter.canReadEntityField(current, 'order', 'title'), true);
+      assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
+    }
+  }],
+  ['business_field_exact_deny_overrides_data_wildcards', () => {
+    for (const grant of ['data.record.*', 'data.*.*']) {
+      for (const resource of [APP_RESOURCE, ENTITY_RESOURCE]) {
+        const current = access(permission(grant), permission('data.record.update', { effect: 'deny', resource }));
+        assert.equal(adapter.canUpdateEntityField(current, 'order', 'title'), false);
+      }
+    }
+  }],
+  ['business_field_update_readonly_deny_and_revoke', () => {
+    const grant = permission('data.record.update');
+    assert.equal(adapter.canUpdateEntityField(access(grant), 'order', 'title'), true);
+    assert.equal(adapter.canUpdateEntityField(access(permission('data.record.update', { fieldAccess: { title: 'readonly' } })), 'order', 'title'), false);
+    assert.equal(adapter.canUpdateEntityField(access(grant, permission('data.*.*', { effect: 'deny' })), 'order', 'title'), false);
+    assert.equal(adapter.canUpdateEntityField(access(), 'order', 'title'), false);
   }],
 ];
 

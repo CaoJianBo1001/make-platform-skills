@@ -106,20 +106,21 @@ assert.deepEqual(
 );
 
 assert.match(skill, /references\/mobile-defaults\.md/);
-assert.match(skill, /show the workbench tab only when their count reaches five/);
 const navigationSection = mobileDefaults.split('## 底部导航与工作台\n')[1]?.split('\n## ')[0];
 assert.ok(navigationSection, 'mobile defaults must define the bottom navigation rules');
+const noApprovalSection = navigationSection.split('### 未生成审批入口\n')[1]?.split('\n### ')[0];
+assert.ok(noApprovalSection, 'the original five-object threshold must be scoped to Apps without an approval entry');
 assert.match(navigationSection, /当前可展示[^\n]*业务对象[^\n]*数量/);
-assert.match(navigationSection, /少于 5 个[^\n]*不展示工作台 Tab/);
-assert.match(navigationSection, /大于等于 5 个[^\n]*工作台/);
-assert.match(navigationSection, /4 个[^\n]*前四个业务对象[^\n]*AI 助手/);
-assert.match(navigationSection, /5 个[^\n]*前三个业务对象[^\n]*AI 助手[^\n]*工作台/);
-assert.match(navigationSection, /AI 助手不可用[^\n]*第四个业务对象[^\n]*工作台/);
-assert.match(navigationSection, /composeMobileBottomNavigationItems[^\n]*只[^\n]*大于等于 5 个/);
+assert.match(noApprovalSection, /少于 5 个[^\n]*不展示工作台 Tab/);
+assert.match(noApprovalSection, /大于等于 5 个[^\n]*工作台/);
+assert.match(noApprovalSection, /4 个[^\n]*前四个业务对象[^\n]*AI 助手/);
+assert.match(noApprovalSection, /5 个[^\n]*前三个业务对象[^\n]*AI 助手[^\n]*工作台/);
+assert.match(noApprovalSection, /AI 助手不可用[^\n]*第四个业务对象[^\n]*工作台/);
+assert.match(noApprovalSection, /composeMobileBottomNavigationItems[^\n]*只[^\n]*大于等于 5 个/);
 assert.match(navigationSection, /对象列表[^\n]*(变化|更新)[^\n]*重新计算/);
 assert.match(navigationSection, /元数据[^\n]*`meta\.entity\.read`[^\n]*就绪/);
 assert.match(navigationSection, /加载中[^\n]*不[^\n]*0 个对象[^\n]*隐藏工作台/);
-assert.match(navigationSection, /少于 5 个[^\n]*只隐藏[^\n]*工作台 Tab[^\n]*直达页面/);
+assert.match(navigationSection, /不满足[^\n]*只隐藏[^\n]*工作台 Tab[^\n]*直达页面/);
 assert.match(navigationSection, /当前停留在工作台[^\n]*数量变化[^\n]*保持页面/);
 assert.match(navigationSection, /`MobileWorkbenchGrid`[^\n]*完整的当前可展示业务对象列表/);
 assert.doesNotMatch(navigationSection, /工作台[^\n]*(跳转|重定向)至首个/);
@@ -177,11 +178,11 @@ assert.match(
   /(单条编辑|single edit)[\s\S]{0,320}(make-app-actions)[\s\S]{0,320}(预检|precheck)/i,
   'phone card edit must reuse make-app-actions permission and precheck contracts',
 );
-assert.match(
-  mobileDefaults,
-  /(单条删除|single delete)[\s\S]{0,360}(MobileConfirmDialog)[\s\S]{0,360}(最终|final)[^\n]*(鉴权|authorization)/i,
-  'phone card delete must use confirmation and the authoritative delete endpoint',
-);
+const mobileDelete = mobileDefaults.match(/^- 单条删除[^\n]+/m)?.[0] ?? '';
+assert.match(mobileDelete, /action-permission-model\.md#shared-single-delete/,
+  'phone delete must route to the PC shared controller and authoritative delete contract');
+assert.match(mobileDelete, /MobileConfirmDialog/,
+  'phone delete changes the confirmation renderer only');
 assert.match(
   mobileDefaults,
   /(手机端|Phone)[^\n]*(不展示|隐藏)[^\n]*(分组|group)[^\n]*(排序|sort)/i,
@@ -605,9 +606,11 @@ assert.match(
 );
 assert.match(
   mobileDefaults,
-  /手机新建／编辑[^\n]*`MobileFormActionBar`[\s\S]{0,220}手机详情[^\n]*`MobileBottomActionBar`/,
+  /^- 手机新建／编辑[^\n]*`MobileFormActionBar`/m,
   'form submission and detail actions must use separate package primitives',
 );
+assert.match(mobileDefaults, /^- 手机详情默认使用 `MobileBottomActionBar`/m,
+  'record detail must keep its independently permissioned action bar');
 assert.match(
   skill,
   /\.\.\/make-app-actions\/[\s\S]{0,180}mobile-card-actions\.md/,

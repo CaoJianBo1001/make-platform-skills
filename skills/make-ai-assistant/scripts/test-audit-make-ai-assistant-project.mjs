@@ -28,6 +28,70 @@ const run = (name, source, options = {}, expectedCode = '') => {
 
 try {
   run('current-v1', validAppSource());
+  for (const name of ['MakeAiAssistant', 'AssistantPanel']) {
+    for (const [kind, expression] of [
+      ['memo', '{ $$typeof: Symbol.for("react.memo"), type: () => null }'],
+      ['forwardRef', '{ $$typeof: Symbol.for("react.forward_ref"), render: () => null }'],
+      ['memo-forwardRef', '{ $$typeof: Symbol.for("react.memo"), type: { $$typeof: Symbol.for("react.forward_ref"), render: () => null } }'],
+      ['nested-memo', '{ $$typeof: Symbol.for("react.memo"), type: { $$typeof: Symbol.for("react.memo"), type: () => null } }'],
+    ]) {
+      run(`${name}-${kind}`, validAppSource(), { reactExpressions: { [name]: expression } });
+    }
+    for (const [kind, expression] of [
+      ['object', '{}'],
+      ['missing', 'undefined'],
+      ['invalid-memo', '{ $$typeof: Symbol.for("react.memo"), type: {} }'],
+      ['invalid-forwardRef', '{ $$typeof: Symbol.for("react.forward_ref"), render: null }'],
+      ['cyclic-memo', '(() => { const value = { $$typeof: Symbol.for("react.memo") }; value.type = value; return value; })()'],
+    ]) {
+      run(`${name}-${kind}`, validAppSource(), { reactExpressions: { [name]: expression } }, 'package_react_missing');
+    }
+  }
+  for (const [kind, expression] of [
+    ['memo', '{ $$typeof: Symbol.for("react.memo"), type: () => ({}) }'],
+    ['forwardRef', '{ $$typeof: Symbol.for("react.forward_ref"), render: () => null }'],
+  ]) {
+    run(`client-is-not-${kind}`, validAppSource(), { clientExpression: expression }, 'package_client_missing');
+    run(`transport-is-not-${kind}`, validAppSource(), { factoryExpression: expression }, 'package_factory_missing');
+  }
+  const installedSkill = path.join(tempRoot, 'installed Skill');
+  fs.cpSync(path.dirname(audit), path.join(installedSkill, 'scripts'), {recursive:true});
+  const skillText = fs.readFileSync(path.join(path.dirname(audit), '../SKILL.md'), 'utf8');
+  const documentedAudit = skillText.match(/node (\S+audit-make-ai-assistant-project\.mjs) /)?.[1];
+  assert.ok(documentedAudit, 'Skill 必须提供随包审计命令');
+  const installedResult = spawnSync(process.execPath, [documentedAudit, path.join(tempRoot, 'current-v1'), '--expected-package-version=0.3.2'], {cwd:installedSkill, encoding:'utf8'});
+  assert.equal(installedResult.status, 0, installedResult.stdout + installedResult.stderr);
+
+  for (const agentDirectory of ['.agents', '.codex']) {
+    const project = path.join(tempRoot, `local install ${agentDirectory}`);
+    writeProject(project, validAppSource(), {});
+    const localSkill = path.join(project, agentDirectory, 'skills/make-ai-assistant');
+    fs.cpSync(path.dirname(audit), path.join(localSkill, 'scripts'), {recursive:true});
+    const localAudit = path.join(localSkill, 'scripts', path.basename(audit));
+    const checkLocal = expectedCode => {
+      const result = spawnSync(process.execPath, [localAudit, project], {cwd:project, encoding:'utf8'});
+      const output = result.stdout + result.stderr;
+      if (expectedCode) {
+        assert.notEqual(result.status, 0, output);
+        assert.ok(output.includes(expectedCode), output);
+      } else {
+        assert.equal(result.status, 0, output);
+      }
+    };
+    checkLocal();
+    const appFile = path.join(project, 'apps/ui/src/assistant.tsx');
+    fs.writeFileSync(appFile, validAppSource().replace('client.agents.list', 'client.agents.lookup'));
+    checkLocal('agent_discovery_missing');
+    fs.writeFileSync(appFile, validAppSource());
+    // 只排除 skills 安装子目录；同名业务目录及其他 Agent 目录内容仍接受检查。
+    for (const relative of [`${agentDirectory}/application.ts`, 'apps/ui/src/skills/application.ts']) {
+      const file = path.join(project, relative);
+      fs.mkdirSync(path.dirname(file), {recursive:true});
+      fs.writeFileSync(file, "const legacy = '/chats/locate';\n");
+      checkLocal('removed_locate_route');
+      fs.rmSync(file);
+    }
+  }
   run('legacy-0.3.1', validAppSource(), {
     packageVersion: '0.3.1',
     expectedVersion: '0.3.1',
@@ -135,13 +199,13 @@ function writeFakePackage(packageRoot, options) {
   }));
   fs.writeFileSync(path.join(packageRoot, 'client.mjs'), options.clientExport === false
     ? 'export const placeholder = true;\n'
-    : 'export const createMakeAgentClient = () => ({});\n');
+    : `export const createMakeAgentClient = ${options.clientExpression ?? '() => ({})'};\n`);
   fs.writeFileSync(path.join(packageRoot, 'make-app.mjs'), options.appFactory === false
     ? 'export const placeholder = true;\n'
-    : 'export const createMakeAppAssistantTransport = async () => ({});\n');
+    : `export const createMakeAppAssistantTransport = ${options.factoryExpression ?? 'async () => ({})'};\n`);
   fs.writeFileSync(path.join(packageRoot, 'react.mjs'), options.reactRuntime === false
     ? 'export const placeholder = true;\n'
-    : 'export const MakeAiAssistant = () => null; export const AssistantPanel = () => null;\n');
+    : ['MakeAiAssistant', 'AssistantPanel'].map(name => `export const ${name} = ${options.reactExpressions?.[name] ?? '() => null'};`).join('\n'));
   if (options.stylesFile !== false) fs.writeFileSync(path.join(packageRoot, 'styles.css'), '');
   const responseEventDeclaration = terminalEventDeclaration(options);
   fs.writeFileSync(path.join(packageRoot, 'dist/client.d.ts'), options.inlineClientTypes

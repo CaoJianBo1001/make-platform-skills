@@ -8,6 +8,7 @@ import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
 
 const script = fileURLToPath(new URL('./verify-feedback-package-surface.mjs', import.meta.url));
+const mobileScript = fileURLToPath(new URL('./verify-mobile-package-surface.mjs', import.meta.url));
 const run = (...args) => spawnSync(process.execPath, [script, ...args], { encoding: 'utf8' });
 const withPackage = (changes, check) => {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'feedback-surface-test-'));
@@ -74,17 +75,21 @@ test('a root export cannot stand in for the required React subpath', () => withP
   assert.match(result.stderr, /feedback_public_export_missing/u);
 }));
 
-// This is a verifier fixture, not evidence of a published npm artifact.
-const withValidPackage = check => withPackage({ exports: {
-  '.': { import: './core.mjs', types: './core.d.ts' },
-  './react': { import: './react.mjs', require: './react.cjs', types: './react.d.ts' },
-  './styles.css': { default: './styles.css', types: './styles.css.d.ts' },
-} }, directory => {
+const installReactDependencies = directory => {
   const dependencies = createRequire(path.resolve(process.env.MAKE_FEEDBACK_TEST_DEPENDENCIES ?? '.', 'package.json'));
   fs.mkdirSync(path.join(directory, 'node_modules'));
   for (const name of ['react', 'react-dom']) {
     fs.symlinkSync(path.dirname(dependencies.resolve(`${name}/package.json`)), path.join(directory, 'node_modules', name), 'junction');
   }
+};
+
+// These are verifier fixtures rendered with real React, not published npm artifacts.
+const withValidPackage = check => withPackage({ exports: {
+  '.': { import: './core.mjs', types: './core.d.ts' },
+  './react': { import: './react.mjs', require: './react.cjs', types: './react.d.ts' },
+  './styles.css': { default: './styles.css', types: './styles.css.d.ts' },
+} }, directory => {
+  installReactDependencies(directory);
   const files = {
     'core.mjs': 'export const normalizeMakeAppPermissionNotice = input => input;',
     'core.d.ts': 'export declare function normalizeMakeAppPermissionNotice(input: unknown): unknown;',
@@ -141,3 +146,119 @@ for (const [name, file, before, after, failure] of [
     assert.ok(result.stderr.includes(failure), result.stderr);
   }));
 }
+
+const wrappers = [
+  ['memo', 'React.memo(Component)'],
+  ['forwardRef', 'React.forwardRef((props, ref) => React.createElement(Component, props))'],
+  ['memo-forwardRef', 'React.memo(React.forwardRef((props, ref) => React.createElement(Component, props)))'],
+  ['nested-memo', 'React.memo(React.memo(Component))'],
+];
+const invalidComponents = [
+  ['missing', 'undefined'],
+  ['object', '{}'],
+  ['invalid-memo', '{ $$typeof: Symbol.for("react.memo"), type: {} }'],
+  ['invalid-forwardRef', '{ $$typeof: Symbol.for("react.forward_ref"), render: null }'],
+  ['cyclic-memo', '(() => { const value = { $$typeof: Symbol.for("react.memo") }; value.type = value; return value; })()'],
+];
+const feedbackExports = [
+  ['MakeAppPermissionNotice', 'feedback_component_missing', 'feedback_cjs_component_missing'],
+  ['MakeAppErrorNotice', 'feedback_existing_error_component_missing', 'feedback_cjs_error_component_missing'],
+  ['MakeAppErrorNoticeViewport', 'feedback_existing_viewport_missing', 'feedback_cjs_viewport_missing'],
+];
+const replaceFeedbackExport = (directory, format, name, expression) => {
+  const others = feedbackExports.map(([key]) => key).filter(key => key !== name);
+  fs.writeFileSync(path.join(directory, format === 'ESM' ? 'react.mjs' : 'react.cjs'), format === 'ESM'
+    ? `import React from 'react'; import components from './components.cjs'; const Component = components.${name}; export const { ${others.join(', ')} } = components; export const ${name} = ${expression};`
+    : `const React = require('react'); const components = require('./components.cjs'); const Component = components.${name}; module.exports = { ...components, ${name}: ${expression} };`);
+};
+
+for (const [name, esmFailure, cjsFailure] of feedbackExports) {
+  for (const format of ['ESM', 'CJS']) {
+    for (const [wrapper, expression] of wrappers) {
+      test(`${format} ${name} accepts supported ${wrapper} exports`, () => withValidPackage(directory => {
+        replaceFeedbackExport(directory, format, name, expression);
+        const result = run(directory);
+        assert.equal(result.status, 0, result.stderr);
+      }));
+    }
+    for (const [kind, expression] of invalidComponents) {
+      test(`${format} ${name} rejects ${kind}`, () => withValidPackage(directory => {
+        replaceFeedbackExport(directory, format, name, expression);
+        const result = run(directory);
+        assert.equal(result.status, 1, result.stderr);
+        assert.ok(result.stderr.includes(format === 'ESM' ? esmFailure : cjsFailure), result.stderr);
+      }));
+    }
+  }
+}
+
+for (const [wrapper, expression] of [...wrappers, ['object', '{}']]) {
+  test(`ordinary normalizer must remain a function and reject ${wrapper}`, () => withValidPackage(directory => {
+    fs.writeFileSync(path.join(directory, 'core.mjs'), `import React from 'react'; const Component = () => null; export const normalizeMakeAppPermissionNotice = ${expression};`);
+    const result = run(directory);
+    assert.equal(result.status, 1, result.stderr);
+    assert.match(result.stderr, /feedback_normalizer_missing/);
+  }));
+}
+
+const withValidMobilePackage = check => withPackage({
+  name: '@qfei-design/make-app-mobile',
+  exports: { './styles.css': './mobile.css', './fields': './fields.mjs', './primitives': './primitives.mjs' },
+}, directory => {
+  installReactDependencies(directory);
+  fs.writeFileSync(path.join(directory, 'mobile.css'), `
+    .make-app-mobile-picker__search input { font-size: 16px; }
+    .make-app-mobile-picker__selected { touch-action: pan-x pinch-zoom; }
+    .make-app-mobile-attachment-field__upload { box-sizing: border-box; height: 48px; }
+  `);
+  fs.writeFileSync(path.join(directory, 'attachment.cjs'), `
+    const React = require('react');
+    module.exports = ({items, onRetry}) => {
+      const item = items[0];
+      const status = item.status === 'pending'
+        ? React.createElement('span', {className:'make-app-mobile-attachment-field__status-icon', 'aria-label':'待上传'})
+        : item.status === 'error'
+          ? onRetry
+            ? React.createElement('button', {className:'make-app-mobile-attachment-field__retry', 'aria-label':'重新上传' + item.name})
+            : React.createElement('span', {className:'make-app-mobile-attachment-field__status'}, '上传失败')
+          : null;
+      return React.createElement('div', null, status);
+    };
+  `);
+  fs.writeFileSync(path.join(directory, 'fields.mjs'), `import Component from './attachment.cjs'; export const MobileAttachmentField = Component;`);
+  fs.writeFileSync(path.join(directory, 'primitives.mjs'), ['MobileTimeline','MobileDetailSection','MobileFieldRow','MobileTextArea','MobileDetailPage','MobileFormActionBar','MobileFormSheet'].map(name => `export const ${name} = () => null;`).join('\n'));
+  check(directory);
+});
+
+for (const detail of [false, true]) {
+  for (const [wrapper, expression] of [['function', 'Component'], ...wrappers]) {
+    test(`attachment ${wrapper} renders correctly with detail=${detail}`, () => withValidMobilePackage(directory => {
+      fs.writeFileSync(path.join(directory, 'fields.mjs'), `import React from 'react'; import Component from './attachment.cjs'; export const MobileAttachmentField = ${expression};`);
+      const result = spawnSync(process.execPath, [mobileScript, directory, ...(detail ? ['--detail'] : [])], {encoding:'utf8'});
+      assert.equal(result.status, 0, result.stderr);
+    }));
+  }
+  for (const [kind, expression] of invalidComponents) {
+    test(`attachment rejects ${kind} with detail=${detail}`, () => withValidMobilePackage(directory => {
+      fs.writeFileSync(path.join(directory, 'fields.mjs'), `export const MobileAttachmentField = ${expression};`);
+      const result = spawnSync(process.execPath, [mobileScript, directory, ...(detail ? ['--detail'] : [])], {encoding:'utf8'});
+      assert.equal(result.status, 1, result.stderr);
+      assert.match(result.stderr, /MobileAttachmentField/);
+    }));
+  }
+}
+
+test('documented feedback commands run from an independently installed Skill', () => withValidPackage(directory => {
+  const installed = fs.mkdtempSync(path.join(os.tmpdir(), 'feedback installed Skill '));
+  try {
+    fs.cpSync(path.dirname(script), path.join(installed, 'scripts'), {recursive:true});
+    const markdown = fs.readFileSync(new URL('../references/permission-feedback.md', import.meta.url), 'utf8');
+    const commands = [...markdown.matchAll(/node (\S+verify-feedback-package-surface\.mjs) "?<installed-package-root>"?( --allow-prerelease)?/g)];
+    assert.equal(commands.length, 2, '同时执行正式产物与本地预发布产物的文档命令');
+    for (const [, command, prerelease] of commands) {
+      const result = spawnSync(process.execPath, [command, directory, ...(prerelease ? [prerelease.trim()] : [])], {cwd:installed, encoding:'utf8'});
+      assert.equal(result.status, 0, result.stderr);
+      assert.match(result.stdout, /feedback package surface verified/);
+    }
+  } finally { fs.rmSync(installed, {recursive:true, force:true}); }
+}));

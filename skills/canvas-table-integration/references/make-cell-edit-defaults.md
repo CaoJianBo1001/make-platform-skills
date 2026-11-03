@@ -6,6 +6,8 @@ These defaults define the validated platform behavior for Make table editing. Th
 
 If an implementation misses this baseline, treat it as a readiness blocker / 交付阻断. Do not report the editable table as done, complete, ready, or delivered until the standard is satisfied.
 
+Activation and popup requirements below apply only after record/field permissions and the [Make record approval guard](edit-contract.md#make-record-approval-guard) allow editing. A blocked row must not mount an editor, including on double-click; the ordinary commit path must recheck the latest record too.
+
 ## 1. Required editing baseline
 
 Use `editType: "custom"` plus a host `customEdit(options)` bridge for business fields.

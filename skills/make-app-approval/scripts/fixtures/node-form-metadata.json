@@ -1,0 +1,121 @@
+{
+  "provenance": "2026-10-27 dev 成功响应的结构保真裁剪：应用、对象、流程、节点、字段 key/name 与选项业务值脱敏；不含记录值、用户、凭据。仅这些裁剪字段来自已观察结构；全部枚举及异常场景由行为测试另行构造。 2026-10-28 dev/test START 与 dev TASK 成功响应已确认 data.relations，补入同构脱敏关系和已有 targetFieldType；test 暂无任务样本。",
+  "request": {
+    "scene": "START",
+    "appKey": "sample_app",
+    "processKey": "sample_flow"
+  },
+  "expected": {
+    "scene": "START",
+    "appKey": "sample_app",
+    "entityKey": "sample_entity",
+    "processKey": "sample_flow",
+    "nodeKey": "start_"
+  },
+  "response": {
+    "code": 200,
+    "msg": "成功",
+    "data": {
+      "appKey": "sample_app",
+      "entityKey": "sample_entity",
+      "processKey": "sample_flow",
+      "nodeKey": "start_",
+      "nodeName": "提交",
+      "fields": [
+        {
+          "fieldKey": "title",
+          "fieldName": "申请标题",
+          "type": 1,
+          "makeFieldType": "TEXT",
+          "validations": {
+            "isRequired": true,
+            "maxLength": 120
+          }
+        },
+        {
+          "fieldKey": "amount",
+          "fieldName": "申请金额",
+          "type": 1,
+          "makeFieldType": "CURRENCY",
+          "currency": {
+            "decimalPlaces": 2,
+            "symbol": "¥",
+            "useGrouping": true
+          },
+          "validations": {
+            "isRequired": true,
+            "maximum": 999999999999.99
+          }
+        },
+        {
+          "fieldKey": "category",
+          "fieldName": "申请分类",
+          "type": 1,
+          "makeFieldType": "SINGLE_SELECT",
+          "selection": {
+            "fieldSelections": [
+              {
+                "id": "option_1",
+                "label": "分类一",
+                "value": "category_one",
+                "isEnabled": true,
+                "sort": 100
+              }
+            ]
+          }
+        },
+        {
+          "fieldKey": "requestNo",
+          "fieldName": "申请编号",
+          "type": 1,
+          "makeFieldType": "ID",
+          "encoding": {
+            "type": 1,
+            "encodings": [
+              {
+                "id": "encoding_1",
+                "type": 1,
+                "prefix": "REQ",
+                "code": 30,
+                "digit": 6,
+                "sort": 0
+              }
+            ]
+          }
+        },
+        {
+          "fieldKey": "relatedName",
+          "fieldName": "关联名称",
+          "type": 1,
+          "makeFieldType": "LOOKUP",
+          "lookup": {
+            "relationKey": "sample_relation",
+            "targetFieldKey": "title",
+            "targetFieldType": "Make.Field.Text"
+          }
+        }
+      ],
+      "relations": [
+        {
+          "key": "sample_relation",
+          "name": "示例关联",
+          "type": "Make.Relation",
+          "appKey": "sample_app",
+          "meta": {
+            "version": "1.0.0"
+          },
+          "properties": {
+            "from": {
+              "entityKey": "sample_target",
+              "cardinality": "one"
+            },
+            "to": {
+              "entityKey": "sample_entity",
+              "cardinality": "many"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -4,19 +4,23 @@ Read this for React App startup, route/data or operation denial presentation. Pe
 
 ## Install and release gate
 
-- Use `MakeAppPermissionNotice` from `@qfei-design/make-app-observability/react`; do not add a separate feedback dependency. New or explicitly upgraded feedback integrations use the `0.1.10` lifecycle baseline; after verifying it in the intended registry, install with `corepack pnpm add @qfei-design/make-app-observability@^0.1.10` in the resolved UI package, or the host package manager's equivalent. Do not change the host runtime or introduce a second lockfile. Preserve untouched legacy Apps and their existing lockfiles; a new npm release does not update an existing lockfile or deployed bundle. An explicit dependency/lockfile upgrade, tests and redeployment are required.
+- Use `MakeAppPermissionNotice` from `@qfei-design/make-app-observability/react`; do not add a separate feedback dependency. New or explicitly upgraded feedback integrations recommend `0.1.11`, which retains the `0.1.10` lifecycle baseline and clarifies the public business-error message contract; after verifying it in the intended registry, install with `corepack pnpm add @qfei-design/make-app-observability@^0.1.11` in the resolved UI package, or the host package manager's equivalent. Do not change the host runtime or introduce a second lockfile. Preserve untouched legacy Apps and their existing lockfiles; a new npm release does not update an existing lockfile or deployed bundle. An explicit dependency/lockfile upgrade, tests and redeployment are required.
 - A planned release, source version or local tarball is **not proof of registry publication**. Verify the actual selected `0.1.10+` registry artifact before declaring automatic Toast dismissal available. If packaged prose still says an API is unreleased, resolve availability from the verified registry artifact and its actual public exports/types, not stale release wording. Without a registry-resolvable version exposing this API, report a package release blocker rather than silently installing an old version. Only an explicitly approved local test may install a supplied tarball; do not commit a developer-specific tarball path or use Git/source copying as a release fallback.
 - Verify the actual installed artifact, including public JS, TypeScript and CSS entries, rather than trusting a version string or template. Use the script below; `--allow-prerelease` is reserved for that explicit local-test opt-in and never proves publication.
 
 The package/Skill may be used before the administrator backend is deployed. Package availability is required; administrator-query availability is not. Render generic authorization guidance without blocking the App when the SDK method is missing or the endpoint is absent. Follow `make-app-auth/references/access-help.md#staggered-release-fallback` for lookup errors; this does not relax login, IAM or Schema checks.
 
+From this Skill's actual installation directory, pass the absolute path of the target App's installed package:
+
 ```sh
-node skills/makeui/scripts/verify-feedback-package-surface.mjs <installed-package-root>
+node scripts/verify-feedback-package-surface.mjs "<installed-package-root>"
 # Explicitly approved local alpha test only:
-node skills/makeui/scripts/verify-feedback-package-surface.mjs <installed-package-root> --allow-prerelease
+node scripts/verify-feedback-package-surface.mjs "<installed-package-root>" --allow-prerelease
 ```
 
 The verifier uses the host's installed React and `react-dom/server`. It checks exports and representative rendered states, not route authorization, mounted layout, browser interaction or live IAM. Keep portable host verification project-local or versioned; do not reference a developer's global Skill directory in CI.
+
+权限提示、错误提示和提示容器分别校验公开 ESM/CJS React 导出，使用与移动组件相同的函数、forwardRef、memo 及嵌套包装识别规则。缺失或无效导出仍失败；`normalizeMakeAppPermissionNotice` 是普通工具函数，必须保持可调用函数，不接受组件包装代替。
 
 ```tsx
 import { MakeAppPermissionNotice } from '@qfei-design/make-app-observability/react';
@@ -59,6 +63,14 @@ There is no npm `showForbidden`, `useAppAdministrators` or automatic 403 interce
 ```
 
 `help`, `notice`, callbacks and `AppPermissionFeedback` above are host-owned. Import `MakeAppErrorNoticeViewport` from the same `/react` entry when used; reuse the existing outlet rather than nesting or duplicating it. The package owns timing and hiding; the host owns queue deduplication, action context and removal of the matching item in `onClose`. Do not add a second host timer. Allocate `notice.id` once per event and pass it as both React key and `noticeKey`, including for ordinary `MakeAppErrorNotice`; this prevents unrelated rerenders or newly created callback references from extending the lifetime. A same-text new event gets a new id. Administrator loading itself must not reset the timer. Use the public `duration` prop for an intentional lifetime override. Select inline or Toast for one rejection rather than duplicating both messages.
+
+When explicitly migrating existing feedback, follow [error outlet migration](../../make-app-observability/references/error-outlet-migration.md): operation Toasts reuse the root outlet, including Toasts produced through host adapters. Do not retain a page-local floating message container for packaged error or permission cards. Keep intentional inline/page guidance persistent and local validation in its existing surface.
+
+## Toast 生命周期
+
+统一遵循 [Toast 默认关闭与宿主接线](../../make-app-observability/references/package-integration.md#toast-默认关闭与宿主接线)。不能仅凭 `0.1.9` 版本号认定已支持自动关闭；先核对目标发布产物的公开文档、类型和挂载行为，新 API 尚未发布时报告发布阻断。
+
+支持该合同的包默认 3 秒关闭权限 Toast，`duration` 单位为秒，0 常驻；权限 inline/page 始终常驻。宿主不重复设置计时器，通过 onClose 删除对应队列项；每次通知使用新的稳定 noticeKey，普通重渲染保持不变，重复触发同文案也重新计时。宿主适配器须转发 duration/noticeKey/onClose，不另建计时链路或因关闭重放业务操作。这两项属性仅在已确认支持的产物上使用；既有包表面校验器不证明计时能力，仍须按 observability 的行为验收要求验证。
 
 ## Host contact adapter example
 
@@ -129,5 +141,3 @@ compatibility, and a local component fix is not proof of a new npm release.
 ## Required host evidence
 
 Assert mounted navigation/global identity header and the absence of every original business title/toolbar/header/card/form/dialog on resource denial; cover both table and non-table layouts, initial denial and post-load revocation. Also assert zero subsequent denied business requests, record/cache invalidation, ignored late responses without remount loops, preserved allowed input for operation-only refusal, no automatic mutation after recovery, meaningful retry failure, embedded/empty/missing contacts and context-race cancellation. Cover generic page/inline/Toast rendering with no SDK method, an undeployed endpoint and failed/timed-out contact lookup; no help failure may become a global auth/request error. Test the real package after installation and at desktop/mobile widths. A CSS import, SSR verifier or scope attribute alone is not a complete Make App permission acceptance.
-
-With the actual `0.1.10+` package and host queue, test default three-second dismissal, `duration={0}`, persistent inline/page, independent same-text events, no lifetime extension on unrelated rerender or administrator resolution, one matching queue removal on manual/timeout close, and timer cleanup on unmount. Keep these tests in the App's default test command; the legacy-compatible SSR verifier is not a timer test.

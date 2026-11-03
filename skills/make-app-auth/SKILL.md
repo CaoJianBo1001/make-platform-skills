@@ -2,10 +2,12 @@
 name: make-app-auth
 description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user/account-drawer auth wiring, current-context identity, Feishu-container logout visibility, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. Preserve authenticated context for the default /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for account surfaces and make-app-permission for single-app permission enforcement.
 metadata:
-  version: 0.1.22
+  version: 0.1.23
 ---
 
 # make-app-auth
+
+认证启动的加载 fallback 遵循 [区域加载态](../makeui/references/app-shell-layout.md#区域加载态)，在启动区域内水平、垂直居中；Shell 已挂载时按所属内容区呈现，不把加载文本放在角落。该布局不改变 SDK 登录、重定向或认证错误行为。
 
 Read `references/access-help.md` before changing any forbidden page or 403 handler. Preserve denial payloads and scope; independent current-App administrator help does not authorize business access. React feedback uses the verified package through `makeui/references/permission-feedback.md`; auth does not render or style the denial page.
 

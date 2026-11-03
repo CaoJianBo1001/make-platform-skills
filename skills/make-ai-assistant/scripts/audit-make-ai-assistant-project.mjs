@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
+import { isReactComponentExport } from './react-component-contract.mjs';
 
 const projectRoot = path.resolve(process.argv[2] ?? '');
 const options = process.argv.slice(3);
@@ -45,7 +46,9 @@ const walk = (directory) => fs.readdirSync(directory, { withFileTypes: true })
   .flatMap((entry) => {
     const absolutePath = path.join(directory, entry.name);
     if (entry.isDirectory()) {
-      return ignoredDirectories.has(entry.name) || isVendoredAssistantPackage(absolutePath)
+      const isInstalledSkills = entry.name === 'skills'
+        && ['.agents', '.codex'].includes(path.basename(directory));
+      return ignoredDirectories.has(entry.name) || isInstalledSkills || isVendoredAssistantPackage(absolutePath)
         ? [] : walk(absolutePath);
     }
     return [absolutePath];
@@ -136,7 +139,7 @@ for (const dependency of consumerPackages.values()) {
   try {
     const reactExports = await import(pathToFileURL(resolvedReactPath).href);
     const missing = ['MakeAiAssistant', 'AssistantPanel']
-      .filter((name) => typeof reactExports[name] !== 'function');
+      .filter((name) => !isReactComponentExport(reactExports[name]));
     if (missing.length > 0) {
       fail('package_react_missing', `${relativePackage} public /react lacks ${missing.join(', ')}`);
     }

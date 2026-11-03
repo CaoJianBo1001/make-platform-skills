@@ -172,3 +172,8 @@ When route docs changed, also run any UI/service integration tests that consume 
 - Service route called `makecli` for runtime records, which fails in online containers
 - Service adapter dropped the request `Cookie` / login context before calling published gateway `/make/data/v1/record`, or used makecli token outside the local-preview branch
 - runtime build or port rules were added here instead of `make-app-runtime`
+
+
+## 筛选表达式无损透传
+
+记录 filter.expression 与 Entity Preset filter.expression 必须保留表达式原文及括号，不解析、扁平化、去括号或重写 CEL。对非空表达式不要 trim 后覆盖原值；只可用 trim 判断是否空白。测试 Preset PATCH → Make → GET 与记录查询 payload 的原文相等，包含双层条件组括号。编译错误不是空筛选，不应由 Service 兜底为全量查询；宿主先停止失败请求。筛选生成、回显、结构错误和版本门槛交接 make-app-filter 的 [无损回显合同](../../make-app-filter/references/roundtrip-and-errors.md)。filter 与 groupFilter 仍独立透传。

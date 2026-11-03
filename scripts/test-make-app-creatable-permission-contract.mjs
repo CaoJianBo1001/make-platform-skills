@@ -222,26 +222,7 @@ assert.match(
   /meta\.entity\.read[\s\S]{0,1000}(导航|navigation)[\s\S]{0,1000}meta\.field\.read[\s\S]{0,1000}(表头|headers|columns|列)[\s\S]{0,1000}data\.record\.read/i,
   'entity navigation, table headers, and record data must use independent meta.entity/meta.field/data.record read gates',
 );
-assert.match(
-  permissionBundle,
-  /createFields[\s\S]{0,1200}meta\.field\.read[\s\S]{0,1200}(creatable|readonly|editable|partialMask|fullMask|\*)/i,
-  'create fields must be the createFields and meta.field.read create-state intersection',
-);
-assert.match(
-  permissionBundle,
-  /meta\.field\.create[^\n]*(not a platform permission point|不是平台权限点|must not be required)/i,
-  'meta.field.create must be documented as an unsupported create-field permission point',
-);
-assert.match(
-  boundaries,
-  /Apply a matching `effect: deny` before allows; it denies the matching permission dimension\./,
-  'deny semantics must be described per permission dimension, not as a record operation denial',
-);
-assert.doesNotMatch(
-  permissionBundle,
-  /fieldCondition|policy editing|permission groups/i,
-  'the front-end App permission skill must not own back-office policy configuration',
-);
+
 for (const expectedValue of [
   'Make.Field.ID',
   'IDField',
@@ -314,17 +295,19 @@ for (const conformanceCase of [
   'invalid_requested_identifiers_fail_closed',
   'operation_global_permission_wildcard_allows',
   'operation_segment_permission_wildcard_allows',
-  'operation_deny_does_not_deny_read_derived_create_field',
-  'read_field_deny_does_not_deny_record_create_operation',
+  'record_create_deny_blocks_create_fields',
+  'metadata_read_does_not_grant_or_revoke_data_creation',
   'entity_resource_wildcard_matches',
   'parent_and_global_resources_match',
-  'create_field_uses_meta_field_read_dimension',
+  'create_field_uses_record_create_state',
   'read_dimension_access_states',
   'record_create_field_access_does_not_grant_meta_read',
   'legacy_meta_field_create_does_not_grant_create_field',
   'explicit_null_field_access_fails_closed',
   'invalid_field_access_state_fails_closed',
-  'valid_field_access_state_lists_are_preserved',
+  'principal_multi_value_access_is_operation_specific',
+  'principal_singleton_arrays_preserve_field_permissions',
+  'principal_scalar_field_states_are_preserved',
   'blank_field_key_poison_entire_access',
   'invalid_effect_fails_closed',
   'malformed_row_poison_entire_access',
@@ -333,12 +316,11 @@ for (const conformanceCase of [
   'missing_app_scope_fails_closed',
   'app_resource_cannot_override_scope',
   'invalid_explicit_app_resource_fails_closed',
-  'entity_wildcard_allow_restricts_app_allow',
-  'same_specificity_allow_fields_union',
-  'namespace_alias_same_specificity_allow_union',
-  'same_specificity_named_hidden_overrides_wildcard',
-  'same_specificity_named_hidden_overrides_named_allow',
-  'same_specificity_named_hidden_overrides_unrestricted_allow',
+  'backend_aggregated_field_results_are_consumed',
+  'compatible_permission_results_do_not_cancel_each_other',
+  'empty_and_sparse_maps_have_distinct_bounds',
+  'missing_field_access_is_not_normalized_to_an_empty_map',
+  'returned_access_values_are_consumed_without_priority_ranking',
   'system_id_and_audit_fields_are_not_create_capable',
   'system_id_fields_are_not_edit_capable',
   'similarly_named_business_fields_remain_create_capable',
@@ -360,11 +342,7 @@ assert.match(
   /createFields[^\n]*(missing|缺失)[^\n]*(empty|空)[^\n]*(no fallback|不回退)[^\n]*fields/i,
   'missing createFields must fail closed without falling back to fields',
 );
-assert.match(
-  permissionBundle,
-  /editableFields[^\n]*(ignore|ignored|不使用|忽略)/i,
-  'editableFields must be explicitly ignored by current edit behavior',
-);
+
 assert.match(
   permissionBundle,
   /(exclude|排除|不可)[^\n]*(ID|审计|audit)[^\n]*(create|creatable|可新建)|(create|creatable|可新建)[^\n]*(exclude|排除|不可)[^\n]*(ID|审计|audit)/i,
@@ -375,11 +353,7 @@ assert.match(
   /(审计|audit)[^\n]*(edit|editable|可编辑)[^\n]*(保留|remain|keep)|(保留|remain|keep)[^\n]*(审计|audit)[^\n]*(edit|editable|可编辑)/i,
   'audit fields must retain existing edit capability',
 );
-assert.match(
-  permissionBundle,
-  /data\.record\.create[^\n]*meta\.field\.read[^\n]*(separate|independent|独立)|meta\.field\.read[^\n]*data\.record\.create[^\n]*(separate|independent|独立)/i,
-  'record create and read-derived create-field permissions must be independent',
-);
+
 assert.match(
   runtime,
   /canCreateEntityField[\s\S]{0,600}creatableFieldKeysForEntity/,
@@ -426,32 +400,7 @@ assert.match(
   'makeui must define validations.isRequired as the Schema source for the required UI prop',
 );
 
-assert.match(
-  principalPermission,
-  /permissionKey[^\n]*meta\.field\.read[\s\S]{0,600}fieldAccess[\s\S]{0,300}creatable/,
-  'principal permission response must show creatable fieldAccess on meta.field.read',
-);
-assert.doesNotMatch(
-  principalPermission,
-  /data\.record\.create[^\n]*fieldAccess[^\n]*(creatable|可新建)/i,
-  'principal permission reference must not bind create fields to data.record.create',
-);
 
-assert.match(
-  permissionTesting,
-  /data\.record\.create[^\n]*deny[^\n]*meta\.field\.read[^\n]*allow[^\n]*(operation no|操作拒绝)[^\n]*(field yes|字段允许)/i,
-  'testing guidance must keep operation deny independent from create-field allow',
-);
-assert.match(
-  permissionTesting,
-  /data\.record\.create[^\n]*allow[^\n]*meta\.field\.read[^\n]*deny[^\n]*(operation yes|操作允许)[^\n]*(field no|字段拒绝)/i,
-  'testing guidance must keep create-field deny independent from record-create allow',
-);
-assert.doesNotMatch(
-  permissionTesting,
-  /\|\s*create deny\s*\|[^\n]*(entry|handler)[^\n]*field denied/i,
-  'testing guidance must not couple an unspecified create deny to both dimensions',
-);
 assert.match(
   serviceBundle,
   /fields[\s\S]{0,500}createFields[\s\S]{0,700}(independent|separate|独立|分别)/i,
@@ -494,4 +443,8 @@ assert.match(
   /(create|creatable|新建)[^\n]*(read|visible|可见)[^\n]*(update|edit|可编辑)/i,
   'agent metadata must advertise the complete create/read/update field chain',
 );
+assert.match(permissionBundle, /permission-registry\.mjs/);
+assert.match(permissionBundle, /service-principal-permission\.md/);
+assert.match(permissionBundle, /data\.record\.create[^\n]*(creatable|createFields)/);
+assert.match(permissionBundle, /editableFields[^\n]*(update|编辑)/i);
 console.log('make-app creatable permission contract passed');

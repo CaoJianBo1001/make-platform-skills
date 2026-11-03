@@ -28,29 +28,31 @@ data.record.bulkUpdate  -> batch edit for two or more records
 These three keys are independent; they must not be coupled or inferred from one
 another.
 
-Having `data.record.bulkUpdate` without `data.record.update` must still show batch
-edit for multiple selection. Having `data.record.update` without
+Having `data.record.bulkUpdate` without `data.record.update` must still allow batch
+edit for multiple selection, subject to the field and approval visibility gates below. Having `data.record.update` without
 `data.record.bulkUpdate` must not expose batch edit. Delete never implies either
 update permission.
 
-Use `meta.field.read` for field visibility and `meta.field.update` for field
-editability. Do not use field counts to infer record-operation permission.
+Use `meta.field.read` for field visibility. Field editability follows the current
+operation state: `data.record.update` for single edit and `data.record.bulkUpdate`
+for batch edit. Do not use field counts to infer record-operation permission.
 
 ## Action state
 
 Build package action definitions from the cached principal result:
 
-- `visible` represents the current App/entity operation permission.
+- `visible` combines the current App/entity operation permission with the field and approval visibility gates below.
 - `scope: "single"` applies to edit/delete.
 - `scope: "multiple"` applies to batch edit.
 - `canOperateRecord` may consume row operation metadata already loaded with a
   record for immediate local validation.
 
-Batch-edit visibility requires both the independent operation permission and at
-least one field after permission/capability filtering:
+Batch-edit visibility requires the independent operation permission, at least
+one field after permission/capability filtering, and no known approval-restricted
+record within the current selection:
 
 ```ts
-visible: canBulkUpdate && batchEditableFields.length > 0
+visible: canBulkUpdate && batchEditableFields.length > 0 && !hasSelectedApprovalRestriction
 ```
 
 When no batch-editable field remains, hide the batch-edit action before precheck;
@@ -63,9 +65,18 @@ Pass all definitions to `resolveRecordSelectionActionState`:
 - no available selected action: use scheme two, retaining `已选 n/total`, lock
   icon, `暂无可用的操作`, and close
 
-Do not hide an action merely because only some loaded selected rows fail local
-row checks. Keep the App-level action visible and call
-`validateRecordSelectionAction` on click.
+For ordinary row-level IAM denial, do not hide an action merely because some
+loaded selected rows fail local row checks. Keep the App-level action visible
+and call `validateRecordSelectionAction` on click.
+
+Approval write restrictions are an explicit exception: follow the shared
+[approval restriction](../../make-app-approval/references/status-display.md#锁与范围)
+to hide single edit for a restricted target and batch edit when any known
+selected record is restricted. Apply this to buttons and menu items, not just
+their disabled state; keep `canOperateRecord`, precheck and final write checks
+as well. Do not infer safety for unloaded selected records or silently drop
+restricted records from a bulk mutation. Other allowed actions and ordinary
+IAM denial feedback remain independent; no actions still uses scheme two.
 
 ## Denial feedback
 
@@ -122,13 +133,42 @@ open-detail icon remains owned by `canvas-table-integration`.
 
 On phone, detail shows independent edit/delete actions through
 `MobileBottomActionBar` as defined in `mobile-card-actions.md`. Card actions do
-not replace detail actions. The following Drawer flow applies to desktop/tablet;
-phone task routes use that reference's mandatory edit/delete precheck lifecycle.
+not replace detail actions. Containers and confirmation UI may differ; phone
+and desktop/tablet reuse the same host edit/delete controllers, permission
+model, Service routes and error handling. Phone routes must not add an
+independent precheck or choose a different delete policy.
 
 Single edit requires the cached `data.record.update` permission, local selection
 validation, and one Service row-write precheck before opening the edit Drawer.
 
-Single delete requires cached `data.record.delete`, local validation, explicit
-confirmation, and the normal authoritative delete Service endpoint. If the host
-uses the row-write precheck for delete, send `data.record.delete` once; never
-replace final delete authorization with the precheck.
+Single delete follows the [shared single-delete contract](#shared-single-delete)
+in every presentation.
+
+## Shared single delete
+
+PC and phone use the same host delete controller. It owns cached
+`data.record.delete` and local row validation, one frozen target, confirmation,
+the existing precheck policy, the authoritative delete Service request,
+stale-target protection and error handling. Only the confirmation renderer and
+entry placement differ; mobile does not construct a second business pipeline.
+Keep the same route, request body, record identity, permission snapshot and
+failure semantics. Do not send presentation-dependent permission or API fields.
+
+The following labels describe existing host choices for regression coverage;
+they are not new configuration keys. Counts apply after local authorization,
+confirmation and target validity checks succeed:
+
+| Host delete policy | Precheck calls, PC/phone | Final delete calls, PC/phone |
+| --- | --- | --- |
+| `final-endpoint-only` | 0 | 1 |
+| `precheck-and-final` | 1 | 1 |
+
+If the existing PC controller has no delete precheck, phone adds none. If it
+uses `record-write-permission`, both views reuse that one call with
+`data.record.delete` and the same frozen target. Cancellation, local denial or
+a stale target sends no delete; precheck denial/error also sends no delete.
+Final endpoint denial remains authoritative in both policies; a successful
+precheck never grants deletion or triggers an automatic retry. Do not add
+per-record diagnostics or change the PC policy to accommodate phone UI.
+
+单条编辑使用 data.record.update，批量使用独立的 data.record.bulkUpdate 及其字段状态；批量不能额外要求单条 update。meta.field.update 只管字段结构，业务授权只使用文档列明的记录操作。只读、隐藏、脱敏、deny 和撤权必须在 UI 提交及 Service 写入两处拒绝；前端缓存不替代后端最终授权。

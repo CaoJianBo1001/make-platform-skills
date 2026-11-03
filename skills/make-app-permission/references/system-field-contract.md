@@ -26,7 +26,7 @@ qfei_update_user
 qfei_update_time
 ```
 
-Apply this guard after mode-specific field authorization: ordinary create uses `createFields ∩ meta.field.read.fieldAccess`, while approval create uses the authorized start-config fields. The backend remains the final authority and should normally omit these fields from `createFields` or approval start-config; the UI guard is defense in depth for malformed or stale responses.
+Apply this guard after mode-specific field authorization: ordinary create uses `createFields ∩ data.record.create 字段状态`, while approval create uses the authorized start-config fields. The backend remains the final authority and should normally omit these fields from `createFields` or approval start-config; the UI guard is defense in depth for malformed or stale responses.
 
 Do not exclude a business field merely because its key contains `create`, `update`, `user`, or `time`. When the platform adds a real system type or audit key, update this reference, the host guard, and the conformance suite together.
 
@@ -36,7 +36,7 @@ Normal edit keeps the existing rule:
 
 - exclude ID fields from edit capability;
 - do not automatically exclude the audit keys above;
-- an audit field is editable only when it is present in visible `fields`, allowed by `meta.field.update`, and supported by the host editor.
+- an audit field is editable only when it is present in visible `fields`, allowed by the current record operation and its editable field state, and supported by the host editor.
 
 This preserves “审计字段不可新建但仍保留既有可编辑能力”. Do not reuse the create-capability guard as the edit-capability guard.
 

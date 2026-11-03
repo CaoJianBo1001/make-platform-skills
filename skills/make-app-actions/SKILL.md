@@ -2,7 +2,7 @@
 name: make-app-actions
 description: "Use when generating, integrating, refactoring, reviewing, or debugging Make record-list actions: CanvasTable actions are the default desktop/tablet selection and batch workflow, while 手机/phone 卡片/card and mobile detail pages reuse single edit/delete actions. Triggered by 复选框, 行操作, 选择操作栏, 编辑, 删除, 批量编辑, 暂无可用的操作, selectAll, Shift selection, selectionIntent, 手机卡片操作, 手机详情操作栏, 行级写权限预检, noPermissionRecordIds, record-write-permission, records/bulk, @qfei-design/make-app-actions, or action tests. Covers headless single-record action reuse, independent update/delete/bulkUpdate permissions, Canvas selection intent, immutable snapshots, Service precheck/bulk contracts, denial feedback, stale safety, and tests. Does not own CanvasTable internals, principal IAM policy, general Service layering, page shell, field editor internals, auth, runtime packaging, DSL, Make CLI, or filter/sort/group semantics."
 metadata:
-  version: 0.1.18
+  version: 0.1.24
 ---
 
 # make-app-actions
@@ -20,7 +20,7 @@ requests, query context, field controls, business feedback, and list refresh.
 
 ## Workflow
 
-业务新建保存/首次发起、流程状态及审批锁边界使用 [make-app-approval](../make-app-approval/SKILL.md)。本 skill 继续负责普通记录操作；其行预检、快捷编辑和批量操作不得绕过真实审批状态/锁。审批新建按钮不从普通选择操作栏模型推导，也不在此实现任务审批动作。
+业务新建保存/发起恢复、发起人撤回、任务继续提交、流程状态及审批锁边界使用 [make-app-approval](../make-app-approval/SKILL.md)。本 skill 继续负责普通记录操作；其行预检、快捷编辑和批量操作不得绕过真实审批状态/锁。审批新建按钮不从普通选择操作栏模型推导，也不在此实现任务审批动作。业务详情的撤回由审批 skill 的记录生命周期提供独立动作，不套普通编辑/删除预检，也不生成批量撤回；详情保留独立“发起审批”，该动作不套普通编辑/删除预检且不执行普通保存；编辑页仍可“保存并提交”，编辑及数据保存通过原权限链。
 
 1. Inspect the host presentation mode, package manager, Node/React/UI-library compatibility,
    installed CanvasTable version and docs, normalized runtime schema, principal

@@ -203,6 +203,8 @@ These values are configurable recommendations, not universal magic constants or 
 
 ## 6. Cache and state ownership
 
+Keep reusable base props separate from per-instance derived props. Build each instance's local, virtual, or grouped configuration from the latest base props and current mode; never write the derived configuration back into the base object/ref or mutate shared nested options. In particular, a local instance must not inherit an old instance's enabled `virtualOptions`, page totals, or group configuration. Preserve the existing public initialization/cleanup path; this does not require recreating a table for ordinary background loads or callback changes.
+
 Maintain separate but aligned responsibilities:
 
 - CanvasTable owns its rendered virtual-page cache through `maxCachedRows`.
@@ -326,6 +328,8 @@ Verify at least these paths:
 - object, filter, sort, permission, or schema changes abort old work and reset queue, cache, data, and scroll
 - a context reset clears before the fresh generation; a short identity-aware response does not clear and invalidate itself
 - background page loads do not recreate the table or churn unrelated page-level state
+- save/refresh transitions cover virtual → local → virtual, plus transitions to and from grouped mode where the host supports it; instance derivation does not mutate base props, each instance uses only its current mode's options, and local writes never target an instance with stale virtual mode enabled
+- run mode-transition checks through ordinary record lists, grouped lists, and detail subtables that share the host wrapper; when a transition replaces an instance, destroy the old one, remove its listeners and cancel its work, and verify late callbacks cannot write into the replacement or duplicate loads
 - teardown removes listeners, timers, queued work, and in-flight requests
 
 Prefer pure model tests for page normalization, desired-page calculation, priority, out-of-range detection, stale-page calculation, and cache eviction. Add host integration tests for listener lifetime, direct page writes, failure release, and cancellation propagation.

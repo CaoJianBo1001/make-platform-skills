@@ -21,6 +21,10 @@ The host project can provide a `customEdit(options)` function.
 
 Treat this as the bridge between canvas-table and the host editor system.
 
+### Make record approval guard
+
+For Make business records, consume the shared [approval restriction](../../make-app-approval/references/status-display.md#锁与范围) alongside ordinary record/field permissions. A column's editable config does not authorize every row. Check the latest row by stable record ID before mounting an editor for pointer, keyboard or programmatic activation; use the documented cancel path when blocked. Recheck at draft acceptance and final commit (`edit:end` or the host equivalent), including callbacks holding a stale row snapshot. Once the host observes an approval/lock change, end the ordinary edit session without accepting its draft, uploading attachments, saving or backfilling success. Keep other eligible rows editable and retain authoritative backend write checks. This guard does not replace current-node authorization for Workflow task forms.
+
 ## 3. `ICustomEditOptions` key fields
 
 The host should expect at least these concepts:

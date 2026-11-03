@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { isReactComponentExport } from './react-component-contract.mjs';
 
 const parseCssRules = (css) => [...css.replace(/\/\*[\s\S]*?\*\//g, '').matchAll(/([^{}]+)\{([^{}]*)\}/g)]
   .map(([, selector, body]) => ({
@@ -129,10 +130,10 @@ export const assertAttachmentHtml = ({ saved, pending, retry, failed }) => {
   assert.match(failed, /上传失败/, 'failure without retry must show a readable message');
 };
 
-export const verifyMobilePackageSurface = async (packageRootArgument) => {
+export const verifyMobilePackageSurface = async (packageRootArgument, { detail = false } = {}) => {
   const packageRoot = path.resolve(packageRootArgument);
   let version = 'unknown';
-  console.info('[makeui] checking installed mobile package surface');
+  console.info('[makeui] checking installed mobile package surface', { detail });
 
   try {
     const packageJson = JSON.parse(fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'));
@@ -153,7 +154,7 @@ export const verifyMobilePackageSurface = async (packageRootArgument) => {
     const React = requireFromPackage('react');
     const { renderToStaticMarkup } = requireFromPackage('react-dom/server');
     const { MobileAttachmentField } = await import(pathToFileURL(packageExportPath(packageRoot, packageJson, './fields')).href);
-    assert.equal(typeof MobileAttachmentField, 'function', 'missing MobileAttachmentField public export');
+    assert.ok(isReactComponentExport(MobileAttachmentField), 'missing or invalid MobileAttachmentField public export');
 
     const renderAttachment = (item, onRetry) => renderToStaticMarkup(React.createElement(MobileAttachmentField, {
       fieldName: '附件',
@@ -168,6 +169,12 @@ export const verifyMobilePackageSurface = async (packageRootArgument) => {
       retry: renderAttachment({ key: 'retry', name: 'failed.txt', status: 'error' }, true),
       failed: renderAttachment({ key: 'failed', name: 'failed.txt', status: 'error' }),
     });
+    if (detail) {
+      const primitives = await import(pathToFileURL(packageExportPath(packageRoot, packageJson, './primitives')).href);
+      for (const name of ['MobileTimeline', 'MobileDetailSection', 'MobileFieldRow', 'MobileTextArea', 'MobileDetailPage', 'MobileFormActionBar', 'MobileFormSheet']) {
+        assert.ok(isReactComponentExport(primitives[name]), `missing or invalid public detail component ${name}`);
+      }
+    }
     return version;
   } catch (error) {
     console.error('[makeui] installed mobile package surface failed', {
@@ -179,9 +186,10 @@ export const verifyMobilePackageSurface = async (packageRootArgument) => {
 };
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === path.resolve(process.argv[1])) {
-  assert.ok(process.argv[2], 'usage: node verify-mobile-package-surface.mjs <installed-package-root>');
+  assert.ok(process.argv[2], 'usage: node verify-mobile-package-surface.mjs <installed-package-root> [--detail]');
+  assert.ok(process.argv.slice(3).every((arg) => arg === '--detail'), 'unknown option; supported option: --detail');
   try {
-    const version = await verifyMobilePackageSurface(process.argv[2]);
+    const version = await verifyMobilePackageSurface(process.argv[2], { detail: process.argv.includes('--detail') });
     console.log(`makeui mobile package surface verified: ${version}`);
   } catch {
     process.exitCode = 1;

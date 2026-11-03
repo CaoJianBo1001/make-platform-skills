@@ -1,5 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
+import { correctAdapterSource } from './fixtures/correct-permission-adapter.mjs';
 import { spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -24,152 +25,38 @@ try {
   assert.notEqual(permissiveResult.status, 0);
   assert.match(permissiveResult.output, /named_entity_permission_does_not_leak/);
 
-  const correctAdapterSource = `
-    const APP = 'make://tenant-1/meta/app/TestApp';
-    const knownFieldAccess = new Set(['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask', 'hidden']);
-    const wildcardKeyMatches = (actual, expected) => {
-      if (actual === expected || actual === '*.*.*') return true;
-      if (actual === 'data.record.*' && expected.startsWith('data.record.')) return true;
-      const left = actual.split('.');
-      const right = expected.split('.');
-      return left.length === 3 && right.length === 3 && left.every((part, index) => part === '*' || part === right[index]);
-    };
-    const resourceMatches = (actual, expected) => {
-      if (actual === '*' || actual === expected || expected.startsWith(actual + '/')) return true;
-      if (!/^make:\\/\\/[^/*]+\\/(?:meta|\\*)\\/app\\/[^/*]+(?:\\/entity\\/(?:[^/*]+|\\*))?$/.test(actual)) return false;
-      const left = actual.split('/');
-      const right = expected.split('/');
-      return left.length <= right.length && left.every((part, index) => part === '*' || part === right[index]);
-    };
-    const score = (resource) => {
-      if (resource === '*') return 0;
-      const segments = resource.split('/');
-      const entityIndex = segments.indexOf('entity');
-      if (entityIndex >= 0) return segments[entityIndex + 1] === '*' ? 3 : 4;
-      return segments.includes('app') ? 2 : 1;
-    };
-    const entityResource = (access, entityKey) => access.appResource + '/entity/' + entityKey;
-    const requestedIdentifier = (value) => String(value ?? '').trim();
-    const isValidRequestedIdentifier = (value) => {
-      if (typeof value !== 'string') return false;
-      const normalized = requestedIdentifier(value);
-      return Boolean(normalized) && normalized !== '*';
-    };
-    const matches = (access, entityKey, permissionKey) => {
-      if (!isValidRequestedIdentifier(entityKey)) return [];
-      return access.permissions
-        .filter((item) => wildcardKeyMatches(item.permissionKey, permissionKey))
-        .filter((item) => resourceMatches(item.resource, entityResource(access, requestedIdentifier(entityKey))));
-    };
-    const fieldAllowed = (access, entityKey, fieldKey, permissionKey, allowedStates) => {
-      if (!isValidRequestedIdentifier(fieldKey)) return false;
-      fieldKey = requestedIdentifier(fieldKey);
-      const matched = matches(access, entityKey, permissionKey);
-      if (matched.some((item) => item.effect === 'deny')) return false;
-      const allows = matched.filter((item) => item.effect === 'allow');
-      const maxScore = Math.max(...allows.map((item) => score(item.resource)), -1);
-      const ranges = allows.filter((item) => score(item.resource) === maxScore);
-      const namedStates = ranges
-        .filter((item) => Object.hasOwn(item.fieldAccess, fieldKey))
-        .map((item) => item.fieldAccess[fieldKey]);
-      const states = namedStates.length > 0
-        ? namedStates
-        : ranges.some((item) => Object.keys(item.fieldAccess).length === 0)
-          ? ['*']
-          : ranges.filter((item) => Object.hasOwn(item.fieldAccess, '*')).map((item) => item.fieldAccess['*']);
-      const flattenedStates = states.flatMap((state) => Array.isArray(state) ? state : [state]);
-      if (flattenedStates.includes('hidden')) return false;
-      return flattenedStates.some((state) => allowedStates.has(state ?? ''));
-    };
-    export const normalizeAccess = (payload) => {
-      const source = payload && typeof payload === 'object' && !Array.isArray(payload) ? payload : null;
-      const scope = String(source?.scope ?? '');
-      const inputPermissions = source?.permissions;
-      const appResourceMatches = !Object.hasOwn(source ?? {}, 'appResource') || String(source.appResource ?? '') === scope;
-      const validScope = /^make:\\/\\/[^/*]+\\/meta\\/app\\/[^/*]+$/.test(scope);
-      const supportedBusinessPermissionKeys = [
-          'data.record.read',
-          'data.record.create',
-          'data.record.update',
-          'data.record.bulkUpdate',
-          'data.record.delete',
-          'meta.entity.read',
-          'meta.field.read',
-          'meta.field.update',
-      ];
-      const classifyResource = (value) => {
-        if (value === '*') return 'current-app';
-        if (typeof value !== 'string') return 'unclassifiable';
-        if (/^make:\\/\\/[^/*]+$/.test(value)) return 'unrelated';
-        const scopeParts = /^make:\\/\\/([^/*]+)\\/meta\\/app\\/([^/*]+)$/.exec(scope);
-        const resourceParts = /^make:\\/\\/([^/*]+)\\/(?:meta|\\*)\\/app\\/([^/*]+)(?:\\/entity\\/(?:[^/*]+|\\*))?$/.exec(value);
-        if (!scopeParts || !resourceParts) return 'unclassifiable';
-        return scopeParts[1] === resourceParts[1] && scopeParts[2] === resourceParts[2]
-          ? 'current-app'
-          : 'unrelated';
-      };
-      const validPermissionKey = (value) => /^(?:[A-Za-z][\\w-]*|\\*)(?:\\.(?:[A-Za-z][\\w-]*|\\*)){2}$/.test(String(value ?? ''));
-      const isPotentialBusinessPermissionKey = (value) => {
-        if (typeof value !== 'string') return true;
-        return supportedBusinessPermissionKeys.some((expected) => wildcardKeyMatches(value, expected))
-          || (/^(?:data\\.record|meta\\.(?:entity|field))(?:\\.|$)/.test(value) && !validPermissionKey(value));
-      };
-      const shouldSelectRow = (item) => {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) return true;
-        const resourceClassification = classifyResource(item.resource);
-        if (resourceClassification === 'unrelated') return false;
-        if (resourceClassification === 'unclassifiable') return true;
-        return isPotentialBusinessPermissionKey(item.permissionKey);
-      };
-      const validResource = (value) => value === '*' || /^make:\\/\\/[^/*]+\\/(?:meta|\\*)\\/app\\/[^/*]+(?:\\/entity\\/(?:[^/*]+|\\*))?$/.test(String(value ?? ''));
-      const normalizeItem = (item) => {
-        if (!item || typeof item !== 'object' || Array.isArray(item)) return null;
-        if (!['allow', 'deny'].includes(item.effect) || !validPermissionKey(item.permissionKey) || !validResource(item.resource)) return null;
-        const hasFieldAccess = Object.hasOwn(item, 'fieldAccess');
-        if (hasFieldAccess && (item.fieldAccess === null || typeof item.fieldAccess !== 'object' || Array.isArray(item.fieldAccess))) return null;
-        const entries = Object.entries(item.fieldAccess ?? {});
-        if (entries.some(([key, value]) => {
-          const states = Array.isArray(value) ? value : [value];
-          return !key.trim() || states.length === 0 || states.some((state) => typeof state !== 'string' || !knownFieldAccess.has(state.trim()));
-        })) return null;
-        return {
-          effect: item.effect,
-          fieldAccess: Object.fromEntries(entries.map(([key, value]) => [key.trim(), (Array.isArray(value) ? value : [value]).map((state) => state.trim())])),
-          permissionKey: String(item.permissionKey),
-          resource: String(item.resource),
-        };
-      };
-      const selectedPermissions = Array.isArray(inputPermissions)
-        ? inputPermissions.filter(shouldSelectRow)
-        : [];
-      const normalized = selectedPermissions.map(normalizeItem);
-      const permissions = validScope && appResourceMatches && Array.isArray(inputPermissions) && normalized.every(Boolean)
-        ? normalized
-        : [];
-      return {
-        appResource: String(payload?.scope ?? ''),
-        permissions,
-        principal: String(source?.principal ?? ''),
-        scope,
-      };
-    };
-    export const canUseEntityOperation = (access, entityKey, permissionKey) => {
-      const matched = matches(access, entityKey, permissionKey);
-      return !matched.some((item) => item.effect === 'deny') && matched.some((item) => item.effect === 'allow');
-    };
-    export const canCreateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.read', new Set(['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask']));
-    export const canReadEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.read', new Set(['*', 'editable', 'readonly', 'partialMask', 'fullMask']));
-    export const canUpdateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.update', new Set(['*', 'editable']));
-    export const isCreateCapableField = (field) => !new Set(['Make.Field.ID', 'IDField']).has(field.type) && !new Set([
-      'create_user', 'create_time', 'update_user', 'update_time',
-      'qfei_create_user', 'qfei_create_time', 'qfei_update_user', 'qfei_update_time',
-    ]).has(field.key);
-    export const isEditCapableField = (field) => !new Set(['Make.Field.ID', 'IDField']).has(field.type);
-  `;
+
   const correctAdapter = writeAdapter('correct.mjs', correctAdapterSource);
   const correctResult = runSuite(correctAdapter);
   assert.equal(correctResult.status, 0, correctResult.output);
   assert.match(correctResult.output, /permission conformance: PASS/);
+
+  for (const [name, source, failure] of [
+    ['reject-all-field-arrays', correctAdapterSource.replace('const states = Array.isArray(value)', 'if (Array.isArray(value)) return null; const states = Array.isArray(value)'), /metadata_read_does_not_grant_or_revoke_data_creation/],
+    ['all-arrays-as-wildcard', correctAdapterSource.replace('return [...new Set(states.map(state => state.trim()))];', "return ['*'];"), /create_field_uses_record_create_state/],
+    ['first-array-member-only', correctAdapterSource.replace('return [...new Set(states.map(state => state.trim()))];', 'return [states[0].trim()];'), /principal_multi_value_access_is_operation_specific/],
+    ['sparse-map-as-full-access', correctAdapterSource.replace('if (maps.every(fields => Object.keys(fields).length === 0)) return true;', 'if (states.length === 0) return true;'), /empty_and_sparse_maps_have_distinct_bounds/],
+    ['missing-map-as-empty', correctAdapterSource.replace("if (!hasFieldAccess || item.fieldAccess === null || typeof item.fieldAccess !== 'object' || Array.isArray(item.fieldAccess)) return null;", "if (hasFieldAccess && (item.fieldAccess === null || typeof item.fieldAccess !== 'object' || Array.isArray(item.fieldAccess))) return null;").replace('Object.entries(item.fieldAccess);', 'Object.entries(item.fieldAccess ?? {});'), /missing_field_access_is_not_normalized_to_an_empty_map/],
+    ['reject-compatible-results', correctAdapterSource.replace('if (allows.length === 0) return false;', 'if (allows.length !== 1) return false;'), /compatible_permission_results_do_not_cancel_each_other/],
+    ['require-all-array-members', correctAdapterSource.replace('return states.some(state =>', 'return states.length > 0 && states.every(state =>'), /principal_multi_value_access_is_operation_specific/],
+    ['read-first-result-only', correctAdapterSource.replace('const maps = allows.map(item => item.fieldAccess);', 'const maps = allows.slice(0, 1).map(item => item.fieldAccess);'), /compatible_permission_results_do_not_cancel_each_other|returned_access_values_are_consumed_without_priority_ranking/],
+  ]) {
+    assert.notEqual(source, correctAdapterSource, name + ' mutation must change the fixture');
+    const result = runSuite(writeAdapter(name + '.mjs', source));
+    assert.notEqual(result.status, 0, name + ' must be rejected');
+    assert.match(result.output, failure);
+  }
+
+  const updateExpression = "fieldAllowed(access, entityKey, fieldKey, operation, new Set(['editable']))";
+  for (const [name, source, failure] of [
+    ['metadata-fallback', correctAdapterSource.replace(updateExpression, updateExpression + " || fieldAllowed(access, entityKey, fieldKey, 'meta.field.update', new Set(['editable']))"), /metadata_wildcards_never_grant_business_edit/],
+    ['exact-field-deny-ignored', correctAdapterSource.replace('.filter((item) => wildcardKeyMatches(item.permissionKey, permissionKey))', ".filter((item) => !(item.effect === 'deny' && item.permissionKey === 'data.record.update')).filter((item) => wildcardKeyMatches(item.permissionKey, permissionKey))"), /business_field_exact_deny_overrides_data_wildcards|principal_array_wildcard_keeps_named_restrictions_and_operation_bounds/],
+  ]) {
+    assert.notEqual(source, correctAdapterSource, name + ' mutation must change the fixture');
+    const result = runSuite(writeAdapter(name + '.mjs', source));
+    assert.notEqual(result.status, 0, name + ' must be rejected');
+    assert.match(result.output, failure);
+  }
 
   const unknownKeySelectedAdapter = writeAdapter(
     'unknown-key-selected.mjs',
@@ -224,41 +111,24 @@ try {
   assert.notEqual(noGlobalWildcardResult.status, 0);
   assert.match(noGlobalWildcardResult.output, /operation_global_permission_wildcard_allows/);
 
-  const noStateListAdapter = writeAdapter(
-    'no-state-list.mjs',
-    correctAdapterSource.replace(
-      "const flattenedStates = states.flatMap((state) => Array.isArray(state) ? state : [state]);",
-      "const flattenedStates = states;",
-    ),
-  );
-  const noStateListResult = runSuite(noStateListAdapter);
-  assert.notEqual(noStateListResult.status, 0);
-  assert.match(noStateListResult.output, /operation_deny_does_not_deny_read_derived_create_field|create_field_uses_meta_field_read_dimension|valid_field_access_state_lists_are_preserved/);
+  const schemaStateAdapter = writeAdapter('unknown-state-as-principal.mjs', correctAdapterSource.replace(
+    "new Set(['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask', 'hidden'])",
+    "new Set(['unexpected', '*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask', 'hidden'])",
+  ));
+  const schemaStateResult = runSuite(schemaStateAdapter);
+  assert.notEqual(schemaStateResult.status, 0);
+  assert.match(schemaStateResult.output, /invalid_field_access_state_fails_closed/);
 
-  const createFieldUsesRecordOperationAdapter = writeAdapter(
-    'create-field-uses-record-operation.mjs',
-    correctAdapterSource.replace(
-      "fieldAllowed(access, entityKey, fieldKey, 'meta.field.read', new Set(['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask']))",
-      "fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask']))",
-    ),
-  );
-  const createFieldUsesRecordOperationResult = runSuite(createFieldUsesRecordOperationAdapter);
-  assert.notEqual(createFieldUsesRecordOperationResult.status, 0);
-  assert.match(createFieldUsesRecordOperationResult.output, /operation_deny_does_not_deny_read_derived_create_field|create_field_uses_meta_field_read_dimension/);
-
-  const createFieldDependsOnRecordOperationAdapter = writeAdapter(
-    'create-field-depends-on-record-operation.mjs',
-    correctAdapterSource.replace(
-      "export const canCreateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.read', new Set(['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask']));",
-      "export const canCreateEntityField = (access, entityKey, fieldKey) => canUseEntityOperation(access, entityKey, 'data.record.create') && fieldAllowed(access, entityKey, fieldKey, 'meta.field.read', new Set(['*', 'creatable', 'editable', 'readonly', 'partialMask', 'fullMask']));",
-    ),
-  );
-  const createFieldDependsOnRecordOperationResult = runSuite(createFieldDependsOnRecordOperationAdapter);
-  assert.notEqual(createFieldDependsOnRecordOperationResult.status, 0);
-  assert.match(
-    createFieldDependsOnRecordOperationResult.output,
-    /operation_deny_does_not_deny_read_derived_create_field/,
-  );
+  for (const [name, replacement] of [
+    ['create-from-metadata', "fieldAllowed(access, entityKey, fieldKey, 'meta.field.read', new Set(['editable']))"],
+    ['create-readonly', "fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['creatable', 'editable', 'readonly', 'partialMask', 'fullMask']))"],
+  ]) {
+    const source = correctAdapterSource.replace("fieldAllowed(access, entityKey, fieldKey, 'data.record.create', new Set(['creatable']))", replacement);
+    assert.ok(source !== correctAdapterSource, name + ' mutation must change fixture');
+    const result = runSuite(writeAdapter(name + '.mjs', source));
+    assert.notEqual(result.status, 0, name);
+    assert.match(result.output, /metadata_read_does_not_grant_or_revoke_data_creation|record_create_deny_blocks_create_fields|create_field_uses_record_create_state|record_create_field_access_does_not_grant_meta_read/);
+  }
 
   const noParentResourceAdapter = writeAdapter(
     'no-parent-resource.mjs',
@@ -304,17 +174,6 @@ try {
   assert.notEqual(appResourceOverrideResult.status, 0);
   assert.match(appResourceOverrideResult.output, /app_resource_cannot_override_scope|invalid_explicit_app_resource_fails_closed/);
 
-  const firstAllowOnlyAdapter = writeAdapter(
-    'first-allow-only.mjs',
-    correctAdapterSource.replace(
-      'const ranges = allows.filter((item) => score(item.resource) === maxScore);',
-      'const ranges = allows.filter((item) => score(item.resource) === maxScore).slice(0, 1);',
-    ),
-  );
-  const firstAllowOnlyResult = runSuite(firstAllowOnlyAdapter);
-  assert.notEqual(firstAllowOnlyResult.status, 0);
-  assert.match(firstAllowOnlyResult.output, /create_field_uses_meta_field_read_dimension|same_specificity_allow_fields_union/);
-
   const fuzzySystemFieldAdapter = writeAdapter(
     'fuzzy-system-field.mjs',
     correctAdapterSource.replace(
@@ -340,8 +199,8 @@ try {
   const auditEditGuardAdapter = writeAdapter(
     'audit-edit-guard.mjs',
     correctAdapterSource.replace(
-      "export const canUpdateEntityField = (access, entityKey, fieldKey) => fieldAllowed(access, entityKey, fieldKey, 'meta.field.update', new Set(['*', 'editable']));",
-      "export const canUpdateEntityField = (access, entityKey, fieldKey) => fieldKey !== 'create_time' && fieldAllowed(access, entityKey, fieldKey, 'meta.field.update', new Set(['*', 'editable']));",
+      "export const canUpdateEntityField = (access, entityKey, fieldKey, operation = 'data.record.update') => ['data.record.update', 'data.record.bulkUpdate'].includes(operation) && fieldAllowed(access, entityKey, fieldKey, operation, new Set(['editable']));",
+      "export const canUpdateEntityField = (access, entityKey, fieldKey, operation = 'data.record.update') => fieldKey !== 'create_time' && ['data.record.update', 'data.record.bulkUpdate'].includes(operation) && fieldAllowed(access, entityKey, fieldKey, operation, new Set(['editable']));",
     ),
   );
   const auditEditGuardResult = runSuite(auditEditGuardAdapter);

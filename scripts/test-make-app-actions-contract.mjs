@@ -113,7 +113,7 @@ assert.deepEqual(
     ['both-allowed', '允许', '允许', '卡片与详情均显示编辑、删除'],
     ['edit-only', '允许', '拒绝', '卡片与详情只显示编辑'],
     ['delete-only', '拒绝', '允许', '卡片与详情只显示删除'],
-    ['neither-allowed', '拒绝', '拒绝', '卡片无操作区；详情无底部操作栏'],
+    ['neither-allowed', '拒绝', '拒绝', '卡片无编辑/删除操作区；详情无编辑/删除按钮'],
     ['stale-precheck', '任意', '任意', '丢弃结果，不打开任务页且不删除记录'],
   ],
   'phone card and detail actions must preserve independent permission scenarios',
@@ -527,7 +527,7 @@ assert.match(
 
 assert.match(
   batchEdit,
-  /meta\.field\.update[\s\S]*resolveBatchEditableFields[\s\S]*(AntdRecordBatchEditModal)[\s\S]*(RecordBatchEditModal)/i,
+  /data\.record\.bulkUpdate[\s\S]*resolveBatchEditableFields[\s\S]*(AntdRecordBatchEditModal)[\s\S]*(RecordBatchEditModal)/i,
   'batch modal fields must pass permission and package capability filtering',
 );
 assert.match(

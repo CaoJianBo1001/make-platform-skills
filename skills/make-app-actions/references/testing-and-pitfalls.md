@@ -5,7 +5,8 @@ desktop/tablet. Phone card/detail tests follow `mobile-card-actions.md`; shared
 permission independence and final Service authorization remain required.
 For phone single-record actions, also run its delayed-precheck A→B and A→B→A
 cases, including reversed completion and stale allow/deny/error; check the
-final write target against the frozen precheck target. Do not apply these
+final write target against the frozen target; delete precheck cases apply only
+when the common host controller uses that precheck. Do not apply these
 single-record cases to CanvasTable batch-selection behavior.
 
 ## TDD order
@@ -32,6 +33,8 @@ Action permissions:
 - independent combinations of update/delete/bulkUpdate
 - bulkUpdate without update still shows batch edit for multiple selection
 - batch edit is hidden when `batchEditableFields.length === 0`
+- approval-restricted targets have no single edit button/menu item; known restricted records in the current selection hide batch edit without clearing selection or hiding independently allowed actions
+- use the [approval edit matrix](../../make-app-approval/references/verification.md#普通编辑禁编矩阵) for stale edit sessions, cell commits and the task-action exception; ordinary row-level IAM denial still follows the existing visible-action/precheck feedback path
 - no allowed actions renders scheme two
 - principal cache is reused on click/submit; identity/tenant/explicit refresh can
   replace it
@@ -110,11 +113,13 @@ UI:
 
 - one row shows edit/delete; two rows show batch edit
 - desktop/tablet detail surface has no duplicate edit/delete actions
-- phone detail exposes independent edit/delete actions; when neither is allowed,
-  hide the entire bottom action bar, and never replace detail actions with card actions
+- phone detail exposes independent edit/delete actions; keep legal approval
+  start/withdraw actions even if ordinary edit/delete are unavailable. Hide the
+  whole bottom action bar only when no ordinary or approval action remains;
+  never replace detail actions with card actions
 - no-action bar, close, selected count, and row-alert cleanup
 - the default modal title is exactly `批量编辑`
-- batch field list enforces meta.field.update and package capability
+- batch field list enforces data.record.bulkUpdate fieldAccess and package capability
 - Select, Input, DatePicker, User, and Department controls submit normalized values
 - for FieldSelect and each popup value control, open the dropdown/picker and assert
   its popup DOM is mounted outside the modal panel/body or other overflow clipping
@@ -138,10 +143,17 @@ UI:
 - opaque precheck denial shows toast without marking the whole explicit selection
 - explicit refusal with unusable ID metadata shows the same toast without row
   highlights, never shows a request-error notice, and sends zero real writes
-- delete precheck HTTP 403 with confirmed `permission_denied` shows operation
+- with the common host delete-precheck policy enabled, precheck HTTP 403 with confirmed `permission_denied` shows operation
   guidance with embedded contacts or optional administrator lookup, preserves
   permitted page/confirmation UI, and sends zero real delete requests; an
   unknown 403 stays a request error, with no automatic retries or mutation replay
+- PC and phone invoke the same host delete controller with the same frozen
+  target, cached permissions, route/body and error handling. Cover both existing
+  host strategies: without precheck, confirmation then exactly one final delete;
+  with precheck, confirmation then one precheck and one final delete. Cancel,
+  local denial, stale target and precheck denial/error send zero deletes; final
+  delete denial never retries or changes target. Assert captured requests and
+  counts through the host controller/Service boundary, not a second toy pipeline.
 - selected-count fallback uses frozen count when select-all updatedCount is null
 
 ## Readiness blockers
@@ -236,3 +248,5 @@ search path, one explicit exact-ID denial path including selected/hover visibili
 and `clearRowColors` restoration, one select-all opaque-denial path, one 201-record
 action limit, one Shift 199/200/201 boundary, and one stale-request path in a real
 browser when the host supports browser automation.
+
+单条编辑使用 data.record.update，批量使用独立的 data.record.bulkUpdate 及其字段状态；批量不能额外要求单条 update。meta.field.update 只管字段结构，业务授权只使用文档列明的记录操作。只读、隐藏、脱敏、deny 和撤权必须在 UI 提交及 Service 写入两处拒绝；前端缓存不替代后端最终授权。

@@ -7,6 +7,7 @@ This reference defines the desktop/tablet shell unless a section explicitly says
 ## Contents
 
 - [Structure](#structure)
+- [区域加载态](#区域加载态)
 - [Global error outlet](#global-error-outlet)
 - [Header](#header)
 - [Current user menu](#current-user-menu)
@@ -46,6 +47,18 @@ When no project-specific shell already exists, use the platform dense object-man
 - workspace header is flat, compact, and only shows the current title plus global right-side current-user menu/actions
 - content area starts with the local toolbar, then the table region
 - sidebar background color follows the existing project theme or design system; do not default to a dark sidebar unless the project or user asks for it
+
+## 区域加载态
+
+本节适用于桌面、平板和手机。刷新、权限校验、Schema、路由或局部数据加载的阻塞提示，必须在**所属区域内水平和垂直居中**，不能把“正在核验访问权限…”或 Loading 文本直接渲染在左上角、边缘或工具栏旁。
+
+- Shell 已挂载：权限与页面加载占据扣除侧栏、顶栏后的主内容区，不覆盖已授权的导航或头部。Shell 尚未挂载：启动 fallback 占据应用可用视口；不能让 Provider 的短文本撑出一个只有一行高的容器。
+- 表格、Drawer、Tab、卡片或弹窗的局部加载：使用该区域实际可见的内容槽位，扣除仍保留的标题、工具栏和操作栏；不能使用整个浏览器视口居中，也不能漂移到其他面板。滚动后仍以可见槽位为准，不以长内容总高度的中点定位。
+- 容器必须具有明确的可用高度：沿用 Shell 的高度链，flex/grid 子区使用可伸缩布局及 `min-height: 0`、`min-width: 0`；不能在高度未建立的父级下仅写 `height: 100%`，不能用任意固定像素高度或 `100vh` 替代局部剩余空间。替换内容时使用填满槽位的 grid/flex 居中；覆盖加载时，在可见槽位的 `position: relative` 容器内使用 `position: absolute; inset: 0; display: grid; place-items: center`。不强制所有实现都使用 absolute。
+- 复用宿主组件库的 Spinner/Spin，加载图标和简短说明作为一组居中，使用主题字号、颜色和间距；不引入新的 UI 库，不使用 Toast 代替区域加载态。状态使用 `role="status"`，所属区域按状态设置 `aria-busy`；不要反复播报。加载期间继续遵守权限门禁，不为了保留布局提前挂载未授权业务内容。
+- 按钮内的提交指示、输入框候选搜索和增量加载保留控件自身的局部反馈，不升级为整页遮罩。已有骨架屏可保留其内容结构；区域加载状态结束后移除占位或遮罩，失败与拒绝状态继续走原有错误/权限反馈合同，不能一直显示加载动画。
+
+宿主验收：在真实浏览器延迟权限、Schema 和局部请求，覆盖首次刷新、Shell 前后、Drawer/Tab、滚动及窗口尺寸变化，至少验证桌面和手机。用 `getBoundingClientRect` 比较加载组中心与所属可见区域中心，两个方向误差均不超过 2 CSS px；同时确认不遮挡区域外导航/操作、不新增页面滚动，成功/失败后加载态消失。文档回归检查只证明规范与交接存在，不能替代上述布局验收。
 
 ## Global error outlet
 
@@ -108,7 +121,7 @@ The rules above are the desktop default. On phones, use the avatar-only top-left
 
 Use the sidebar for app modules or object navigation.
 
-- Support collapse / expand when the app has enough navigation items to benefit from it.
+- Support collapse / expand when the app has enough navigation items to benefit from it. The independent “我的审批” entry defined below must remain accessible when object/module groups collapse or the sidebar narrows.
 - Keep navigation labels concise.
 - Default sidebar navigation items are single-line primary labels only. Do not add per-object subtitles, descriptions, helper text, or second-line summaries by default.
 - Object navigation items should link to a dynamic object route, for example `/objects/:objectKey`, instead of separate hard-coded pages per object.
@@ -117,6 +130,15 @@ Use the sidebar for app modules or object navigation.
 - Do not move long navigation scrolling to `body`, app root, shell, workspace, or list-page containers.
 
 For a metadata-driven Make App, build navigation from modules or object groups when available. If no grouping exists, list objects directly. Object entries still use a dynamic route such as `/objects/:objectKey`.
+
+When [make-app-approval](../../make-app-approval/SKILL.md) requires “我的审批”, render it as a top-level menu item immediately after all visible business objects/module groups in the same navigation list:
+
+- Keep it outside all object/module groups, submenus, and collapsible or “more” containers. Grouping metadata must not turn it into a group child, and expanded-group state must not hide it.
+- Use the same row spacing, navigation container, and sidebar scroll area as the preceding menu items. Do not add an approval-only divider, card, footer region, or large blank gap. “After the objects” describes menu order, not the bottom edge of the sidebar or viewport; do not use fixed/sticky positioning, `margin-top: auto`, or a flex spacer to push the item there.
+- Collapsing object/module groups must not hide this sibling item. It moves naturally with the preceding menu content and remains after the business entries when objects are reordered or changed. A long navigation list scrolls together, including approval, which may leave the visible area; do not pin it in view. If the existing sidebar narrows to an icon rail, keep its clickable icon with an accessible name and label tooltip.
+- Reuse the existing approval route and navigation identity. If it was nested under an object or placed in a fixed bottom region, move that entry after the business entries and remove its old placement, approval-only separator, and spacer instead of creating a duplicate.
+
+This menu-order and shared-scroll rule applies to desktop/tablet sidebars, including the tablet navigation overlay when open. Phone navigation follows [mobile-defaults.md](mobile-defaults.md#底部导航与工作台): reserve one bottom Tab for the generated approval entry and use the remaining capacity for business objects, the optional AI assistant, and the workbench. Keep at most five items and reuse the same approval route and navigation key.
 
 If object descriptions exist in host-provided metadata, do not show them under each sidebar item by default. Use them only when the user asks for richer navigation, and prefer a tooltip or detail surface over making every item two lines.
 

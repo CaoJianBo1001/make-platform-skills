@@ -2,7 +2,7 @@
 name: make-app-runtime
 description: Use when generating, refactoring, reviewing, or debugging Make App project runtime structure, workspace manifests, Service runtime, local/dev scripts, build outputs, Docker/K8s image entrypoints, publish readiness, or packaging errors such as missing `apps/service/dist/server.js`. Covers `apps/` workspace contracts, `apps/ui/dist`, `apps/service` port/build/start contracts, runtime config file location, runtime artifact tests, forwarded host/proto header preservation, and publish gates that include auth, default Trace ID, and applicable permission audits. Does not cover UI layout, authentication implementation, Trace behavior, permission logic, Make adapter env semantics, DSL modeling, Make CLI resource deployment, or canvas-table internals.
 metadata:
-  version: 0.1.6
+  version: 0.1.7
 ---
 
 # make-app-runtime
@@ -146,7 +146,10 @@ Therefore the default TypeScript Service contract is:
 - production start script: `node dist/server.js`
 - dev script may use `tsx watch src/server.ts`, but production start must not use `tsx`
 - Service HTTP port: `3000`
+- container-facing listener: prefer explicit `0.0.0.0:3000`; an equivalent all-interface socket is valid, but `127.0.0.1`/`localhost` is not
 - centralized runtime config entry: `apps/service/src/config.ts`
+
+The published listener must remain container-reachable when `NODE_ENV` is absent as well as when it is `production`; do not select loopback as the missing-env default. Local-only test upstreams may still bind loopback. Verify the actual production entry with the executable listener check below, not a log message or a static `listen` string.
 
 `apps/service/tsconfig.json` must compile the runtime source to that path:
 
@@ -195,6 +198,7 @@ It should assert:
 - `apps/service/package.json` production start points to `node dist/server.js` when the platform image uses that entry
 - `apps/service/tsconfig.json` uses `rootDir: "src"` and `outDir: "dist"`
 - after build, `apps/service/dist/server.js` exists
+- the actual built entry requests port `3000` and opens an all-interface socket both with `NODE_ENV` absent and with `NODE_ENV=production`
 
 Run the Service build before relying on that artifact. For a new or explicitly migrated pnpm App:
 
@@ -204,6 +208,14 @@ test -f apps/service/dist/server.js
 ```
 
 For a legacy App, use its established package-manager build command and verify the actual production entry artifact instead.
+
+Copy `scripts/service-listener-conformance.mjs` into the host's local test tooling and run it against that built entry from the host workspace, with the same non-secret test runtime configuration as its Service startup tests:
+
+```bash
+node scripts/service-listener-conformance.mjs service/dist/server.js
+```
+
+Wire it into the host's default test or publish gate. It runs the real entry in an owned subprocess, changes only the socket port to an ephemeral port to avoid occupying local `3000`, preserves the requested host, inspects the actual socket, and closes it. It does not call Make APIs. Do not reimplement the listener in the test or add test switches to production code; a port/log-only assertion would miss the container-network defect.
 
 ## Runtime config location and port
 
@@ -235,7 +247,7 @@ Before reporting a Service-backed App as ready to publish or ready for user-doma
 5. Verify `apps/service/dist/server.js` exists when the runtime entry points there.
 6. Run the Service contract test and the make-app-auth published audit for Service-fronted Apps.
 7. For Service-fronted Apps, verify the Service contract test covers both local-preview and published gateway modes. Published upstream requests must not use `/api/make/**`; local preview must consume makecli resolve `make_api_origin` and must not use k8s-internal `/make/**`.
-8. If a start smoke is available, start the built Service with the production start script and verify it reaches the expected health or root response, then stop it.
+8. Run the real-entry listener check above. If a start smoke is available, also start the built Service with the production start script and verify it reaches the expected health or root response, then stop it. After an authorized deployment, verify the external `/api/health` separately; platform/component `Ready` and a localhost-only smoke do not prove container ingress is reachable.
 
 For an existing App without runtime migration, first verify that its declared Node/package manager, lockfile, workspace and CI/install workflow agree with the target platform build image. Use that App's established frozen/clean install, test, build and release commands, then perform the same applicable auth, permission, gateway-mode, artifact and start checks above. Do not require the `22.20.0`/`10.20.0` triple, `pnpm-workspace.yaml`, or `corepack pnpm run verify:publish` merely because an unrelated UI feature changed. If the platform actually requires a runtime the legacy App cannot meet, report a publish blocker and request an explicit migration; a successful local build alone is not release readiness.
 

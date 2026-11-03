@@ -37,10 +37,11 @@ precheck starts.
 
 ## Single delete
 
-Validate cached `data.record.delete` and local row permission, then show the
-delete confirmation. Use the host's authoritative delete Service route. A host
-may use the same precheck endpoint with `data.record.delete`, but must still call
-the final delete endpoint and must not add per-record diagnostics.
+Reuse the [shared single-delete controller and policy](action-permission-model.md#shared-single-delete)
+for both PC and phone. It validates cached `data.record.delete` and local row
+permission, freezes the target, confirms, and uses the same authoritative delete
+Service route. Only an existing host delete-precheck policy adds one precheck;
+no presentation adds its own request or per-record diagnostics.
 
 ## Opening batch edit
 
@@ -61,7 +62,7 @@ Apply this order:
 
 Build batch candidates from runtime normalized schema:
 
-1. Keep fields allowed by `meta.field.read` and `meta.field.update`.
+1. Keep fields allowed by `meta.field.read` and the `data.record.bulkUpdate` field state.
 2. Pass those fields to `resolveBatchEditableFields`.
 3. Exclude readonly/derived Lookup fields or any field the installed package
    reports unsupported.
@@ -149,7 +150,7 @@ into the host.
 
 1. Acquire a single-submit lock; duplicate confirm clicks do nothing.
 2. Recheck the current cached `data.record.bulkUpdate` and target field
-   `meta.field.update` without refetching principal.
+   the `data.record.bulkUpdate` field state without refetching principal.
 3. Re-resolve current field capability and validate the normalized value.
 4. Build `data`/`relations` using the host's existing field mutation builders.
 5. Reuse the frozen prechecked target exactly and call one Service bulk route.
@@ -162,3 +163,5 @@ into the host.
 
 The precheck is not repeated on submit; the final bulk endpoint is the authority.
 Never reconstruct the target from current list state after the modal opens.
+
+单条编辑使用 data.record.update，批量使用独立的 data.record.bulkUpdate 及其字段状态；批量不能额外要求单条 update。meta.field.update 只管字段结构，业务授权只使用文档列明的记录操作。只读、隐藏、脱敏、deny 和撤权必须在 UI 提交及 Service 写入两处拒绝；前端缓存不替代后端最终授权。

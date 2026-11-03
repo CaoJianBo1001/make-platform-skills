@@ -34,7 +34,13 @@ jobs:
           node skills/make-app-observability/scripts/test-audit-trace-contract.mjs
           node skills/make-app-auth/scripts/test-current-context-conformance-suite.mjs
           node skills/make-app-auth/scripts/test-audit-auth-contract.mjs
+          node skills/make-app-permission/scripts/test-permission-registry.mjs
+          node skills/make-app-permission/scripts/test-platform-permission-contract.mjs
+          node skills/make-app-permission/scripts/test-permission-conformance-suite.mjs
+          node skills/make-app-permission/scripts/test-write-permission-conformance-suite.mjs
           node skills/make-app-permission/scripts/test-audit-make-app-permission.mjs
+          node --test skills/make-app-permission/scripts/test-permission-runtime-signals.mjs
+          node --test skills/make-app-permission/scripts/test-create-payload-signals.mjs
           node --test skills/make-app-permission/scripts/test-scoped-route-feedback.mjs
 
       - name: Check feedback package and SDK compatibility
@@ -42,6 +48,14 @@ jobs:
           npm exec --yes --ignore-scripts --package=typescript@5.9.3 \
             --package=react@19.2.8 --package=react-dom@19.2.8 -- sh -ec '
             export MAKE_FEEDBACK_TEST_DEPENDENCIES="$(dirname "$(dirname "$(command -v tsc)")")"
+            node --test skills/make-app-observability/scripts/test-audit-error-outlets.mjs
             node --test skills/makeui/scripts/test-verify-feedback-package-surface.mjs
             node skills/makeui/scripts/test-feedback-sdk-types.mjs "$(command -v tsc)"
+          '
+
+      - name: Check error outlet audit with legacy TypeScript
+        run: |
+          npm exec --yes --ignore-scripts --package=typescript@4.8.4 -- sh -ec '
+            export MAKE_FEEDBACK_TEST_DEPENDENCIES="$(dirname "$(dirname "$(command -v tsc)")")"
+            node --test --test-name-pattern="保留唯一全局出口|catch 中将请求异常|JSON 本地解析|缺少 satisfies API" skills/make-app-observability/scripts/test-audit-error-outlets.mjs
           '

@@ -2,6 +2,8 @@
 
 审批新建的字段来源、保存/首次发起和详情标题 Tag 使用 [make-app-approval](../../make-app-approval/SKILL.md)。本文件的 `createFields` 要求是普通新建规则；有效审批新建消费启动配置授权结果，配置失败不回退普通字段。继续复用下述布局和字段控件，不把审批权限算法复制到 Drawer。
 
+我的审批任务详情使用审批包的 [任务详情合同](../../make-app-approval/references/task-detail.md)：通过 renderLayout 接入宿主容器，节点授权字段可直接编辑，actions 放关闭 X 左侧，意见随正文滚动；不套用下文普通业务详情的纯只读模式，也不另加保存按钮或固定办理底栏。
+
 ## Contents
 
 - [Default mode](#default-mode)
@@ -37,7 +39,7 @@ On desktop/tablet, Drawer presentation can still be driven by dynamic child rout
 
 Use a compact header layout:
 
-- left title area: fullscreen toggle when supported, then mode tag or record status, then title
+- left title area: fullscreen toggle when supported, then the mode badge when present, then title; an approval status Tag follows the title in this same group
 - right action area: contextual actions first, then one close control as the final far-right item
 - when `make-app-actions` owns record editing/deletion, the detail Drawer does not
   include edit/delete; those commands remain exclusively in the selection bar
@@ -51,6 +53,26 @@ Use a compact header layout:
 - do not render duplicate close controls, such as a left `X` plus a right `关闭` button
 - close should be icon-only by default, with accessible name/title `关闭`; avoid visible `关闭` text unless an existing project pattern explicitly requires text buttons
 - title text must be readable within the available header space. Give the title container `min-width: 0` plus a flexible width, and only apply ellipsis after real overflow; keep the full title available through `title`/tooltip. Do not shrink the title slot so otherwise displayable titles are truncated.
+
+### Approval header placement
+
+Use the following desktop/tablet header grouping for Make approval surfaces. The approval status is a read-only label in the **left title group**, immediately after the title; it is not an action in the right `extra`/actions slot.
+
+| Surface | Left title group, in order | Right action group, in order |
+| --- | --- | --- |
+| Business record detail | Fullscreen toggle → `详情` mode badge → existing object/record title → approval status Tag | Eligible `发起审批` or authorized `撤回` → icon-only close X; standalone start does not require ordinary edit permission or save the record |
+| Business create/edit | Fullscreen toggle → `新建`/`编辑` mode badge → existing object title | Save → `保存并提交` when eligible → icon-only close X |
+| My approvals task detail | Fullscreen toggle → `审批详情` title followed by one status Tag, following the approval status contract below | Package-provided authorized actions, in their supplied order → icon-only close X |
+
+Do not add unavailable actions merely to fill these slots. Save/recovery labels, eligibility and disabled/loading states remain owned by the approval contracts. Preserve selection-bar ownership of ordinary edit/delete. If fullscreen is absent, omit only that control and keep the other items in order.
+
+Keep title text and its status Tag adjacent, vertically centered and in normal document flow. The title group may take the remaining width (`min-width: 0`); long title text may ellipsize with its full text available via tooltip. Keep the Tag from shrinking and keep the right action group compact. Do not stretch a title/Tag pair with `justify-content: space-between`, `margin-left: auto` or absolute positioning that moves the Tag beside the right-hand buttons. Missing status removes the Tag and its gap.
+
+任务详情的标题和状态名称遵循 [审批状态展示合同](../../make-app-approval/references/status-display.md#展示合同)：包标题文案已符合合同时可复用完整的 `slots.title`；需要修正文案且有 detail 时，用公开 `slots.detail.processStatus` 和共享适配器替换整个标题组，无 detail 的加载/失败态保留原 title。标题组位于宿主全屏控件之后，保持既有标题语义、字号、字重及间距；不拆改包内部节点、不追加重复 Tag，也不将 Tag 放入右侧操作组。此处只规定布局，不维护第二套状态映射。
+
+Place the complete `renderLayout.actions` before the host close control. Keep actions/content/footer and the original controller unchanged when adapting the title. Keep the same header grouping in loading/error states and fullscreen mode. Contextual commands stay in the header; do not add a second bottom action bar on desktop/tablet.
+
+Scope responsive control sizing to its surface: business detail actions stay compact when a desktop/tablet window narrows; they must not inherit enlarged create/edit form buttons. Phone task-page placement continues to follow the mobile contract.
 
 For newly generated fullscreen controls, choose semantically appropriate Lucide icons by default, including in Ant Design hosts; follow an explicit user choice of another icon library. In an existing project, keep an established close control unless changing it is part of the requested work.
 

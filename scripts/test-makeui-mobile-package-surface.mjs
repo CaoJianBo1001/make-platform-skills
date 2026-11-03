@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
+import { spawnSync } from 'node:child_process';
 import {
   assertAttachmentHtml,
   assertIosPackageCss,
@@ -224,4 +225,80 @@ export const MobileAttachmentField = ({ items, onRetry }) => {
     },
   }));
   await assert.rejects(verifyMobilePackageSurface(root), /0\.1\.9/);
+});
+
+const detailExports = ['MobileTimeline','MobileDetailSection','MobileFieldRow','MobileTextArea','MobileDetailPage','MobileFormActionBar','MobileFormSheet'];
+const detailPackage = (t, { missing, invalid, publicEntry = true, componentExpressions = {} } = {}) => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'makeui-detail-surface-'));
+  t.after(() => fs.rmSync(root, {recursive:true,force:true}));
+  for (const dir of ['esm','node_modules/react','node_modules/react-dom']) fs.mkdirSync(path.join(root,dir),{recursive:true});
+  fs.writeFileSync(path.join(root,'package.json'),JSON.stringify({
+    name:'@qfei-design/make-app-mobile',version:'0.1.9',
+    exports:{'./styles.css':'./mobile.css','./fields':'./esm/fields.mjs',...(publicEntry?{'./primitives':'./esm/primitives.mjs'}:{})},
+  }));
+  fs.writeFileSync(path.join(root,'mobile.css'),iosCss+attachmentCss);
+  fs.writeFileSync(path.join(root,'node_modules/react/index.js'),'exports.createElement = (type,props) => ({type,props});');
+  fs.writeFileSync(path.join(root,'node_modules/react-dom/server.js'),'exports.renderToStaticMarkup = element => element.type(element.props);');
+  fs.writeFileSync(path.join(root,'esm/fields.mjs'),`export const MobileAttachmentField = ({items,onRetry}) => {
+    const {status}=items[0];
+    return status==='pending'?${JSON.stringify(compliantAttachmentHtml.pending)}:status==='error'?(onRetry?${JSON.stringify(compliantAttachmentHtml.retry)}:${JSON.stringify(compliantAttachmentHtml.failed)}):${JSON.stringify(compliantAttachmentHtml.saved)};
+  };`);
+  fs.writeFileSync(path.join(root,'esm/primitives.mjs'),detailExports.filter(name=>name!==missing).map(name=>
+    `export const ${name} = ${name===invalid?'{}':componentExpressions[name]??(name==='MobileTextArea'?'{ $$typeof: Symbol.for("react.forward_ref"), render: () => null }':'() => null')};`).join('\n'));
+  return root;
+};
+
+test('detail capability rejects an old package that only passes the attachment baseline', async (t) => {
+  const root=detailPackage(t,{publicEntry:false});
+  assert.equal(await verifyMobilePackageSurface(root),'0.1.9');
+  await assert.rejects(verifyMobilePackageSurface(root,{detail:true}),/public export.*primitives/);
+});
+
+for (const name of detailExports) {
+  test(`detail capability rejects missing ${name} instead of accepting the version`, async (t) => {
+    await assert.rejects(verifyMobilePackageSurface(detailPackage(t,{missing:name}),{detail:true}),new RegExp(name));
+  });
+}
+
+test('detail capability accepts public components including React forwardRef', async (t) => {
+  assert.equal(await verifyMobilePackageSurface(detailPackage(t),{detail:true}),'0.1.9');
+});
+
+test('detail capability rejects a non-component export with the expected name', async (t) => {
+  await assert.rejects(verifyMobilePackageSurface(detailPackage(t,{invalid:'MobileFormActionBar'}),{detail:true}),/MobileFormActionBar/);
+});
+
+for (const [label, expression] of [
+  ['memo', '{ $$typeof: Symbol.for("react.memo"), type: () => null }'],
+  ['memo + forwardRef', '{ $$typeof: Symbol.for("react.memo"), type: { $$typeof: Symbol.for("react.forward_ref"), render: () => null } }'],
+  ['nested memo', '{ $$typeof: Symbol.for("react.memo"), type: { $$typeof: Symbol.for("react.memo"), type: () => null } }'],
+]) {
+  test(`detail capability accepts valid ${label} component exports`, async (t) => {
+    const componentExpressions = Object.fromEntries(detailExports.map(name => [name, expression]));
+    assert.equal(await verifyMobilePackageSurface(detailPackage(t, { componentExpressions }), { detail:true }), '0.1.9');
+  });
+}
+
+for (const [label, expression] of [
+  ['memo without a component', '{ $$typeof: Symbol.for("react.memo"), type: {} }'],
+  ['memo with an invalid forwardRef', '{ $$typeof: Symbol.for("react.memo"), type: { $$typeof: Symbol.for("react.forward_ref"), render: null } }'],
+  ['cyclic memo', '(() => { const value = { $$typeof: Symbol.for("react.memo") }; value.type = value; return value; })()'],
+]) {
+  test(`detail capability rejects ${label} with the public export name`, async (t) => {
+    const root = detailPackage(t, { componentExpressions: { MobileTimeline:expression } });
+    await assert.rejects(verifyMobilePackageSurface(root, { detail:true }), /MobileTimeline/);
+  });
+}
+
+test('documented detail command runs from an installed Skill without a source checkout', async (t) => {
+  const markdown = fs.readFileSync(new URL('../skills/makeui/references/mobile-detail-components.md', import.meta.url), 'utf8');
+  const match = markdown.match(/`node (\S+verify-mobile-package-surface\.mjs) "?<[^>]+>"? (--detail)`/);
+  assert.ok(match, '详情文档必须提供可执行的随包校验命令');
+  const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'makeui installed skill '));
+  t.after(() => fs.rmSync(installRoot, { recursive:true, force:true }));
+  const skillRoot = path.join(installRoot, '.agents/skills/makeui');
+  fs.cpSync(new URL('../skills/makeui/scripts/', import.meta.url), path.join(skillRoot, 'scripts'), { recursive:true });
+  const result = spawnSync(process.execPath, [match[1], detailPackage(t), match[2]], { cwd:skillRoot, encoding:'utf8' });
+  assert.equal(result.status, 0, result.stdout + result.stderr);
+  assert.match(result.stdout, /mobile package surface verified: 0\.1\.9/);
 });

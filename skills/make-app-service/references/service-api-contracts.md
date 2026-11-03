@@ -1,6 +1,10 @@
 # Service API Contracts
 
+任务节点的 recordPatch 与下面的普通记录更新/关系合同分开：按 [审批 Workflow 合同](../../make-app-approval/references/workflow-api.md) 通过任务动作一次提交；Lookup 直接保留字段下的单选 ID/null、多选 ID 数组，File 通过任务授权预上传后一起提交。任务字段定义及附件类型核验读取 bpm-node-form-metadata 的 TASK 场景，不从普通 entity/Schema 取得或回退；字段权限仍由当前任务决定，不覆盖普通 Schema 缓存。不得转普通 PATCH、qfei_relation 或二次套用普通 IAM 字段集。
+
 Use this reference when designing or reviewing `apps/service` routes and `apps/docs/api.md`.
+
+审批任务 UI 使用 `/api/bpm/tasks/form` 聚合原任务信封与 节点 metadata 及必要 Lookup 依赖；保留原 detail 直接代理。Lookup 使用 `/api/bpm/tasks/lookup-options`，每次候选读取重查节点授权、只解析当前字段，并保留目标对象/字段/记录读取检查。元数据去重仅限单次编排；具体定位、响应包装和调用次数见上述审批合同。启动配置仅返回 field key 时由 bpm-node-form-metadata 的 START 场景补定义，不从普通 Schema 裁剪集合补齐。
 
 ## Contract source
 
@@ -353,3 +357,8 @@ Rules:
 - Put multi-step orchestration in `services/`, not directly in route handlers.
 - Return stable UI-facing records or result objects.
 - Do not make custom routes a place for unrelated business rules unless the user explicitly requested those rules.
+
+
+## 筛选表达式无损透传
+
+记录 filter.expression 与 Entity Preset filter.expression 必须保留表达式原文及括号，不解析、扁平化、去括号或重写 CEL。对非空表达式不要 trim 后覆盖原值；只可用 trim 判断是否空白。测试 Preset PATCH → Make → GET 与记录查询 payload 的原文相等，包含双层条件组括号。编译错误不是空筛选，不应由 Service 兜底为全量查询；宿主先停止失败请求。筛选生成、回显、结构错误和版本门槛交接 make-app-filter 的 [无损回显合同](../../make-app-filter/references/roundtrip-and-errors.md)。filter 与 groupFilter 仍独立透传。

@@ -46,8 +46,8 @@ test('new feedback installations resolve a compatible release without silently u
   const guide = await read('makeui/references/permission-feedback.md');
   const integration = await read('make-app-observability/references/package-integration.md');
   const install = guide.match(/corepack pnpm add (@qfei-design\/make-app-observability@[^`\s]+)/u)?.[1];
-  assert.equal(install, '@qfei-design/make-app-observability@^0.1.10');
-  assert.match(integration, /@qfei-design\/make-app-observability@\^0\.1\.10/u);
+  assert.equal(install, '@qfei-design/make-app-observability@^0.1.11');
+  assert.match(integration, /@qfei-design\/make-app-observability@\^0\.1\.11/u);
   assert.match(guide, /lockfile[\s\S]*explicit[\s\S]*upgrade/iu);
   assert.match(guide, /untouched legacy Apps/iu);
 });
