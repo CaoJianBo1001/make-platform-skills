@@ -8,6 +8,10 @@
 - 包拥有 MyApprovalsPage 的查询、列表、追加页、取消和重试，以及 ApprovalTaskDetail 的草稿、权限复核、校验、预上传与提交状态机。宿主只提供路由、Service provider、控件、字段展示、历史和布局适配。
 - 使用公开入口；不深导入 src/dist，不另写任务列表或办理 Controller。本机预览可以使用模拟接口，但不能当真实后端或真机验收。
 
+**0.2.11 已知限制：** 手机列表和详情布局插槽可用，不代表手机字段外框已达标。该版本的 `sections.application` 默认使用 104px 标签槽、38px 最小行高和 20px 值行高；按下文组合公开区块时，767px 仍可能显示双列。公开字段属性 `fullWidth` 可让字段独占一行，但不调整上述尺寸；`renderField` 仅替换值控件，公开 props/样式变量未提供对应的字段外框尺寸配置。下述手机尺寸保留为验收目标，此版本该项应记录未通过；由审批包补齐公开能力并正式发布后升级复验，不能在宿主覆盖私有结构，也不能因这一视觉缺口另写列表或办理控制器。
+
+**字段展示能力门槛：** 审批包待发布源码新增 `ApprovalTaskDetail.presentation?: "desktop" | "mobile"`，正式 0.2.11 不支持该参数。只有安装的正式产物类型及真实组件行为均已支持后，才按下述方式接入；不凭源码或版本号宣称发布完成。详情和列表的 presentation 是各自组件的参数，必须分别传入。详情参数只调整包拥有的字段外框，宿主仍负责手机控件、路由、页头与底栏，不能期待包自动完成整页适配。
+
 ## 列表与筛选
 
 - 由已有响应式上下文显式选择 `presentation="mobile"`；不传时保持桌面。手机卡片不挂 Canvas，桌面/平板仍用原表格和查询/重置/刷新。
@@ -36,10 +40,12 @@
 
 使用随包 [纯布局适配器](../assets/mobile-detail-layout.mjs) 组合公开插槽；它不读取字段值、不请求、不生成授权动作。宿主接入时沿用已有页头及桌面 renderLayout。hasFieldErrors 是现有字段校验结果，不能另写数值转换；provider 仍在序列化、附件预上传和发送动作前复核全部已修改字段，禁用按钮不能替代提交边界校验。
 
+以下接线仅用于已通过上述字段展示能力门槛的产物。由宿主同一响应式上下文向 `ApprovalTaskDetail` 传入 presentation，`tablet` 映射为包支持的 `desktop`，手机传 `mobile`；只在 renderLayout 中判断手机不会切换包的字段外框。无需为手机单列重写 field.fullWidth 或任务元数据；字段控件仍须满足编辑字号、交互高度和授权要求。
+
 宿主页头接收公开 slots，按 [流程状态标题合同](status-display.md#展示合同) 使用 detail 中的真实状态；需要修正文案时替换标题组，不同时保留旧 Tag。无 detail 时保留 slots.title；沿用原标题排版，不改变控制器、字段及动作。
 
 ```tsx
-import type { ApprovalTaskDetailProps } from '@qfei-design/make-app-approval/detail';
+import { ApprovalTaskDetail, type ApprovalTaskDetailProps } from '@qfei-design/make-app-approval/detail';
 // composeApprovalTaskLayout 来自随包参考适配器；两个 renderExisting... 是宿主已有容器接线。
 const renderLayout: NonNullable<ApprovalTaskDetailProps['renderLayout']> = (slots) => {
   if (presentation !== 'mobile') return renderExistingDesktopLayout(slots);
@@ -51,6 +57,10 @@ const renderLayout: NonNullable<ApprovalTaskDetailProps['renderLayout']> = (slot
     footer={view.actions.length > 0 ? <MobileFormActionBar size="small" actions={view.actions} /> : null}
   />;
 };
+
+// existingTaskProps 为宿主现有 provider、任务定位、控件与校验接线。
+const taskDetail = <ApprovalTaskDetail {...existingTaskProps}
+  presentation={presentation === 'mobile' ? 'mobile' : 'desktop'} renderLayout={renderLayout} />;
 ```
 
 展示切换不改变 ApprovalTaskDetail 的 scopeKey、任务 reference 或控制器身份。没有 history 时不创建空历史页签；加载/失败不创建空操作栏；办理完成后空 actionItems 不恢复旧动作。参考适配器测试只证明插槽组合，宿主仍须用实际安装的审批包测试字段 DOM、加载失败后的重试、只读/可编辑混合字段、RETURN 与非必填数值错误，以及 PC 来回切换的草稿保持。
