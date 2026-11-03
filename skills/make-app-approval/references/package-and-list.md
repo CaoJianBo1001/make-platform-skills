@@ -1,6 +1,6 @@
 # 审批包与我的审批列表
 
-适用于完整接入或升级任务中心。本文基于已核对的 `@qfei-design/make-app-approval@0.2.11` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
+适用于完整接入或升级任务中心。本文基于已核对的 `@qfei-design/make-app-approval@0.2.12` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
 
 ## 依赖与职责
 
@@ -8,8 +8,8 @@
 - Service 如消费状态、禁编或撤回校验函数，也安装同一审批包版本，只加载根入口。依赖与锁文件可在干净环境重装；生产不依赖开发机路径、未发布 tgz、node_modules 修改或未随构建分发的补丁。
 - 应用入口一次导入 `@qfei-design/make-app-approval/styles.css`，表格样式沿用宿主 CanvasTable 接入。Ant Design/dayjs 是包的示例依赖，不要求宿主更换 UI 库。
 - 0.2.10 发布包携带 `examples/field-adapters`，包含人员缓存、数值原文校验和 `use-input-modality.ts`。这些是宿主源码适配示例，按 [字段适配回归](../../makeui/references/field-adapter-regressions.md) 复用已有控件与校验，不当作新的 npm 公开子路径导入。
-- 0.2.11 原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
-- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.11 原生检查失败是已知缺口；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
+- 0.2.12 原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
+- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.12 原生检查失败是已知缺口；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
 
 | 公开入口 | 使用内容 |
 | --- | --- |
@@ -84,7 +84,7 @@ Service 固定当前部署 `appKey` 和 `viewType: MY`。已完成是当前用�
 
 ## 多端边界
 
-已核验的 0.2.11 发布产物包含 `MyApprovalsPage presentation="mobile"` 和详情布局插槽 `detail/sections/actionItems`。0.2.7 不包含这些手机能力；旧版本先核对并升级到具备所需能力的正式产物，不能直接传入不存在的参数。审批包与 `make-app-mobile` 分别核验，不能因审批包升级就认定移动组件包也已支持所有控件。
+已核验的 0.2.12 发布产物包含 `MyApprovalsPage presentation="mobile"`、详情布局插槽 `detail/sections/actionItems` 及 `ApprovalTaskDetail presentation="mobile"` 字段展示能力。0.2.11 缺少最后一项，0.2.7 不包含这些手机能力；旧版本先核对并升级到具备所需能力的正式产物，不能直接传入不存在的参数。审批包与 `make-app-mobile` 分别核验，不能因审批包升级就认定移动组件包也已支持所有控件。
 
 支持该能力的产物中，宿主由已有响应式上下文选择 `presentation="mobile"`，桌面/平板不传或传 `desktop`。手机公共卡片、列表查询状态、滚动追加、失败重试与下拉刷新归审批包；宿主只提供手机基础控件适配、导航、provider 和详情容器，不复制一套列表/分页 Controller。不生成不存在的 `MobileMyApprovalsPage` 导出。
 
