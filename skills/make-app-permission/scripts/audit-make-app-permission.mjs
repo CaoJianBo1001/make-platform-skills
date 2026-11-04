@@ -2,14 +2,17 @@
 // make-app-permission contract version: 0.4.4
 import fs from 'node:fs';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import { calls, codeMask as maskJavaScriptNonCode, identifier, stripComments, unwrap } from './permission-source-expressions.mjs';
 import { runtimeSignals } from './permission-runtime-signals.mjs';
 import { navigationGate } from './permission-navigation-signals.mjs';
 import { auditCreatePayloads, defaultCreateCalls } from './create-payload-signals.mjs';
 import { auditScopedRouteFeedback } from './scoped-route-feedback-audit.mjs';
+import { auditAdministratorFeedback } from './administrator-feedback-audit.mjs';
+import { runAdministratorFeedbackConformance } from './administrator-feedback-conformance-suite.mjs';
 
 const USAGE = `Usage:
-  node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root> [--config <json-file>]
+  node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root> [--config <json-file>] [--feedback-adapter <host-module>]
 
 Checks Make App single-app permission enforcement, including record operations and operation-specific field states. This is a static contract audit; it does not replace Service/UI tests.`;
 
@@ -21,10 +24,14 @@ if (args.includes('--help') || args.includes('-h')) {
 
 const positional = [];
 let configFile;
+let feedbackAdapter;
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--config') {
     if (!args[i + 1] || configFile) failUsage('--config requires one JSON file');
     configFile = args[++i];
+  } else if (args[i] === '--feedback-adapter') {
+    if (!args[i + 1] || feedbackAdapter) failUsage('--feedback-adapter requires one host adapter module');
+    feedbackAdapter = args[++i];
   } else if (args[i].startsWith('-')) failUsage(`Unknown audit option: ${args[i]}`);
   else positional.push(args[i]);
 }
@@ -51,12 +58,41 @@ let createSummary;
 checkSourceRoots();
 checkServiceContract();
 checkUiContract();
+await checkAdministratorFeedback();
 warnings.push(...auditScopedRouteFeedback(uiRuntimeFiles.map(file => ({
   file: path.relative(root, file), source: fs.readFileSync(file, 'utf8'),
 }))));
 
 printResult();
 process.exit(failures.length > 0 ? 1 : reviews.length > 0 ? 2 : 0);
+
+async function checkAdministratorFeedback() {
+  const result = auditAdministratorFeedback(uiRuntimeFiles.map(file => ({ file: path.relative(root, file), source: readFile(file) })));
+  if (!result.detected && !feedbackAdapter) return;
+  if (!feedbackAdapter) {
+    failures.push(...result.failures);
+    failures.push('administrator_feedback_behavior_missing: permission notices require --feedback-adapter <host-module>; source keywords or package verification cannot prove host contact wiring');
+    return;
+  }
+  const absolute = path.resolve(root, feedbackAdapter);
+  if (!fs.existsSync(absolute) || !fs.statSync(absolute).isFile()) {
+    failures.push('administrator_feedback_adapter_missing: the configured host adapter must be an existing file');
+    return;
+  }
+  try {
+    const adapter = await import(pathToFileURL(absolute).href);
+    if (typeof adapter.mountAdministratorFeedback !== 'function') throw new Error('export mountAdministratorFeedback from a thin production-UI adapter');
+    const report = await runAdministratorFeedbackConformance(adapter.mountAdministratorFeedback);
+    if (report.failures.length) {
+      failures.push(...result.failures);
+      failures.push(...report.failures.map(failure => `administrator_feedback_behavior_failed: ${failure}`));
+    } else {
+      console.log(`administrator feedback conformance: ${report.passed}/${report.total} passed`);
+    }
+  } catch (error) {
+    failures.push(`administrator_feedback_adapter_invalid: ${error.message}`);
+  }
+}
 
 function checkSourceRoots() {
   if (uiFiles.filter(isRuntimeSourceFile).length === 0) {

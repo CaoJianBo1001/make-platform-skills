@@ -9,6 +9,9 @@ assert.ok(example, 'the documented host adapter must remain executable');
 const effect = example.match(/useEffect\(\(\) => \{([\s\S]*?)\n  \}, \[auth, contextKey, payload, embedded\]\);/u)?.[1];
 assert.ok(effect, 'exercise the actual documented contact effect, not a second implementation');
 const startEffect = new Function('auth', 'contextKey', 'payload', 'embedded', 'setHelp', effect);
+const statusExpression = example.match(/administratorStatus=\{([^}]+)\}/u)?.[1];
+assert.ok(statusExpression, 'exercise the documented presentation projection');
+const displayedStatus = new Function('auth', 'current', 'embedded', `return ${statusExpression};`);
 
 function mount(auth, payload, contextKey = 'resource:orders') {
   const states = [];
@@ -36,7 +39,9 @@ for (const scope of ['app', 'resource', 'operation']) {
     assert.equal(mounted.states[0].status, 'loading');
     await mounted.settle();
     assert.deepEqual(mounted.states.at(-1).contacts, []);
-    assert.equal(mounted.states.at(-1).status, 'ready', '404 is an expected compatibility fallback, not an App failure');
+    assert.equal(mounted.states.at(-1).status, 'error', 'retain the lookup failure, not an App failure');
+    assert.equal(mounted.states.at(-1).failure.status, 404);
+    assert.equal(displayedStatus(auth, mounted.states.at(-1)), 'ready', 'only presentation falls back to generic help');
     assert.equal(mounted.states.at(-1).contextKey, `${scope}:target`);
     assert.deepEqual(payload, original, 'help must not rewrite authorization or denial scope');
     assert.equal(calls, 1, 'no automatic retries or polling');
@@ -72,25 +77,65 @@ for (const contacts of [[], [{ userId: 'admin-1', name: '管理员一' }]]) {
 }
 
 for (const failure of [
+  Object.assign(new Error('invalid context'), { status: 400 }),
   Object.assign(new Error('missing identity'), { status: 401 }),
   Object.assign(new Error('tenant mismatch'), { status: 403 }),
+  Object.assign(new Error('internal error'), { status: 500 }),
+  Object.assign(new Error('bad gateway'), { status: 502 }),
   Object.assign(new Error('service unavailable'), { status: 503 }),
+  Object.assign(new Error('gateway timeout'), { status: 504 }),
   new DOMException('deadline exceeded', 'AbortError'),
+  new TypeError('network unavailable'),
   new TypeError('invalid response'),
 ]) {
   test(`contact ${failure.status ?? failure.name} stays local and keeps the original denial`, async () => {
     const payload = deniedPayload();
     const original = structuredClone(payload);
     let calls = 0;
-    const mounted = mount({ ...noAuthSideEffects(), getAppAdministrators: async () => { calls++; throw failure; } }, payload);
+    const auth = { ...noAuthSideEffects(), getAppAdministrators: async () => { calls++; throw failure; } };
+    const mounted = mount(auth, payload);
     await mounted.settle();
     assert.deepEqual(mounted.states.at(-1).contacts, []);
     assert.equal(mounted.states.at(-1).status, 'error');
+    assert.equal(mounted.states.at(-1).failure, failure, 'keep original diagnostics private to this generation');
+    assert.equal(displayedStatus(auth, mounted.states.at(-1)), 'ready', 'a help failure must not add a second user-facing error');
     assert.deepEqual(payload, original);
     assert.equal(calls, 1);
     mounted.cleanup?.();
   });
 }
+
+test('contact presentation preserves pending, embedded and resolved states without rewriting lookup state', () => {
+  const auth = { getAppAdministrators() {} };
+  for (const [status, expected] of [['loading', 'loading'], ['ready', 'ready'], ['error', 'ready']]) {
+    const current = Object.freeze({ contacts: [], status });
+    assert.equal(displayedStatus(auth, current), expected);
+    assert.equal(current.status, status);
+  }
+  assert.equal(displayedStatus({}, undefined), 'ready');
+  assert.equal(displayedStatus(auth, undefined), 'loading');
+  assert.equal(displayedStatus(auth, { status: 'error' }, []), 'ready');
+});
+
+test('a successful empty directory is distinct from a failed lookup internally', async () => {
+  const mounted = mount({ ...noAuthSideEffects(), getAppAdministrators: async () => [] }, deniedPayload());
+  await mounted.settle();
+  assert.deepEqual(mounted.states.at(-1).contacts, []);
+  assert.equal(mounted.states.at(-1).status, 'ready');
+  assert.equal('failure' in mounted.states.at(-1), false);
+  mounted.cleanup?.();
+});
+
+test('a rejected lookup after unmount does not publish stale failure state', async () => {
+  let reject;
+  const mounted = mount({ getAppAdministrators: () => new Promise((_, fail) => { reject = fail; }) }, deniedPayload());
+  await mounted.settle();
+  mounted.cleanup();
+  const count = mounted.states.length;
+  reject(new DOMException('old context cancelled', 'AbortError'));
+  await mounted.settle();
+  assert.equal(mounted.states.length, count);
+});
 
 test('a later entry can discover the endpoint after backend rollout', async () => {
   let calls = 0;
