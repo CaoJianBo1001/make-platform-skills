@@ -158,6 +158,30 @@ Do not report complete until:
 - source and installed Skill copies are synchronized;
 - complex revisions have fresh-agent forward-test evidence when available.
 
+## Administrator feedback gate
+
+New or explicitly upgraded React feedback must pass the existing permission audit with `--feedback-adapter <host-module>`. Detection of the packaged permission component without this adapter fails with `administrator_feedback_behavior_missing`; the audit also identifies absent or fixed-empty contact props. Dynamic props, spreads and SDK method names alone cannot pass. Source signals do not prove the surrounding branch is wrong: a generic old-SDK fallback is valid when the actual host behavior gate passes every named-contact and fallback case. Existing locked Apps do not automatically receive a new audit or dependency version.
+
+This gate does not validate a lookup URL, require a URL argument, require a caller-supplied `appKey` or inspect SDK query arguments. The established SDK/shared request adapter owns trusted AppKey injection and optional URL handling under `make-app-auth/references/auth-app-context.md`; preserve that implementation. `--feedback-adapter` is a local test-module path, not an endpoint setting.
+
+Copy `administrator-feedback-audit.mjs` and `administrator-feedback-conformance-suite.mjs` alongside the project-local permission audit. Export `mountAdministratorFeedback(props)` from a thin test adapter that mounts the App's actual production feedback component using its existing component test stack. Inject only the SDK/network boundary; do not duplicate the contact effect or return invented contact text. `props` contains `auth`, `payload`, `scope`, `contextKey` and optional retry/close callbacks. The mounted result exposes:
+
+| Member | Required behavior |
+| --- | --- |
+| `snapshot()` | Read the currently rendered permission notice and return `{text, scope}` from its text content and `data-scope`; do not read a contact hook/store or the whole App's unrelated text |
+| `flush()` | Flush pending UI work with the host's real test stack; do not reimplement rendering or perform network requests |
+| `unmount()` | Clean up the actual mounted component and subscriptions; safe after an earlier unmount |
+
+The adapter must return while an optional query is still pending. The gate supplies unique diagnostic names, verifies the rendered names and SDK call count, and tests App/resource/operation scopes, embedded/explicit-empty contacts, old SDKs, empty directories, 404/401/403/5xx, timeout/invalid responses and late completion after unmount. It also rejects auth/business/retry side effects and rewriting the original denial. These fixtures are offline: do not call deployed Make APIs to pass them. Production context-switch, DOM layout and Toast timing tests remain separately required; this focused gate does not claim to cover them.
+
+```sh
+node scripts/audit-make-app-permission.mjs . --feedback-adapter test/adapters/administrator-feedback.mjs
+```
+
+Paths resolve from the audited project root. For a TypeScript adapter use the host's existing TypeScript test runner/loader; do not add a runtime dependency. The behavior suite also exports `runAdministratorFeedbackConformance(mountAdministratorFeedback)` for use within the host's existing test framework, but a detached test-only implementation cannot replace the adapter required by the audit. Keep the full audit command in the App's default test/CI or `verify:publish`, fail on its nonzero exit and do not append `|| true`. `makecli app deploy` does not automatically execute this project gate.
+
+Repository CI runs the gate's self-tests and mutation fixtures: absent query, lost rendered contacts, global login on help failure and blocking denial rendering must fail. Those tests validate the gate, not an arbitrary generated App; its own production UI adapter must still pass.
+
 ## Scoped feedback acceptance
 
 Read `scoped-route-feedback.md` and wire its direct URL, recovery, refresh and revocation assertions into host tests. Assert visible authorized navigation/global identity header, feedback replacing the whole business content, absence of original business titles/toolbars/headers/forms/dialogs, and zero subsequent denied requests. A scope/text-only assertion or static audit pass is insufficient: the heuristic cannot prove arbitrary business content was fully unmounted. `resource_route_shell_unverified` is a bounded JSX signal; dynamic nesting/aliases require rendered-tree evidence, not a comment or an unrelated business-page shell.

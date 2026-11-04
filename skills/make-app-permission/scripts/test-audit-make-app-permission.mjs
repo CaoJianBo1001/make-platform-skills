@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 import assert from 'node:assert/strict';
-import { execFileSync } from 'node:child_process';
+import { execFileSync, spawnSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
@@ -133,6 +133,75 @@ try {
   });
 
   assert.match(runAudit(goodRoot), /status: PASS/);
+
+  const missingContactRoot = createFixture('permission-notice-without-contacts', {
+    ...goodFiles,
+    page: `${goodFiles.page}
+      import { MakeAppPermissionNotice } from '@qfei-design/make-app-observability/react';
+      export function Forbidden({ retry }) {
+        return <MakeAppPermissionNotice variant="inline" scope="resource" onRetry={retry} />;
+      }
+    `,
+  });
+  const missingContactResult = spawnSync(process.execPath, [auditScript, missingContactRoot], { encoding: 'utf8' });
+  assert.equal(missingContactResult.status, 1,
+    `a contact-free permission notice must fail the existing audit gate:\n${missingContactResult.stdout}`);
+  assert.match(missingContactResult.stdout, /administrator_feedback_contacts_missing/);
+
+  const boundContactRoot = createFixture('permission-notice-requires-host-evidence', {
+    ...goodFiles,
+    page: `${goodFiles.page}
+      import { MakeAppPermissionNotice } from '@qfei-design/make-app-observability/react';
+      const Forbidden = ({ contacts }) => <MakeAppPermissionNotice administrators={contacts} />;
+    `,
+  });
+  const noEvidence = spawnSync(process.execPath, [auditScript, boundContactRoot], { encoding: 'utf8' });
+  assert.equal(noEvidence.status, 1, 'an administrators prop alone is not behavioral evidence');
+  assert.match(noEvidence.stdout, /administrator_feedback_behavior_missing/);
+
+  // Integration fixtures validate that the audit actually invokes its behavior gate.
+  // They are not acceptance evidence for a generated App's real rendered UI.
+  write(path.join(boundContactRoot, 'feedback-adapter.mjs'), `
+    export async function mountAdministratorFeedback({auth, payload, scope}) {
+      let contacts = payload?.data?.appAdministrators;
+      let active = true;
+      let pending;
+      if (!Array.isArray(contacts) && typeof auth.getAppAdministrators === 'function') {
+        pending = Promise.resolve().then(() => auth.getAppAdministrators()).then(
+          value => { if (active) contacts = value; }, () => { if (active) contacts = []; });
+      }
+      return { snapshot: () => ({ scope, text: active ? '请联系应用管理员授权 ' + (contacts ?? []).map(item => item.name).join('、') : '' }),
+        flush: async () => { await pending; }, unmount: () => { active = false; } };
+    }
+  `);
+  const feedbackArgs = [auditScript, boundContactRoot, '--feedback-adapter', 'feedback-adapter.mjs'];
+  const acceptedEvidence = spawnSync(process.execPath, feedbackArgs, { encoding: 'utf8' });
+  assert.equal(acceptedEvidence.status, 0, acceptedEvidence.stdout + acceptedEvidence.stderr);
+  assert.match(acceptedEvidence.stdout, /administrator feedback conformance: 16\/16 passed/u);
+
+  write(path.join(boundContactRoot, 'apps/ui/src/features/objects/SchemaObjectPage.jsx'), `${goodFiles.page}
+    import { MakeAppPermissionNotice } from '@qfei-design/make-app-observability/react';
+    function Forbidden({ oldSdkWithoutContacts, contacts }) {
+      if (oldSdkWithoutContacts) return <MakeAppPermissionNotice />;
+      return <MakeAppPermissionNotice administrators={contacts} />;
+    }
+  `);
+  const compatibleFallback = spawnSync(process.execPath, feedbackArgs, { encoding: 'utf8' });
+  assert.equal(compatibleFallback.status, 0,
+    `a verified legacy generic branch must not be rejected by a bounded prop heuristic:\n${compatibleFallback.stdout}`);
+
+  write(path.join(boundContactRoot, 'feedback-adapter.mjs'), `
+    export async function mountAdministratorFeedback({scope}) {
+      return { snapshot: () => ({scope, text: '请联系应用管理员授权'}), flush: async () => {}, unmount: () => {} };
+    }
+  `);
+  const ignoredContacts = spawnSync(process.execPath, feedbackArgs, { encoding: 'utf8' });
+  assert.equal(ignoredContacts.status, 1);
+  assert.match(ignoredContacts.stdout, /administrator_feedback_behavior_failed/u);
+
+  const missingAdapter = spawnSync(process.execPath, [auditScript, boundContactRoot, '--feedback-adapter', 'absent.mjs'], { encoding: 'utf8' });
+  assert.equal(missingAdapter.status, 1);
+  assert.match(missingAdapter.stdout, /administrator_feedback_adapter_missing/u);
 
   const iamPathCases = [
     { name: 'single-quoted-api-iam', expression: "new URL('/api/make/iam/v1/principal/permission', gatewayOrigin)" },

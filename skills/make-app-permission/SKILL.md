@@ -2,12 +2,14 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.3.14
+  version: 0.3.15
 ---
 
 # make-app-permission
 
 Direct URL and runtime resource denial follow `references/scoped-route-feedback.md`: App guard outside shell, object/fixed-route guards inside shell. Replace the entire denied business content, not just table rows; keep authorized navigation and the global identity header. Require rendered-tree and zero-denied-request regression tests. React renders the verified package through `makeui/references/permission-feedback.md`; this Skill decides scope and access lifecycle, not component styling. Read `make-app-auth/references/access-help.md` for current-App personnel contacts without sending denied business requests.
+
+For new or explicitly upgraded React permission feedback, contact wiring is required even when the query capability is optional. The permission audit rejects unverified missing contact bindings and requires the [production-host feedback gate](references/testing-and-audit.md#administrator-feedback-gate); a successful package verifier, source keyword or pure permission model is not a substitute. Old SDKs and unavailable endpoints keep the documented generic fallback, proven through the host behavior gate rather than rejected by source shape alone.
 
 Use this skill when a request creates, changes, reviews, or debugs Make App single-app permission enforcement. It must be enabled by default for every generated or refactored Make App. Do not omit the IAM proxy, route guards, permission-aware Schema, or permission audits merely because the request focuses on UI, Service, Schema, or runtime work.
 
@@ -71,6 +73,15 @@ This skill owns permission semantics. Use `make-app-auth` for login/session, `ma
 ```bash
 node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
 ```
+
+When the App imports the packaged permission notice, run the same audit with a thin adapter to its real rendered feedback:
+
+```bash
+node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root> \
+  --feedback-adapter test/adapters/administrator-feedback.mjs
+```
+
+Keep this command in the host's default test/CI/publish gate. Copy the sibling `administrator-feedback-audit.mjs` and `administrator-feedback-conformance-suite.mjs` with the audit when making it project-local. No adapter or failing host behavior exits nonzero; optional SDK/backend absence is tested by the contract, not used to skip it. This remains a project gate, not an automatic makecli hook.
 
 Treat failures as blockers and warnings as review items. The audit is heuristic and never replaces runtime tests.
 It rejects obvious `fieldAccess` state-array coercion through `String(...)`, text helpers, template interpolation, `.toString()`, or `.join()` when the coerced value affects normalization output or permission evaluation, including direct control-flow conditions. Diagnostic-only logging, comments, and string literals inside a named normalization helper must not fail the audit, regardless of whether the parameter uses a generic or `fieldAccess`-specific name. The executable behavior contract remains authoritative.

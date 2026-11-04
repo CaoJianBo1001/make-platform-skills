@@ -15,6 +15,7 @@ Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建�
 
 修改 Skill 后运行 `node scripts/lint-skill-metadata.mjs` 及 `.github/workflows/skill-metadata-lint.yml` 中的契约测试；规则与可观测结果保持一致。
 
+2026-11-04：无权限管理员提示增加宿主行为审计门禁，区分接线遗漏与旧 SDK/未上线接口的合法降级；未更改 App、SDK 或后端。
 2026-11-02：从已合入 beta 的聚合候选中独立整理 main 交付；补充 makecli 与 App Service 的聚合发现和随包契约，保留等价查询、汇总组合及合理规模明细计算，不引入 beta 的其他功能。
 
 2026-10-27：独立整理无权限管理员提示契约及回归；区分启动、内容和操作拒绝，保持旧 SDK/后端兼容，不包含审批与表格功能变更。
