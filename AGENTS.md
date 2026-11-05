@@ -13,6 +13,10 @@ Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建�
 发布通道复用 makecli 的 settings.channel：stable → main，beta → beta；安装、更新与远端检查使用相同分支，角色只决定范围。
 候选修改先进入 beta，完成静态检查与实际任务验证后合入 main。通道切换覆盖同名 Skill，目标分支缺失的旧条目由用户显式卸载。
 
+2026-11-05：统一应用显示名称合同：make-app-service 从运行时接口归一 appName 并约束缓存刷新，makeui 全入口动态消费，补齐后台改名、长名称及硬编码验收；不将显示名用作 appKey，不新增轮询。
+
+2026-11-05：补充手机金额值槽的点击聚焦范围与真实点击验收；明确审批列表页签与搜索/卡片的留白对齐、小号筛选入口视觉尺寸与至少 44px 点击范围的区别。保留审批历史普通短横杠占位及原业务规则，不将 POC 点击实现、固定行高或占位符宽度写成通用要求。金额点击范围回归明确限定手机场景，避免将 44px 要求扩展到桌面。
+
 修改 Skill 后运行 `node scripts/lint-skill-metadata.mjs` 及 `.github/workflows/skill-metadata-lint.yml` 中的契约测试；规则与可观测结果保持一致。
 
 2026-11-04：在独立 beta 集成分支解决 AppKey／管理员审计冲突，保留 beta 权限审计配置、共享源码与 REVIEW_REQUIRED，补测双参数组合；不向原需求分支回灌 beta。

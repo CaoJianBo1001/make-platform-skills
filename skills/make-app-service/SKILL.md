@@ -7,6 +7,8 @@ metadata:
 
 # make-app-service
 
+应用显示名称从运行时接口归一为共享 appName，后台改名后随既有刷新更新，禁止用配置或 DSL 固定名称覆盖；见 [应用名称来源](references/make-data-adapter.md#应用名称来源)。
+
 For administrator-contact feedback, reuse the published auth namespace proxy described by `make-app-auth/references/access-help.md`. Preserve completed denial status/body (including reason and permissionKey), Cookie and trusted forwarded host/proto; do not gate contact help on a successful business request or add a broad gateway proxy.
 
 Apply the [shared App context contract](../make-app-auth/references/auth-app-context.md) in the existing Make client for every Service-to-Gateway call, including auth/oauth and internal callers. This transport context does not replace authentication or permission checks.
