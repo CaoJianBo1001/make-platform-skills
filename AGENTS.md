@@ -13,6 +13,8 @@ Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建�
 发布通道复用 makecli 的 settings.channel：stable → main，beta → beta；安装、更新与远端检查使用相同分支，角色只决定范围。
 候选修改先进入 beta，完成静态检查与实际任务验证后合入 main。通道切换覆盖同名 Skill，目标分支缺失的旧条目由用户显式卸载。
 
+2026-11-05：统一应用显示名称合同：make-app-service 从运行时接口归一 appName 并约束缓存刷新，makeui 全入口动态消费，补齐后台改名、长名称及硬编码验收；不将显示名用作 appKey，不新增轮询。
+
 修改 Skill 后运行 `node scripts/lint-skill-metadata.mjs` 及 `.github/workflows/skill-metadata-lint.yml` 中的契约测试；规则与可观测结果保持一致。
 
 2026-11-02：从已合入 beta 的聚合候选中独立整理 main 交付；补充 makecli 与 App Service 的聚合发现和随包契约，保留等价查询、汇总组合及合理规模明细计算，不引入 beta 的其他功能。
