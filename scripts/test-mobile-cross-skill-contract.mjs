@@ -335,3 +335,27 @@ test('editing from phone detail enters the record edit route without a list roun
   assert.match(detailActions, /(不得|不要|without|never)[^\n]*(先|through|via)?[^\n]*(列表|list)/i);
   assert.match(detailActions, /(拒绝|denied)[^\n]*(留在|保持|stay)[^\n]*(详情|detail)/i);
 });
+
+// 文档一致性门禁；不证明目标 App 已渲染、可点击或完成真实浏览器验收。
+test('phone create contract requires an authorized entry even for empty results and keeps shared permission ownership', () => {
+  const defaults = read('makeui/references/mobile-defaults.md');
+  const contract = defaults.split('### 新建入口可达性\n')[1]?.split('\n### ')[0];
+  assert.ok(contract, '必须有可发现的手机新建入口合同');
+  for (const term of ['同一创建资格', '空列表', '筛选后为空', '恰好一个', '提前返回', 'createFields', '启动配置', '权限未就绪', '权限撤销']) {
+    assert.ok(contract.includes(term), `手机新建防漏合同缺少 ${term}`);
+  }
+  assert.match(contract, /记录条数[^\n]*不[^\n]*创建资格/);
+  assert.match(contract, /普通新建[^\n]*审批新建/);
+});
+
+test('phone create acceptance measures one or zero entries, real hits and no writes on navigation', () => {
+  const defaults = read('makeui/references/mobile-defaults.md');
+  const contract = defaults.split('### 新建入口可达性\n')[1]?.split('\n### ')[0];
+  assert.ok(contract);
+  for (const term of ['390px', '767px', 'PC', 'DOM', '0 个', '1 个', '底部导航', '安全区', '真实点击', '新建路由', '创建请求', '静态']) {
+    assert.ok(contract.includes(term), `宿主验收缺少 ${term}`);
+  }
+  for (const file of ['makeui/references/list-page-layout.md', 'make-app-actions/references/mobile-card-actions.md']) {
+    assert.ok(read(file).includes('mobile-defaults.md#新建入口可达性'), `${file} 必须交接同一入口合同`);
+  }
+});

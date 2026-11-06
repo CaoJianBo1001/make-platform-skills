@@ -80,7 +80,7 @@ Phone defaults:
 - search stays in one compact phone toolbar; when advanced filtering is enabled or requested, place its filter trigger beside search instead of stacking desktop buttons vertically. Use medium visual controls (`size="middle"`, the library's default medium size, or equivalent) with matching visible heights, not CSS-enlarged small controls, while retaining at least 44px touch targets. A `search-only` list has no filter trigger.
 - pull-to-refresh starts only at the top of the list's own scroll region and preserves applied search/filter context; do not show a separate refresh button or refresh icon on the phone toolbar, even if desktop/tablet has one
 - when advanced filtering is enabled or requested, the filter trigger opens the package panel in a host mobile Sheet with `layout="mobile"`; do not reuse the desktop Popover trigger/content fragment
-- create uses the permission-gated floating action and full-screen new task route
+- create uses the permission-gated floating action and full-screen new task route; enforce [phone create reachability](mobile-defaults.md#新建入口可达性), including an authorized empty list and filter-empty results
 
 Phone card visual contract:
 
