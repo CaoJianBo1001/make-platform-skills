@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.59
+  version: 0.4.60
 ---
 
 # makeui
@@ -22,6 +22,8 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 ## Quick start
 
 需求方案确认后新建或迭代 Make App，先按 [make-app-approval](../make-app-approval/SKILL.md) 判断是否生成/复用“我的审批”入口。审批新建/发起、撤回、我的审批包、节点办理与继续提交、历史和流程状态由该 skill 主责；下文 `createFields` 新建规则仅用于普通无有效审批配置的场景，已有记录普通编辑保持原 IAM 链路。不要因未绑定流程漏掉导航，也不要因有导航就切换所有表单的字段权限。我的审批按 [包与列表](../make-app-approval/references/package-and-list.md) 注入宿主控件，节点编辑按 [任务详情](../make-app-approval/references/task-detail.md) 使用当前节点授权；下文普通 edit 规则不套入审批任务。手机 View 按包实际能力与本 skill 的移动规范完成，不将某个项目窄屏抽屉的定制推广为默认。
+
+生成业务对象手机列表时按 [新建入口可达性](references/mobile-defaults.md#新建入口可达性) 验证：复用 PC 的创建资格，允许时空列表也恰好一个可见、可点击入口；无资格或进入任务页时不保留旧入口。
 
 生成“我的审批”入口时，必须作为应用导航一级菜单，紧接所有业务对象/模块分组之后；桌面/平板与其他菜单在同一列表中按正常行间距排列、共同滚动，不固定到侧栏底部，不单独增加分隔区，也不挂在对象、模块或可折叠分组下。手机为审批保留一个底部 Tab，按剩余容量展示业务对象及工作台，总数不超过五项。侧栏布局与滚动关系见 [App shell layout](references/app-shell-layout.md#sidebar)，手机顺序与容量见 [移动导航规范](references/mobile-defaults.md#底部导航与工作台)。
 
