@@ -38,6 +38,8 @@ const state = resolveRecordSelectionActionState({
 
 新建不属于选择 action。由 `makeui` 与 `make-app-permission` 根据当前缓存的应用/对象访问资格和 `data.record.create` 操作权限决定 `MobileFloatingAction` 是否可见；不能因普通 `createFields` 为空隐藏入口。点击后进入 `/objects/:objectKey/new` 全屏任务路由：普通新建使用授权 `createFields`，有效审批新建按 [make-app-approval](../../make-app-approval/SKILL.md) 使用启动配置授权字段。表单空态和提交能力按当前新建分支判断；最终创建接口继续执行权威鉴权和提交字段白名单过滤。
 
+手机与 PC 复用同一创建资格；空列表不撤销资格，新建入口不依赖卡片数量或选择态。手机页面组合、按钮可见性与实际点击验收使用 makeui 的 [新建入口可达性](../../makeui/references/mobile-defaults.md#新建入口可达性)，不在本 Skill 另建授权算法。
+
 ## 单条编辑
 
 1. 在发起异步预检前，从点击的卡片记录冻结不可变目标：对象 key、记录 ID、权限 `data.record.update`、`selectAllMode=false`、`recordIDList=[recordID]` 以及当前操作与权限 generation。不要从任何桌面选择快照读取目标。
