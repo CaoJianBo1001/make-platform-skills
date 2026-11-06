@@ -2,10 +2,14 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts, including server-side aggregation for dashboards, charts and 统计/汇总. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.21
+  version: 0.2.24
 ---
 
 # make-app-service
+
+明确的业务报表、趋势、构成、排名或分析指标需求用 [make-app-analytics](../make-app-analytics/SKILL.md) 规划口径、固定可视化和建设规模；本 Skill 继续拥有统计链路、宿主 API 和 Make 适配器。宿主声明业务群体、日期、分母、目标及公式含义，通用编排和派生／分组序列计算复用分析包，不在每个 App 重写算法。普通初始化不因此新增分析接口／探查；PRD 已要求分析时按范围实施。现有列表 total 与临时查数沿用原流程。包发布、Skill 安装与宿主验收分别核验；列表联动的完整条件与参数能力按 [筛选交接](../make-app-analytics/references/list-filter-integration.md) 验证，不静默扩大统计范围。
+
+统计接入前读取 [聚合查询规划](references/aggregate-query-planning.md)：同范围兼容指标合并，重复来源复用，避免逐对象 N+1；区分必要授权复核和重复网络初始化，使用有界并发、分页及请求预算。测量真实下游调用，不能只通过增大并发／超时或缓存业务结果解决慢页。
 
 应用显示名称从运行时接口归一为共享 appName，后台改名后随既有刷新更新，禁止用配置或 DSL 固定名称覆盖；见 [应用名称来源](references/make-data-adapter.md#应用名称来源)。
 
@@ -45,6 +49,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 | Service folder structure, layering, logging, errors | `references/service-layering.md` |
 | Make Data API adapter rules, schema `fields` / `createFields`, records, files, lookup, candidates | `references/make-data-adapter.md` |
 | Dashboards, charts, counts, sums, averages, grouped statistics / 聚合统计 | [Aggregate statistics](references/make-data-adapter.md#aggregate-statistics) |
+| 多来源统计、重复接口、慢页、聚合合并、请求预算与大数据验收 | [聚合查询规划](references/aggregate-query-planning.md)；授权元数据复用另见 [复用与失效](references/service-api-contracts.md#分析元数据的复用与失效) |
 | Test requirements, contract checks, safety review | `references/testing-and-safety.md` |
 | Single-app permission proxy, Make IAM principal permission, app-scope permission payloads | Use `make-app-permission` |
 | Auth proxy, cookies, unified login, 401/403 behavior | Use `make-app-auth` |

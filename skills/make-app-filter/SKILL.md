@@ -2,7 +2,7 @@
 name: make-app-filter
 description: "Use when generating, integrating, reviewing, or debugging Make App record-list keyword search through Service filter.expression or advanced/conditional/table/header filtering with @qfei-design/make-app-filter. Triggered by 列表搜索, 关键词搜索, 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, CEL/DNF, field-type operators, candidate values, and filter Preset save/echo. In search-only mode, use the package compiler without a filter panel or Preset lifecycle. In advanced-filter mode, use the package panel, permission-aware Entity Preset, and desktop/tablet CanvasTable header linkage; phone uses the mobile panel layout. Consume make-app-permission list access. When make-app-actions is present, a successfully applied filter must clear its selection and invalidate pending work; drafts and failures preserve selection. Does not own page layout, CanvasTable internals, Service route implementation, sorting, grouping, auth, runtime, DSL, Make CLI, or table cell editing."
 metadata:
-  version: 0.1.21
+  version: 0.1.22
 ---
 
 # make-app-filter
@@ -22,6 +22,8 @@ On desktop/tablet, do not implement only advanced filter or only header filter i
 This skill owns the consumer-side package integration contract, advanced-filter behavior, field support, Entity Preset filter persistence, Service filter payload shape, host-owned header-linkage semantics, URL/deep-link filter echo, and filter-specific tests. It consumes list-access state from `make-app-permission`; it does not define permission policy. It does not own sorting (`make-app-sort`), grouping (`make-app-group`), page shell/layout (`makeui`), CanvasTable rendering internals or header menu API details (`canvas-table-integration`), Service route implementation (`make-app-service`), auth (`make-app-auth`), runtime packaging (`make-app-runtime`), DSL modeling (`makedsl`), or Make CLI execution (`makecli`).
 
 ## Capability modes
+
+已有列表旁分析且要求跟随筛选时，配合 [make-app-analytics 的筛选交接](../make-app-analytics/references/list-filter-integration.md) 提供成功应用的完整条件与原始值；本 Skill 继续拥有列表编译和 Preset，不为分析丢弃关键词、改变 AND／OR 或清空已应用条件。统计无法完整表达条件时只停止对应统计，原列表筛选链路继续工作。
 
 Choose the mode before following the workflow. Panel, controller, filter Preset and mobile-layout requirements below apply only to `advanced-filter` unless explicitly stated otherwise.
 

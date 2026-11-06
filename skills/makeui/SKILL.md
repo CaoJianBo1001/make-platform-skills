@@ -2,12 +2,22 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.60
+  version: 0.4.65
 ---
 
 # makeui
 
+PRD 或本次迭代已提出分析指标、趋势、构成、排名或可视化报表时，用 [make-app-analytics](../make-app-analytics/SKILL.md) 澄清业务口径、规划固定视图和最小接入范围，再由本 Skill 组合界面、`make-app-service` 提供统计链路。一个指标／图形优先嵌入已有业务区域；普通初始化、列表总数、打印导出、业务入口工作台或存在日期／金额字段不触发分析模块。PRD 明确要求分析时纳入初始范围；图形在实施阶段确定，不生成用户选图器。多来源序列、面积和堆叠复用分析包专用合同，宿主保留业务布局及基础交互适配。以实际可读 Skill 和核验制品为准，缺失时说明接入缺口，不阻断无关 UI 工作。
+
+列表旁统计需要跟随筛选时，按 [列表筛选联动](../make-app-analytics/references/list-filter-integration.md) 消费已应用快照。条件不能完整映射时，保留列表筛选，在分析区域说明限制，取消旧统计并卸载旧图形、数值和明细；不能继续显示宽范围或旧范围统计。
+
+已触发的图表页面按 [图表占位与布局](../make-app-analytics/references/chart-layout.md) 编排：以实际内容区、图形类型和数据密度决定跨列与高度，同排同层级卡片的上下边缘及已有页脚底缘对齐，各行保留自身合理高度。避免全页固定等高、只拉长外框、重复边距及少量数据的大空框。宿主负责外层排列，包负责内部绘图区和引擎尺寸生命周期；只用核验后的公开端口，缺少能力时说明包侧依赖，不覆盖私有样式。
+
+图表的分组汇总明细按 [统一容器](../make-app-analytics/references/integration-contract.md#汇总明细的默认容器) 使用 PC 居中弹窗／手机底部弹层，同一 App 复用公共 `DetailsSurface`；原始业务记录沿用既有详情与操作容器。
+
 所有表示当前应用名称的展示位置必须动态消费接口名称，禁止硬编码业务应用名；统一来源、刷新、长名称和验收见 [动态应用名称](references/app-shell-layout.md#动态应用名称)。
+
+已触发的分析页面还须按 [分析请求与性能](../make-app-analytics/references/query-performance.md) 实施：当前区域按需加载、多卡多图共享统计结果、无用 catalog 零请求；复用初始化与访问代次，保持参数／transport 引用稳定并取消旧请求。图表重渲染、弹层和视觉主题切换不重复查询，不在浏览器下载全量明细统计；用实际下游次数及页面测试验收。
 
 区域阻塞加载统一遵循 [区域加载态](references/app-shell-layout.md#区域加载态)：在所属可见区域内水平、垂直居中，建立有效高度，覆盖刷新时的权限与 Schema 校验及局部面板加载。
 
@@ -36,7 +46,7 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 7. Normalize the auth/current-context identity before either presentation, including responses such as `{ userId, avatar, name }`. On desktop, put the current logged-in user entry in the top header right as a strict 32px avatar plus plain display name. On mobile, show only the avatar at top left and open the package account drawer; read `mobile-defaults.md` for tenant name and logout visibility.
 8. For a new Make App UI, use the platform componentized source tree by default: `src/pages`, `src/components`, `src/hooks`, `src/lib/service-api`, `src/router`, and `src/types`, with complex table/workflow components split into nested `config`, `editing`, `editors`, `hooks`, `renderers`, and `types` modules.
 9. For a new Make App UI, create a shared Make field type registry at `apps/ui/src/lib/make-field-types.ts` or the host project's established equivalent before implementing host-owned form, detail, table-display, or cell-editor behavior. The registry must cover all current `Make.Field.*` types and expose display group, render kind, default width, alignment, multiplicity, control/display hints, and normalized `field.properties` needed by UI controls, including `format`, `precision`, `decimalPlaces`, `maxCount`, `begin`, `end`, and `symbol`. Advanced-filter operators and value editors remain package-owned. Also apply [the default Lucide field-type icon contract](references/field-type-icons.md) across desktop/tablet field names and field-choice lists; phones keep plain field labels. Do this for every new Make App without waiting for a separate icon request.
-10. Use a right Drawer and two-column grid for desktop/tablet create, edit, and detail. Use the package-backed full-screen one-column task route on phones and read `references/mobile-form-controls.md`; a phone task page must switch field presentation adapters instead of reusing desktop popups unchanged.
+10. Use a right Drawer and two-column grid for desktop/tablet create, edit, and detail. This rule applies to individual business records; analytical grouped summaries follow the [summary surface contract](../make-app-analytics/references/integration-contract.md#汇总明细的默认容器). Use the package-backed full-screen one-column task route on phones and read `references/mobile-form-controls.md`; a phone task page must switch field presentation adapters instead of reusing desktop popups unchanged.
 11. Custom form field controls must be host-form controlled adapters: accept and forward `value/onChange/onBlur/id/disabled` from the host form layer, and make the form value seen by submit/validation match the displayed selection. This is UI-library neutral and does not require Ant Design, Arco, or shadcn. Phone and desktop adapters may differ visually but must preserve the same submitted value contract.
 12. Render detail values through a field-type display adapter. Do not display raw objects, arrays, or JSON wrapper text when the field type has a stable Make display shape.
 13. For generated Make App UI, use `make-app-permission` for required permission gates and field-set handoff: 普通新建 consumes the permission-derived `createFields` / create field set; 审批新建 consumes the authorized 启动配置 fields defined by `make-app-approval`; edit consumes visible fields plus the editable field set. Permission owns route/action checks, payload filtering, and refresh; `makeui` only renders the authorized result.
@@ -75,7 +85,7 @@ For mobile delivery, verify the actually installed package with [`scripts/verify
 | Make record selection, bottom action bar, edit/delete/batch edit, row precheck | Use `make-app-actions` |
 | Advanced filter panel, condition builder, filter expression, header field filter | Use `make-app-filter` |
 | Record grouping, drag priority, Preset group, record-groups, grouped table flow | Use `make-app-group` |
-| 仪表盘、图表、指标卡的统计数据 / dashboard or chart metrics | Use `make-app-service` for server-side aggregation; this Skill renders the results |
+| 业务分析指标卡、图表与仪表盘 / dashboard or chart metrics | 已触发的分析任务用 `make-app-analytics` 决定口径、固定视图与范围；`make-app-service` 负责统计，本 Skill 组合结果展示；普通列表 total 沿用原链路 |
 | Record sorting, drag priority, Preset sort, table-header asc/desc | Use `make-app-sort` |
 | Make AI 助手, AI助手, MakeAI AI 助手, AI 对话框, SSE, Agent Gateway, make-ai-assistant package, MakeAiTheme, maxDrawerWidth | Use `make-ai-assistant`; the package owns internal UI/styles, while `makeui` owns launcher/panel placement, shell fit, and external container constraints |
 | Single-app permissions, route guard, operation buttons, field editability, refresh permission reload | Use `make-app-permission` |

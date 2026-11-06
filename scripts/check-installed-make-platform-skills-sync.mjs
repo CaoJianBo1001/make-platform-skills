@@ -2,11 +2,13 @@
 import { spawnSync } from 'node:child_process';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { checkInstalledSkillLinks } from './check-installed-skill-links.mjs';
 
 const skillNames = [
   'makeui',
   'make-app-permission',
   'make-app-service',
+  'make-app-analytics',
   'make-app-auth',
   'make-app-actions',
   'make-app-approval',
@@ -57,7 +59,8 @@ if (!sourceSkillsRootArg || !installedSkillsRootArg) {
     hasFailure ||= result.status !== 0;
   }
 
-  if (hasFailure) {
+  const linksValid = checkInstalledSkillLinks(installedSkillsRoot, skillNames);
+  if (hasFailure || !linksValid) {
     console.error('installed Make platform skills sync: FAIL');
     process.exitCode = 1;
   } else {

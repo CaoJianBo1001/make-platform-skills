@@ -1,0 +1,4 @@
+interface:
+  display_name: "Make App Analytics"
+  short_description: "按需设计 Make App 分析指标、图表与接入方案"
+  default_prompt: "使用 $make-app-analytics 根据已提出的业务分析需求核对数据与口径，选择最小展示并接入现有宿主。"
