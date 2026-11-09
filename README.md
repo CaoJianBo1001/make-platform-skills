@@ -81,7 +81,7 @@ Codex 判断优先级：
 | 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | `search-only` 仅用包 core 编译关键词为 `filter.expression`，不读写筛选 Preset、不挂载 Controller／面板；`advanced-filter` 才共用 Controller、Preset 与表达式，desktop/tablet 配套 CanvasTable 表头联动，手机使用顶部筛选入口和移动安全面板、不挂载 CanvasTable；不负责页面 Shell、Service 实现、认证或发布 |
 | 排序、高级排序、多字段排序、排序优先级、升序/降序、拖拽排序条件、表头排序、`openWithField`、`capabilities.sortable`、Entity Preset sort、records sort、dnd-kit | `make-app-sort` | 负责排序模型、Preset 与 records sort；desktop/tablet 提供工具栏和 CanvasTable 表头联动，手机默认隐藏排序入口并保留已应用的排序结果；不负责页面 Shell、CanvasTable API 细节、Service 实现或分组 |
 | 分组、高级分组、多级分组、分组条件、拖拽分组、表头分组、`capabilities.groupable`、Entity Preset group、record-groups、groupFilter、分组叶子明细分页、`@qfei-design/make-app-group` | `make-app-group` | 负责分组模型、Preset、Service group 合同和 CanvasTable 分组渲染；desktop/tablet 显示分组能力，手机使用普通卡片记录查询、不挂载分组表格且不清除已保存的分组 Preset；不负责页面 Shell、CanvasTable 内部或筛选/排序模型 |
-| 助手、AI助手、MakeAI AI 助手、Make AI 助手、AI 对话框、SSE、Agent Gateway、`@qfei-design/make-ai-assistant`、make-ai-assistant 包 | `make-ai-assistant` | 负责 Make App AI 助手接入：已安装包公开类型门禁、Skill 内置 Make App v1 协议、18 项操作的多会话/流式响应/文件图片上传、Agent 发现、历史/反馈/取消与包内 UI；不负责普通 Dialog、业务 Agent 提示词、权限算法、认证实现、发布或 DSL |
+| 助手、AI助手、MakeAI AI 助手、Make AI 助手、AI 对话框、SSE、Agent Gateway、`@qfei-design/make-ai-assistant`、make-ai-assistant 包 | `make-ai-assistant` | 负责 Make App AI 助手接入：官方 0.4.1 公开契约、受限 webchat 发现、25 项 App 代理组合、多会话/队列/停止/问题/流式响应/文件图片与包内 UI；不负责普通 Dialog、业务 Agent 提示词、权限算法、认证实现、发布或 DSL |
 | Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema `fields/createFields`、records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排、Schema 集合无损传输和按主体隔离缓存，不负责 UI、认证、权限算法、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
 | 统计、汇总、分组统计、指标卡、图表、仪表盘 | 临时数据查询用 `makecli`；Vibe App 用 `make-app-service` + `makeui` | 优先使用 Data API 的单 Entity 聚合能力；列表折叠与展开仍由 `make-app-group` 负责 |
 | 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、对象导航、路由权限、按钮权限、字段可新建、可见、可编辑、`creatable`、`createFields`、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、`meta.entity.read` 对象导航、`meta.field.read` 表头和 `data.record.read` 数据行的独立权限，以及 `createFields` 与字段 `creatable/readable/editable` 独立权限、创建提交白名单、路由和按钮权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
@@ -106,7 +106,7 @@ Codex 判断优先级：
 - 同时做高级筛选和排序：`make-app-filter` + `make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，共享一次权限感知的 Entity Preset 加载与并发请求协调器，但按维度独立保存；仅关键词搜索不读取或应用 Preset 的筛选维度
 - 做多级分组、拖拽分组或分组表格：`make-app-group` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，必须同时完成权限感知的 Preset 保存/回显、record-groups、groupFilter、CanvasTable 分组和叶子明细分页
 - 同时做高级筛选、分组和排序：`make-app-filter` + `make-app-group` + `make-app-sort` + `make-app-permission` + `makeui` + `canvas-table-integration` + `make-app-service`，共享一次权限感知的 Entity Preset 加载与并发请求协调器，但按维度独立保存；仅关键词搜索不读取或应用 Preset 的筛选维度
-- 做 Make App AI 助手或 AI 对话框：`make-ai-assistant` + `makeui` + `make-app-service` + `make-app-auth` + `make-app-permission` + `make-app-observability`，需要发布或接口域名注入时加 `make-app-runtime`；`make-ai-assistant` 主责公开包接入、Make App v1 契约、多会话、SSE、文件图片上传与包内 UI，JSON/SSE/二进制请求沿用默认 Trace 链路
+- 做 Make App AI 助手或 AI 对话框：`make-ai-assistant` + `makeui` + `make-app-service` + `make-app-auth` + `make-app-permission` + `make-app-observability`，需要发布或接口域名注入时加 `make-app-runtime`；`make-ai-assistant` 主责公开包接入、Agent Public API v1 契约、多会话、SSE、文件图片上传与包内 UI，JSON/SSE/二进制请求沿用默认 Trace 链路
 - 做 UI 需要的 Service 接口：`make-app-service` + `makeui`
 - 做 Make 项目默认权限体系：`make-app-permission` + `make-app-service` + `make-app-auth` + `makeui`，涉及表格编辑时加 `canvas-table-integration`
 - 做一个登录后的页面：`makeui` + `make-app-auth`
@@ -328,22 +328,21 @@ npx skills update make-app-sort
 - 页面位置交给 `makeui`，CanvasTable 表头菜单机制交给 `canvas-table-integration`，Service 路由和 Make adapter 交给 `make-app-service`
 
 ### make-ai-assistant
-指导在 Make App 中接入 `@qfei-design/make-ai-assistant`。Make App v1 覆盖 18 项操作：capabilities、分页 Agent 发现、多会话、历史、消息、反馈、响应快照/取消、SSE 续传、文件图片分片上传和内容引用。当前适配器不承载 Artifact。
+指导 Make App 使用正式 `@qfei-design/make-ai-assistant@0.4.1` 的 Agent 公共能力。Skill 0.4.1 以包公开类型及随包固定合同为基线，覆盖 23 个数据面操作与 Agent Get/List 共 25 项 Service 组合。
 
-#### 升级 skill
 ```bash
-npx skills update make-ai-assistant
+makecli skills update
 ```
 
-**使用场景**
-- 接入或升级 `@qfei-design/make-ai-assistant`，从实际 registry 安装最新已发布版本并核对消费 workspace 的 lockfile 精确版本、`/client`、`/make-app` 与 `/react` 公开类型；当前协议以本 Skill 内置的版本化 reference 为准，不得从已有项目、其他 POC、项目历史、包内源码或示例推断
-- 使用正式组件 `MakeAiAssistant`、`AssistantPanel` 和 `styles.css`；包负责标题、任务列表、消息区、输入框、上传菜单等内部 UI，宿主只负责外部摆放和公开主题变量
-- 当前 Make App 的 `/api/make/app/ai/v1/**` 使用 `make-app`；已安装版本缺少所需公开类型时明确报告“当前包版本缺少所需公开契约”并停止，不猜测旧路由或旧环境变量；当前 Skill 未内置 legacy adapter
-- Make App 先用 `/client` 读取完整 Agent 分页，仅选当前 App 唯一的 `agentType=app_internal` Agent，随后异步创建 `/make-app` transport 并读取 capabilities；`agentId` 不得来自环境变量、公开配置、部署配置、URL、存储或硬编码
-- 对接 Make App 多会话、SSE 增量/快照/续传、历史对账、反馈、取消、文件图片上传；分别处理裸 JSON、204 空响应、SSE 和字节，不使用统一 JSON 解包
-- 当前 `make-app` v1 适配器不提供 Artifact 输出，不得伪造 Artifact capabilities、消息字段或 UI 承诺；文件/图片输入不受此限制。若未来有新协议，先升级公开契约和 Skill
-- 规范 AI 助手接口域名：浏览器始终同源调用 `/api/make/app/ai/v1/**`；local preview 的 Service 上游使用 `make_api_origin + /api/make/app/ai/v1/**`；published Service 使用 `MAKE_API_BASE_URL` / `MAKE_SERVER_URL` 严格 origin 加 `/make/app/ai/v1/**`。不得新增独立 AI Gateway / Agent Gateway 域名、Token 或配置变量；Service 必须校验请求 `appKey` 等于部署注入的 `MAKE_APP_KEY`
-- 页面布局、入口位置和响应式交给 `makeui`；Service route/proxy/log/test 交给 `make-app-service`；登录态交给 `make-app-auth`；Make App 权限结果接入交给 `make-app-permission`；运行时变量注入和发布检查交给 `make-app-runtime`
+按当前通道同步关联技能；本次协议升级不能只替换助手技能而继续混用旧 auth/service 副本。切换分支与 npx 方式见仓库顶部安装说明。
+
+- 使用 `/agent` 的 createAgentClient 和 `/react` 的 MakeAppAssistantEntry；包负责受限 `view:"webchat"` 发现、冲突/错误与内部 UI，宿主不再分页筛选或补查管理详情。
+- 宿主负责真实 app.id、稳定身份生命周期、同源认证字节桥和显式 Service 代理；普通导航与关闭保留会话，身份/App 切换释放旧客户端。
+- 对接历史会话、偏好、消息/队列、追加、取消、Task 停止、问题回答、反馈、SSE 恢复和原件 multipart 上传/下载；包缺陷交维护者修复，不复制状态机或内部 CSS。
+- 浏览器 `/api/make/app/agent/v1/**`，preview 上游 `/api/make/agent/v1/**`，published 上游 `/make/agent/v1/**`。复用已有 Gateway/登录/Trace，不新增 Agent 专用域名或 Token。
+- UI 与 Service 声明同一正式版本；验证数字 code/msg/data 信封、公开请求校验器、method/path/Target 和 App 范围，不开放额外控制面写入/目录操作。
+- 先行为测试再实现，执行随技能审计、真实包 verifier、宿主测试和构建；已登录对话/真实模型识图单独验收。Skill 流程大改需隔离的新代理正向接入验证。
+- 关联 `makeui`、`make-app-service`、`make-app-auth`、`make-app-permission`、`make-app-observability`、`make-app-runtime`；本 Skill 不处理平台 Agent 配置编辑、模型行为或部署授权。
 
 ### make-app-service
 指导生成、重构或审查 Make App 的 `apps/service` API，覆盖 UI-Service 合同、Service 路由、Make Meta/Data API adapter、`MAKE_APP_KEY` / Make adapter 环境变量/config 语义、schema/records/users/departments/lookup/file 代理接口和 Service API 测试。
@@ -432,7 +431,7 @@ npx skills update make-app-auth
 - 验证 OAuth、SSO、Cookie、logout、redirect callback
 - 处理权限不足、登录态过期和退出链路
 - 为 `makeui` 账户表面保留 `name`、`avatar`、`tenantName`，集中并测试普通浏览器／飞书容器识别；飞书内隐藏移动退出入口但不改写认证退出逻辑
-- 约束普通 Make 后端请求通过共享 API adapter 包装 `auth.api`，统一处理 401/403；Make App AI v1 的 `/client` 另有严格限定同源路径的 `AuthenticatedTransport` 原始字节流桥接，保留状态、响应头、SSE 和文件字节，不扩展为普通 API 的裸请求惯例
+- 约束普通 Make 后端请求通过共享 API adapter 包装 `auth.api`，统一处理 401/403；Make App Agent Public API v1 的 `/agent` 另有严格限定同源路径的 `AgentAuthenticatedTransport` 原始字节流桥接，保留状态、响应头、SSE 和文件字节，不扩展为普通 API 的裸请求惯例
 - 使用 `scripts/audit-auth-contract.mjs` 做发布前认证合同检查，拦截 token 模式、裸 `/api/make` fetch 和 Service auth proxy 缺失
 - 约束前端不要手写 `Authorization`、不要传 `accessToken`/`tokenProvider`/`unifiedLogin:false`、不要操作 `zs_session`、不要自行拼 Org OAuth/logout URL
 

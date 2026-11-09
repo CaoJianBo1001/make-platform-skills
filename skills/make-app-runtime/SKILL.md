@@ -2,7 +2,7 @@
 name: make-app-runtime
 description: Use when generating, refactoring, reviewing, or debugging Make App project runtime structure, workspace manifests, Service runtime, local/dev scripts, build outputs, Docker/K8s image entrypoints, publish readiness, or packaging errors such as missing `apps/service/dist/server.js`. Covers `apps/` workspace contracts, `apps/ui/dist`, `apps/service` port/build/start contracts, runtime config file location, runtime artifact tests, forwarded host/proto header preservation, and publish gates that include auth, default Trace ID, and applicable permission audits. Does not cover UI layout, authentication implementation, Trace behavior, permission logic, Make adapter env semantics, DSL modeling, Make CLI resource deployment, or canvas-table internals.
 metadata:
-  version: 0.1.7
+  version: 0.1.9
 ---
 
 # make-app-runtime
@@ -86,12 +86,15 @@ When preparing a new or explicitly migrated App for publish, provide enough proj
 - run the `make-app-observability` Trace audit and behavior tests for every new Make App, whether direct-gateway or Service-fronted
 - run the `make-app-permission` contract audit when single-app permission enforcement is enabled or required by a repository-local delivery baseline
 - run Service gateway-mode contract tests proving local preview and published upstream scopes are separated
+- when Agent chat is enabled, use `make-ai-assistant` to verify the actual official package version, browser `/api/make/app/agent/v1` mapping, preview `/api/make/agent/v1` and published `/make/agent/v1` upstreams, raw multipart/SSE/download forwarding and exact method/path/Target tests; build Ready alone does not prove a logged-in conversation or image interpretation
 - verify `apps/ui/dist` and `apps/service/dist/server.js`
 - run Service contract tests, including auth callback proxy behavior, when tests exist
 
 For a new or explicitly migrated pnpm Service-fronted App, prefer a project-local `verify:publish` script that runs the publish gate in one command. Keep `check:publish` for build/artifact checks, but do not make it the only release gate. Add `trace:audit` for every new App. When single-app permission enforcement is enabled or locally required, add `permission:audit` to that command; do not make unrelated Apps depend on a missing permission runtime. A legacy App uses its existing release command with the equivalent applicable checks.
 
 Recommended workspace scripts for a new or explicitly migrated pnpm App. Before adding these to `package.json`, copy or wrap the audit utilities into project-local `scripts/`; do not write user-specific skill install paths into generated projects. Do not copy these pnpm-specific scripts into a legacy npm/Yarn App without an explicit runtime migration.
+
+For the auth gate, copy the complete file pair listed in [make-app-auth's project-local audit](../make-app-auth/SKILL.md#project-local-audit), preserving its relative import. Update both files together; do not vendor only the entrypoint. Check its `--help` command loads before running the full audit. The auth Skill owns that dependency list.
 
 ```json
 {

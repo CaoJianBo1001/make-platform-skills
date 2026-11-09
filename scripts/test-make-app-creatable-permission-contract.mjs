@@ -169,12 +169,12 @@ assert.ok(
 );
 assert.match(
   serviceContracts,
-  /## Default route response modes[\s\S]{0,1800}\/api\/make\/app\/principal\/permission[\s\S]{0,240}(direct Make proxy|直接 Make 代理)[\s\S]{0,1800}\/api\/schema[\s\S]{0,240}(non-proxy|非代理)/i,
+  /## Default route response modes[\s\S]{0,1800}\/api\/make\/app\/principal\/permission[\s\S]{0,240}(direct Make proxy|直接 Make 代理)[\s\S]{0,1800}\/api\/make\/app\/schema[\s\S]{0,240}(non-proxy|非代理)/i,
   'default route baseline must classify permission as a direct proxy and schema as a non-proxy route',
 );
 assert.match(
   serviceContracts,
-  /\/api\/entities\/:entityKey\/records[\s\S]{0,240}(non-proxy|非代理)/i,
+  /\/api\/make\/app\/entities\/:entityKey\/records[\s\S]{0,240}(non-proxy|非代理)/i,
   'default route baseline must classify record normalization routes explicitly',
 );
 assert.match(

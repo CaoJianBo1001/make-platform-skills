@@ -1,4 +1,4 @@
 interface:
   display_name: "Make AI Assistant"
-  short_description: "Make App AI chat, multi-session, file, and SSE integration"
-  default_prompt: "Use $make-ai-assistant to integrate the Agent chat in a Make App using public package APIs, paginated Agent discovery, multi-session chat, file/image upload, SSE recovery, versioned Service routes, package-owned UI, and tests."
+  short_description: "Make App Agent 0.4.1 接入、会话、文件图片与流式验证"
+  default_prompt: "Use $make-ai-assistant to integrate Agent chat in a Make App with the official 0.4.1 /agent client and MakeAppAssistantEntry, restricted webchat discovery, identity cleanup, authenticated Service routes, multi-session streaming, file/image input, package-owned UI, and executable tests."

@@ -1,45 +1,17 @@
-# Package UI
+# UI 与外围布局
 
-## Ownership and current controls
+标准入口使用 `MakeAppAssistantEntry`，不由宿主再套竞争 Drawer、抄写聊天窗口、会话栏、上传控件、队列、错误面板或全屏按钮。导入包 styles.css 一次，仅用公开主题和 props 适配外层空间。
 
-The default surface has a floating launcher and right-side panel. The package
-owns its internal header, task list, message area, composer, upload menu and
-responsive behavior. Verify the installed version's public props and rendered
-controls; do not encode pixel-level styling from one screenshot as host CSS.
-Current controls include:
+`title` 是助手显示名称，可由产品决定；标题下方文字通常是当前 Session 标题或连接状态，与安装包版本无关。不传旧兼容 subtitle/privacyNotice 来展示页面上下文。上下文通过公开 context 传递，不扩大权限。
 
-- a task list with recent chats and new conversation;
-- a composer plus menu with one `上传文件或图片` entry when negotiated upload is enabled;
-- send, close, loading, error and retry states owned by the package.
+## 手机外部入口
 
-Do not add a current-object line, read-only state decoration, or adjacent help
-control. Do not duplicate package buttons or file inputs in the host.
+makeui 负责 App 底部导航，AI 包负责入口是否存在。使用公开 `launcher` render 插槽接入外部入口；只有包确认唯一 Agent 并挂载 launcher 后才把宿主可用性置 true，卸载时复位 false。launcher 返回 null 可用于外部导航，但不能因此让桌面默认入口消失。
 
-The package owns internal UI and styles. `makeui` may place the launcher/panel in
-the App shell and resolve collisions with global navigation, but it must not
-restyle internal task rows, headers, menus, messages, or composer controls.
+打开状态通过 open/onOpenChange 对接，普通关闭保留 client。任务页若需隐藏浮动入口，只使用公开开关/launcher，不能销毁共享会话或用内部 CSS 挡住。验证桌面默认按钮、手机外部导航、0 个/冲突/错误、关闭再开、全屏/停靠与键盘焦点，不因未配置 Agent 留下无效按钮。
 
-## Responsive and accessible behavior
+包内部容器查询、最宽、会话选择器、输入框及文件状态归包所有。宿主不写 `.make-ai-agent__*`、`.make-ai-assistant__*` 覆盖规则；包内视觉或行为问题附复现交给维护者。
 
-- Preserve the package's public drawer width/maxDrawerWidth, full-screen control,
-  mobile full-width behavior, and container queries. Do not add a host drag-resize
-  interaction that the package does not expose.
-- Keep controls keyboard reachable with visible focus and meaningful accessible
-  names.
-- Do not disable reduced-motion behavior or replace status text with color alone.
-- Long titles, task names, file names, and errors must truncate or wrap without
-  covering actions; retain an accessible full value.
-- Closing and reopening the panel must not destroy an active conversation.
+## 能力边界
 
-Use only public theme/launcher props and documented `--make-ai-*` variables for
-requested customization. Prefer package defaults over host CSS patches.
-
-## States
-
-- Loading: keep the entry usable and show bounded progress in the panel.
-- Agent unavailable/discovery failed: show a safe retry action.
-- Empty task list: retain the new conversation action.
-- Stream reconnect: preserve accumulated output and durable cursor.
-- Upload in progress/failure: keep the pending item actionable and explain retry.
-- Terminal response failure: show the stable public error without raw upstream
-  diagnostics.
+本流程覆盖文本、多轮历史、实时预览、队列/取消、追加、停止、等待用户问题、反馈、文件图片与下载。实际显隐取决于获权事实和输入能力。不要把通用 Artifact 模板或测试 transport 当成 Agent 服务端输出协议；新格式须先有公开契约。

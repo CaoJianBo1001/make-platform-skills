@@ -12,17 +12,18 @@ browser-facing paths in `apps/docs/api.md`.
 
 ## UI-Service routes
 
-Default app-local contracts:
+Default published contracts for new Service-fronted Apps:
 
 ```text
-GET   /api/entities/:entityKey/preset
-PATCH /api/entities/:entityKey/preset
-GET   /api/entities/:entityKey/records?sort=<json>
+GET   /api/make/app/entities/:entityKey/preset
+PATCH /api/make/app/entities/:entityKey/preset
+GET   /api/make/app/entities/:entityKey/records?sort=<json>
 ```
 
-If the host uses `gatewayBaseUrl: "/api/make"`, its published browser path may map
-the app-local route under `/api/make/app/**`. Preserve the host routing contract;
-do not register only a prefix-free local path.
+These paths already include `/api/make/app`. With `gatewayBaseUrl: "/api/make"`,
+UI calls their `/app/**` counterparts through its shared authenticated adapter.
+Preserve an existing host's documented equivalent routing contract and matching
+UI adapter; do not register only a local compatibility path.
 
 Preset GET returns a stable shape:
 
