@@ -1,0 +1,6551 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Make Agent 数据面 API",
+    "version": "1.0.0",
+    "description": "Session、Message、Task、Run 用户协议；行为见 API.md。"
+  },
+  "servers": [
+    {
+      "url": "https://dev-make.qtech.cn/api/make/agent/v1"
+    }
+  ],
+  "security": [
+    {
+      "UserToken": []
+    }
+  ],
+  "paths": {
+    "/session": {
+      "post": {
+        "operationId": "session_post",
+        "summary": "创建会话",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.CreateResource",
+                "MakeService.GetResource",
+                "MakeService.ListResources"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N01Response"
+                    },
+                    {
+                      "$ref": "#/components/schemas/N02Response"
+                    },
+                    {
+                      "$ref": "#/components/schemas/N03Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.CreateResource": {
+            "request": {
+              "$ref": "#/components/schemas/N01Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N01Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "建立共享会话记录，不绑定单个 Agent，不启动 Task。"
+          },
+          "MakeService.GetResource": {
+            "request": {
+              "$ref": "#/components/schemas/N02Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N02Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "读取会话及获准的有限关联数据。"
+          },
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/N03Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N03Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "前端与业务后台共用，查询获权范围内会话。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N01Request"
+                  },
+                  {
+                    "$ref": "#/components/schemas/N02Request"
+                  },
+                  {
+                    "$ref": "#/components/schemas/N03Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/preference": {
+      "post": {
+        "operationId": "session_preference_post",
+        "summary": "更新本人会话偏好",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.UpdateResource"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N04Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.UpdateResource": {
+            "request": {
+              "$ref": "#/components/schemas/N04Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N04Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "只更新当前用户与会话的关联，不修改共享标题。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N04Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/message": {
+      "post": {
+        "operationId": "session_message_post",
+        "summary": "提交消息",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.CreateResource",
+                "MakeService.GetResource",
+                "MakeService.ListResources"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N05Response"
+                    },
+                    {
+                      "$ref": "#/components/schemas/N06Response"
+                    },
+                    {
+                      "$ref": "#/components/schemas/N07Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.CreateResource": {
+            "request": {
+              "$ref": "#/components/schemas/N05Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N05Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "保存一份消息，并按 Agent recipients 登记独立受理目标；普通目标被接受为新任务后创建 Task。"
+          },
+          "MakeService.GetResource": {
+            "request": {
+              "$ref": "#/components/schemas/N06Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N06Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "读取一条消息以及按需的业务关联。"
+          },
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/N07Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N07Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "分页读取会话历史或指定任务的回复，可附带本页消息的本人反馈。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N05Request"
+                  },
+                  {
+                    "$ref": "#/components/schemas/N06Request"
+                  },
+                  {
+                    "$ref": "#/components/schemas/N07Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/task": {
+      "post": {
+        "operationId": "session_task_post",
+        "summary": "读取任务",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.GetResource",
+                "MakeService.ListResources"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N08Response"
+                    },
+                    {
+                      "$ref": "#/components/schemas/N09Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.GetResource": {
+            "request": {
+              "$ref": "#/components/schemas/N08Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N08Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "读取任务状态、结束原因和可选的初始触发消息。"
+          },
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/N09Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N09Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "按会话、Agent、状态等查询整轮任务。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N08Request"
+                  },
+                  {
+                    "$ref": "#/components/schemas/N09Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/task/stop": {
+      "post": {
+        "operationId": "session_task_stop_post",
+        "summary": "请求停止任务",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.CreateResource"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N10Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.CreateResource": {
+            "request": {
+              "$ref": "#/components/schemas/N10Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N10Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "保存停止请求；任务是否已停止以 Task 状态为准。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N10Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/task/steer": {
+      "post": {
+        "operationId": "session_task_steer_post",
+        "summary": "查询补充关系",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.ListResources"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N11Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/N11Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N11Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "查看已经归入任务的补充说明和处理状态。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N11Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/run": {
+      "post": {
+        "operationId": "session_run_post",
+        "summary": "读取运行记录",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.GetResource",
+                "MakeService.ListResources"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N12Response"
+                    },
+                    {
+                      "$ref": "#/components/schemas/N13Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.GetResource": {
+            "request": {
+              "$ref": "#/components/schemas/N12Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N12Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "读取运行记录或获准公开题面；题面附带状态、回答资格和表单。"
+          },
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/N13Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N13Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "查询调用概要或当前身份获准访问的人工交互。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N12Request"
+                  },
+                  {
+                    "$ref": "#/components/schemas/N13Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/run/answer": {
+      "post": {
+        "operationId": "session_run_answer_post",
+        "summary": "提交人工答案",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.CreateResource"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N14Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.CreateResource": {
+            "request": {
+              "$ref": "#/components/schemas/N14Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N14Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "向明确的人工询问提交答案，等待接受决定。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N14Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/request": {
+      "post": {
+        "operationId": "session_request_post",
+        "summary": "查询请求结果",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.GetResource"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N15Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.GetResource": {
+            "request": {
+              "$ref": "#/components/schemas/N15Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N15Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "凭原请求编号读取保存回执和各目标最新决定；消息目标来自 Agent recipients，新任务被接受后返回 taskId。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N15Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/stream": {
+      "get": {
+        "operationId": "session_stream_get",
+        "summary": "订阅会话变化",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "sessionId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40,
+              "description": "使用 N01、N02 或 N03 返回的会话 ID，不是外部 chat_id。"
+            }
+          },
+          {
+            "in": "query",
+            "name": "after",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^(0|[1-9][0-9]{0,15})$",
+              "minLength": 1,
+              "maxLength": 16,
+              "description": "初始位置；没有 Last-Event-ID 时必填。两者同传时必须一致；非法请求头不回退到 after。非法或超前返回 400 invalid_cursor；过期返回 410 cursor_expired。位置须与 sessionId 一起保存，不跨会话复用。"
+            }
+          },
+          {
+            "in": "query",
+            "name": "streamDeltas",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "enum": [
+                true,
+                false
+              ],
+              "default": false,
+              "description": "URL 中传 true 或 false；默认 false。true 接收 message.delta 与 run.progress，建连时恢复可用的消息 snapshot 和最新工具进度；false 仅接收已保存事件。不扩大读取权限。"
+            }
+          },
+          {
+            "in": "header",
+            "name": "Last-Event-ID",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "pattern": "^[0-9]+$",
+              "minLength": 1,
+              "maxLength": 16
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE；必须提供 after 或 Last-Event-ID。",
+            "content": {
+              "text/event-stream": {
+                "schema": {
+                  "type": "string"
+                },
+                "x-event-schema": {
+                  "$ref": "events.schema.json"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/content": {
+      "post": {
+        "operationId": "content_post",
+        "summary": "上传文件",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.CreateResource"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N17Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.CreateResource": {
+            "request": {
+              "$ref": "#/components/schemas/N17Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N17Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "multipart/form-data",
+            "description": "保存文件并返回内容引用，不自动发布或启动任务。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N17Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "get": {
+        "operationId": "content_get",
+        "summary": "读取文件",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "contentId",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "pattern": "^content_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40,
+              "description": "使用 N17 返回或获准业务记录明确引用的内容 ID，不是文件名或 URL。"
+            }
+          },
+          {
+            "in": "query",
+            "name": "mode",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "metadata",
+                "download"
+              ],
+              "default": "metadata",
+              "description": "metadata 返回 JSON；download 返回真实 Content-Type、Content-Disposition 和字节。字节开始前错误用公共 JSON，中断视为下载失败。"
+            }
+          },
+          {
+            "in": "query",
+            "name": "viaType",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "message",
+                "run"
+              ],
+              "description": "公开引用的来源类型；与 viaId 同时提供。不传引用线索时按上传者及有效期等既有权限规则校验。"
+            }
+          },
+          {
+            "in": "query",
+            "name": "viaId",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "description": "记录必须实际引用此 contentId，且当前身份有权访问；知道 ID 或字符串相同不授予权限。"
+            }
+          },
+          {
+            "in": "query",
+            "name": "viaView",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "summary",
+                "raw",
+                "question"
+              ],
+              "description": "Run 引用的视图线索；raw 和 question 各按对应权限校验，不传不增加视图权限。question 仅覆盖公开 attachments。"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "元信息或文件内容，取决于 mode。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/N18Response"
+                }
+              },
+              "application/octet-stream": {
+                "schema": {
+                  "type": "string",
+                  "format": "binary"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/message/feedback": {
+      "post": {
+        "operationId": "session_message_feedback_post",
+        "summary": "设置本人回答反馈",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.UpdateResource"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N19Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.UpdateResource": {
+            "request": {
+              "$ref": "#/components/schemas/N19Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N19Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "保存或修改本人对 Agent 回复的评价。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N19Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/message/resume": {
+      "post": {
+        "operationId": "session_message_resume_post",
+        "summary": "继续原调用",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.CreateResource"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "根据 X-Make-Target 选择相应结果；保存成功不等于执行完成。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/N20Response"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.CreateResource": {
+            "request": {
+              "$ref": "#/components/schemas/N20Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N20Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "校验原用户当前登录并恢复原调用，不创建独立授权期限或解除未知写阻断。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/N20Request"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      }
+    },
+    "/agent/input-capabilities": {
+      "post": {
+        "operationId": "agent_input_capabilities_post",
+        "summary": "读取 Agent 输入能力",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.GetResource"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "返回当前入口可用的 Agent 输入能力。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/N21Response"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.GetResource": {
+            "request": {
+              "$ref": "#/components/schemas/N21Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N21Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "按当前入口用途获权读取最小能力投影。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/N21Request"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/message/queue": {
+      "post": {
+        "operationId": "session_message_queue_post",
+        "summary": "查询待处理消息",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.ListResources"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "按消息序号读取当前用户尚未开始的普通消息目标。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/N22Response"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/N22Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N22Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "按消息序号读取当前用户尚未开始的普通消息目标。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/N22Request"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/session/message/cancel": {
+      "post": {
+        "operationId": "session_message_cancel_post",
+        "summary": "取消待处理消息",
+        "parameters": [
+          {
+            "in": "header",
+            "name": "X-Make-Target",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.CreateResource"
+              ]
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "仅取消尚未开始的原用户消息目标；已开始时拒绝，不隐式停止。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/N23Response"
+                }
+              }
+            }
+          },
+          "default": {
+            "description": "错误响应",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Error"
+                }
+              }
+            }
+          }
+        },
+        "x-make-targets": {
+          "MakeService.CreateResource": {
+            "request": {
+              "$ref": "#/components/schemas/N23Request"
+            },
+            "response": {
+              "$ref": "#/components/schemas/N23Response"
+            },
+            "successStatus": 200,
+            "requestContentType": "application/json",
+            "description": "仅取消尚未开始的原用户消息目标；已开始时拒绝，不隐式停止。"
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/N23Request"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "SessionSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "channelType",
+          "externalId"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "console",
+              "channel",
+              "background"
+            ]
+          },
+          "channelType": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1,
+            "maxLength": 128
+          },
+          "externalId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 1
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "channel"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "channelType": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "channelType": {
+                  "const": null
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "type": {
+                  "const": "console"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "externalId": {
+                  "const": null
+                }
+              }
+            }
+          }
+        ]
+      },
+      "AcceptanceDecision": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "agent": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "const": "agent"
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                    "minLength": 38,
+                    "maxLength": 38
+                  }
+                },
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "kind": {
+                "const": "message"
+              },
+              "state": {
+                "enum": [
+                  "pending",
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              "mode": {
+                "enum": [
+                  null,
+                  "new",
+                  "steer"
+                ]
+              },
+              "taskId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 37,
+                "maxLength": 37
+              },
+              "reason": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "msg": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "msg"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "agent",
+              "kind",
+              "state",
+              "mode",
+              "taskId",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "state": {
+                      "const": "rejected"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "reason": {
+                      "type": "null"
+                    }
+                  }
+                }
+              },
+              {
+                "if": {
+                  "properties": {
+                    "state": {
+                      "const": "accepted"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "mode": {
+                      "enum": [
+                        "new",
+                        "steer"
+                      ]
+                    },
+                    "taskId": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "mode": {
+                      "const": null
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "agent": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "const": "agent"
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                    "minLength": 38,
+                    "maxLength": 38
+                  }
+                },
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "kind": {
+                "const": "stop"
+              },
+              "state": {
+                "enum": [
+                  "pending",
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              "mode": {
+                "const": null
+              },
+              "taskId": {
+                "type": "string",
+                "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 37,
+                "maxLength": 37
+              },
+              "reason": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "msg": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "msg"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "agent",
+              "kind",
+              "state",
+              "mode",
+              "taskId",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "state": {
+                      "const": "rejected"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "reason": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "agent": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "const": "agent"
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                    "minLength": 38,
+                    "maxLength": 38
+                  }
+                },
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "kind": {
+                "const": "answer"
+              },
+              "state": {
+                "enum": [
+                  "pending",
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              "mode": {
+                "const": null
+              },
+              "taskId": {
+                "type": "string",
+                "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 37,
+                "maxLength": 37
+              },
+              "reason": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "msg": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "msg"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              },
+              "runId": {
+                "type": "string",
+                "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 36,
+                "maxLength": 36
+              }
+            },
+            "required": [
+              "agent",
+              "kind",
+              "state",
+              "mode",
+              "taskId",
+              "reason",
+              "runId"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "state": {
+                      "const": "rejected"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "reason": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "type": "object",
+            "properties": {
+              "agent": {
+                "type": "object",
+                "properties": {
+                  "type": {
+                    "const": "agent"
+                  },
+                  "id": {
+                    "type": "string",
+                    "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                    "minLength": 38,
+                    "maxLength": 38
+                  }
+                },
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "additionalProperties": false
+              },
+              "kind": {
+                "const": "cancel"
+              },
+              "state": {
+                "enum": [
+                  "accepted",
+                  "rejected"
+                ]
+              },
+              "mode": {
+                "const": null
+              },
+              "taskId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 37,
+                "maxLength": 37
+              },
+              "reason": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "type": "object",
+                    "properties": {
+                      "code": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "msg": {
+                        "type": "string",
+                        "minLength": 1
+                      }
+                    },
+                    "required": [
+                      "code",
+                      "msg"
+                    ],
+                    "additionalProperties": false
+                  }
+                ]
+              }
+            },
+            "required": [
+              "agent",
+              "kind",
+              "state",
+              "mode",
+              "taskId",
+              "reason"
+            ],
+            "additionalProperties": false,
+            "allOf": [
+              {
+                "if": {
+                  "properties": {
+                    "state": {
+                      "const": "rejected"
+                    }
+                  }
+                },
+                "then": {
+                  "properties": {
+                    "reason": {
+                      "type": "object"
+                    }
+                  }
+                },
+                "else": {
+                  "properties": {
+                    "reason": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      "RecipientInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "agent"
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 38,
+                "maxLength": 38
+              },
+              "taskId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 37,
+                "maxLength": 37
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "user"
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              },
+              "taskId": {
+                "const": null
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "channel_user"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              },
+              "taskId": {
+                "const": null
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "RecipientIdentity": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "agent"
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 38,
+                "maxLength": 38
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "user"
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^[1-9][0-9]*$"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "const": "channel_user"
+              },
+              "id": {
+                "type": "string",
+                "minLength": 1
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ContentPartInput": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "enum": [
+                  "text"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "contentId": {
+                "const": null
+              },
+              "fileName": {
+                "const": null
+              },
+              "mediaType": {
+                "const": null
+              }
+            },
+            "required": [
+              "type",
+              "text",
+              "contentId",
+              "fileName",
+              "mediaType"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "enum": [
+                  "image",
+                  "file",
+                  "audio",
+                  "video"
+                ]
+              },
+              "text": {
+                "const": null
+              },
+              "contentId": {
+                "type": "string",
+                "pattern": "^content_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 40,
+                "maxLength": 40
+              },
+              "fileName": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "mediaType": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              }
+            },
+            "required": [
+              "type",
+              "text",
+              "contentId",
+              "fileName",
+              "mediaType"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "ContentPart": {
+        "oneOf": [
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "enum": [
+                  "text",
+                  "reasoning"
+                ]
+              },
+              "text": {
+                "type": "string",
+                "minLength": 1
+              },
+              "contentId": {
+                "const": null
+              },
+              "fileName": {
+                "const": null
+              },
+              "mediaType": {
+                "const": null
+              }
+            },
+            "required": [
+              "type",
+              "text",
+              "contentId",
+              "fileName",
+              "mediaType"
+            ],
+            "additionalProperties": false
+          },
+          {
+            "type": "object",
+            "properties": {
+              "type": {
+                "enum": [
+                  "image",
+                  "file",
+                  "audio",
+                  "video"
+                ]
+              },
+              "text": {
+                "const": null
+              },
+              "contentId": {
+                "type": "string",
+                "pattern": "^content_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 40,
+                "maxLength": 40
+              },
+              "fileName": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "mediaType": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              }
+            },
+            "required": [
+              "type",
+              "text",
+              "contentId",
+              "fileName",
+              "mediaType"
+            ],
+            "additionalProperties": false
+          }
+        ]
+      },
+      "Run": {
+        "type": "object",
+        "required": [
+          "id",
+          "taskId",
+          "operation",
+          "callSource",
+          "target",
+          "state",
+          "meta",
+          "payload",
+          "result",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "operation": {
+            "enum": [
+              "model.inference",
+              "tool.invoke"
+            ]
+          },
+          "callSource": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "runId",
+                  "toolCallId"
+                ],
+                "properties": {
+                  "runId": {
+                    "type": "string",
+                    "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+                  },
+                  "toolCallId": {
+                    "type": "string",
+                    "pattern": "^[^\\u0000]+$",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "target": {
+            "type": "object",
+            "required": [
+              "bindingId",
+              "name",
+              "version",
+              "config"
+            ],
+            "properties": {
+              "bindingId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^plugin_binding_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "config": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          "state": {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "unknown"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "createdAt",
+              "updatedAt",
+              "startedAt",
+              "finishedAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "updatedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "payload": {},
+          "result": {},
+          "reason": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "code",
+                  "msg"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:-]+$"
+                  },
+                  "msg": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "model.inference"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "callSource": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "running",
+                    "unknown"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "meta": {
+                  "properties": {
+                    "finishedAt": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "failed",
+                    "unknown"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "running",
+                    "completed"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "RunSummary": {
+        "type": "object",
+        "required": [
+          "id",
+          "taskId",
+          "operation",
+          "callSource",
+          "target",
+          "state",
+          "meta"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "operation": {
+            "enum": [
+              "model.inference",
+              "tool.invoke"
+            ]
+          },
+          "callSource": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "runId",
+                  "toolCallId"
+                ],
+                "properties": {
+                  "runId": {
+                    "type": "string",
+                    "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+                  },
+                  "toolCallId": {
+                    "type": "string",
+                    "pattern": "^[^\\u0000]+$",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "target": {
+            "type": "object",
+            "required": [
+              "bindingId",
+              "name",
+              "version"
+            ],
+            "properties": {
+              "bindingId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^plugin_binding_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "state": {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "unknown"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "createdAt",
+              "updatedAt",
+              "startedAt",
+              "finishedAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "updatedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              }
+            },
+            "additionalProperties": false
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "model.inference"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "callSource": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "running",
+                    "unknown"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "meta": {
+                  "properties": {
+                    "finishedAt": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "Session": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "本会话的唯一标识。例：session_01a161562d0078558a5e0982108b1aa4；不包含来源渠道含义。"
+          },
+          "title": {
+            "type": "string",
+            "pattern": "^[^\\u0000]+$",
+            "minLength": 1,
+            "description": "会话共享标题，例如“十月报销核对”；个人显示别名不修改此字段。"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "group",
+              "background"
+            ],
+            "description": "personal 为个人会话，\ngroup 为多人共享群会话，\nbackground 为定时任务等后台创建的会话。"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SessionSource"
+          },
+          "createdBy": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "agent",
+                  "channel_user"
+                ],
+                "description": "主体类型；"
+              },
+              "id": {
+                "type": "string",
+                "description": "创建主体的身份 ID，取值见前文“身份 ID 约定”。"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false,
+            "description": "实际创建主体，不随读取者改变，也不代表唯一权限拥有者。"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "本实体的创建时间。"
+              },
+              "updatedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "数据库维护：新增记录或本行数据实际变化时填写当前时间；读取和无变化重传不刷新。\n个人偏好、成员关联或子实体变化不自动更新本行。"
+              }
+            },
+            "required": [
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false,
+            "description": "本实体的时间记录。"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "type",
+          "source",
+          "createdBy",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Message": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "消息唯一标识，\n例如 message_01a161562d007ef8b04b02096d4a83d2。"
+          },
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "所属 Session.id；\n本例为 session_01a161562d0078558a5e0982108b1aa4。"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "Context 在消息首次成功保存时统一分配，表示进入会话记录的顺序；规则见下文。"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "user",
+              "system",
+              "intermediate",
+              "final"
+            ],
+            "description": "消息分类；取值含义见下列各行，必填且不允许 null。\nuser 用户消息\nsystem 系统消息\nintermediate Agent 的中间消息，包含过程说明和阶段结果。\nfinal Agent 针对当前 Task 的最终答复。"
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "agent",
+                  "channel_user",
+                  "system"
+                ],
+                "description": "发送者身份类型；\n标识发送主体是平台用户、Agent、渠道用户或系统。"
+              },
+              "id": {
+                "type": "string",
+                "description": "发送者的身份 ID，取值见前文“身份 ID 约定”。"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false,
+            "description": "发送者：实际发布本消息的主体；\nAgent 回复的身份须与产生它的 Task.agent 一致。"
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipientIdentity"
+            }
+          },
+          "producedByTaskId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37,
+            "description": "生成消息的任务：产生本消息的 Task ID；创建后固定，且与消息同属一个 Session。\n用户直接发送的消息为 null；Agent 执行任务时发布的消息填写对应 Task.id。\n本例三条回复为 task_01a161562d007720a29a771ce9be937e，两条用户输入为 null。\n本字段不因其他 Task 消费该消息而改变；\n消息与 Task 的输入关系由 Task.triggerMessageId 或 steer 关系记录。"
+          },
+          "replyToMessageId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "回复关系：指向本消息明确回复的 Message ID；须同属一个 Session，且不得指向自身。\n没有明确回复关系时为 null；本例回复和补充消息均指向 message_01a161562d007af1b0b372070970c802。\n回复关系提供消息上下文，接收者仍由 recipients 的身份对象表达；它不替代 Task 触发、steer 或人工询问工具的定向答案。"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentPart"
+            },
+            "minItems": 1
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "streaming",
+              "completed",
+              "incomplete"
+            ],
+            "description": "streaming：已有可靠保存的部分正文，尚未收尾；completed：完整正文已保存并结束；incomplete：已确认中断，保留已保存正文。临时预览不改变此字段。完整用户输入直接为 completed；本字段不表示 Task 完成。"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "平台首次建立本条 Message 的时间。\n完整输入：完整接收并建立消息时。\n流式输出：首个有效内容片段建立消息时。\n延迟落库不改写此时间；不是外部渠道原始发送时间或 Task/Run 开始时间。"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "本条消息确认结束生成、正文被冻结的时间。\n正常结束或确认中断收尾时写入一次，之后固定；流式增量不更新。\n完整输入直接建立为 completed 时，与 createdAt 取同一时刻。\n不早于 createdAt；不表示投递、已读或 Task 结束时间。"
+              }
+            },
+            "required": [
+              "createdAt",
+              "finishedAt"
+            ],
+            "additionalProperties": false,
+            "description": "本条消息的创建与正文收尾时间。"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "sequence",
+          "type",
+          "author",
+          "recipients",
+          "producedByTaskId",
+          "replyToMessageId",
+          "parts",
+          "state",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "Task": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37,
+            "description": "任务 ID。\n例：task_01a161562d007720a29a771ce9be937e。"
+          },
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "所属 Session。\n例：session_01a161562d0078558a5e0982108b1aa4。"
+          },
+          "triggerMessageId": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "触发本任务的初始 Message，正文须已冻结，且不能由本 Task 产生。不同 Agent 目标的 Task 可引用同一 Message；Task.agent 对应各自的接收目标。"
+          },
+          "agent": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "agent"
+                ],
+                "description": "执行者身份类型。"
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 38,
+                "maxLength": 38,
+                "description": "Agent 实体 ID。\n例：agent_01a161562d0075acb5711eb302238265。"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false,
+            "description": "执行本任务的 Agent。"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "description": "Harness 上报的本轮生命周期状态，见 3.1。\n例：completed。"
+          },
+          "endReason": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "minLength": 1,
+                "description": "结束原因码，用于分类和查询。\n例：STEP_LIMIT_REACHED（执行步数达到上限）。"
+              },
+              "msg": {
+                "type": "string",
+                "pattern": "^[^\\u0000]+$",
+                "minLength": 1,
+                "description": "本轮实际结束原因；不确定的部分如实说明。"
+              }
+            },
+            "required": [
+              "code",
+              "msg"
+            ],
+            "additionalProperties": false,
+            "description": "本轮未正常完成或主动停止的原因。\n已恢复的单次 Run 错误留在 Run；取消原因未记录时为 null。"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "任务创建时间。"
+              },
+              "updatedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "数据库维护：新增记录或本行数据实际变化时填写当前时间；读取和无变化重传不刷新。\nRun、Message、steer 的独立记录及人工回答不自动更新本行。\n不作为心跳或写入顺序。"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "本轮实际开始执行的时间。"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "首次保存为终态时，由数据库填写当前时间；填写后固定。"
+              }
+            },
+            "required": [
+              "createdAt",
+              "updatedAt",
+              "startedAt",
+              "finishedAt"
+            ],
+            "additionalProperties": false,
+            "description": "任务的时间记录。"
+          },
+          "configVersion": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^agent_config_version_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 53,
+                "maxLength": 53,
+                "description": "本 Task 固定采用的配置版本标识。"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "同一 Agent 内递增的配置版本号，与插件定义版本和 asOf 无关；不是乐观锁。"
+              }
+            },
+            "required": [
+              "id",
+              "version"
+            ],
+            "additionalProperties": false,
+            "description": "本 Task 固定采用的配置版本摘要。 不接受作为配置写入参数。"
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "triggerMessageId",
+          "agent",
+          "state",
+          "endReason",
+          "meta",
+          "configVersion"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "failed"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "endReason": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "queued",
+                    "running",
+                    "completed"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "endReason": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "queued",
+                    "running"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "meta": {
+                  "properties": {
+                    "finishedAt": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "meta": {
+                  "properties": {
+                    "finishedAt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "QuestionView": {
+        "type": "object",
+        "properties": {
+          "runId": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 36,
+            "maxLength": 36,
+            "description": "关联原人工询问 Run，不新增 Question ID。重启沿用本 ID；题面、表单、字段顺序、回答者及截止时间发布后固定。替换问题由 Harness 关闭原问题并发布新 Run。"
+          },
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "定位来源，不授予整段会话或 Task 的读取权限。"
+          },
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37,
+            "description": "用于反问卡片归属；不因此获得完整 Task 的读取权限。"
+          },
+          "agent": {
+            "$ref": "#/components/schemas/AgentIdentity"
+          },
+          "title": {
+            "type": "string",
+            "pattern": "^[^\\u0000]+$",
+            "minLength": 1,
+            "description": "来自已保存的询问信息。"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "open",
+              "answered",
+              "closed",
+              "expired"
+            ],
+            "description": "open 未接受答案且未关闭；answered 已可靠接受首份有效答案；closed 因停止、任务结束或替代等关闭；expired 因截止关闭。依据已保存事实，不从 Run.state 推导。"
+          },
+          "canAnswer": {
+            "type": "boolean",
+            "enum": [
+              true,
+              false
+            ],
+            "description": "由回答权限、交互状态、期限和任务条件共同决定。只表示查询时资格；N14 重新鉴权与校验，客户端不提交此字段。"
+          },
+          "form": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          },
+          "fieldOrder": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[^\\u0000]+$",
+              "minLength": 1
+            },
+            "minItems": 0,
+            "uniqueItems": true,
+            "description": "按数组顺序展示，不依赖 JSON 对象键顺序。"
+          },
+          "expiresAt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+            "minLength": 20,
+            "maxLength": 27,
+            "format": "date-time",
+            "description": "截止校验以接受决定时的服务端时间为准；null 表示无截止。pending 不预留名额；关闭和过期进入会话变化记录，不由浏览器时钟改状态。"
+          },
+          "attachments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {},
+              "required": [],
+              "additionalProperties": true
+            }
+          }
+        },
+        "required": [
+          "runId",
+          "sessionId",
+          "taskId",
+          "agent",
+          "title",
+          "state",
+          "canAnswer",
+          "form",
+          "fieldOrder",
+          "expiresAt",
+          "attachments"
+        ],
+        "additionalProperties": false
+      },
+      "Timestamp": {
+        "type": "string",
+        "format": "date-time",
+        "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+      },
+      "AgentIdentity": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "agent"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 38,
+            "maxLength": 38
+          }
+        },
+        "required": [
+          "type",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "RequiredAction": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "resume"
+          },
+          "reason": {
+            "const": "login_required"
+          },
+          "canResume": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "type",
+          "reason",
+          "canResume"
+        ],
+        "additionalProperties": false
+      },
+      "MessageRequiredAction": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "resume"
+          },
+          "reason": {
+            "const": "login_required"
+          },
+          "canResume": {
+            "type": "boolean"
+          },
+          "agent": {
+            "$ref": "#/components/schemas/AgentIdentity"
+          }
+        },
+        "required": [
+          "type",
+          "reason",
+          "canResume",
+          "agent"
+        ],
+        "additionalProperties": false
+      },
+      "ContentDescriptor": {
+        "type": "object",
+        "properties": {
+          "contentId": {
+            "type": "string",
+            "pattern": "^content_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40
+          },
+          "fileName": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mediaType": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 0
+          }
+        },
+        "required": [
+          "contentId",
+          "fileName",
+          "mediaType",
+          "size"
+        ],
+        "additionalProperties": false
+      },
+      "RequestResult": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "operation": {
+            "type": "object",
+            "properties": {
+              "resource": {
+                "enum": [
+                  "/session",
+                  "/session/preference",
+                  "/session/message",
+                  "/session/task/stop",
+                  "/session/run/answer",
+                  "/content",
+                  "/session/message/feedback",
+                  "/session/message/resume",
+                  "/session/message/cancel"
+                ]
+              },
+              "action": {
+                "enum": [
+                  "CreateResource",
+                  "UpdateResource"
+                ]
+              }
+            },
+            "required": [
+              "resource",
+              "action"
+            ],
+            "additionalProperties": false
+          },
+          "recordedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "resources": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "enum": [
+                    "session",
+                    "message",
+                    "task",
+                    "run",
+                    "content"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              },
+              "required": [
+                "type",
+                "id"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "decisions": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AcceptanceDecision"
+            }
+          },
+          "agentMsg": {
+            "type": "string"
+          },
+          "asOf": {
+            "type": "string",
+            "pattern": "^[0-9]+$"
+          }
+        },
+        "required": [
+          "requestId",
+          "operation",
+          "recordedAt",
+          "resources",
+          "decisions"
+        ],
+        "additionalProperties": false
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "agentMsg": {
+                "type": "string",
+                "description": "可选安全补充说明；客户端不依赖此字段判断错误。",
+                "maxLength": 4096
+              },
+              "details": {}
+            },
+            "required": [
+              "reason"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "Pagination": {
+        "type": "object",
+        "properties": {
+          "size": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "nextCursor": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        },
+        "required": [
+          "size",
+          "nextCursor"
+        ],
+        "additionalProperties": false
+      },
+      "Steer": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37
+          },
+          "messageId": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "steeredAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "handled",
+              "ignored"
+            ]
+          },
+          "related": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "taskId",
+          "messageId",
+          "sequence",
+          "steeredAt",
+          "state"
+        ],
+        "additionalProperties": false
+      },
+      "SessionView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "本会话的唯一标识。例：session_01a161562d0078558a5e0982108b1aa4；不包含来源渠道含义。"
+          },
+          "title": {
+            "type": "string",
+            "pattern": "^[^\\u0000]+$",
+            "minLength": 1,
+            "description": "会话共享标题，例如“十月报销核对”；个人显示别名不修改此字段。"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "group",
+              "background"
+            ],
+            "description": "personal 为个人会话，\ngroup 为多人共享群会话，\nbackground 为定时任务等后台创建的会话。"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SessionSource"
+          },
+          "createdBy": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "agent",
+                  "channel_user"
+                ],
+                "description": "主体类型；"
+              },
+              "id": {
+                "type": "string",
+                "description": "创建主体的身份 ID，取值见前文“身份 ID 约定”。"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false,
+            "description": "实际创建主体，不随读取者改变，也不代表唯一权限拥有者。"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "本实体的创建时间。"
+              },
+              "updatedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "数据库维护：新增记录或本行数据实际变化时填写当前时间；读取和无变化重传不刷新。\n个人偏好、成员关联或子实体变化不自动更新本行。"
+              }
+            },
+            "required": [
+              "createdAt",
+              "updatedAt"
+            ],
+            "additionalProperties": false,
+            "description": "本实体的时间记录。"
+          },
+          "related": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "type",
+          "source",
+          "createdBy",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "MessageView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "消息唯一标识，\n例如 message_01a161562d007ef8b04b02096d4a83d2。"
+          },
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "所属 Session.id；\n本例为 session_01a161562d0078558a5e0982108b1aa4。"
+          },
+          "sequence": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "Context 在消息首次成功保存时统一分配，表示进入会话记录的顺序；规则见下文。"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "user",
+              "system",
+              "intermediate",
+              "final"
+            ],
+            "description": "消息分类；取值含义见下列各行，必填且不允许 null。\nuser 用户消息\nsystem 系统消息\nintermediate Agent 的中间消息，包含过程说明和阶段结果。\nfinal Agent 针对当前 Task 的最终答复。"
+          },
+          "author": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "agent",
+                  "channel_user",
+                  "system"
+                ],
+                "description": "发送者身份类型；\n标识发送主体是平台用户、Agent、渠道用户或系统。"
+              },
+              "id": {
+                "type": "string",
+                "description": "发送者的身份 ID，取值见前文“身份 ID 约定”。"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false,
+            "description": "发送者：实际发布本消息的主体；\nAgent 回复的身份须与产生它的 Task.agent 一致。"
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipientIdentity"
+            }
+          },
+          "producedByTaskId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37,
+            "description": "生成消息的任务：产生本消息的 Task ID；创建后固定，且与消息同属一个 Session。\n用户直接发送的消息为 null；Agent 执行任务时发布的消息填写对应 Task.id。\n本例三条回复为 task_01a161562d007720a29a771ce9be937e，两条用户输入为 null。\n本字段不因其他 Task 消费该消息而改变；\n消息与 Task 的输入关系由 Task.triggerMessageId 或 steer 关系记录。"
+          },
+          "replyToMessageId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "回复关系：指向本消息明确回复的 Message ID；须同属一个 Session，且不得指向自身。\n没有明确回复关系时为 null；本例回复和补充消息均指向 message_01a161562d007af1b0b372070970c802。\n回复关系提供消息上下文，接收者仍由 recipients 的身份对象表达；它不替代 Task 触发、steer 或人工询问工具的定向答案。"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentPart"
+            },
+            "minItems": 1
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "streaming",
+              "completed",
+              "incomplete"
+            ],
+            "description": "streaming：已有可靠保存的部分正文，尚未收尾；completed：完整正文已保存并结束；incomplete：已确认中断，保留已保存正文。临时预览不改变此字段。完整用户输入直接为 completed；本字段不表示 Task 完成。"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "平台首次建立本条 Message 的时间。\n完整输入：完整接收并建立消息时。\n流式输出：首个有效内容片段建立消息时。\n延迟落库不改写此时间；不是外部渠道原始发送时间或 Task/Run 开始时间。"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "本条消息确认结束生成、正文被冻结的时间。\n正常结束或确认中断收尾时写入一次，之后固定；流式增量不更新。\n完整输入直接建立为 completed 时，与 createdAt 取同一时刻。\n不早于 createdAt；不表示投递、已读或 Task 结束时间。"
+              }
+            },
+            "required": [
+              "createdAt",
+              "finishedAt"
+            ],
+            "additionalProperties": false,
+            "description": "本条消息的创建与正文收尾时间。"
+          },
+          "related": {
+            "type": "object",
+            "properties": {
+              "decisions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/AcceptanceDecision"
+                },
+                "description": "本条消息各 Agent 目标的只读受理决定，kind 固定为 message；与消息视图共用当前权限和 asOf。"
+              }
+            },
+            "required": [],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "sequence",
+          "type",
+          "author",
+          "recipients",
+          "producedByTaskId",
+          "replyToMessageId",
+          "parts",
+          "state",
+          "meta"
+        ],
+        "additionalProperties": false
+      },
+      "TaskView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37,
+            "description": "任务 ID。\n例：task_01a161562d007720a29a771ce9be937e。"
+          },
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "所属 Session。\n例：session_01a161562d0078558a5e0982108b1aa4。"
+          },
+          "triggerMessageId": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "触发本任务的初始 Message，正文须已冻结，且不能由本 Task 产生。不同 Agent 目标的 Task 可引用同一 Message；Task.agent 对应各自的接收目标。"
+          },
+          "agent": {
+            "type": "object",
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "agent"
+                ],
+                "description": "执行者身份类型。"
+              },
+              "id": {
+                "type": "string",
+                "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 38,
+                "maxLength": 38,
+                "description": "Agent 实体 ID。\n例：agent_01a161562d0075acb5711eb302238265。"
+              }
+            },
+            "required": [
+              "type",
+              "id"
+            ],
+            "additionalProperties": false,
+            "description": "执行本任务的 Agent。"
+          },
+          "state": {
+            "type": "string",
+            "enum": [
+              "queued",
+              "running",
+              "completed",
+              "failed",
+              "cancelled"
+            ],
+            "description": "Harness 上报的本轮生命周期状态，见 3.1。\n例：completed。"
+          },
+          "endReason": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9_.:-]+$",
+                "minLength": 1,
+                "description": "结束原因码，用于分类和查询。\n例：STEP_LIMIT_REACHED（执行步数达到上限）。"
+              },
+              "msg": {
+                "type": "string",
+                "pattern": "^[^\\u0000]+$",
+                "minLength": 1,
+                "description": "本轮实际结束原因；不确定的部分如实说明。"
+              }
+            },
+            "required": [
+              "code",
+              "msg"
+            ],
+            "additionalProperties": false,
+            "description": "本轮未正常完成或主动停止的原因。\n已恢复的单次 Run 错误留在 Run；取消原因未记录时为 null。"
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "任务创建时间。"
+              },
+              "updatedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "数据库维护：新增记录或本行数据实际变化时填写当前时间；读取和无变化重传不刷新。\nRun、Message、steer 的独立记录及人工回答不自动更新本行。\n不作为心跳或写入顺序。"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "本轮实际开始执行的时间。"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$",
+                "minLength": 20,
+                "maxLength": 27,
+                "format": "date-time",
+                "description": "首次保存为终态时，由数据库填写当前时间；填写后固定。"
+              }
+            },
+            "required": [
+              "createdAt",
+              "updatedAt",
+              "startedAt",
+              "finishedAt"
+            ],
+            "additionalProperties": false,
+            "description": "任务的时间记录。"
+          },
+          "configVersion": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^agent_config_version_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 53,
+                "maxLength": 53,
+                "description": "本 Task 固定采用的配置版本标识。"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "同一 Agent 内递增的配置版本号，与插件定义版本和 asOf 无关；不是乐观锁。"
+              }
+            },
+            "required": [
+              "id",
+              "version"
+            ],
+            "additionalProperties": false,
+            "description": "本 Task 固定采用的配置版本摘要。 不接受作为配置写入参数。"
+          },
+          "related": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "id",
+          "sessionId",
+          "triggerMessageId",
+          "agent",
+          "state",
+          "endReason",
+          "meta",
+          "configVersion"
+        ],
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "const": "failed"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "endReason": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "queued",
+                    "running",
+                    "completed"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "endReason": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "queued",
+                    "running"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "meta": {
+                  "properties": {
+                    "finishedAt": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            },
+            "else": {
+              "properties": {
+                "meta": {
+                  "properties": {
+                    "finishedAt": {
+                      "type": "string"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "RunView": {
+        "type": "object",
+        "required": [
+          "id",
+          "taskId",
+          "operation",
+          "callSource",
+          "target",
+          "state",
+          "meta",
+          "payload",
+          "result",
+          "reason"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "operation": {
+            "enum": [
+              "model.inference",
+              "tool.invoke"
+            ]
+          },
+          "callSource": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "runId",
+                  "toolCallId"
+                ],
+                "properties": {
+                  "runId": {
+                    "type": "string",
+                    "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+                  },
+                  "toolCallId": {
+                    "type": "string",
+                    "pattern": "^[^\\u0000]+$",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "target": {
+            "type": "object",
+            "required": [
+              "bindingId",
+              "name",
+              "version",
+              "config"
+            ],
+            "properties": {
+              "bindingId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^plugin_binding_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "config": {
+                "type": "object"
+              }
+            },
+            "additionalProperties": false
+          },
+          "state": {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "unknown"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "createdAt",
+              "updatedAt",
+              "startedAt",
+              "finishedAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "updatedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "payload": {},
+          "result": {},
+          "reason": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "code",
+                  "msg"
+                ],
+                "properties": {
+                  "code": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9_.:-]+$"
+                  },
+                  "msg": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "related": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "model.inference"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "callSource": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "running",
+                    "unknown"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "meta": {
+                  "properties": {
+                    "finishedAt": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "failed",
+                    "unknown"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "running",
+                    "completed"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "reason": {
+                  "type": "null"
+                }
+              }
+            }
+          }
+        ]
+      },
+      "RunSummaryView": {
+        "type": "object",
+        "required": [
+          "id",
+          "taskId",
+          "operation",
+          "callSource",
+          "target",
+          "state",
+          "meta"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "operation": {
+            "enum": [
+              "model.inference",
+              "tool.invoke"
+            ]
+          },
+          "callSource": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "required": [
+                  "runId",
+                  "toolCallId"
+                ],
+                "properties": {
+                  "runId": {
+                    "type": "string",
+                    "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+                  },
+                  "toolCallId": {
+                    "type": "string",
+                    "pattern": "^[^\\u0000]+$",
+                    "minLength": 1
+                  }
+                },
+                "additionalProperties": false
+              }
+            ]
+          },
+          "target": {
+            "type": "object",
+            "required": [
+              "bindingId",
+              "name",
+              "version"
+            ],
+            "properties": {
+              "bindingId": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^plugin_binding_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+              },
+              "name": {
+                "type": "string",
+                "minLength": 1
+              },
+              "version": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              }
+            },
+            "additionalProperties": false
+          },
+          "state": {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "unknown"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "createdAt",
+              "updatedAt",
+              "startedAt",
+              "finishedAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "updatedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "related": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          }
+        },
+        "additionalProperties": false,
+        "allOf": [
+          {
+            "if": {
+              "properties": {
+                "operation": {
+                  "const": "model.inference"
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "callSource": {
+                  "type": "null"
+                }
+              }
+            }
+          },
+          {
+            "if": {
+              "properties": {
+                "state": {
+                  "enum": [
+                    "running",
+                    "unknown"
+                  ]
+                }
+              }
+            },
+            "then": {
+              "properties": {
+                "meta": {
+                  "properties": {
+                    "finishedAt": {
+                      "type": "null"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      },
+      "QuestionRunView": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "operation": {
+            "enum": [
+              "model.inference",
+              "tool.invoke"
+            ]
+          },
+          "state": {
+            "enum": [
+              "running",
+              "completed",
+              "failed",
+              "cancelled",
+              "unknown"
+            ]
+          },
+          "meta": {
+            "type": "object",
+            "required": [
+              "createdAt",
+              "updatedAt",
+              "startedAt",
+              "finishedAt"
+            ],
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "updatedAt": {
+                "type": "string",
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "startedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              },
+              "finishedAt": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^\\d{4}-\\d{2}-\\d{2}T(?:[01]\\d|2[0-3]):[0-5]\\d:[0-5]\\d(?:\\.\\d{1,6})?Z$"
+              }
+            },
+            "additionalProperties": false
+          },
+          "related": {
+            "type": "object",
+            "properties": {
+              "question": {
+                "$ref": "#/components/schemas/QuestionView"
+              }
+            },
+            "required": [
+              "question"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "id",
+          "taskId",
+          "operation",
+          "state",
+          "meta",
+          "related"
+        ],
+        "additionalProperties": false
+      },
+      "UserIdentity": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "const": "user"
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^[1-9][0-9]*$"
+          }
+        },
+        "required": [
+          "type",
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "SessionPreference": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserIdentity"
+          },
+          "titleOverride": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[^\\u0000]+$",
+            "minLength": 1,
+            "description": "三个可改字段至少提供一个；省略不改，null 清除个人标题覆盖。首次设置叠加于默认值 null/false/false。"
+          },
+          "pinned": {
+            "type": "boolean",
+            "enum": [
+              true,
+              false
+            ],
+            "description": "省略不修改。"
+          },
+          "archived": {
+            "type": "boolean",
+            "enum": [
+              true,
+              false
+            ],
+            "description": "只影响本人，不改共享 Session 或其 updatedAt，不停止 Task、不改变权限"
+          }
+        },
+        "required": [
+          "sessionId",
+          "user",
+          "titleOverride",
+          "pinned",
+          "archived"
+        ],
+        "additionalProperties": false
+      },
+      "MessageFeedback": {
+        "type": "object",
+        "properties": {
+          "messageId": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40
+          },
+          "user": {
+            "$ref": "#/components/schemas/UserIdentity"
+          },
+          "rating": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "positive",
+              "negative",
+              null
+            ],
+            "description": "positive 点赞；negative 点踩；null 清除评分。与 comment 至少提供一项，二者独立更新。"
+          },
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[^\\u0000]*$",
+            "minLength": 0,
+            "description": "本人评价文字；省略不改，null 清除评论，不改变 rating 或消息正文。"
+          }
+        },
+        "required": [
+          "messageId",
+          "user",
+          "rating",
+          "comment"
+        ],
+        "additionalProperties": false
+      },
+      "N01Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "调用方为一次逻辑写入生成；重试沿用原编号和原内容。"
+          },
+          "title": {
+            "type": "string",
+            "pattern": "^[^\\u0000]+$",
+            "minLength": 1,
+            "description": "共享会话标题，不是个人标题覆盖。"
+          },
+          "type": {
+            "type": "string",
+            "enum": [
+              "personal",
+              "group",
+              "background"
+            ],
+            "description": "personal 个人会话；\ngroup 群会话；\nbackground 后台会话，仍受创建入口和业务权限限制。"
+          },
+          "source": {
+            "$ref": "#/components/schemas/SessionSource"
+          }
+        },
+        "required": [
+          "requestId",
+          "title",
+          "type",
+          "source"
+        ],
+        "additionalProperties": false
+      },
+      "N01Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "session": {
+                "$ref": "#/components/schemas/Session"
+              }
+            },
+            "required": [
+              "session"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N02Request": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "使用服务端返回的该类资源 ID；"
+          },
+          "expand": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "myPreference",
+                "activity"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 0,
+            "default": [],
+            "description": "myPreference：我的偏好，session是否置顶，是否归档，修改标题\nactivity：最近一次消息的时间，id，可用于展示时间戳与session排序"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "N02Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "session": {
+                "$ref": "#/components/schemas/SessionView"
+              },
+              "asOf": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            },
+            "required": [
+              "session"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N03Request": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "expression": {
+                "type": "string",
+                "minLength": 0,
+                "description": "运算符及取值见紧接的筛选字段表；仅允许 DNF 形式的 &&、|| 和括号组合，不接受其他字段。"
+              }
+            },
+            "required": [
+              "expression"
+            ],
+            "additionalProperties": false,
+            "description": "省略或 null 表示无附加筛选；不扩大当前身份的获权范围。"
+          },
+          "expand": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "myPreference",
+                "activity"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 0,
+            "default": [],
+            "description": "每条结果的 session.related 使用 myPreference、activity；按活动排序时仍附带 activity。本人偏好展开和 archived/pinned 筛选要求 Org 普通用户身份。"
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fieldKey": {
+                  "type": "string",
+                  "enum": [
+                    "meta.createdAt",
+                    "activity.lastMessageAt",
+                    "id"
+                  ],
+                  "description": "仅支持这些排序字段，不支持按任意实体字段排序。"
+                },
+                "order": {
+                  "type": "string",
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "description": "asc 升序；desc 降序。"
+                }
+              },
+              "required": [
+                "fieldKey",
+                "order"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "description": "按数组顺序确定优先级。默认按最近可见消息首次保存时间降序；无消息用会话创建时间回退，并以 id 升序稳定并列。活动变化后重新查询并按 Session.id 合并、重排。"
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[^\\u0000]+$",
+                "minLength": 1,
+                "description": "续页原样传回上次响应的 pagination.nextCursor；沿当前排序读取下一批。保持查询范围、筛选、排序、视图和访问身份一致，不自行构造游标。"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "本次希望获取的记录条数。"
+              }
+            },
+            "required": [],
+            "additionalProperties": false,
+            "description": "仅支持游标分页；首屏省略 cursor 或传 null，续页使用上次响应的 nextCursor。不接受 page，不返回 total。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "N03Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "session": {
+                      "$ref": "#/components/schemas/SessionView"
+                    }
+                  },
+                  "required": [
+                    "session"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "asOf": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            },
+            "required": [
+              "items"
+            ],
+            "additionalProperties": false
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "additionalProperties": false
+      },
+      "N04Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "调用方为一次逻辑写入生成；重试沿用原编号和原内容。"
+          },
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "使用 N01、N02 或 N03 返回的会话 ID，不是外部 chat_id。"
+          },
+          "titleOverride": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[^\\u0000]+$",
+            "minLength": 1,
+            "description": "三个可改字段至少提供一个；省略不改，null 清除个人标题覆盖。首次设置叠加于默认值 null/false/false。"
+          },
+          "pinned": {
+            "type": "boolean",
+            "enum": [
+              true,
+              false
+            ],
+            "description": "省略不修改。"
+          },
+          "archived": {
+            "type": "boolean",
+            "enum": [
+              true,
+              false
+            ],
+            "description": "只影响本人，不改共享 Session 或其 updatedAt，不停止 Task、不改变权限"
+          }
+        },
+        "required": [
+          "requestId",
+          "sessionId"
+        ],
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "titleOverride"
+            ]
+          },
+          {
+            "required": [
+              "pinned"
+            ]
+          },
+          {
+            "required": [
+              "archived"
+            ]
+          }
+        ]
+      },
+      "N04Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/SessionPreference"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N05Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "调用方为一次逻辑写入生成；重试沿用原编号和原内容。"
+          },
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "使用 N01、N02 或 N03 返回的会话 ID，不是外部 chat_id。"
+          },
+          "parts": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ContentPartInput"
+            },
+            "minItems": 1
+          },
+          "recipients": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/RecipientInput"
+            }
+          },
+          "replyToMessageId": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "动态消息 ID，不能指向自身；不自动构成 steer 或人工答案。"
+          }
+        },
+        "required": [
+          "requestId",
+          "sessionId",
+          "parts"
+        ],
+        "additionalProperties": false
+      },
+      "N05Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "$ref": "#/components/schemas/Message"
+              },
+              "agentMsg": {
+                "type": "string"
+              },
+              "related": {
+                "type": "object",
+                "properties": {
+                  "requestResult": {
+                    "$ref": "#/components/schemas/RequestResult"
+                  }
+                },
+                "required": [
+                  "requestResult"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "required": [
+              "message",
+              "agentMsg",
+              "related"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N06Request": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "使用服务端返回的该类资源 ID；不与其他实体 ID 或业务 key 混用。"
+          },
+          "expand": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "producedByTask",
+                "replyToMessage",
+                "myFeedback",
+                "decisions"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 0,
+            "default": [],
+            "description": "分别返回本条 data.message.related.producedByTask、replyToMessage、myFeedback；关联值沿用实体结构，不递归包装。 decisions 返回 related.decisions，可区分排队、已接受、拒绝和取消；不返回 Inbox 或凭据。"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "N06Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "message": {
+                "$ref": "#/components/schemas/MessageView"
+              },
+              "asOf": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "requiredActions": {
+                "type": "array",
+                "items": {
+                  "$ref": "#/components/schemas/MessageRequiredAction"
+                }
+              }
+            },
+            "required": [
+              "message"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N07Request": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "使用 N01、N02 或 N03 返回的会话 ID，不是外部 chat_id。"
+          },
+          "filter": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "expression": {
+                "type": "string",
+                "minLength": 0,
+                "description": "运算符及取值见紧接的筛选字段表；仅允许 DNF 形式的 &&、|| 和括号组合，不接受其他字段。"
+              }
+            },
+            "required": [
+              "expression"
+            ],
+            "additionalProperties": false,
+            "description": "省略或 null 表示无附加筛选；不扩大当前身份的获权范围。"
+          },
+          "direction": {
+            "type": "string",
+            "enum": [
+              "asc",
+              "desc"
+            ],
+            "default": "asc",
+            "description": "按 Message.sequence 排序：asc 从旧到新，desc 从新到旧。聊天窗口向上加载历史时，首屏显式传 desc，续页保持 desc；不接收 sort 参数。"
+          },
+          "expand": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "enum": [
+                "myFeedback",
+                "decisions"
+              ]
+            },
+            "uniqueItems": true,
+            "minItems": 0,
+            "default": [],
+            "description": "每条结果附带本人的 message.related.myFeedback；要求 Org 普通用户身份。关联与本页主记录共用 data.asOf，不另分页，读取不创建反馈。 decisions 返回 related.decisions，可区分排队、已接受、拒绝和取消；不返回 Inbox 或凭据。"
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[^\\u0000]+$",
+                "minLength": 1,
+                "description": "续页原样传回上次响应的 pagination.nextCursor；沿当前排序读取下一批。保持查询范围、筛选、排序、视图和访问身份一致，不自行构造游标。"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "本次希望获取的记录条数。"
+              }
+            },
+            "required": [],
+            "additionalProperties": false,
+            "description": "仅支持游标分页；首屏省略 cursor 或传 null，续页使用上次响应的 nextCursor。不接受 page，不返回 total。"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      },
+      "N07Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "$ref": "#/components/schemas/MessageView"
+                    },
+                    "requiredActions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MessageRequiredAction"
+                      }
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "asOf": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            },
+            "required": [
+              "items"
+            ],
+            "additionalProperties": false
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "additionalProperties": false
+      },
+      "N08Request": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37,
+            "description": "使用服务端返回的该类资源 ID；不与其他实体 ID 或业务 key 混用。"
+          },
+          "expand": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "uniqueItems": true,
+            "description": "支持 triggerMessage、configVersion；后者需要配置读取权限。"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "N08Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "task": {
+                "$ref": "#/components/schemas/TaskView"
+              },
+              "asOf": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              },
+              "requiredAction": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RequiredAction"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            },
+            "required": [
+              "task"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N09Request": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "省略时在当前身份获准的范围查询，不因此获得全局查询权限。"
+          },
+          "filter": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "expression": {
+                "type": "string",
+                "minLength": 0,
+                "description": "运算符及取值见紧接的筛选字段表；仅允许 DNF 形式的 &&、|| 和括号组合，不接受其他字段。"
+              }
+            },
+            "required": [
+              "expression"
+            ],
+            "additionalProperties": false,
+            "description": "省略或 null 表示无附加筛选；不扩大当前身份的获权范围。"
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fieldKey": {
+                  "type": "string",
+                  "enum": [
+                    "meta.createdAt",
+                    "id"
+                  ],
+                  "description": "仅支持这些排序字段，不支持按任意实体字段排序。"
+                },
+                "order": {
+                  "type": "string",
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "description": "asc 升序；desc 降序。"
+                }
+              },
+              "required": [
+                "fieldKey",
+                "order"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "description": "按数组顺序确定优先级。省略时按 meta.createdAt 降序、id 升序。"
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[^\\u0000]+$",
+                "minLength": 1,
+                "description": "续页原样传回上次响应的 pagination.nextCursor；沿当前排序读取下一批。保持查询范围、筛选、排序、视图和访问身份一致，不自行构造游标。"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "本次希望获取的记录条数。"
+              }
+            },
+            "required": [],
+            "additionalProperties": false,
+            "description": "仅支持游标分页；首屏省略 cursor 或传 null，续页使用上次响应的 nextCursor。不接受 page，不返回 total。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "N09Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "task": {
+                      "$ref": "#/components/schemas/TaskView"
+                    },
+                    "requiredAction": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/RequiredAction"
+                        },
+                        {
+                          "type": "null"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "task"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "asOf": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            },
+            "required": [
+              "items"
+            ],
+            "additionalProperties": false
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "additionalProperties": false
+      },
+      "N10Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "调用方为一次逻辑写入生成；重试沿用原编号和原内容。"
+          },
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37,
+            "description": "必须有该 Task 的停止权限，读取权限不等于停止权限。已保存请求按原 requestId 重传，不因 Task 后来结束而变成新请求。"
+          }
+        },
+        "required": [
+          "requestId",
+          "taskId"
+        ],
+        "additionalProperties": false
+      },
+      "N10Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RequestResult"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N11Request": {
+        "type": "object",
+        "properties": {
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37,
+            "description": "与 messageId 二选一；按本 Task 的 Steer.sequence 升序查询。"
+          },
+          "messageId": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "与 taskId 二选一；反查时按 steeredAt、taskId 排序，不跨 Task 比较 sequence。"
+          },
+          "filter": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "expression": {
+                "type": "string",
+                "minLength": 0,
+                "description": "运算符及取值见紧接的筛选字段表；仅允许 DNF 形式的 &&、|| 和括号组合，不接受其他字段。"
+              }
+            },
+            "required": [
+              "expression"
+            ],
+            "additionalProperties": false,
+            "description": "省略或 null 表示无附加筛选；不扩大当前身份的获权范围。"
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[^\\u0000]+$",
+                "minLength": 1,
+                "description": "续页原样传回上次响应的 pagination.nextCursor；沿当前排序读取下一批。保持查询范围、筛选、排序、视图和访问身份一致，不自行构造游标。"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "本次希望获取的记录条数。"
+              }
+            },
+            "required": [],
+            "additionalProperties": false,
+            "description": "仅支持游标分页；首屏省略 cursor 或传 null，续页使用上次响应的 nextCursor。不接受 page，不返回 total。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false,
+        "oneOf": [
+          {
+            "required": [
+              "taskId"
+            ]
+          },
+          {
+            "required": [
+              "messageId"
+            ]
+          }
+        ]
+      },
+      "N11Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "steer": {
+                      "$ref": "#/components/schemas/Steer"
+                    }
+                  },
+                  "required": [
+                    "steer"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "asOf": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "items"
+            ],
+            "additionalProperties": false
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "additionalProperties": false
+      },
+      "N12Request": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 36,
+            "maxLength": 36,
+            "description": "使用服务端返回的该类资源 ID；不与其他实体 ID 或业务 key 混用。"
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "raw",
+              "question"
+            ],
+            "default": "summary",
+            "description": "summary 返回概要；raw 需独立授权，不静默降级；question 仅用于已发布的人工题面，单独校验题面访问权限。"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "additionalProperties": false
+      },
+      "N12Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "run": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/RunView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/RunSummaryView"
+                  },
+                  {
+                    "$ref": "#/components/schemas/QuestionRunView"
+                  }
+                ]
+              },
+              "asOf": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "run"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N13Request": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "查询该 Session 下的 Run；与 taskId 不一致返回 400 invalid_request。"
+          },
+          "taskId": {
+            "type": "string",
+            "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 37,
+            "maxLength": 37,
+            "description": "查询指定 Task。与 sessionId 同传时须属于该 Session；不与 Run.id 混用。未指定范围时仍按当前视图权限过滤。"
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "question"
+            ],
+            "default": "summary",
+            "description": "summary 返回调用概要；question 仅按题面访问权限查询，不要求跨任务原始 Run 权限，默认包括获准的全部状态。不提供列表 raw。"
+          },
+          "filter": {
+            "type": [
+              "object",
+              "null"
+            ],
+            "properties": {
+              "expression": {
+                "type": "string",
+                "minLength": 0,
+                "description": "按视图校验白名单；question 不允许 target.*，summary 不允许 question.*。state 始终指 Run.state，题面状态使用 question.state。"
+              }
+            },
+            "required": [
+              "expression"
+            ],
+            "additionalProperties": false,
+            "description": "省略或 null 表示无附加筛选；不扩大当前身份的获权范围。"
+          },
+          "sort": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "fieldKey": {
+                  "type": "string",
+                  "enum": [
+                    "meta.createdAt",
+                    "id"
+                  ],
+                  "description": "仅支持这些排序字段，不支持按任意实体字段排序。"
+                },
+                "order": {
+                  "type": "string",
+                  "enum": [
+                    "asc",
+                    "desc"
+                  ],
+                  "description": "asc 升序；desc 降序。"
+                }
+              },
+              "required": [
+                "fieldKey",
+                "order"
+              ],
+              "additionalProperties": false
+            },
+            "minItems": 0,
+            "description": "按数组顺序确定优先级。省略时按 meta.createdAt 升序、id 升序。"
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[^\\u0000]+$",
+                "minLength": 1,
+                "description": "续页原样传回上次响应的 pagination.nextCursor；沿当前排序读取下一批。保持查询范围、筛选、排序、视图和访问身份一致，不自行构造游标。"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "本次希望获取的记录条数。"
+              }
+            },
+            "required": [],
+            "additionalProperties": false,
+            "description": "仅支持游标分页；首屏省略 cursor 或传 null，续页使用上次响应的 nextCursor。不接受 page，不返回 total。"
+          }
+        },
+        "required": [],
+        "additionalProperties": false
+      },
+      "N13Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "run": {
+                      "anyOf": [
+                        {
+                          "$ref": "#/components/schemas/RunView"
+                        },
+                        {
+                          "$ref": "#/components/schemas/RunSummaryView"
+                        },
+                        {
+                          "$ref": "#/components/schemas/QuestionRunView"
+                        }
+                      ]
+                    }
+                  },
+                  "required": [
+                    "run"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "asOf": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "items"
+            ],
+            "additionalProperties": false
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "additionalProperties": false
+      },
+      "N14Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "调用方为一次逻辑写入生成；重试沿用原编号和原内容。"
+          },
+          "runId": {
+            "type": "string",
+            "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 36,
+            "maxLength": 36,
+            "description": "指向原人工询问 Run；回答者按已发布题面与可信身份校验。读取题面不等于获准回答；关闭、过期、已接受停止或 Task 结束后不接受新答案。"
+          },
+          "answer": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": true
+          }
+        },
+        "required": [
+          "requestId",
+          "runId",
+          "answer"
+        ],
+        "additionalProperties": false
+      },
+      "N14Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RequestResult"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N15Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "原写请求的编号；仅原提交身份或明确获准后台可查询，仍校验当前资源权限。查询不重新提交或触发执行。"
+          },
+          "operation": {
+            "type": "object",
+            "properties": {
+              "resource": {
+                "type": "string",
+                "enum": [
+                  "/session",
+                  "/session/preference",
+                  "/session/message",
+                  "/session/task/stop",
+                  "/session/run/answer",
+                  "/content",
+                  "/session/message/feedback",
+                  "/session/message/cancel",
+                  "/session/message/resume"
+                ],
+                "description": "原写接口的相对路径，不带域名或 /api/make/agent/v1 前缀。"
+              },
+              "action": {
+                "type": "string",
+                "enum": [
+                  "CreateResource",
+                  "UpdateResource"
+                ],
+                "description": "UpdateResource 仅用于 /session/preference、/session/message/feedback；其余支持路径使用 CreateResource，且与原写请求一致。"
+              }
+            },
+            "required": [
+              "resource",
+              "action"
+            ],
+            "additionalProperties": false,
+            "description": "填写原写操作；不是本次查询的 /session/request + GetResource。"
+          }
+        },
+        "required": [
+          "requestId",
+          "operation"
+        ],
+        "additionalProperties": false
+      },
+      "N15Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RequestResult"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N16Request": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "使用 N01、N02 或 N03 返回的会话 ID，不是外部 chat_id。"
+          },
+          "after": {
+            "type": "string",
+            "pattern": "^(0|[1-9][0-9]{0,15})$",
+            "minLength": 1,
+            "maxLength": 16,
+            "description": "初始位置；没有 Last-Event-ID 时必填。两者同传时必须一致；非法请求头不回退到 after。非法或超前返回 400 invalid_cursor；过期返回 410 cursor_expired。位置须与 sessionId 一起保存，不跨会话复用。"
+          },
+          "streamDeltas": {
+            "type": "boolean",
+            "enum": [
+              true,
+              false
+            ],
+            "default": false,
+            "description": "URL 中传 true 或 false；默认 false。true 接收 message.delta 与 run.progress，建连时恢复可用的消息 snapshot 和最新工具进度；false 仅接收已保存事件。不扩大读取权限。"
+          }
+        },
+        "required": [
+          "sessionId"
+        ],
+        "additionalProperties": false
+      },
+      "N17Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "原编号防重；文件字节及有效元信息共同参与相同内容判断。"
+          },
+          "file": {
+            "type": "string",
+            "format": "binary",
+            "description": "不是文件路径或 URL。"
+          },
+          "fileName": {
+            "type": "string",
+            "pattern": "^[^/\\\\\\x00-\\x1F\\x7F]+$",
+            "minLength": 1,
+            "description": "非固定枚举，仅作文件名提示；服务端进行安全校验。"
+          },
+          "mediaType": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9!#$&^_.+-]+/[A-Za-z0-9!#$&^_.+-]+$",
+            "minLength": 3,
+            "description": "可省略；只是类型提示，服务端校验真实类型。"
+          }
+        },
+        "required": [
+          "requestId",
+          "file"
+        ],
+        "additionalProperties": false
+      },
+      "N17Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ContentDescriptor"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N18Request": {
+        "type": "object",
+        "properties": {
+          "contentId": {
+            "type": "string",
+            "pattern": "^content_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "使用 N17 返回或获准业务记录明确引用的内容 ID，不是文件名或 URL。"
+          },
+          "mode": {
+            "type": "string",
+            "enum": [
+              "metadata",
+              "download"
+            ],
+            "default": "metadata",
+            "description": "metadata 返回 JSON；download 返回真实 Content-Type、Content-Disposition 和字节。字节开始前错误用公共 JSON，中断视为下载失败。"
+          },
+          "viaType": {
+            "type": "string",
+            "enum": [
+              "message",
+              "run"
+            ],
+            "description": "公开引用的来源类型；与 viaId 同时提供。不传引用线索时按上传者及有效期等既有权限规则校验。"
+          },
+          "viaId": {
+            "type": "string",
+            "description": "记录必须实际引用此 contentId，且当前身份有权访问；知道 ID 或字符串相同不授予权限。"
+          },
+          "viaView": {
+            "type": "string",
+            "enum": [
+              "summary",
+              "raw",
+              "question"
+            ],
+            "description": "Run 引用的视图线索；raw 和 question 各按对应权限校验，不传不增加视图权限。question 仅覆盖公开 attachments。"
+          }
+        },
+        "required": [
+          "contentId"
+        ],
+        "additionalProperties": false
+      },
+      "N18Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/ContentDescriptor"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N19Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255,
+            "description": "调用方为一次逻辑写入生成；重试沿用原编号和原内容。"
+          },
+          "messageId": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "必须是当前可见的 Agent 回复；仅修改本人评价，不改变消息、Task 或 Run。"
+          },
+          "rating": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "positive",
+              "negative",
+              null
+            ],
+            "description": "positive 点赞；negative 点踩；null 清除评分。与 comment 至少提供一项，二者独立更新。"
+          },
+          "comment": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^[^\\u0000]*$",
+            "minLength": 0,
+            "description": "本人评价文字；省略不改，null 清除评论，不改变 rating 或消息正文。"
+          }
+        },
+        "required": [
+          "requestId",
+          "messageId"
+        ],
+        "additionalProperties": false,
+        "anyOf": [
+          {
+            "required": [
+              "rating"
+            ]
+          },
+          {
+            "required": [
+              "comment"
+            ]
+          }
+        ]
+      },
+      "N19Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/MessageFeedback"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N20Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "messageId": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40
+          },
+          "agentId": {
+            "type": "string",
+            "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 38,
+            "maxLength": 38
+          }
+        },
+        "required": [
+          "requestId",
+          "messageId",
+          "agentId"
+        ],
+        "additionalProperties": false
+      },
+      "N20Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RequestResult"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "AgentInputCapabilities": {
+        "type": "object",
+        "properties": {
+          "agent": {
+            "$ref": "#/components/schemas/AgentIdentity"
+          },
+          "configVersion": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "pattern": "^agent_config_version_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                "minLength": 53,
+                "maxLength": 53,
+                "description": "查询时的当前配置版本 ID。"
+              },
+              "version": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "同一 Agent 内递增的配置版本号，与插件定义版本和 asOf 无关；不是乐观锁。"
+              }
+            },
+            "required": [
+              "id",
+              "version"
+            ],
+            "additionalProperties": false,
+            "description": "查询时的当前配置版本摘要，不固定后续 Task 的版本。"
+          },
+          "inputCapabilities": {
+            "$ref": "#/components/schemas/InputCapabilities"
+          }
+        },
+        "required": [
+          "agent",
+          "configVersion",
+          "inputCapabilities"
+        ],
+        "additionalProperties": false
+      },
+      "InputCapabilities": {
+        "type": "object",
+        "properties": {
+          "isMultiModal": {
+            "type": "boolean",
+            "description": "所选模型当前是否声明多模态能力；false 时客户端隐藏上传入口。"
+          },
+          "maxFileBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxTotalBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "inputKinds": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "text",
+                "image",
+                "file",
+                "audio",
+                "video"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "supportedContentTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "isMultiModal",
+          "maxFileBytes",
+          "maxTotalBytes",
+          "inputKinds",
+          "supportedContentTypes"
+        ],
+        "additionalProperties": false
+      },
+      "N21Request": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 38,
+            "maxLength": 38,
+            "description": "Agent 实体 ID。\n例：agent_01a161562d0075acb5711eb302238265。"
+          },
+          "source": {
+            "enum": [
+              "console",
+              "webchat"
+            ]
+          }
+        },
+        "required": [
+          "agentId",
+          "source"
+        ],
+        "additionalProperties": false
+      },
+      "N21Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentInputCapabilities"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      },
+      "N22Request": {
+        "type": "object",
+        "properties": {
+          "sessionId": {
+            "type": "string",
+            "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40,
+            "description": "使用 N01、N02 或 N03 返回的会话 ID，不是外部 chat_id。"
+          },
+          "agentId": {
+            "type": "string",
+            "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 38,
+            "maxLength": 38,
+            "description": "Agent 实体 ID。\n例：agent_01a161562d0075acb5711eb302238265。"
+          },
+          "pagination": {
+            "type": "object",
+            "properties": {
+              "cursor": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "pattern": "^[^\\u0000]+$",
+                "minLength": 1,
+                "description": "续页原样传回上次响应的 pagination.nextCursor；沿当前排序读取下一批。保持查询范围、筛选、排序、视图和访问身份一致，不自行构造游标。"
+              },
+              "size": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "本次希望获取的记录条数。"
+              }
+            },
+            "required": [],
+            "additionalProperties": false,
+            "description": "仅支持游标分页；首屏省略 cursor 或传 null，续页使用上次响应的 nextCursor。不接受 page，不返回 total。"
+          }
+        },
+        "required": [
+          "sessionId",
+          "agentId"
+        ],
+        "additionalProperties": false
+      },
+      "N22Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "items": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "message": {
+                      "$ref": "#/components/schemas/MessageView"
+                    },
+                    "requiredActions": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/MessageRequiredAction"
+                      }
+                    }
+                  },
+                  "required": [
+                    "message"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "asOf": {
+                "type": "string",
+                "pattern": "^[0-9]+$"
+              }
+            },
+            "required": [
+              "items",
+              "asOf"
+            ],
+            "additionalProperties": false
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Pagination"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "additionalProperties": false
+      },
+      "N23Request": {
+        "type": "object",
+        "properties": {
+          "requestId": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9_-]+$",
+            "minLength": 1,
+            "maxLength": 255
+          },
+          "messageId": {
+            "type": "string",
+            "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 40,
+            "maxLength": 40
+          },
+          "agentId": {
+            "type": "string",
+            "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 38,
+            "maxLength": 38
+          }
+        },
+        "required": [
+          "requestId",
+          "messageId",
+          "agentId"
+        ],
+        "additionalProperties": false
+      },
+      "N23Response": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200
+          },
+          "msg": {
+            "type": "string"
+          },
+          "data": {
+            "$ref": "#/components/schemas/RequestResult"
+          }
+        },
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "securitySchemes": {
+      "UserToken": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

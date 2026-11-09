@@ -1,99 +1,42 @@
-# Package integration
+# 0.4.1 包契约
 
-## Resolve the consumer contract
+## 安装与证据
 
-For a new integration or a requested latest upgrade, query the configured npm
-registry, install its latest published `@qfei-design/make-ai-assistant` in the
-consumer UI workspace, and verify the lockfile's exact resolved version. Do not
-put the dependency only at a monorepo root. Package `0.3.2` is the first
-validated baseline for the current public failure fields and negotiated UI-limit
-projection described below. Package `0.3.1` predates those public contracts and
-must fail this Skill's current audit; do not weaken the audit or add a host-side
-compatibility shim to accept it. Use `0.3.2` or a later published version only
-if its public declarations satisfy the current contract and the v1
-route/response tests pass. If registry access, peer
-compatibility or the required public contract cannot be confirmed, stop and
-report the exact gap instead of guessing an old adapter.
+使用宿主现有的包管理器和锁文件，在 UI workspace 安装正式 `@qfei-design/make-ai-assistant@0.4.1`。Service 使用 `assertAgentRequest` 时也在 Service 的 dependencies 声明同版本，不能依赖 UI 的传递安装。核对 manifest、lockfile、实际 resolution 与发布构建提交；记录 registry 与 integrity。不要用本地 link、包源码、patch-package 或放宽校验代替正式包。
 
-Read the installed `package.json` export map, each exported type target, and only
-the transitively referenced declarations needed to understand those public
-types. Do not inspect unexported declaration files or package implementation
-merely because they are present under `dist`; an unexported file cannot add a
-host-facing contract.
-For `make-app`, require these public entry points and symbols:
+当前基线明确为 0.4.1。用户要求未来最新版本时先查询 registry，再核验实际公开契约；遇到不一致时报告版本和缺失符号，不猜测或切回旧协议。
 
-| Entry point | Required public surface |
+从安装包 export map 的 types 目标及其传递引用读取声明。公开字段以导出类型为准，内部源码/示例不能增加公开 API。
+
+| 公开入口 | App 接入使用 |
 | --- | --- |
-| `/client` | `createMakeAgentClient`, `AuthenticatedTransport`, `Client`, `Scope`, `Agent`, `Capabilities`, and `ResponseSnapshot.code/message` plus `response.failed` `code/message/requestId` |
-| `/make-app` | async `createMakeAppAssistantTransport`, `MakeAppAssistantTransportOptions` |
-| `/react` and root public types | `MakeAiAssistant`, `AssistantPanel`, public props, `MakeAiTheme`, and `AssistantTransportFeatures.limits` for negotiated upload/input budgets |
-| `/styles.css` | declared style export |
+| `/agent` | `createAgentClient`、`AgentClient`、`AgentAuthenticatedTransport`、`AgentHttpRequest`、`assertAgentRequest`、`AgentApiError`、`AGENT_UPLOAD_LIMIT` |
+| `/react` | `MakeAppAssistantEntry`、`MakeAppAssistantEntryProps`；低层面板仅在明确需要时使用 |
+| `/make-app` | `createMakeAppAssistantTransport`：已经确认 ID 的低层同步绑定；标准入口无需宿主调用 |
+| 根类型 | `MakeAssistantHostContext`、主题及通用公开类型 |
+| `/styles.css` | 全 App 导入一次 |
 
-The installed type target is read-only verification; host code must never
-import `dist`, `src`, examples or an undeclared subpath.
+`/client` 虽仍随包导出，但属于旧私有协议；存在旧路由不代表完成新 Agent 接入。新入口不得从旧 SDK 拼接 DTO、错误解析、上传或流恢复。
 
-Do not infer `ResponseSnapshot.code/message` or `AssistantTransportFeatures.limits`
-from an unexported internal file. If the registry still resolves a build without
-these public fields, report the package release dependency and pause full v1
-integration; a host-side duplicate parser or fixed upload limits is not a
-compatible substitute.
-
-The Skill's versioned references define the selected backend protocol. Package
-README/recipe/example text and another App are not substitutes for that protocol.
-If the installed public types or exports are incompatible, report “当前包版本缺少所需公开契约”
-with the version and missing symbol. Do not reconstruct internals or silently
-enable a legacy route. A dedicated legacy adapter is not bundled here.
-
-## Make App v1 composition
-
-Import the public entry point, not an internal build file:
+## 客户端
 
 ```ts
-import { createMakeAgentClient } from "@qfei-design/make-ai-assistant/client";
-```
-
-The host creates `createMakeAgentClient({ scope: { appKey, identityKey },
-transport: authenticatedTransport })`; its default base path is
-`/api/make/app/ai`, and the SDK appends `/v1`. A host whose auth URL resolver
-prepends `/api/make` may instead use `basePath: "/app/ai"`, provided the final
-browser URL is the same-origin `/api/make/app/ai/v1/**`. Never pass a base path
-already ending in `/v1`.
-
-`AuthenticatedTransport.request` executes one authenticated HTTP operation and
-returns `{ status, headers, body?: AsyncIterable<Uint8Array> }`. Set
-`retryOwner: "sdk"` if this bridge itself does not retry, or `"transport"` if
-the existing transport owns retries. Never stack both retry loops. Preserve the
-request's method, headers, bytes and AbortSignal. The response body must remain
-unconsumed for the SDK to decode JSON, empty 204, SSE or file bytes. The SDK
-requires the upstream `Make-AI-Api-Version: v1` response header. The bridge
-uses the established unified-login session and handles 401/403 through host
-auth policy; it does not read or store tokens, cookies or Provider keys.
-
-Read all Agent pages via `client.agents.list()` before creating the UI adapter:
-
-```ts
-const assistantTransport = await createMakeAppAssistantTransport({
-  client,
-  agentId,
-  signal,
+import { createAgentClient } from "@qfei-design/make-ai-assistant/agent";
+const client = createAgentClient({
+  scope: { appKey, identityKey },
+  basePath: "/api/make/app/agent/v1",
+  transport: authenticatedTransport,
 });
 ```
 
-The async factory reads capabilities for the selected Agent, then returns a
-public `AssistantTransport` for `MakeAiAssistant` or `AssistantPanel`. It owns
-v1 DTO validation, request/response decoding, bounded retries, SSE parsing and
-recovery, file upload/read helpers, feature gating and history mapping. A host
-must not copy those algorithms into callbacks. Dispose the old client after
-identity/App change or host unmount; disposal does not log out or remotely
-cancel a running response.
+`basePath` 是完整版本前缀，SDK 不再替它追加 `/v1`。SDK 默认 `/api/make/agent/v1` 面向 Gateway；Service-fronted App 使用上面的同源前缀。`identityKey` 来自当前用户/租户稳定标识，只用于客户端状态隔离，不授予服务端权限。
 
-Import `@qfei-design/make-ai-assistant/styles.css` once. Use the package's
-public React props for brand/title, user display, safe context, suggestions,
-controlled open state, launcher position and theme. New hosts do not pass the
-ignored compatibility props `subtitle` or `privacyNotice`. The package owns
-internal header, task list, composer, upload menu, message layout and responsive
-styles. Host CSS should affect only external placement and documented theme
-variables, not internal selectors or a competing drawer.
+`AgentAuthenticatedTransport.request(request, options)` 返回 `{status, headers, body?: AsyncIterable<Uint8Array>}`。请求方法是 GET/POST，请求体为字节或异步字节流。一次网络尝试对应一次认证 I/O；`retryOwner:"sdk"` 表示桥不重试。保留请求操作头、Content-Type、signal 与响应体，不在桥内拆业务 data。
 
-Mock/testing entry points are for tests and controlled demos only. They cannot
-prove Service routes, authentication or model behavior are ready.
+`MakeAppAssistantEntry` 负责入口解析、同步 transport 的 effect 创建/释放及 UI。不要为它再手工调用发现、管理详情、构造 bootstrap transport 或关闭 StrictMode。公开 `createMakeAppAssistantTransport` 也不再先异步读取旧 capabilities。
+
+## 包缺陷与验收边界
+
+已复现的 0.4.1 包问题：同一个入口组件直接替换 client 时，发现结果可能在 effect 重置前短暂沿用旧 client 的 Agent，形成“新 client + 旧 Agent ID”的绑定尝试。应由包将解析结果与产生它的 client 关联后修复；宿主继续履行正常身份切换释放职责，不加专用发现兼容。尚无越权或数据泄露证据，需服务端独立鉴权。
+
+包导出类型通过、App 测试通过、发布 Ready、真实对话/识图成功是不同证据。不能用其中一个代替另一个；标题含旧版本文字通常是会话 title，而非运行包版本。

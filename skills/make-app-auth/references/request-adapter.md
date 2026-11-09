@@ -8,18 +8,49 @@ All ordinary frontend requests to Make backend must go through one shared adapte
 
 Do not call raw `window.fetch('/api/make/...')` for ordinary business APIs. Do not scatter unhandled `auth.api` calls across UI components, drawers, tables, field editors, or route loaders.
 
-The Make App AI v1 `/client` contract is one narrow raw-response exception.
+The Make App Agent Public API v1 `/agent` contract is one narrow raw-response exception.
 `auth.api` consumes successful responses and cannot return the required
-`{ status, headers, body?: AsyncIterable<Uint8Array> }` for JSON, 204, SSE and
-file bytes. Implement `AuthenticatedTransport.request` inside this shared
-adapter, limited to same-origin `/api/make/app/ai/v1/**`, using the established
+`{ status, headers, body?: AsyncIterable<Uint8Array> }` for the Agent JSON envelope, SSE and
+file bytes. Implement `AgentAuthenticatedTransport.request` inside this shared
+adapter, limited to same-origin `/api/make/app/agent/v1/**`, using the established
 session cookie through `credentials: "include"`, not a browser-read token.
-Forward method, request headers/bytes and AbortSignal; return the unconsumed
-response status, headers and lazy byte stream. Keep 401/403 login and permission
+Forward method, X-Make-Target, request headers/bytes and AbortSignal; convert an SDK async multipart body to a bounded Blob only when browser Fetch requires it; return the unconsumed
+response status, headers and lazy byte stream. The SDK's response headers are a
+`Readonly<Record<string, string>>`: convert browser `Headers` without dropping values.
+Its optional `AbortSignalLike` may need a native `AbortController` bridge for Fetch;
+propagate an already-aborted signal and later cancellation, then remove listeners
+when the attempt/body finishes. Convert asynchronous multipart bytes within the
+documented bounds rather than casting them to `BodyInit`. Keep 401/403 login and permission
 handling without swallowing the SDK error body or redirect-looping on ordinary
-403. Select one retry owner. The SDK handles SSE parsing/recovery and cancellation;
+403. Select one retry owner. The SDK handles SSE parsing/recovery, request-result recovery and task stopping;
 do not add native `EventSource`, a parallel reconnect loop or a general raw-fetch
 exception. Read `make-ai-assistant` for versioned routes and Service scope.
+
+The auth audit resolves the UI workspace's installed TypeScript when it finds raw
+requests. Its narrow exemption checks an exported shared factory/constant typed
+as the public `AgentAuthenticatedTransport` (including import aliases), its
+`request` method, cookie/signal/method/headers/body forwarding, manual redirects,
+and the original response status/headers/body. It follows local const bindings,
+shorthand properties and the data source of bounded body, header and signal
+conversions; those helper implementations still require executable tests.
+A page-level Agent URL gets no
+automatic exemption. A literal URL must stay inside the normalized Agent prefix;
+dynamic URLs must be normalized with `new URL(request.path, window.location.origin)`
+and rejected before Fetch when the origin differs or the pathname leaves
+`/api/make/app/agent/v1/`. Fetch the checked URL, not the original unchecked string.
+Do not weaken checks or change production architecture merely to satisfy a
+static pattern: unfamiliar equivalent control flow remains a review item and
+needs executable transport tests. This preflight does not prove stream conversion,
+multipart bounds, Trace, or 401/403 behavior.
+
+The audit also resolves ordinary request targets written as `URL`, `Request`,
+local const aliases, `.href`/`.url`, or string conversions. A resolved Make path
+outside the typed Agent bridge remains rejected. Known non-Make paths are outside
+this audit's scope; unresolved targets produce `raw_fetch_scope_unproven` and a
+manual-review warning rather than silently passing as verified. Resolve that
+review item with source inspection and request tests before declaring the scope
+verified. UI and Service test files/directories are excluded relative to the App
+root; the same invalid configuration in production source remains a failure.
 
 ## Request Shape
 
@@ -55,9 +86,9 @@ export async function loadSchema() {
     auth.api.get('/app/schema', makeRequestInit(traceHeaders)));
 }
 
-export async function listRecords(entityKey: string, payload: unknown) {
+export async function listRecords(entityKey: string) {
   return requestWithTrace((traceHeaders: TraceHeaders) =>
-    auth.api.post(`/app/records/${entityKey}`, payload, makeRequestInit(traceHeaders)));
+    auth.api.get(`/app/entities/${encodeURIComponent(entityKey)}/records`, makeRequestInit(traceHeaders)));
 }
 ```
 
@@ -132,6 +163,6 @@ When touching request code, add or update tests for:
 - Service-fronted auth and business proxy calls use the same host-context helper, deriving `X-Forwarded-Host` from inbound `Host` and not passing through client-supplied `X-Forwarded-Host`
 - Service-fronted proxy calls add `X-Forwarded-Proto` before calling make-gateway
 - Service-fronted proxy calls use k8s-internal make-gateway paths without the external `/api` prefix, for example `http://make-gateway/make/auth/**`, `/make/meta/**`, and `/make/data/**`
-- no raw `window.fetch('/api/make/...')` outside the fixed AI v1 `AuthenticatedTransport` bridge
+- no raw `window.fetch('/api/make/...')` outside the fixed Agent v1 `AgentAuthenticatedTransport` bridge
 - no scattered unhandled `auth.api` calls in UI components
 - ordinary and AI business requests preserve matching `traceparent` and `X-Log-Id` through the shared adapter, including failed network attempts

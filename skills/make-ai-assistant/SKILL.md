@@ -1,121 +1,38 @@
 ---
 name: make-ai-assistant
-description: "Use when integrating, upgrading, debugging, or reviewing @qfei-design/make-ai-assistant in a Make App: Agent discovery, multi-session chat, streaming, file/image input, Service gateway routes, and package-owned UI. Does not own generic dialogs, model behavior, authentication or permission policy, DSL, or publishing."
+description: "Use when integrating, upgrading, debugging, or reviewing @qfei-design/make-ai-assistant in a Make App: restricted Agent discovery, sessions, streaming, queue/stop/questions, file/image input, authenticated Service routes, and package-owned UI. Does not own Agent configuration, model behavior, generic dialogs, auth/permission policy, DSL, or deployment."
 metadata:
-  version: 0.3.3
+  version: 0.4.1
 ---
 
 # Make AI Assistant
 
-This Skill owns the host integration contract, not the package's internal UI or
-state machine. The Make App host owns identity, bounded page context, one
-authenticated raw-byte transport, explicit Service routes, and deployment
-configuration.
-This Skill's Make App v1 reference is aligned with the Agent Public API v1
-OpenAPI revision `60bbbcfe90c6defce46a0ed715e008fa4db20deb` and the
-package's public v1 entry points. The Skill version and npm package version
-are independent; verify the actual installed version before implementation.
+本 Skill 面向 Make App 宿主。基线是正式 npm 包 **0.4.1** 与 Agent Public API v1（合同提交 `7ddbacac599b3fc6780fb7f01f2cf466731c2369`），Skill 版本与 npm 版本独立。旧的私有 Chat 协议不再作为新接入依据。
 
-## Workflow
+## 接入流程
 
-1. Inspect the target host's package manager, authenticated shell and identity,
-   shared auth adapter, UI/Service routes, permission checks, runtime origin,
-   tests, and existing assistant integration. Preserve stable call chains.
-2. Read `references/package-integration.md`. For a new installation or a requested
-   latest upgrade, query the configured registry, install the latest published
-   package in the consumer UI workspace, and verify its exact lockfile version,
-   public export map and declarations. If the installed version does not expose
-   this Skill's required public contract, stop with the missing export/type and
-   version; do not synthesize compatibility from another project or package prose.
-3. Use the versioned Make App AI Chat contract in
-   `references/make-app-protocol.md`, including schemas, limits, extensible
-   public errors and the pinned backend revision. Check the current backend
-   contract/deployed behavior before claiming production readiness. If that
-   check is unavailable or differs, retain the documented v1 implementation
-   but report runtime compatibility as unverified; never infer an older API
-   from another project.
-4. For a full integration, read the package, host, protocol, stream/attachment,
-   UI, and test references below. For a targeted fix, read only the relevant
-   references. Use TDD: failing contract/behavior test, minimal implementation,
-   then refactor with tests green.
-5. Use only public imports and import `styles.css` once. Create the
-   public `/client` with a host-authenticated `AuthenticatedTransport`, discover
-   the unique current-App `app_internal` Agent across complete pagination, then
-   `await createMakeAppAssistantTransport({ client, agentId, signal })`. The SDK
-   owns v1 DTOs, decoding, retries, uploads, SSE and UI transport mapping.
-   For every new Make App, apply `make-app-observability` to this authenticated
-   transport: JSON, SSE and binary requests send `traceparent` and matching
-   `X-Log-Id` headers; never place tracing context in a query parameter.
-6. Expose only the 18 documented Make App v1 Service operations. Validate App
-   scope, method/path/query/body, a single same-origin HTTP(S) Origin for every
-   non-GET/HEAD request, sizes and upstream target before forwarding.
-7. Keep package UI internals package-owned. Use public props/theme variables for
-   host placement and presentation; never copy its reducer, stream parser, upload
-   engine, task list, composer or CSS.
-8. Run the static audit, focused UI/Service tests, typecheck, build and an
-   authenticated existing-route smoke test. A static preflight pass cannot
-   prove all 18 Service operations, runtime correctness or deployment readiness.
+1. 同批安装时优先读取本技能仓库/安装根下的关联技能；若本机旧副本仍指导旧私有协议，先报告版本差异并更新对应技能，不混用。确认当前 App、认证身份、包管理器、UI → Service → Gateway 调用链及平台侧 Agent/应用内渠道配置。保留存量运行时，不因接入助手迁移 Node、包管理器或登录。
+2. 读 [包契约](references/package-integration.md)，在实际消费包的 UI、Service workspace 安装并锁定官方 `0.4.1`，核对公开导出与类型。未来升级需重新核对契约；不得仅提高版本号或照抄其他 App。
+3. 读 [宿主接线](references/make-app-host-integration.md)，在认证后的稳定 Shell 挂载 `MakeAppAssistantEntry`。使用 `/agent` 的 `createAgentClient` 与 `AgentAuthenticatedTransport`；由包负责受限发现和内部 UI。宿主不再自行分页挑 Agent 或回退管理接口。
+4. 先更新宿主 API 文档，再按 [Service 协议](references/make-app-protocol.md) 和 [操作清单](references/service-operations.json) 实现同源显式代理。完整 App 数据面为 23 项，另有 Agent Get/List 共 25 项组合；不是开放整个控制面。
+5. 文件/图片或流式问题读 [流与附件](references/make-app-stream-and-attachments.md)，布局与手机入口读 [UI 边界](references/ui-and-templates.md)。只修负责该问题的一层，包内缺陷交由包修复，不在宿主复制状态机或 CSS。
+6. 按 [验证与交付](references/testing-and-pitfalls.md) 做 TDD：行为测试先失败，最小实现，再整理。运行审计、宿主 UI/Service 测试、类型检查、构建和经授权的已登录 Dev 验收；分别报告合成验证与真实后端/模型结果。
+7. 维护本 Skill 的协议或流程时，完成独立 fresh-agent forward test；缺少证据就明确记录，不能称为发布就绪。
 
-For a Skill contract release, complete the independent forward test in
-`references/testing-and-pitfalls.md` before declaring this guidance ready.
-
-From this Skill's actual installation directory, use the target App's absolute project path:
+从本 Skill 实际安装目录运行（路径可有中文与空格）：
 
 ```bash
-node scripts/audit-make-ai-assistant-project.mjs "<project-root>" \
-  --expected-package-version=<resolved-exact-version>
+node scripts/audit-make-ai-assistant-project.mjs "<project-root>" --expected-package-version=0.4.1
 ```
 
-The expected version is the actual installed resolution, not a range. A claim
-of broader model-input support needs separate deployed-model evidence. Verify
-published same-origin requests and response streaming against the target Dev App
-before reporting an integration complete.
+UI 审计通过消费 workspace 已安装的 TypeScript 分析公开导入绑定，支持命名别名及 namespace import，缺少解析器会明确失败；不安装全局解析器。只做静态预检，不能证明 25 项操作、身份隔离、流式恢复或模型识图正确。用真实安装包执行 `node scripts/verify-agent-package.mjs "<consumer-workspace>"` 核验受限发现请求及公开校验器；执行 `node scripts/verify-host-example.mjs "<consumer-workspace>"` 编译本文档宿主示例（workspace 需有 TypeScript）。这些检查不需要登录和远端写入。独立测试所需原始合同与离线准备命令见[验证与交付](references/testing-and-pitfalls.md)。
 
-审计对 `MakeAiAssistant` 和 `AssistantPanel` 使用随包的 React 组件识别合同，支持函数、forwardRef、memo 及其组合，仍拒绝缺失、无效或循环包装。`createMakeAgentClient` 与 `createMakeAppAssistantTransport` 是普通工厂函数，继续严格校验为函数，不套组件识别规则。
+## 必须保持的边界
 
-项目内的 `.agents/skills` 和 `.codex/skills` 是技能安装目录，不作为应用源码审计；其他业务源码继续按原规则检查。
-
-## Reference map
-
-| Topic | Read |
-| --- | --- |
-| Package resolution, public types and React props | `references/package-integration.md` |
-| Make App host composition, Agent discovery and identity | `references/make-app-host-integration.md` |
-| Make App v1 18-operation API and Service boundary | `references/make-app-protocol.md` |
-| SDK stream recovery and file/image behavior | `references/make-app-stream-and-attachments.md` |
-| Package UI, theme and accessibility | `references/ui-and-templates.md` |
-| Tests and delivery gates | `references/testing-and-pitfalls.md` |
-
-## Hard boundaries and handoffs
-
-- Browser Make App requests use same-origin `/api/make/app/ai/v1/**`. The SDK
-  appends `/v1` to its path-free version base; do not append it twice. Local
-  preview upstream uses `make_api_origin + /api/make/app/ai/v1/**`; published
-  Service uses the configured Make Gateway origin plus `/make/app/ai/v1/**`.
-  Never add a separate Agent Gateway origin, token or hard-coded Agent ID.
-- The selected App Agent must have `agentType === "app_internal"` and an exact
-  current `appKey`. Ignore channel and unknown Agent types, but fail on zero or
-  multiple matching App-internal Agents. Read every page before accepting one.
-- `AuthenticatedTransport.request` performs one credentialed same-origin I/O and
-  yields status, headers and raw `AsyncIterable<Uint8Array>`; it never reads a
-  browser token or unwraps SSE/bytes as JSON. Set `retryOwner` to exactly one
-  owner. Preserve 201/202/204, `Make-AI-Api-Version`, AbortSignal and 401/403
-  login/permission handling.
-- Capabilities are fetched by the package at adapter creation. They gate optional
-  UI features and supply model input kinds/limits; they are not authorization.
-  Upload availability does not prove the model can interpret a file or image.
-  The current Make App adapter does not carry Artifact; do not add
-  unsupported context, Artifact or negotiation fields or promise Artifact UI.
-- App, tenant or user changes abort old discovery and dispose the old client.
-  A panel close is local UI state, not a remote run cancellation. Keep a retryable
-  launcher on Agent/capabilities discovery failure.
-- `makeui` owns surrounding App shell and external placement; this Skill and the
-  package own assistant-internal behavior/styles. `make-app-service` owns the
-  explicit proxy, validation and safe errors. `make-app-auth` owns
-  unified login and the narrow AI raw-byte bridge rule. `make-app-permission` owns access and
-  action authorization. `make-app-runtime` owns preview/published origins and
-  build contracts. `make-env-setup` owns Skill installation/sync; `makecli` owns
-  platform inspection, not runtime Service requests.
-- Keep page context bounded and non-secret. Never treat it as authorization or
-  execute server-provided HTML, JSX, CSS, JavaScript or unvalidated action URLs.
-  Testing mocks are opt-in and cannot establish backend readiness.
+- 浏览器 `/api/make/app/agent/v1/**` → App Service → 已有 Make Gateway。SDK 默认是直接 Gateway 路径，Service-fronted App 必须显式设置 **包含 `/v1`** 的 `basePath`；不能沿用旧版自动追加版本的假设。
+- `MakeAppAssistantEntry` 负责 `agents.list({view:"webchat"})`：0 个不展示，唯一入口打开，多个入口提示冲突；403、部署不可用、依赖失败保留错误，不伪装成无入口。入口不额外调用管理详情，不读 `agentType` 推断。
+- App key、资源 ID、显示名各自使用。`context.app.id` 是真实 App ID；不能用 appKey、Agent ID 或显示名代替。Agent key 不等于资源 agentId。
+- 宿主共享认证层提供有界的原始字节传输，保持 Cookie 会话、状态、响应头、AbortSignal。只设一个 retryOwner；multipart、SSE、下载不进入普通业务 JSON 解析器。Trace 通过 Header 传递。
+- 普通路由切换和关闭助手保留 client；App/租户/用户切换释放旧 client，阻止迟到结果。关闭界面不停止服务端 Task；停止、排队、追加、回执恢复由包负责。
+- 只使用公开 props、launcher 插槽、主题与 styles.css。包不支持的能力不要在宿主伪造；发现包问题记录版本、最小复现、影响与责任，不自行补丁或改 node_modules。
+- [make-app-auth](../make-app-auth/SKILL.md) 负责登录与窄范围字节桥；[make-app-service](../make-app-service/SKILL.md) 负责路由/范围/安全错误；[make-app-permission](../make-app-permission/SKILL.md) 负责 App 授权；[make-app-observability](../make-app-observability/SKILL.md) 负责 Trace；[makeui](../makeui/SKILL.md) 负责外围 Shell；[make-app-runtime](../make-app-runtime/SKILL.md) 负责发布构建与 origin；[make-env-setup](../make-env-setup/SKILL.md) 负责安装技能；[makecli](../makecli/SKILL.md) 负责获授权的平台检查与发布。

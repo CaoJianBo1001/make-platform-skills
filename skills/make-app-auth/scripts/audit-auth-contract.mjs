@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { createRequire } from 'node:module';
+import { auditRawMakeFetches } from './agent-byte-bridge-contract.mjs';
 
 const SDK_PACKAGE_NAME = '@qfeius/make-app-auth';
 const MINIMUM_SDK_VERSION = [0, 1, 5];
@@ -68,8 +70,9 @@ const serviceFiles = collectSourceFiles(firstExisting([
   'server/src'
 ]));
 const serviceRuntimeFiles = serviceFiles.filter(isRuntimeSourceFile);
+const uiRuntimeFiles = uiFiles.filter(isRuntimeSourceFile);
 const allProjectFiles = collectSourceFiles(root);
-const uiText = readJoined(uiFiles);
+const uiText = readJoined(uiRuntimeFiles);
 const serviceText = readJoined(serviceRuntimeFiles);
 const projectText = readJoined(allProjectFiles);
 const sdkDependencyDeclarations = findSdkDependencyDeclarations(allProjectFiles);
@@ -87,8 +90,9 @@ if (!/@qfeius\/make-app-auth/.test(projectText) && !/createMakeAppAuth\s*\(/.tes
   failures.push('sdk_missing: project does not appear to use @qfeius/make-app-auth');
 }
 
-for (const hit of findRawMakeFetches(uiFiles)) {
-  failures.push(`raw_make_fetch: ${relative(hit.file)} uses raw fetch for ${hit.url}; use auth.api through the shared adapter`);
+for (const hit of findRawMakeFetches(uiRuntimeFiles)) {
+  const findings = hit.review ? warnings : failures;
+  findings.push(`${hit.reason ?? 'raw_make_fetch'}: ${relative(hit.file)} uses raw fetch for ${hit.url}; ordinary APIs use auth.api; Agent bytes require a typed, scoped shared transport`);
 }
 
 if (hasTokenMode(uiText) || hasServiceTokenModeWithoutLocalPreview(serviceText)) {
@@ -130,7 +134,7 @@ if (inferredMode === 'service-fronted') {
   if (hasUiDirectGatewayCalls(uiText)) {
     failures.push('service_fronted_ui_bypass: UI calls /data/** or /meta/** through auth.api; UI should call Service-owned /app/** paths');
   }
-  for (const hit of findRawMakeDownloadResourceUrls(uiFiles)) {
+  for (const hit of findRawMakeDownloadResourceUrls(uiRuntimeFiles)) {
     failures.push(`service_fronted_raw_download_resource: ${relative(hit.file)} uses ${hit.attribute} with raw Make download URL ${hit.url}; use a Service-owned download proxy URL`);
   }
   if (hasRawMakeDownloadLiteral(uiText) && !hasServiceDownloadProxyLiteral(uiText)) {
@@ -252,7 +256,7 @@ function isSourceFile(file) {
 function isRuntimeSourceFile(file) {
   const basename = path.basename(file);
   return !/\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(basename)
-    && !/(?:^|[/\\])(?:__tests__|test|tests)(?:[/\\]|$)/i.test(file);
+    && !/(?:^|[/\\])(?:__tests__|test|tests)(?:[/\\]|$)/i.test(path.relative(root, file));
 }
 
 function readJoined(files) {
@@ -486,9 +490,18 @@ function inferMode() {
 }
 
 function findRawMakeFetches(files) {
+  const runtime = files.filter(file => /\.[cm]?[jt]sx?$/.test(file) && isRuntimeSourceFile(file));
   const hits = [];
+  if (runtime.some(file => /\bfetch\s*\(/.test(fs.readFileSync(file, 'utf8')))) {
+    const uiRoot = ['apps/ui', 'ui', '.'].map(dir => path.join(root, dir)).find(dir => fs.existsSync(path.join(dir, 'package.json')));
+    let ts;
+    try { ts = createRequire(path.join(uiRoot ?? root, '__auth_audit__.cjs'))('typescript'); }
+    catch { return [{ file: uiRoot ?? root, url: '<unparsed>', reason: 'agent_bridge_parser_missing: install the UI TypeScript dependency before auditing raw requests' }]; }
+    hits.push(...auditRawMakeFetches(ts, runtime));
+  }
   const rawFetch = /(?:window\.)?fetch\s*\(\s*([`'"])([^`'"]*\/api\/make[^`'"]*)\1/g;
   for (const file of files) {
+    if (runtime.includes(file)) continue;
     const text = fs.readFileSync(file, 'utf8');
     let match;
     while ((match = rawFetch.exec(text))) {

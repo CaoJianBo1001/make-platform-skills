@@ -5,6 +5,9 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+const testRequire = createRequire(path.resolve(process.argv[2] ?? process.env.MAKE_SKILL_TEST_DEPENDENCIES ?? '.', '__skill_tests__.cjs'));
+const parserRoot = path.dirname(testRequire.resolve('typescript/package.json'));
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
 const auditScript = path.join(scriptDir, 'audit-auth-contract.mjs');
@@ -53,6 +56,143 @@ try {
   });
 
   assert.match(runAudit(goodRoot), /status: PASS/);
+
+  const byteBridge = `
+    import type { AgentAuthenticatedTransport as ByteTransport } from '@qfei-design/make-ai-assistant/agent';
+    export function makeAgentTransport(): ByteTransport {
+      return { retryOwner: 'sdk', async request(request, options) {
+        const url = new URL(request.path, window.location.origin);
+        if (url.origin !== window.location.origin || !url.pathname.startsWith('/api/make/app/agent/v1/')) {
+          throw new Error('Agent path out of scope');
+        }
+        const response = await fetch('/api/make/app/agent/v1/session/stream', {
+          method: request.method, headers: request.headers, body: request.body,
+          credentials: 'include', signal: options.signal, redirect: 'manual'
+        });
+        return { status: response.status, headers: response.headers, body: readBytes(response.body) };
+      }};
+    }
+  `;
+  const bridgeFile = path.join(goodRoot, 'apps/ui/src/lib/service-api/agent-transport.ts');
+  write(bridgeFile, byteBridge);
+  assert.match(runAudit(goodRoot), /status: PASS/, 'narrow shared Agent byte bridge must allow a literal scoped URL');
+  write(bridgeFile, byteBridge.replace("fetch('/api/make/app/agent/v1/session/stream',", 'fetch(url,'));
+  assert.match(runAudit(goodRoot), /status: PASS/, 'guarded canonical URL must also pass');
+  const constantBridge = byteBridge.replace('export function makeAgentTransport(): ByteTransport {\n      return {', 'export const agentTransport: ByteTransport = {').replace(/\n    }\n  $/, '\n');
+  assert.match(constantBridge, /export const agentTransport/);
+  write(bridgeFile, constantBridge);
+  assert.match(runAudit(goodRoot), /status: PASS/, 'typed exported constant bridge must pass');
+  write(bridgeFile, byteBridge.replace('import type { AgentAuthenticatedTransport as ByteTransport }', 'import type * as AgentTypes').replace('(): ByteTransport', '(): AgentTypes.AgentAuthenticatedTransport'));
+  assert.match(runAudit(goodRoot), /status: PASS/, 'namespace public transport type must pass');
+  write(bridgeFile, byteBridge.replace('headers: request.headers, body: request.body', 'headers: new Headers(request.headers), body: await toFetchBody(request.body)'));
+  assert.match(runAudit(goodRoot), /status: PASS/, 'Trace header copies and multipart body conversion must remain valid bridge shapes');
+  const browserBridge = byteBridge
+    .replace('const response = await fetch', 'const adapted = nativeSignal(options.signal); const signal = adapted.signal; const headers = {...request.headers, ...traceHeaders}; const body = await toFetchBody(request.body, signal);\nconst response = await fetch')
+    .replace('method: request.method, headers: request.headers, body: request.body,', 'method: request.method, headers, body,')
+    .replace('signal: options.signal,', 'signal,')
+    .replace('headers: response.headers,', 'headers: Object.fromEntries(response.headers),');
+  write(bridgeFile, browserBridge);
+  assert.match(runAudit(goodRoot), /status: PASS/, 'a browser-typed bridge with signal adaptation, object spread, shorthand and header conversion must pass');
+  for (const [name, code] of [
+    ['ordinary-api', byteBridge.replace('/session/stream\', {', '/../schema\', {')],
+    ['external-origin', byteBridge.replace("fetch('/api", "fetch('https://foreign.invalid/api")],
+    ['missing-cookie', byteBridge.replace("credentials: 'include'", "credentials: 'omit'")],
+    ['missing-signal', byteBridge.replace('signal: options.signal', 'signal: undefined')],
+    ['parsed-response', byteBridge.replace('readBytes(response.body)', 'await response.json()')],
+    ['serialized-body', byteBridge.replace('body: request.body', 'body: JSON.stringify(request.body)')],
+    ['lost-status', byteBridge.replace('status: response.status', 'status: 200')],
+    ['wrong-type-source', byteBridge.replace('@qfei-design/make-ai-assistant/agent', './unrelated')],
+    ['unguarded-url', byteBridge.replace("fetch('/api/make/app/agent/v1/session/stream',", 'fetch(request.path,')],
+    ['weak-scope-guard', byteBridge.replace("fetch('/api/make/app/agent/v1/session/stream',", 'fetch(url,').replace("'/api/make/app/agent/v1/'", "'/api/make/'")],
+    ['missing-origin-check', byteBridge.replace("fetch('/api/make/app/agent/v1/session/stream',", 'fetch(url,').replace('url.origin !== window.location.origin || ', '')],
+    ['encoded-path', byteBridge.replace('/session/stream\', {', '/%2e%2e/schema\', {')],
+    ['unchecked-fetch-target', byteBridge.replace("fetch('/api/make/app/agent/v1/session/stream',", 'fetch(request.path,')],
+    ['mutated-checked-url', byteBridge.replace("fetch('/api/make/app/agent/v1/session/stream',", 'fetch(url,').replace('const response = await fetch', "url.pathname='/api/make/app/schema'; const response = await fetch")],
+    ['private-bridge', byteBridge.replace('export function', 'function')],
+    ['redirect-policy', byteBridge.replace("redirect: 'manual'", "redirect: 'follow'")],
+  ]) {
+    write(bridgeFile, code);
+    assert.match(runAudit(goodRoot, { expectFailure: true }), /raw_make_fetch|agent_bridge_/, name);
+  }
+  fs.rmSync(bridgeFile);
+  const pageFile = path.join(goodRoot, 'apps/ui/src/pages/agent.tsx');
+  write(pageFile, "export async function load(){return fetch('/api/make/app/agent/v1/session');}");
+  assert.match(runAudit(goodRoot, { expectFailure: true }), /raw_make_fetch/, 'Agent page request must not receive a blanket exception');
+  write(pageFile, "const endpoint='/api/make/app/schema';export async function load(){return fetch(endpoint);}");
+  assert.match(runAudit(goodRoot, { expectFailure: true }), /raw_make_fetch/, 'moving an ordinary URL to a local variable must not bypass the guard');
+  for (const [name, setup, target] of [
+    ['URL object', '', "new URL('/api/make/app/schema', window.location.origin)"],
+    ['window URL', '', "new window.URL('/api/make/app/schema', location.origin)"],
+    ['Request object', '', "new Request('/api/make/app/schema')"],
+    ['nested Request URL', '', "new globalThis.Request(new URL('/api/make/app/schema', window.location.origin))"],
+    ['URL alias href', "const address=new URL('/api/make/app/schema', window.location.origin);const alias=address;", 'alias.href'],
+    ['Request alias url', "const request=new Request('/api/make/app/schema');const alias=request;", 'alias.url'],
+    ['URL toString', "const address=new URL('/api/make/app/schema', window.location.origin);", 'address.toString()'],
+    ['URL String conversion', "const address=new URL('/api/make/app/schema', window.location.origin);", 'String(address)'],
+    ['relative URL with scoped base', '', "new URL('schema', 'https://fixture.invalid/api/make/app/')"],
+    ['constant concatenation', "const base='/api/make/app/';", "new URL(base+'schema', window.location.origin)"],
+  ]) {
+    write(pageFile, setup + `export async function load(){return fetch(${target});}`);
+    assert.match(runAudit(goodRoot, { expectFailure: true }), /raw_make_fetch/, name);
+  }
+  write(pageFile, "export function load(url){return fetch(url);}");
+  assert.match(runAudit(goodRoot), /raw_fetch_scope_unproven/, 'unresolved raw request scope must be reported for manual review');
+  write(pageFile, "const address=new URL('/api/health',window.location.origin);const alias=address;alias.pathname='/api/make/app/schema';export function load(){return fetch(address);}");
+  assert.match(runAudit(goodRoot), /raw_fetch_scope_unproven/, 'mutating an aliased URL must invalidate the original static target');
+  write(pageFile, "class URL {constructor(value){this.value=value}};export function load(){return fetch(new URL('/api/make/app/schema'));}");
+  assert.match(runAudit(goodRoot), /raw_fetch_scope_unproven/, 'a shadowed URL constructor must not be treated as the native URL');
+  write(pageFile, "export function load(){return fetch(new URL('https://public.invalid/ping?docs=/api/make/app/schema'));}");
+  assert.match(runAudit(goodRoot), /status: PASS\s*$/, 'a known non-Make URL must not be rejected because its query mentions a Make route');
+  fs.rmSync(pageFile);
+  write(bridgeFile, byteBridge.replace("fetch('/api/make/app/agent/v1/session/stream',", "fetch(new URL('/api/make/app/agent/v1/session/stream', window.location.origin),"));
+  assert.match(runAudit(goodRoot), /status: PASS\s*$/, 'a literal same-origin URL inside the typed bridge must remain valid');
+  write(bridgeFile, byteBridge.replace("fetch('/api/make/app/agent/v1/session/stream',", "fetch(new URL('https://foreign.invalid/api/make/app/agent/v1/session/stream', window.location.origin),"));
+  assert.match(runAudit(goodRoot, { expectFailure: true }), /agent_bridge_unproven/, 'an absolute external URL cannot inherit same-origin proof from its base');
+  fs.rmSync(bridgeFile);
+  for (const relative of ['auth.test.ts', 'auth.spec.ts', 'tests/auth.ts', '__tests__/auth.tsx']) {
+    const testFile = path.join(goodRoot, 'apps/ui/src', relative);
+    write(testFile, "export const rejectedConfig={unifiedLogin:false,accessToken:'negative-test'};fetch('/api/make/app/schema');");
+    assert.match(runAudit(goodRoot), /status: PASS\s*$/, 'negative test input must not be audited as runtime code: ' + relative);
+    fs.rmSync(testFile);
+  }
+  const runtimeConfig = path.join(goodRoot, 'apps/ui/src/invalid-auth.ts');
+  write(runtimeConfig, 'export const config={unifiedLogin:false};');
+  assert.match(runAudit(goodRoot, { expectFailure: true }), /token_mode_present/, 'the equivalent configuration in production code must remain rejected');
+  fs.rmSync(runtimeConfig);
+  const rejectedDownloadResources = `
+    export function RejectedResources() {
+      return <>
+        <img src="/api/make/data/v1/download/sample-image" />
+        <a href="/api/make/data/v1/download/sample-document">Download</a>
+        <object data="/api/make/data/v1/download/sample-preview" />
+      </>;
+    }
+  `;
+  for (const relative of ['download.test.tsx', 'download.spec.tsx', 'test/download.tsx', 'tests/download.tsx', '__tests__/download.tsx']) {
+    const testFile = path.join(goodRoot, 'apps/ui/src', relative);
+    write(testFile, rejectedDownloadResources);
+    assert.match(runAudit(goodRoot), /status: PASS\s*$/, 'download resource fixtures must not be audited as runtime code: ' + relative);
+    fs.rmSync(testFile);
+  }
+  const runtimeDownloads = path.join(goodRoot, 'apps/ui/src/download.tsx');
+  write(runtimeDownloads, rejectedDownloadResources);
+  const runtimeDownloadOutput = runAudit(goodRoot, { expectFailure: true });
+  for (const attribute of ['src', 'href', 'data']) {
+    assert.match(runtimeDownloadOutput, new RegExp('service_fronted_raw_download_resource:[^\\n]*uses ' + attribute + ' '), 'the equivalent production resource must remain rejected: ' + attribute);
+  }
+  fs.rmSync(runtimeDownloads);
+  const noParserRoot = createFixture('agent-parser-missing', {
+    ui: fs.readFileSync(path.join(goodRoot, 'apps/ui/src/app.ts'), 'utf8'),
+    service: fs.readFileSync(path.join(goodRoot, 'apps/service/src/app.ts'), 'utf8'),
+  });
+  write(path.join(noParserRoot, 'apps/ui/src/bridge.ts'), byteBridge);
+  fs.rmSync(path.join(noParserRoot, 'apps/ui/node_modules/typescript'));
+  assert.match(runAudit(noParserRoot, { expectFailure: true }), /agent_bridge_parser_missing/, 'missing parser must fail explicitly');
+  const underTests = createFixture('tests/nested-application', {
+    ui: fs.readFileSync(path.join(goodRoot, 'apps/ui/src/app.ts'), 'utf8'),
+    service: fs.readFileSync(path.join(goodRoot, 'apps/service/src/app.ts'), 'utf8'),
+  });
+  assert.match(runAudit(underTests), /status: PASS/, 'an ancestor named tests must not hide production Service files');
 
   // Project-local audit tools carry diagnostic route strings, not runtime routes.
   write(path.join(goodRoot, 'scripts/audit-auth-contract.mjs'), fs.readFileSync(auditScript, 'utf8'));
@@ -983,6 +1123,8 @@ overrides:
 
 function createFixture(name, files) {
   const root = path.join(tempRoot, name);
+  fs.mkdirSync(path.join(root, 'apps/ui/node_modules'), { recursive: true });
+  fs.symlinkSync(parserRoot, path.join(root, 'apps/ui/node_modules/typescript'), 'junction');
   write(path.join(root, 'apps/ui/package.json'), JSON.stringify({
     dependencies: {
       '@qfeius/make-app-auth': '^0.1.5'

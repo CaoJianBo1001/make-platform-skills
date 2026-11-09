@@ -2,7 +2,7 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts, including server-side aggregation for dashboards, charts and 统计/汇总. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.24
+  version: 0.2.25
 ---
 
 # make-app-service
@@ -37,7 +37,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 10. If Schema is cached, isolate permission-trimmed results by tenant, principal/session, App, and access generation, and expose explicit invalidation for permission refresh.
 11. For Make record actions, implement the documented `record-write-permission` route before edit UI and the `records/bulk` route for batch edit; use `make-app-actions` for target, permission, one-request semantics, and the established complete UI-Service response contract. Keep its success, HTTP200 partial-denial and select-all403 projections; other completed HTTP failures preserve status, Content-Type and body, including reason, permissionKey and administrator contacts, rather than a generic code/message wrapper.
 12. For cancellable or supersedable requests, propagate a request-scoped `AbortSignal` from the Service boundary into every downstream adapter; read `references/service-api-contracts.md` before implementation.
-13. If the Make App Service change is for Make AI 助手, AI助手, AI 对话框, SSE, Agent Gateway, or `@qfei-design/make-ai-assistant`, use `make-ai-assistant` for the Make App AI Chat protocol first. Service then implements only its documented route handlers, proxy adapter, config validation, logging, cancellation, and tests.
+13. If the Service change concerns Make AI 助手 or Agent chat, first use `make-ai-assistant` for the official 0.4.1 Agent Public API v1 contract; Service owns explicit routes, validation, runtime config, safe errors, logging, cancellation and tests.
 14. Add or update Service tests for every changed route, adapter, validation path, and error path.
 15. Read only the needed reference files from the map below.
 
@@ -62,7 +62,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 | Advanced filter package behavior and Preset filter | Use `make-app-filter` |
 | Record grouping, groupable capabilities, Preset group, record-groups, groupFilter | Use `make-app-group` |
 | Record action precheck, strict selection target, one-request batch update | Use `make-app-actions` |
-| Make App AI 助手, AI助手, AI 对话框, SSE, Agent Gateway, assistant capabilities, interface domain config | Use `make-ai-assistant` for the confirmed `/api/make/app/ai/v1/**` 18-operation protocol. Service owns routes, validation, logs, cancellation, and runtime config consumption |
+| Make App AI 助手、SSE、文件图片、接口域名 | Use `make-ai-assistant` for `/api/make/app/agent/v1/**` and the 25 method/path/Target combinations; Service owns their bounded authenticated proxy |
 
 ## Scope boundary
 
@@ -85,9 +85,9 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 Generated or refactored Make App Service code should provide these capabilities when the UI needs them and the host project does not already have equivalent routes:
 
 - public health/config: `/api/health`, `/api/config` for published UI access; `/health` may exist as local or k8s-probe compatibility
-- runtime schema: `/api/schema`, `/api/entities/:entityKey/fields`
+- runtime schema: `/api/make/app/schema`, `/api/make/app/entities/:entityKey/fields`
 - default single-app permissions: `/api/make/app/principal/permission` through `make-app-permission`
-- Make App AI assistant routes only when requested by the host and specified by `make-ai-assistant`: expose the exact `/api/make/app/ai/v1/**` 18-operation allowlist for capabilities, paginated Agents, multi-session chats, feedback, messages/history, response events/snapshot/cancel, uploads/parts/complete, and content bytes; never a generic proxy
+- Agent routes when requested: use `make-ai-assistant/references/service-operations.json` for 23 data-plane operations plus Agent Get/List. Allowlist method/path/X-Make-Target together; exclude the other 8 control-plane operations. Standard App entry uses restricted webchat List only, without an extra management Get.
 - records: list, get, create, update, delete, cell update
 - record actions when the list is writable: row-write permission precheck and one-request batch field update through `make-app-actions`
 - current-user Entity Preset: get and sparse filter/sort update when filtering or sorting is enabled
@@ -118,7 +118,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - If neither `MAKE_API_BASE_URL` nor `MAKE_SERVER_URL` is configured for a Make-backed Service, config loading must fail with a clear non-secret error before the Service is reported ready.
 - Published `MAKE_API_BASE_URL` / `MAKE_SERVER_URL` values are strict k8s gateway origins such as `http://make-gateway.make-dev`. New generated Service code must not put `/make`, `/api/make`, `/meta`, `/data`, `/auth`, or another service path scope in this env var. Local-preview resolve output must be consumed as `make_api_origin`; if older makecli fallback returns or reads a path-scoped public `/api/make` API base, normalize that only inside the local-preview adapter.
 - Make platform adapters own the service path scope. Generated Service code derives upstream URLs from an explicit runtime mode: local preview uses public gateway origin + `/api/make/**`; published uses k8s gateway origin + `/make/**`, such as `http://make-gateway.make-dev/make/meta/**` and `http://make-gateway.make-dev/make/data/**`.
-- For the Make App AI assistant adapter, follow `make-ai-assistant`: the browser calls the fixed `/api/make/app/ai/v1/**` 18-operation family through same origin; local preview Service upstreams use `make_api_origin` plus `/api/make/app/ai/v1/**`; published Service upstreams use the strict origin from `MAKE_API_BASE_URL` or its compatibility alias `MAKE_SERVER_URL` plus `/make/app/ai/v1/**`. Service must read deployed scope from `MAKE_APP_KEY` and reject every query/body `appKey` that differs from it; every non-GET/HEAD request requires one HTTP(S) same-origin `Origin` checked against the selected Host. Do not add an assistant-only/AI Gateway/Agent Gateway origin, token, environment variable, or hard-coded domain. Preserve bare JSON objects, empty 204 responses, `Make-AI-Api-Version`, SSE, and bytes as separate success modes, and do not narrow valid protocol DTOs in a host validator. For AI errors, preserve bounded schema-valid flat `{code,message,requestId?,details?}` with its HTTP status, including extensible unknown codes; malformed/non-public upstream errors become a safe Service error without leaking raw diagnostics. Never remap a valid public typed error to 502.
+- Agent Service contract follows `make-ai-assistant`: browser `/api/make/app/agent/v1/**`; preview upstream `make_api_origin + /api/make/agent/v1/**`; published upstream trusted Gateway origin + `/make/agent/v1/**`. No new Agent-only origin or token. Validate all POST Origin, deploy-owned App scope (never concatenate unparsed CEL; use the AI Skill restricted-filter policy or a trusted AST composer), content/query/body using the same 0.4.1 public `assertAgentRequest`. Preserve `{code,msg,data,pagination?}`, HTTP status, extensible reason, SSE and download bytes; sanitize malformed/private diagnostics. Multipart uses POST /content, not legacy chunks. Keep auth, Trace, forwarded Host/Proto and AbortSignal on the shared request chain.
 - If the same Service calls other gateway services, those adapters define their own explicit service scopes from the same gateway origin. Do not strip `/make` out of `MAKE_API_BASE_URL`, and do not overload a path-scoped base URL to reach unrelated services.
 - Service-to-gateway calls inside the cluster must not use the browser-facing `/api/make` prefix. `/api/make/**` belongs to same-origin browser access, Service ingress, and local-preview public gateway calls; published Service internal upstream URLs use gateway-origin plus `/make`.
 - Service source must not hard-code concrete Make dev/test/prod domains, infer namespace-local gateway addresses, or map deployment environments to domains.
@@ -130,7 +130,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - Entity Preset GET/PATCH routes must use the Make Preset `/preset/v1/entity` adapter with `MakeService.GetResource` / `MakeService.UpdateResource`, preserve the established login context, and update only submitted dimensions. Use `make-app-sort`, `make-app-filter`, and `make-app-group` for dimension semantics.
 - Preset sort and records sort must share shape validation and authoritatively validate fields against current runtime schema `capabilities.sortable === true`. Reject invalid, duplicate, non-sortable, or more-than-five rules before Make calls.
 - Sparse Preset updates must preserve sibling dimensions; saving sort must not send filter/group, saving filter must not send sort/group, and saving group must not send filter/sort.
-- User and department candidates come from Service routes such as `GET /api/users` and `GET /api/departments` or the host equivalent; do not use local demo arrays in generated Service.
+- User and department candidates come from Service routes such as `GET /api/make/app/users` and `GET /api/make/app/departments` or the host equivalent; do not use local demo arrays in generated Service.
 - Ordinary Lookup option APIs must resolve target object/field from permission-aware schema metadata and return `{ options, total }`. BPM START/TASK instead follows [node Lookup dependencies](../make-app-approval/references/lookup-metadata.md): recheck current start-field/task authorization, resolve node metadata, its embedded relations and the current Lookup’s targetFieldKey/targetFieldType (no ordinary relation/entity/Schema fallback), and preserve target read permissions. Task candidate details follow [task candidates](../make-app-approval/references/task-detail.md#任务-lookup-候选). Do not expose full target records to selector UIs by default.
 - File routes proxy upload/delete/download through Service. UI should not expose raw backend file URLs when a Service download proxy is available.
 - Browser resource tags such as `<img src>` cannot attach `Authorization`. When Make file downloads require a bearer token, keep the URL browser-facing through a Service download proxy, verify the current App session first, and let only the Service adapter attach the deployment-injected token. Do not put Make tokens or raw `/data/v1/download/**` URLs in UI state, public config, JSX, or logs.
@@ -148,31 +148,31 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 
 ## Default route baseline
 
-Prefer these UI-Service contracts for new Make App Service projects unless the host project already documents equivalent routes:
+For new Service-fronted Apps, use the browser-facing routes below. Ordinary business routes share `/api/make/app/**`; `gatewayBaseUrl: "/api/make"` lets the UI call the corresponding `/app/**` path through its shared `auth.api` adapter. Public health/config stay outside this namespace. Existing Apps keep their documented equivalent routes and matching adapter without an unrelated API migration.
 
 ```text
 GET    /api/health
 GET    /health
 GET    /api/config
 GET    /api/make/app/principal/permission
-GET    /api/schema
-GET    /api/entities/:entityKey/fields
-GET    /api/entities/:entityKey/preset
-PATCH  /api/entities/:entityKey/preset
-GET    /api/entities/:entityKey/records
-GET    /api/entities/:entityKey/records/:recordID
-POST   /api/entities/:entityKey/records
+GET    /api/make/app/schema
+GET    /api/make/app/entities/:entityKey/fields
+GET    /api/make/app/entities/:entityKey/preset
+PATCH  /api/make/app/entities/:entityKey/preset
+GET    /api/make/app/entities/:entityKey/records
+GET    /api/make/app/entities/:entityKey/records/:recordID
+POST   /api/make/app/entities/:entityKey/records
 POST   /api/make/app/entities/:objectKey/record-write-permission
 POST   /api/make/app/entities/:objectKey/records/bulk
-PATCH  /api/entities/:entityKey/records/:recordID
-DELETE /api/entities/:entityKey/records/:recordID
-PATCH  /api/entities/:entityKey/records/:recordID/cells/:fieldKey
-GET    /api/users
-GET    /api/departments
-GET    /api/lookup-options
-POST   /api/entities/:entityKey/records/:recordID/files/:fieldKey
-DELETE /api/entities/:entityKey/records/:recordID/files/:fieldKey
-GET    /api/files/download/*
+PATCH  /api/make/app/entities/:entityKey/records/:recordID
+DELETE /api/make/app/entities/:entityKey/records/:recordID
+PATCH  /api/make/app/entities/:entityKey/records/:recordID/cells/:fieldKey
+GET    /api/make/app/users
+GET    /api/make/app/departments
+GET    /api/make/app/lookup-options
+POST   /api/make/app/entities/:entityKey/records/:recordID/files/:fieldKey
+DELETE /api/make/app/entities/:entityKey/records/:recordID/files/:fieldKey
+GET    /api/make/app/files/download/*
 ```
 
 Lookup relation update routes are optional and should be generated only when the UI needs editable lookup relationships and the Service can preserve a full `qfei_relation` snapshot safely.
@@ -186,6 +186,6 @@ Lookup relation update routes are optional and should be generated only when the
 - With `make-app-filter`: this skill implements and tests Preset/records routes and Make adapters; `make-app-filter` owns package filter behavior, hydration, and save timing.
 - With `make-app-group`: this skill implements and tests Preset group, record-groups, records groupFilter, and Make adapters; `make-app-group` owns groupable rules, groupFilter composition, grouped data timing, and CanvasTable grouped-flow coordination.
 - With `make-app-actions`: this skill implements and tests `record-write-permission`, `records/bulk`, strict target parsing, Make adapters, and error mapping; `make-app-actions` owns selection intent, action timing, permission-key choice, frozen snapshots, and UI feedback.
-- With `make-ai-assistant`: this skill implements Make App AI route handlers, proxy adapters, runtime config validation, safe logs, AbortSignal propagation, and Service tests; `make-ai-assistant` owns package integration, the v1 18-operation DTO/response/stream semantics, multi-session behavior, and interface-domain rules.
+- With `make-ai-assistant`: implement the 25 App route/action combinations, proxy configuration, public request validation, safe logs/errors and executable route tests; the AI Skill/package owns discovery, Agent DTOs, state, stream and attachment semantics.
 - With `make-app-auth`: this skill may preserve Service-fronted app route shape, but auth proxy and session behavior stay in auth.
 - With `make-app-runtime`: this skill writes Service source and tests; runtime build/start/port checks stay in runtime.
