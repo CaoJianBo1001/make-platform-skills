@@ -73,6 +73,8 @@ that looks correct but escapes the library's focus or dismiss layer is invalid.
 
 ## Default candidate mapping
 
+以下 create/edit/detail 映射适用于原始业务记录。图表的分组汇总明细按 [分析明细容器](../../make-app-analytics/references/integration-contract.md#汇总明细的默认容器) 统一为 PC 居中弹窗、手机底部弹层；Ant Design 宿主复用 Modal，shadcn/ui 宿主复用 Dialog 等现有居中容器，不机械使用记录详情的右侧 Drawer／Sheet。
+
 When Ant Design is the selected component library on desktop/tablet:
 
 - shell: `Layout`

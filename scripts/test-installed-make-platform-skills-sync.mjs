@@ -15,6 +15,7 @@ const skillNames = [
   'makeui',
   'make-app-permission',
   'make-app-service',
+  'make-app-analytics',
   'make-app-auth',
   'make-app-actions',
   'make-app-approval',
@@ -37,7 +38,7 @@ try {
 
   assert.match(runChecker(), /installed Make platform skills sync: PASS/);
 
-  for (const skillName of ['make-app-approval', 'makedsl']) {
+  for (const skillName of ['make-app-approval', 'makedsl', 'make-app-analytics']) {
     fs.rmSync(path.join(installedRoot, skillName), { recursive: true });
     const missingOutput = runChecker({ expectFailure: true });
     assert.match(missingOutput, new RegExp(skillName));
@@ -48,6 +49,24 @@ try {
     assert.match(staleOutput, /content_mismatch/);
     writeSkill(installedRoot, skillName, 'source');
   }
+
+  const analyticsReference = path.join(
+    installedRoot,
+    'make-app-analytics',
+    'references',
+    'query-performance.md',
+  );
+  fs.rmSync(analyticsReference);
+  const missingAnalyticsReference = runChecker({ expectFailure: true });
+  assert.match(missingAnalyticsReference, /make-app-analytics/);
+  assert.match(missingAnalyticsReference, /query-performance\.md/);
+  writeSkill(installedRoot, 'make-app-analytics', 'source');
+  fs.writeFileSync(analyticsReference, 'stale performance contract\n');
+  const staleAnalyticsReference = runChecker({ expectFailure: true });
+  assert.match(staleAnalyticsReference, /query-performance\.md/);
+  assert.match(staleAnalyticsReference, /content_mismatch/);
+  writeSkill(installedRoot, 'make-app-analytics', 'source');
+  assert.match(runChecker(), /installed Make platform skills sync: PASS/);
 
   writeSkill(installedRoot, 'makeui', 'stale');
   const makeuiMismatchOutput = runChecker({ expectFailure: true });
@@ -81,6 +100,44 @@ try {
     writeSkill(installedRoot, skillName, 'source');
   }
 
+  // 源和安装文件完全一致时，安装后失效的链接仍必须被识别。
+  const linkReference = 'references/installed-links.md';
+  fs.writeFileSync(path.join(tempRoot, 'README.md'), '# 仓库维护说明\n');
+  writeMatchingFile('make-app-analytics', linkReference, '[仓库说明](../../../README.md)\n');
+  const outsideLink = runChecker({ expectFailure: true });
+  assert.match(outsideLink, /outside_skills_root/);
+  assert.match(outsideLink, /installed-links\.md:1/);
+
+  writeMatchingFile('make-app-analytics', linkReference, '[缺失参考](missing.md)\n');
+  assert.match(runChecker({ expectFailure: true }), /missing_link_target/);
+
+  writeMatchingFile('make-app-analytics', linkReference, '[错误章节](contract.md#missing)\n');
+  assert.match(runChecker({ expectFailure: true }), /missing_link_anchor/);
+
+  writeMatchingFile('make-app-analytics', linkReference, '[引用][ref]\n\n[ref]: missing.md\n');
+  assert.match(runChecker({ expectFailure: true }), /missing_link_target/);
+
+  writeMatchingFile('make-app-service', 'references/字段 合同.md',
+    '# 字段合同\n\n## 数值与单位\n\n## 数值与单位\n\n<a id="explicit-anchor"></a>\n');
+  writeMatchingFile('make-app-analytics', linkReference, [
+    '[同 Skill 参考](contract.md)',
+    '[关联 Skill](../../make-app-service/SKILL.md#make-app-service)',
+    '[中文与空格](<../../make-app-service/references/字段%20合同.md#数值与单位-1>)',
+    '[显式锚点](<../../make-app-service/references/字段%20合同.md#explicit-anchor>)',
+    '[官方文档](https://example.com/docs#remote-anchor)',
+    '[邮件](mailto:maintainer@example.com)',
+    '`[代码中的占位链接](does-not-exist.md)`',
+    '```md',
+    '[示例链接](also-does-not-exist.md)',
+    '```',
+    '~~~md',
+    '[示例引用][ref]',
+    '[ref]: ignored.md',
+    '~~~~',
+    '',
+  ].join('\n'));
+  assert.match(runChecker(), /installed Make platform skills sync: PASS/);
+
   console.log('installed Make platform skills sync tests: PASS');
 } finally {
   fs.rmSync(tempRoot, { recursive: true, force: true });
@@ -89,8 +146,22 @@ try {
 function writeSkill(root, skillName, version) {
   const skillRoot = path.join(root, skillName);
   fs.mkdirSync(path.join(skillRoot, 'references'), { recursive: true });
-  fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), `---\nname: ${skillName}\n---\n${version}\n`);
+  fs.writeFileSync(path.join(skillRoot, 'SKILL.md'), `---\nname: ${skillName}\n---\n\n# ${skillName}\n\n${version}\n`);
   fs.writeFileSync(path.join(skillRoot, 'references', 'contract.md'), `${version}\n`);
+  if (skillName === 'make-app-analytics') {
+    fs.writeFileSync(
+      path.join(skillRoot, 'references', 'query-performance.md'),
+      `${version}\n`,
+    );
+  }
+}
+
+function writeMatchingFile(skillName, relativePath, content) {
+  for (const root of [sourceRoot, installedRoot]) {
+    const target = path.join(root, skillName, relativePath);
+    fs.mkdirSync(path.dirname(target), { recursive: true });
+    fs.writeFileSync(target, content);
+  }
 }
 
 function runChecker(options = {}) {
