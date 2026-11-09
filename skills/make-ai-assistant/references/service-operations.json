@@ -1,0 +1,64 @@
+{
+  "sourceCommit": "7ddbacac599b3fc6780fb7f01f2cf466731c2369",
+  "post": {
+    "/agent": [
+      "GetResource",
+      "ListResources"
+    ],
+    "/agent/input-capabilities": [
+      "GetResource"
+    ],
+    "/session": [
+      "CreateResource",
+      "GetResource",
+      "ListResources"
+    ],
+    "/session/preference": [
+      "UpdateResource"
+    ],
+    "/session/message": [
+      "CreateResource",
+      "GetResource",
+      "ListResources"
+    ],
+    "/session/message/queue": [
+      "ListResources"
+    ],
+    "/session/message/cancel": [
+      "CreateResource"
+    ],
+    "/session/message/resume": [
+      "CreateResource"
+    ],
+    "/session/message/feedback": [
+      "UpdateResource"
+    ],
+    "/session/task": [
+      "GetResource",
+      "ListResources"
+    ],
+    "/session/task/stop": [
+      "CreateResource"
+    ],
+    "/session/task/steer": [
+      "ListResources"
+    ],
+    "/session/run": [
+      "GetResource",
+      "ListResources"
+    ],
+    "/session/run/answer": [
+      "CreateResource"
+    ],
+    "/session/request": [
+      "GetResource"
+    ],
+    "/content": [
+      "CreateResource"
+    ]
+  },
+  "get": [
+    "/session/stream",
+    "/content"
+  ]
+}

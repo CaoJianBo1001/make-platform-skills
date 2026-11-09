@@ -236,7 +236,7 @@ assert.match(
 
 assert.match(
   serviceContract,
-  /GET\s+\/api\/entities\/:entityKey\/preset[\s\S]*PATCH\s+\/api\/entities\/:entityKey\/preset/,
+  /GET\s+\/api\/make\/app\/entities\/:entityKey\/preset[\s\S]*PATCH\s+\/api\/make\/app\/entities\/:entityKey\/preset/,
   'Service must expose entity preset read and partial update routes',
 );
 assert.match(

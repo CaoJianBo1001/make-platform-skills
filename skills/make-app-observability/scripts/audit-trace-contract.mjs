@@ -150,7 +150,7 @@ if (/__traceparent/i.test(uiText)) {
   failures.push('query_trace_present: carry Trace ID in headers, not a URL query parameter');
 }
 
-const directAiFetch = /\bfetch\s*\(\s*(['"`])[^'"`]*\/ai\/v1\/[^'"`]*\1\s*(?:,\s*(\{[^{}]*\}))?\s*\)/gi;
+const directAiFetch = /\bfetch\s*\(\s*(['"`])[^'"`]*\/(?:ai|agent)\/v1\/[^'"`]*\1\s*(?:,\s*(\{[^{}]*\}))?\s*\)/gi;
 const hasUntracedDirectAiFetch = (text) => [...text.matchAll(directAiFetch)]
   .some(([, , options]) => !options || !/\bheaders\b/i.test(options));
 if (uiFiles.some((file) => hasUntracedDirectAiFetch(file.text))) {

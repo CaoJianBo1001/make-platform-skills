@@ -4,7 +4,7 @@
 
 Use this reference when designing or reviewing `apps/service` routes and `apps/docs/api.md`.
 
-审批任务 UI 使用 `/api/bpm/tasks/form` 聚合原任务信封与 节点 metadata 及必要 Lookup 依赖；保留原 detail 直接代理。Lookup 使用 `/api/bpm/tasks/lookup-options`，每次候选读取重查节点授权、只解析当前字段，并保留目标对象/字段/记录读取检查。元数据去重仅限单次编排；具体定位、响应包装和调用次数见上述审批合同。启动配置仅返回 field key 时由 bpm-node-form-metadata 的 START 场景补定义，不从普通 Schema 裁剪集合补齐。
+审批任务 UI 使用 `/api/make/app/bpm/tasks/form` 聚合原任务信封与 节点 metadata 及必要 Lookup 依赖；保留原 detail 直接代理。Lookup 使用 `/api/make/app/bpm/tasks/lookup-options`，每次候选读取重查节点授权、只解析当前字段，并保留目标对象/字段/记录读取检查。审批合同中的 `/api/bpm/**` 是逻辑路径，新应用由共享请求/路由层统一映射到这里的发布前缀，页面不另拼路径。元数据去重仅限单次编排；具体定位、响应包装和调用次数见上述审批合同。启动配置仅返回 field key 时由 bpm-node-form-metadata 的 START 场景补定义，不从普通 Schema 裁剪集合补齐。
 
 ## Contract source
 
@@ -44,16 +44,14 @@ code:
   Make call, and a transport failure with no upstream response, may use a
   documented Service-generated error.
 
-**AI safe-error exception:** The Make App v1 assistant keeps success responses
-as bare JSON, empty 204, SSE, or bytes. Public errors use flat
-`{code,message,requestId?,details?}` with an extensible code. Preserve the
-original HTTP status and bounded schema-valid public fields, including a
-previously unknown code and safe message. Classify unknown code by HTTP status;
-do not apply a closed code allowlist. A malformed or non-JSON upstream error
-becomes a safe Service-generated upstream error rather than raw diagnostics.
-Never turn a valid public typed 4xx/5xx into a generic 502. After SSE headers or bytes
-are written, close the stream on failure rather than sending JSON. Document this exception in
-`apps/docs/api.md`; do not generalize it to ordinary Make data/auth proxies.
+**AI safe-error exception:** The response contract is owned by the bundled
+[Agent Public API v1 protocol](../../make-ai-assistant/references/make-app-protocol.md#响应).
+Follow that contract for JSON success/error envelopes, numeric business codes,
+extensible error reasons, public-field sanitization, SSE and download bytes.
+Preserve HTTP status separately from the business code. After SSE headers or
+bytes are written, close the stream on failure rather than sending JSON.
+Document this exception in `apps/docs/api.md`; do not generalize it to ordinary
+Make data/auth proxies.
 
 ## Default route response modes
 
@@ -67,11 +65,11 @@ Make error still preserves its original status, Content-Type, and body.
 | --- | --- | --- | --- |
 | `GET /api/make/app/principal/permission` | direct Make proxy | original Make response | original Make response |
 | Make file download proxy | direct Make proxy | original bytes, Content-Type, and Content-Disposition | original status, bytes, Content-Type, and Content-Disposition |
-| `GET /api/schema`, `GET /api/entities/:entityKey/fields` | non-proxy normalization | normalized Schema contract | original Make response |
-| `GET /api/entities/:entityKey/records`, `GET /api/entities/:entityKey/record-groups`, `GET /api/entities/:entityKey/records/:recordID` | non-proxy normalization | documented record/group contract | original Make response |
-| `POST/PATCH/DELETE /api/entities/:entityKey/records/**` | non-proxy normalization | documented `recordID`, `ok`, or host success contract | original Make response |
-| `GET/PATCH /api/entities/:entityKey/preset` | non-proxy normalization | documented Preset contract | original Make response |
-| `GET /api/users`, `GET /api/departments`, `GET /api/lookup-options` | non-proxy normalization | documented candidates/options contract | original Make response |
+| `GET /api/make/app/schema`, `GET /api/make/app/entities/:entityKey/fields` | non-proxy normalization | normalized Schema contract | original Make response |
+| `GET /api/make/app/entities/:entityKey/records`, `GET /api/make/app/entities/:entityKey/record-groups`, `GET /api/make/app/entities/:entityKey/records/:recordID` | non-proxy normalization | documented record/group contract | original Make response |
+| `POST/PATCH/DELETE /api/make/app/entities/:entityKey/records/**` | non-proxy normalization | documented `recordID`, `ok`, or host success contract | original Make response |
+| `GET/PATCH /api/make/app/entities/:entityKey/preset` | non-proxy normalization | documented Preset contract | original Make response |
+| `GET /api/make/app/users`, `GET /api/make/app/departments`, `GET /api/make/app/lookup-options` | non-proxy normalization | documented candidates/options contract | original Make response |
 | `/api/health`, `/health`, `/api/config` | Service-owned | documented Service result | not applicable |
 
 For a Node Service reference that exercises this rule against real HTTP response
@@ -90,10 +88,12 @@ administrator contacts. Do not discard these fields in a code/message wrapper
 or classify an unknown 403 as permission denial.
 
 The selected Make AI assistant adapter is another explicit response-mode
-exception: use `make-ai-assistant` for its Make App v1 success/error contract
+exception: use `make-ai-assistant` for its Agent Public API v1 numeric code/msg/data success/error contract
 instead of the ordinary completed-error column above.
 
-For Make Deploy Service-fronted Apps, published browser-facing Service routes live under `/api/**` because the default HTTPRoute sends `/api` to App Service and `/` to UI. In Make App projects that use `gatewayBaseUrl: "/api/make"`, document the browser-facing paths under `/api/make/**`. Prefix-free routes such as `/app/**` or `/auth/**` may exist for local Service tests or compatibility, but they must not be the only documented or tested published path.
+For new Make Deploy Service-fronted Apps, the table and all default routes below are browser-facing paths. Ordinary authenticated business routes use `/api/make/app/**`; with `gatewayBaseUrl: "/api/make"`, UI calls `/app/**` through the shared `auth.api` adapter. For example, `auth.api.get('/app/schema')` reaches `GET /api/make/app/schema`, and `auth.api.get('/app/entities/<entityKey>/records')` reaches the records list. Public `/api/health` and `/api/config` remain outside that business namespace. The HTTPRoute sends `/api` to App Service and `/` to UI.
+
+Existing Apps may retain their documented route/mount mapping and matching UI adapter; do not rename their API solely to adopt a new-App example. Prefix-free local routes and older `/api/**` business paths are compatibility contracts, not the new default. Document and test the actual published path in `apps/docs/api.md`.
 
 ## Public routes
 
@@ -125,8 +125,8 @@ Rules:
 
 Default:
 
-- `GET /api/schema` -> normalized `MakeAppSchema`
-- `GET /api/entities/:entityKey/fields` -> normalized `MakeFieldSchema[]`
+- `GET /api/make/app/schema` -> normalized `MakeAppSchema`
+- `GET /api/make/app/entities/:entityKey/fields` -> normalized `MakeFieldSchema[]`
 
 Rules:
 
@@ -165,24 +165,24 @@ Rules:
 
 Default:
 
-- `GET /api/entities/:entityKey/records`
+- `GET /api/make/app/entities/:entityKey/records`
   - query: `fields`, `filter`, `groupFilter`, `sort`, `pagination`
   - complex values should be JSON strings unless the host contract says otherwise
   - response: `{ records, total }`
-- `GET /api/entities/:entityKey/record-groups`
+- `GET /api/make/app/entities/:entityKey/record-groups`
   - query: `filter`, `groupFilter`, `group`, `pagination`
   - complex values should be JSON strings unless the host contract says otherwise
   - response: `{ groups, pagination: { page, size, total } }`
-- `GET /api/entities/:entityKey/records/:recordID` -> record
-- `POST /api/entities/:entityKey/records`
+- `GET /api/make/app/entities/:entityKey/records/:recordID` -> record
+- `POST /api/make/app/entities/:entityKey/records`
   - body: `{ data, relations?: { [lookupFieldKey]: recordID | recordID[] | null | [] } }`
   - response: `{ recordID }`
-- `PATCH /api/entities/:entityKey/records/:recordID`
+- `PATCH /api/make/app/entities/:entityKey/records/:recordID`
   - body: `{ data }`
   - response: `{ ok: true }`
-- `DELETE /api/entities/:entityKey/records/:recordID`
+- `DELETE /api/make/app/entities/:entityKey/records/:recordID`
   - response: `{ ok: true }` or the host documented empty success
-- `PATCH /api/entities/:entityKey/records/:recordID/cells/:fieldKey`
+- `PATCH /api/make/app/entities/:entityKey/records/:recordID/cells/:fieldKey`
   - body: `{ value }`
   - response: `{ ok: true }`
 
@@ -240,18 +240,19 @@ Log safe route, entity, page, and cancellation reason at the route/adapter bound
 Generate these routes when advanced filtering, record sorting, or record grouping
 is enabled:
 
-- `GET /api/entities/:entityKey/preset`
+- `GET /api/make/app/entities/:entityKey/preset`
   - response: `{ filter: { expression } | null, sort: { fieldKey, order }[], group: { fieldKey, order }[] }`
-- `PATCH /api/entities/:entityKey/preset`
+- `PATCH /api/make/app/entities/:entityKey/preset`
   - sparse body containing at least one supported dimension
   - filter clear: `{ filter: null }`
   - sort clear: `{ sort: [] }`
   - group clear: `{ group: [] }`
   - response: `{ ok: true }` or the host's documented update result
 
-For `gatewayBaseUrl: "/api/make"` hosts, also document and test the actual
-published mapping under `/api/make/app/**`. Do not leave prefix-free compatibility
-routes as the only path.
+These new-App defaults already include the published `/api/make/app/**` prefix.
+For an existing host with a different documented mapping, keep its UI adapter
+and route registration consistent; do not leave local compatibility routes as
+the only tested path.
 
 Rules:
 
@@ -299,8 +300,8 @@ UI/model/group-data timing.
 
 Default:
 
-- `GET /api/users?keyword=&page=&size=` -> `{ users, total }`
-- `GET /api/departments?keyword=&page=&size=` -> `{ departments, total }`
+- `GET /api/make/app/users?keyword=&page=&size=` -> `{ users, total }`
+- `GET /api/make/app/departments?keyword=&page=&size=` -> `{ departments, total }`
 
 Rules:
 
@@ -313,7 +314,7 @@ Rules:
 
 Default:
 
-- `GET /api/lookup-options?sourceEntityKey=&lookupFieldKey=&keyword=&page=&size=`
+- `GET /api/make/app/lookup-options?sourceEntityKey=&lookupFieldKey=&keyword=&page=&size=`
   - response: `{ options: [{ label, value }], total }`
   - `value` is the target record identity, usually `recordID`
 
@@ -332,8 +333,8 @@ Generate lookup update routes only when the UI needs editable lookup relations a
 
 Default optional routes:
 
-- `PATCH /api/entities/:entityKey/records/:recordID/lookup-relations`
-- `PATCH /api/entities/:entityKey/records/:recordID/lookup-relations/:lookupFieldKey`
+- `PATCH /api/make/app/entities/:entityKey/records/:recordID/lookup-relations`
+- `PATCH /api/make/app/entities/:entityKey/records/:recordID/lookup-relations/:lookupFieldKey`
 
 Rules:
 
@@ -349,11 +350,11 @@ Rules:
 
 Default:
 
-- `POST /api/entities/:entityKey/records/:recordID/files/:fieldKey`
+- `POST /api/make/app/entities/:entityKey/records/:recordID/files/:fieldKey`
   - multipart field: `file`
-- `DELETE /api/entities/:entityKey/records/:recordID/files/:fieldKey`
+- `DELETE /api/make/app/entities/:entityKey/records/:recordID/files/:fieldKey`
   - body: `{ fileName, filePath? }`
-- `GET /api/files/download/*`
+- `GET /api/make/app/files/download/*`
   - proxies backend file download stream
 
 Rules:
@@ -363,7 +364,7 @@ Rules:
 - Normalize multipart filenames when the backend cannot handle non-ASCII filenames.
 - Do not expose raw signed backend download URLs when a Service download proxy exists.
 - Strip or redact signed query strings in logs.
-- Attachment previews must use a browser-compatible Service proxy URL, for example the host's `/api/make/app/files/download/*`, `/api/files/download/*`, or legacy `/api/app/files/download/*`, not raw Make Data paths such as `/data/v1/download/*`, `/make/data/v1/download/*`, or `/api/make/data/v1/download/*`.
+- Attachment previews use the browser-facing `/api/make/app/files/download/*` proxy by default. Existing Apps may retain their documented equivalent download proxy; do not render raw Make Data paths such as `/data/v1/download/*`, `/make/data/v1/download/*`, or `/api/make/data/v1/download/*`.
 - When the upstream Make download endpoint needs a bearer token, document that the Service validates the current App session before proxying the binary download with a Service-side token. If Make gateway returns a session-verification response, preserve its status, Content-Type, and body unchanged; only a verification transport failure with no response may use a documented Service-generated 5xx.
 - `/api/config` and any UI-facing file metadata response must not expose Make download tokens.
 

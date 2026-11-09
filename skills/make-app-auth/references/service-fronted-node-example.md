@@ -32,11 +32,11 @@ export const loadSchema = () => requestWithTrace((traceHeaders) =>
     headers: traceHeaders,
   }));
 
-export const listRecords = (entityKey: string, payload: unknown) =>
+export const listRecords = (entityKey: string) =>
   requestWithTrace((traceHeaders) =>
-    auth.api.post(`/app/records/${entityKey}`, payload, {
+    auth.api.get(`/app/entities/${encodeURIComponent(entityKey)}/records`, {
       credentials: 'include',
-      headers: { 'X-Make-Target': 'MakeService.ListResources', ...traceHeaders },
+      headers: traceHeaders,
     }));
 ```
 

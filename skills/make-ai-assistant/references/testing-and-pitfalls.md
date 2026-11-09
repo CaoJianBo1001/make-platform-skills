@@ -1,106 +1,44 @@
-# Testing and delivery gates
+# 验证与交付
 
-## TDD and public-contract checks
+## 宿主 TDD
 
-Test first: demonstrate a failing behavior/contract, make the minimal fix,
-then refactor. Verify the installed exact package version and public `/client`,
-`/make-app`, `/react` and `/styles.css` exports. Static audit is only a preflight;
-focused executable UI, Service, typecheck, build and published-route checks
-remain required.
+先复现失败再实现。记录包实际版本、合同提交、测试命令与结果，不把静态审计等同端到端。
 
-## Make App v1 matrix
+- 入口：使用真实包验证 webchat 请求不带 sort；0/1、409 冲突、403、部署未就绪、依赖失败；不查询管理详情、不按 key 重查资源 ID；异常不能回退管理列表。
+- 生命周期：StrictMode、普通导航、关闭重开、用户/租户/App 切换、快速 A→B→A、迟到响应；真实 app.id 缺失、字符串/数值归一、权限刷新与失败。
+- 字节桥：认证凭据、同源路径、multipart bytes/boundary、取消与超限、原始响应/headers、401/403、唯一重试、未消费响应取消、reader 释放、Trace 恰好收束一次。
+- Service：25 项 method/path/Target 组合逐项执行真实 handler；公开 assertAgentRequest 接受/拒绝样本，错误 action、重复/原型键 query、Origin、跨 App/filter（括号逃逸、注释、转义与额外过滤拒绝）、input-capabilities source、Session 来源；preview/published 上游前缀及 auth helper。验证 8 项额外控制面操作被拒绝。
+- HTTP：数字 code/msg/data 信封、HTTP/业务错误分别保留、未知 reason、坏 JSON/HTML、重定向、401/403 清洗、SSE 即时转发、文件下载原字节、断开取消。
+- 会话：历史/重命名/置顶/归档、首条创建、请求未知结果、队列/取消/追加、停止受理与终态、问题回答、反馈、stream delta/正式事件/asOf 恢复。调用包真实 API，不在测试里复制状态机来证明它正确。
+- 图文：输入能力、原件 multipart、失败重试/移除、Content 引用发送、预览/下载；“上传成功”和“模型识图成功”分别记录。
+- UI：桌面默认入口、手机 launcher 插槽可用性、关闭重开、全屏/停靠、真实点击/焦点，无内部选择器覆盖。
 
-- Discovery: current authenticated App/tenant/user identity; Agent page 1 empty
-  with continuation; mixed `channel` and `app_internal`; exactly one matching
-  App-internal Agent; zero/multiple, mismatched App, missing/unknown type,
-  repeated/absent cursor, abort and retry. Keep launcher visible throughout.
-- Adapter: async capabilities fetch; optional feature gates; `retryOwner`
-  exactly once; 401 login recovery without loop on permission 403; identity
-  switch abort/dispose and no stale chat leakage.
-- Service: exact `/api/make/app/ai/v1/**` 18-operation allowlist, method and
-  query/body validation, `MAKE_APP_KEY` equality where present, all-write
-  same-origin check, strict Gateway origin, local-preview/published path mapping,
-  and acceptance of a trusted internal HTTP Gateway origin; no unversioned
-  fallback or generic proxy. Cover all 18 operations in executable
-  Service route tests; the static audit does not verify route completeness.
-- HTTP: bare JSON; 201 chat, 202 message, 204 no-body; required
-  `Make-AI-Api-Version` response header; version mismatch failure; SSE and file
-  bytes untouched; `X-Request-ID`/retry headers; flat public errors across
-  400/401/403/404/409/410/413/415/422/429/5xx without upstream diagnostics.
-  A schema-valid unknown code retains its HTTP status and safe message; an
-  invalid envelope becomes a safe upstream error. Test unknown code by HTTP
-  category rather than a closed code allowlist.
-- Chats: independent creation, opaque paginated Agent/chat/history cursors,
-  initial history cursor omitted, titlePending refresh, revision conflicts,
-  selection, feedback, update/pin/delete where `chat.management` is enabled.
-- Stream: real incremental `response.*` deltas, optional unknown event, item
-  done, reset, snapshot replacement, non-empty cursor resume, replay
-  deduplication, terminal completion/failure/cancel and explicit remote cancel.
-  Closing the panel keeps an in-flight run; switching identity cannot apply
-  stale events. No native EventSource or host reconnect loop for Make App v1.
-- File/image: stable upload/file/message IDs, server-sized parts, byte/digest
-  integrity, retry/resume, complete/ready reference, content download only
-  when supported, 202 acceptance versus later model interpretation failure.
-  A product/security policy may narrow displayed `modelInputKinds`; claiming
-  broader model support needs deployed-model evidence. Upload availability
-  alone is insufficient.
-- UI: package-owned task list, new conversation, plus menu, upload state,
-  responsive layout, keyboard/focus behavior and drawer close/reopen. No host
-  internal-selector override or duplicated error/composer UI. Safe context is
-  not a permission grant.
+运行本 Skill 静态审计、verify-agent-package 及 verify-host-example，宿主定向 UI/Service 测试、类型检查、build、makecli preflight 和适用的 auth/permission/Trace/runtime 检查；保持项目现有运行时。未修改的能力不盲目重复全量测试。
 
-## Platform Skill release forward test
+维护审计脚本时执行 `node scripts/test-audit-make-ai-assistant-project.mjs "<workspace-with-typescript>"`；该参数仅用于定位测试解析器，测试项目在临时目录生成。CI 固定测试用 TypeScript 版本，不要求全局安装，也不向业务 App 增加运行时依赖。
 
-Before releasing a changed protocol, host integration workflow, or ownership
-boundary, run an independent fresh-agent forward test. Prepare an isolated
-temporary Make App workspace with an authenticated shell, shared auth adapter,
-empty assistant placement, Service skeleton, installed public package, and a
-v1 Gateway fixture derived from the current backend OpenAPI, not from this
-Skill's route table. It must not contain assistant integration code, another
-App's implementation, or this change's proposed solution.
+## 独立 fresh-agent forward test
 
-The Gateway fixture must retain operation request/response schemas and the
-SSE event schemas from that pinned OpenAPI, including conditional upload
-response fields and terminal event shapes. Test representative accepted and
-rejected payloads, not just methods, paths and successful statuses. A
-route/status-only fixture leaves DTO validation and stream recovery unverified;
-record those gaps as release gates instead of calling the synthetic test
-end-to-end coverage.
+协议、接入流程或职责边界大改后，在隔离临时 App 进行独立新代理正向测试。只提供本 Skill、关联技能、已安装公开 0.4.1、认证 Shell/请求层/空 Service 骨架，以及来自固定合同源的 Gateway fixture。不能提供参考 App 实现、既有修复答案或提示预期漏洞。验证者仅在临时目录修改，不部署、不用真实凭据、不写远端。
 
-Give the independent evaluator only that workspace, this Skill, and a realistic
-request to add the Agent chat with multi-session history, streaming, file/image
-input, and Service routes. Do not reveal prior conclusions or direct the
-evaluator to a reference POC. No real deployment, production credentials, or
-external writes are needed. Inspect the resulting code and executable tests for
-public-package imports, full Agent pagination and uniqueness, identity cleanup,
-same-origin authenticated byte transport, the exact 18-route Service boundary,
-SSE recovery, file/image transfer, and package-owned UI. Run the fixture tests,
-typecheck, build, and the Skill's static audit; a static pass alone is not enough.
+原始合同随 Skill 分发在 `scripts/fixtures/agent-v1/`：`openapi.json`、`data.openapi.json`、`events.schema.json` 和记录固定提交及逐文件 SHA-256 的 `source.json`。它们是合同 `7ddbacac599b3fc6780fb7f01f2cf466731c2369` 的不可改写快照，不从 Skill 操作清单反向生成，不依赖内部文档登录、包源码或参考 App。
 
-Record the fixture and backend-contract revisions, resolved package version,
-evaluator result, test commands, failures, and corrective follow-up in the
-release evidence. If the
-evaluator needs another project's code, invents a legacy route, or cannot
-complete the integration from this Skill and public package declarations,
-release is blocked until the guidance is corrected and a fresh attempt passes.
-If independent execution is unavailable, report that gate as unverified rather
-than claiming the Skill is release-ready. Ordinary host fixes do not require
-this platform-release exercise unless they change the Skill's contract.
+从 Skill 实际安装目录执行，目标必须是新的目录（只需 Node.js，无网络或额外依赖）：
 
-## Completion and failure reporting
+```bash
+node scripts/prepare-gateway-fixture.mjs "<isolated-app>/tests/contracts"
+```
 
-Run the Skill's audit, relevant host tests, Service tests, typecheck, build and
-an existing-route render smoke test. Then verify authenticated published Dev
-requests for discovery, capabilities, chat creation, message 202, real SSE,
-history, cancellation and a representative file/image transfer where enabled.
-Do not call an integration complete solely because tests or upload storage
-pass. When the backend/model is not ready, report precisely which boundary
-failed instead of adding a mock fallback to production.
+脚本先验证所有 hash 再复制，已有目录拒绝覆盖；`node scripts/test-prepare-gateway-fixture.mjs` 验证独立安装、离线引用闭合、篡改与覆盖保护。合同里的 `servers` 是原始设计元数据，不能当作测试网络地址或宿主运行时配置。固定此快照用于离线 Gateway fixture；将来合同升级同时核验来源、hash 和正式包。Schema 能检查 DTO 结构，不能代替 CEL 语法及 Service App 范围校验。
 
-If the installed package lacks required public exports/types, the route family
-is unknown, or a deployed capability cannot be verified, stop that branch and
-report the missing contract. Do not infer behavior from another App, package
-source, examples, or an old unversioned endpoint.
-Likewise, a skipped complete upload test because the current v1 backend fixture
-is missing is an explicit unverified release gate, not a passing end-to-end
-attachment result. Keep the skipped count in the release evidence.
+用这些原始 Schema 构造隔离 Gateway fixture，覆盖代表性接受和拒绝 DTO、信封与 SSE；测试侧可用支持 JSON Schema 2020-12 的验证器并离线注册三个文件，不能把验证器作为宿主生产依赖。让验证者实际接入、补测试并运行类型/构建/审计。检查其能否独立完成受限发现、身份生命周期、字节桥与 Service 25 项边界。
+
+记录新代理产物、测试结果、缺陷修正和再次验证。只做了路由/status 模拟、未执行模型或真实部署，就报告这些限制。若独立执行不可用或无法完成，从发布就绪结论中排除该门槛；不能用文档关键词测试替代行为测试。
+
+## 已登录 Dev 验收与故障归属
+
+经用户授权的现有 App 登录态，验证发现、会话创建、消息、真实 SSE、历史恢复、停止及一张受支持图片的识别/下载。服务端可能真实调用业务工具；修改数据须有对应授权，普通连通测试说明不读写业务数据。不能用匿名403、health200、构建Ready或上传存储成功证明全部完成。
+
+分别说明：静态预检、合成协议/宿主行为、真实后端、模型、浏览器验收。未执行/跳过的测试列为未验证；不宣传“完整对接”覆盖未测能力。
+
+发现问题先归属：宿主路径/认证/字节丢失修宿主；公开包解析、生命周期/上传/SSE/UI 缺陷提交版本和最小复现给包维护者；服务端权限/部署/模型错误交平台。当前 0.4.1 client 替换的入口解析竞态见 package-integration，不在宿主添加兼容逻辑，也不因此修改包。

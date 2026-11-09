@@ -213,12 +213,12 @@ try {
   assert.match(run(queryTrace, 'direct').output, /query_trace_present/);
 
   const aiMissing = fixture('ai-missing', {
-    ai: `export const stream = () => fetch('/api/make/app/ai/v1/chats/1/events');`,
+    ai: `export const stream = () => fetch('/api/make/app/agent/v1/session/stream?sessionId=session-example');`,
   });
   assert.match(run(aiMissing, 'service-fronted').output, /ai_trace_headers_missing/);
 
   const aiMissingInit = fixture('ai-missing-init', {
-    ai: `export const stream = () => fetch('/api/make/app/ai/v1/chats/1/events', { method: 'GET' });`,
+    ai: `export const stream = () => fetch('/api/make/app/agent/v1/session/stream?sessionId=session-example', { method: 'GET' });`,
   });
   assert.match(run(aiMissingInit, 'service-fronted').output, /ai_trace_headers_missing/);
 
@@ -227,7 +227,7 @@ try {
       export const stream = (headers) => {
         headers.set('X-Log-Id', trace.traceId);
         headers.set('traceparent', trace.traceparent);
-        return fetch('/api/make/app/ai/v1/chats/1/events', { headers });
+        return fetch('/api/make/app/agent/v1/session/stream?sessionId=session-example', { headers });
       };
     `,
   });
@@ -244,9 +244,9 @@ try {
       }
     `,
     ai: `
-      import type { AuthenticatedTransport } from '@qfei-design/make-ai-assistant/client';
+      import type { AgentAuthenticatedTransport } from '@qfei-design/make-ai-assistant/agent';
       import { request } from './request';
-      export const transport: AuthenticatedTransport = { request };
+      export const transport: AgentAuthenticatedTransport = { request };
     `,
   });
   assert.equal(

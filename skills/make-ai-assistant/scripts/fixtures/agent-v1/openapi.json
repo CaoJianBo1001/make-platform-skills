@@ -1,0 +1,2698 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "Make Agent 控制面 API",
+    "version": "1.0.0-design",
+    "description": "Agent、Plugin、Model、Runtime 配置合同；数据面由 data.openapi.json 定义。"
+  },
+  "servers": [
+    {
+      "url": "https://dev-make.qtech.cn/api/make/agent/v1"
+    }
+  ],
+  "security": [
+    {
+      "UserBearer": []
+    }
+  ],
+  "paths": {
+    "/agent": {
+      "post": {
+        "operationId": "agentResource",
+        "summary": "agent 资源操作",
+        "parameters": [
+          {
+            "name": "X-Make-Target",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.CreateResource",
+                "MakeService.GetResource",
+                "MakeService.ListResources",
+                "MakeService.UpdateResource",
+                "MakeService.DeleteResource"
+              ],
+              "minLength": 23,
+              "maxLength": 26
+            }
+          }
+        ],
+        "x-make-targets": {
+          "MakeService.CreateResource": {
+            "request": {
+              "$ref": "#/components/schemas/AgentCreate"
+            },
+            "response": {
+              "$ref": "#/components/schemas/agent_CreateResourceResult"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608
+          },
+          "MakeService.GetResource": {
+            "request": {
+              "$ref": "#/components/schemas/ConfigGet"
+            },
+            "response": {
+              "$ref": "#/components/schemas/agent_GetResourceResult"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608
+          },
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/AgentList"
+            },
+            "response": {
+              "$ref": "#/components/schemas/AgentListResponse"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-filter-fields": {
+              "key": {
+                "schema": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 20,
+                  "pattern": "^[A-Za-z0-9_]+$",
+                  "not": {
+                    "pattern": "[^A-Za-z0-9_]"
+                  }
+                },
+                "operators": [
+                  "==",
+                  "contains"
+                ],
+                "valueSource": "== 使用合法完整 Agent key；contains 接受 1–20 位英文、数字、下划线片段，不扩大租户或应用范围。"
+              },
+              "name": {
+                "schema": {
+                  "type": "string"
+                },
+                "operators": [
+                  "==",
+                  "contains"
+                ]
+              },
+              "appKey": {
+                "schema": {
+                  "type": "string"
+                },
+                "operators": [
+                  "=="
+                ],
+                "valueSource": "获权应用目录返回的 appKey，不是固定枚举"
+              },
+              "status": {
+                "schema": {
+                  "$ref": "#/components/schemas/AgentSummary/properties/status"
+                },
+                "operators": [
+                  "=="
+                ]
+              }
+            },
+            "x-make-sort-fields": [
+              "key",
+              "name",
+              "createdAt",
+              "updatedAt"
+            ],
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608,
+            "x-make-view-responses": {
+              "default": {
+                "$ref": "#/components/schemas/agent_ListResourcesResult"
+              },
+              "webchat": {
+                "$ref": "#/components/schemas/AgentWebchatListResult"
+              }
+            }
+          },
+          "MakeService.UpdateResource": {
+            "request": {
+              "$ref": "#/components/schemas/AgentUpdate"
+            },
+            "response": {
+              "$ref": "#/components/schemas/agent_UpdateResourceResult"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608
+          },
+          "MakeService.DeleteResource": {
+            "request": {
+              "$ref": "#/components/schemas/AgentDelete"
+            },
+            "response": {
+              "$ref": "#/components/schemas/agent_DeleteResourceResult"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/AgentCreate"
+                  },
+                  {
+                    "$ref": "#/components/schemas/ConfigGet"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AgentList"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AgentUpdate"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AgentDelete"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "按 X-Make-Target 返回明确的业务结果。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/agent_CreateResourceResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/agent_GetResourceResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/AgentListResponse"
+                    },
+                    {
+                      "$ref": "#/components/schemas/agent_UpdateResourceResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/agent_DeleteResourceResult"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "401": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "403": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "404": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "410": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "413": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "415": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "422": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "429": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "500": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "503": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "405": {
+            "$ref": "#/components/responses/DomainError"
+          }
+        }
+      }
+    },
+    "/plugin": {
+      "post": {
+        "operationId": "pluginResource",
+        "summary": "plugin 资源操作",
+        "parameters": [
+          {
+            "name": "X-Make-Target",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.ListResources",
+                "MakeService.GetResource"
+              ],
+              "minLength": 23,
+              "maxLength": 25
+            }
+          }
+        ],
+        "x-make-targets": {
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/PluginList"
+            },
+            "response": {
+              "$ref": "#/components/schemas/plugin_ListResourcesResult"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-filter-fields": {
+              "key": {
+                "schema": {
+                  "type": "string"
+                },
+                "operators": [
+                  "==",
+                  "contains"
+                ]
+              },
+              "name": {
+                "schema": {
+                  "type": "string"
+                },
+                "operators": [
+                  "==",
+                  "contains"
+                ]
+              },
+              "type": {
+                "schema": {
+                  "$ref": "#/components/schemas/PluginType"
+                },
+                "operators": [
+                  "==",
+                  "in"
+                ]
+              }
+            },
+            "x-make-sort-fields": [
+              "key",
+              "name"
+            ],
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608
+          },
+          "MakeService.GetResource": {
+            "request": {
+              "$ref": "#/components/schemas/PluginGet"
+            },
+            "response": {
+              "$ref": "#/components/schemas/plugin_GetResourceResult"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/PluginList"
+                  },
+                  {
+                    "$ref": "#/components/schemas/PluginGet"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "按 X-Make-Target 返回明确的业务结果。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/plugin_ListResourcesResult"
+                    },
+                    {
+                      "$ref": "#/components/schemas/plugin_GetResourceResult"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "401": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "403": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "404": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "410": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "413": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "415": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "422": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "429": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "500": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "503": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "405": {
+            "$ref": "#/components/responses/DomainError"
+          }
+        }
+      }
+    },
+    "/model": {
+      "post": {
+        "operationId": "modelResource",
+        "summary": "model 资源操作",
+        "parameters": [
+          {
+            "name": "X-Make-Target",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.ListResources"
+              ],
+              "minLength": 25,
+              "maxLength": 25
+            }
+          }
+        ],
+        "x-make-targets": {
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/CatalogList"
+            },
+            "response": {
+              "$ref": "#/components/schemas/model_ListResourcesResult"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-filter-fields": {
+              "key": {
+                "schema": {
+                  "type": "string"
+                },
+                "operators": [
+                  "==",
+                  "contains"
+                ]
+              },
+              "name": {
+                "schema": {
+                  "type": "string"
+                },
+                "operators": [
+                  "==",
+                  "contains"
+                ]
+              },
+              "provider": {
+                "schema": {
+                  "$ref": "#/components/schemas/ModelProvider"
+                },
+                "operators": [
+                  "=="
+                ],
+                "valueSource": "ModelProvider 已知服务商字典；实际筛选值使用获权 Model.List 返回的 provider，字典允许扩展。"
+              },
+              "model": {
+                "schema": {
+                  "type": "string"
+                },
+                "operators": [
+                  "=="
+                ],
+                "valueSource": "Model.List 返回的 model，动态模型目录标识"
+              }
+            },
+            "x-make-sort-fields": [
+              "key",
+              "name",
+              "provider",
+              "model"
+            ],
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CatalogList"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "按 X-Make-Target 返回明确的业务结果。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/model_ListResourcesResult"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "401": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "403": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "404": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "410": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "413": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "415": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "422": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "429": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "500": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "503": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "405": {
+            "$ref": "#/components/responses/DomainError"
+          }
+        }
+      }
+    },
+    "/runtime": {
+      "post": {
+        "operationId": "runtimeResource",
+        "summary": "runtime 资源操作",
+        "parameters": [
+          {
+            "name": "X-Make-Target",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.ListResources"
+              ],
+              "minLength": 25,
+              "maxLength": 25
+            }
+          }
+        ],
+        "x-make-targets": {
+          "MakeService.ListResources": {
+            "request": {
+              "$ref": "#/components/schemas/CatalogList"
+            },
+            "response": {
+              "$ref": "#/components/schemas/runtime_ListResourcesResult"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-filter-fields": {
+              "key": {
+                "schema": {
+                  "type": "string"
+                },
+                "operators": [
+                  "=="
+                ]
+              },
+              "name": {
+                "schema": {
+                  "type": "string"
+                },
+                "operators": [
+                  "=="
+                ]
+              },
+              "scope": {
+                "schema": {
+                  "$ref": "#/components/schemas/Runtime/properties/scope"
+                },
+                "operators": [
+                  "=="
+                ]
+              },
+              "meta.online": {
+                "schema": {
+                  "type": "boolean"
+                },
+                "operators": [
+                  "=="
+                ]
+              }
+            },
+            "x-make-sort-fields": [
+              "key",
+              "name"
+            ],
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/CatalogList"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "按 X-Make-Target 返回明确的业务结果。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/runtime_ListResourcesResult"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "401": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "403": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "404": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "410": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "413": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "415": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "422": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "429": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "500": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "503": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "405": {
+            "$ref": "#/components/responses/DomainError"
+          }
+        },
+        "description": "filter 仅 key/name/scope/meta.online 的 ==，支持 &&、||、括号；sort 仅 key/name 的 asc/desc，默认 key asc，同值追加 key asc。其他字段/运算符拒绝。"
+      }
+    },
+    "/agents": {
+      "post": {
+        "operationId": "appAgentsCleanup",
+        "summary": "按原应用实例清理 Agent（服务间）",
+        "parameters": [
+          {
+            "name": "X-Make-Target",
+            "in": "header",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "enum": [
+                "MakeService.DeleteResource"
+              ],
+              "minLength": 23,
+              "maxLength": 26
+            }
+          }
+        ],
+        "x-make-targets": {
+          "MakeService.DeleteResource": {
+            "request": {
+              "$ref": "#/components/schemas/DeleteAppAgents"
+            },
+            "response": {
+              "$ref": "#/components/schemas/agents_DeleteResourceResult"
+            },
+            "successStatus": 200,
+            "mode": "json",
+            "requestContentType": "application/json",
+            "x-make-maxRequestBytes": 8388608,
+            "x-make-maxResponseBytes": 8388608
+          }
+        },
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/DeleteAppAgents"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "按 X-Make-Target 返回明确的业务结果。",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "anyOf": [
+                    {
+                      "$ref": "#/components/schemas/agents_DeleteResourceResult"
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "401": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "403": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "404": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "409": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "410": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "413": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "415": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "422": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "429": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "500": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "503": {
+            "$ref": "#/components/responses/DomainError"
+          },
+          "405": {
+            "$ref": "#/components/responses/DomainError"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "DomainError": {
+        "description": "类型化错误，data.reason 决定处理；HTTP 状态与 code 一致。",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/Error"
+            }
+          }
+        },
+        "headers": {
+          "Retry-After": {
+            "description": "限流或 AI_REQUEST_IN_PROGRESS 时返回的建议等待秒数。",
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "UserBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    },
+    "schemas": {
+      "Filter": {
+        "type": [
+          "object",
+          "null"
+        ],
+        "properties": {
+          "expression": {
+            "type": "string",
+            "description": "CEL 筛选表达式；字段和操作符只允许本接口的白名单。省略 filter、null 或空白表达式表示不加额外业务筛选；对象中的 expression 仍须为字符串。",
+            "minLength": 0,
+            "maxLength": 4096
+          }
+        },
+        "additionalProperties": false,
+        "description": "可省略 filter、传 null 或空白 expression 表示无额外业务筛选；不取消可信范围、权限及本接口默认筛选。提供对象时 expression 必须存在且为字符串；filter: {}、expression: null、非字符串 expression、裸字符串或数组 filter 均拒绝。CEL 文本的字段和运算符按各资源白名单校验，未知或不支持的表达式拒绝。",
+        "required": [
+          "expression"
+        ],
+        "maxProperties": 1
+      },
+      "Sort": {
+        "type": "array",
+        "items": {
+          "type": "object",
+          "properties": {
+            "fieldKey": {
+              "type": "string",
+              "description": "排序字段名；允许值见当前 ListResources 的排序白名单。",
+              "minLength": 1,
+              "maxLength": 128
+            },
+            "order": {
+              "type": "string",
+              "enum": [
+                "asc",
+                "desc"
+              ],
+              "description": "排序方向。",
+              "minLength": 3,
+              "maxLength": 4
+            }
+          },
+          "additionalProperties": false,
+          "required": [
+            "fieldKey",
+            "order"
+          ],
+          "maxProperties": 2
+        },
+        "maxItems": 3,
+        "minItems": 0
+      },
+      "PageRequest": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "default": 1,
+            "description": "从 1 开始的页码。"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 100,
+            "default": 10,
+            "description": "本次有效页大小上限；实际返回条数以数组长度为准。"
+          }
+        },
+        "additionalProperties": false,
+        "maxProperties": 2
+      },
+      "Page": {
+        "type": "object",
+        "properties": {
+          "page": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "从 1 开始的页码。"
+          },
+          "size": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991,
+            "description": "本次有效页大小上限；实际返回条数以数组长度为准。"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 9007199254740991,
+            "description": "当前获权查询集合的总条数。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "page",
+          "size",
+          "total"
+        ],
+        "maxProperties": 3
+      },
+      "ConfigMeta": {
+        "type": "object",
+        "properties": {
+          "createdAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "创建时间。",
+            "minLength": 20,
+            "maxLength": 35
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "最近一次有效更新的时间。",
+            "minLength": 20,
+            "maxLength": 35
+          },
+          "id": {
+            "type": "string",
+            "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "createdAt",
+          "updatedAt",
+          "id"
+        ],
+        "maxProperties": 3
+      },
+      "Error": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "integer",
+            "minimum": 400,
+            "maximum": 599,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "type": "object",
+            "properties": {
+              "reason": {
+                "type": "string",
+                "description": "当前分支的安全机器原因标识；具体值及可扩展性见所属结构。",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "requestId": {
+                "type": "string",
+                "description": "调用方生成的 UUID 幂等键；同一写意图的网络重试保留原值，不同意图使用新值。",
+                "minLength": 1,
+                "maxLength": 128
+              },
+              "currentRevision": {
+                "oneOf": [
+                  {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 256,
+                    "pattern": "^[!-~]+$",
+                    "description": "绑定应用实例、Agent 实例及配置修订的不透明令牌；原样保存和回传，不解析或加一，同名重建不复用。"
+                  },
+                  {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 9007199254740991
+                  }
+                ],
+                "description": "Agent 配置冲突返回不透明令牌；本人反馈或偏好返回各自整数版本。不得自动覆盖。"
+              },
+              "details": {
+                "type": "object",
+                "additionalProperties": true,
+                "description": "获准返回的结构化错误详情；不是稳定枚举字典。",
+                "x-make-json-limits": {
+                  "maxBytes": 65536,
+                  "maxDepth": 16,
+                  "maxNodes": 8192,
+                  "maxPropertiesPerObject": 128,
+                  "maxArrayItems": 256,
+                  "maxStringCharacters": 32768,
+                  "maxKeyCharacters": 128
+                },
+                "minProperties": 0,
+                "maxProperties": 128,
+                "propertyNames": {
+                  "type": "string",
+                  "minLength": 0,
+                  "maxLength": 128
+                }
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "reason"
+            ],
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。",
+            "maxProperties": 4
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "maxProperties": 3
+      },
+      "AgentSummary": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 20,
+            "readOnly": true,
+            "description": "调用方指定的业务 key；在同一租户和应用实例的活动 Agent 内唯一，创建后不改，软删除释放名称；重建产生独立内部身份。",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_]{1,19}$",
+            "not": {
+              "pattern": "[^A-Za-z0-9_]"
+            }
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "供用户阅读的展示名称。",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "用途说明或描述文本。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "appKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "唯一应用 key。Make 内各 App、Contract、Everyline 为平级应用；直接使用该应用的目录 key，不叠加应用子归属。"
+          },
+          "runtimeKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "AgentDefinition 同名持久字段，直接引用 Runtime.key；创建默认选择后也返回确定值，不另存 Runtime 技术 id 关系。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ],
+            "description": "Agent 启用状态；disabled 与内部软删除分别表达。",
+            "minLength": 7,
+            "maxLength": 8
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ConfigMeta",
+            "description": "当前对象的只读元数据分组，字段含义见对应子结构。"
+          },
+          "configVersion": {
+            "$ref": "#/components/schemas/ConfigVersionSummary"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "name",
+          "appKey",
+          "runtimeKey",
+          "status",
+          "meta",
+          "configVersion"
+        ],
+        "maxProperties": 8,
+        "description": "Agent 列表概要；不展开提示词、插件或密钥。"
+      },
+      "AgentDetail": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 20,
+            "readOnly": true,
+            "description": "调用方指定的业务 key；在同一租户和应用实例的活动 Agent 内唯一，创建后不改，软删除释放名称；重建产生独立内部身份。",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_]{1,19}$",
+            "not": {
+              "pattern": "[^A-Za-z0-9_]"
+            }
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "供用户阅读的展示名称。",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "用途说明或描述文本。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "appKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "唯一应用 key。Make 内各 App、Contract、Everyline 为平级应用；直接使用该应用的目录 key，不叠加应用子归属。"
+          },
+          "runtimeKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "AgentDefinition 同名持久字段，直接引用 Runtime.key；创建默认选择后也返回确定值，不另存 Runtime 技术 id 关系。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ],
+            "description": "Agent 启用状态；disabled 与内部软删除分别表达。",
+            "minLength": 7,
+            "maxLength": 8
+          },
+          "meta": {
+            "$ref": "#/components/schemas/ConfigMeta",
+            "description": "当前对象的只读元数据分组，字段含义见对应子结构。"
+          },
+          "prompt": {
+            "type": "string",
+            "description": "Agent 的通用指令正文。",
+            "minLength": 0,
+            "maxLength": 32768
+          },
+          "plugins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentPluginBinding"
+            },
+            "description": "渠道、工具、Skills、执行环境绑定的关系展开；Create/Update 聚合保存，不是主表列，也不选择 Harness。 同一数组内已存在的 id 不得重复；pluginKey 可以重复。",
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "related": {
+            "type": "object",
+            "properties": {
+              "configVersion": {
+                "$ref": "#/components/schemas/AgentConfigVersion"
+              }
+            },
+            "required": [
+              "configVersion"
+            ],
+            "additionalProperties": false,
+            "maxProperties": 1
+          },
+          "configVersion": {
+            "$ref": "#/components/schemas/ConfigVersionSummary"
+          },
+          "inputCapabilities": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/InputCapabilities"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "readOnly": true,
+            "description": "当前模型输入能力的只读投影，未知或目录不可用时为 null。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "name",
+          "appKey",
+          "runtimeKey",
+          "status",
+          "meta",
+          "prompt",
+          "plugins",
+          "configVersion"
+        ],
+        "description": "当前 Agent 与完整配置版本摘要；expand 只读展开同一版本。",
+        "maxProperties": 12
+      },
+      "Model": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "readOnly": true,
+            "description": "权威模型目录返回的稳定可读标识，与内部 id 独立；供 Agent.modelKey 引用，不由前端拼接。同 key 不静默切换服务供应商。"
+          },
+          "name": {
+            "type": "string",
+            "description": "可重复的模型展示名称；选择器结合 provider 展示。",
+            "minLength": 0,
+            "maxLength": 255
+          },
+          "provider": {
+            "$ref": "#/components/schemas/ModelProvider",
+            "description": "实际云端模型 API 服务商的稳定标识；已知代码及名称见 ModelProvider 字典，当前可用值取自获权目录，不从模型名称推断。"
+          },
+          "model": {
+            "type": "string",
+            "description": "该供应商目录中的模型标识；不同供应商不要求同名，底层 Model ID/Endpoint ID 映射由 llm-service 处理。",
+            "minLength": 1,
+            "maxLength": 256
+          },
+          "reasoningEffort": {
+            "type": "string",
+            "description": "模型目录给出的推理强度标识；取值依该模型的当前目录能力，不是全局固定枚举。",
+            "minLength": 1,
+            "maxLength": 64
+          },
+          "isMultiModal": {
+            "type": "boolean",
+            "description": "目录声明该模型是否支持多模态；具体可用输入以会话视图 interaction 返回为准。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "name",
+          "provider",
+          "model",
+          "isMultiModal"
+        ],
+        "description": "某个服务供应商提供的可调用模型。Key Center 经 llm-service 提供只读目录；同系列模型由不同供应商提供时为不同记录，不按 name/model 合并。",
+        "maxProperties": 6
+      },
+      "Runtime": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "readOnly": true,
+            "description": "权威目录生成并返回的可读标识，与该目录内部技术 id 独立；更新名称或发布修订不改变 key，不作为内部 id 的别名。"
+          },
+          "name": {
+            "type": "string",
+            "description": "供用户阅读的展示名称。",
+            "minLength": 0,
+            "maxLength": 255
+          },
+          "scope": {
+            "type": "string",
+            "enum": [
+              "shared",
+              "dedicated"
+            ],
+            "description": "运行服务的租户隔离范围：shared 为共享服务，dedicated 为专属服务。",
+            "minLength": 6,
+            "maxLength": 9
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "online": {
+                "type": "boolean",
+                "readOnly": true,
+                "description": "当前运行服务是否在线；不是目录准入状态，也不保证本次执行成功。"
+              }
+            },
+            "additionalProperties": false,
+            "required": [
+              "online"
+            ],
+            "description": "当前对象的只读元数据分组，字段含义见对应子结构。",
+            "maxProperties": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "name",
+          "scope",
+          "meta"
+        ],
+        "description": "执行服务选择目录。key/name/scope/meta.online 用于身份、名称、共享或专属标识及在线提示；协议兼容、worker、容量与 Harness 部署信息由平台内部校验，不返回客户端。online 不保证当前容量。",
+        "maxProperties": 4
+      },
+      "CatalogList": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "$ref": "#/components/schemas/Filter",
+            "description": "附加业务筛选；不能扩大获权集合，白名单见本接口。"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/Sort",
+            "description": "排序规则列表，按数组顺序决定优先级；字段白名单见本接口。"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PageRequest",
+            "description": "分页参数或当前页的分页结果，见对应子结构。"
+          }
+        },
+        "additionalProperties": false,
+        "description": "模型筛选 key/name/provider/model（key/name 支持相等与包含，provider/model 仅相等）；模型排序 key/name/provider/model。Runtime 筛选及排序见 API.md。page/size/total 均在获权与业务筛选后计算。",
+        "maxProperties": 3
+      },
+      "ConfigGet": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 20,
+            "description": "按认证租户和 Agent 业务 key 定位，不接受内部 id；key 格式与创建一致。",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_]{1,19}$",
+            "not": {
+              "pattern": "[^A-Za-z0-9_]"
+            }
+          },
+          "appKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "\\S",
+            "description": "应用的可读 key；Make 中为实际环境 App 的 appKey。服务端固定原实例，不按同名新对象重定向历史。"
+          },
+          "expand": {
+            "type": "array",
+            "maxItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "configVersion"
+              ]
+            }
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "appKey"
+        ],
+        "maxProperties": 3
+      },
+      "AgentCreate": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 20,
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_]{1,19}$",
+            "description": "当前获权应用实例内的 Agent 业务 key；创建后不可修改。",
+            "not": {
+              "pattern": "[^A-Za-z0-9_]"
+            }
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "供用户阅读的展示名称。",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "用途说明或描述文本。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "prompt": {
+            "type": "string",
+            "description": "Agent 的通用指令正文。",
+            "minLength": 0,
+            "maxLength": 32768
+          },
+          "runtimeKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "省略使用平台指定的默认逻辑 Runtime；校验获权和兼容性，不按候选数量或在线状态推断。"
+          },
+          "appKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "唯一应用 key。Make 内各 App、Contract、Everyline 为平级应用；直接使用该应用的目录 key，不叠加应用子归属。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ],
+            "default": "disabled",
+            "description": "新 Agent 的启用状态；省略时 disabled。",
+            "minLength": 7,
+            "maxLength": 8
+          },
+          "plugins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PluginBindingCreate"
+            },
+            "description": "完整初始插件绑定，明确 pluginVersion；可执行配置恰有一个启用的 model。",
+            "minItems": 0,
+            "maxItems": 32
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "name",
+          "appKey",
+          "plugins"
+        ],
+        "description": "按 appKey 解析受理时的当前获权应用实例；活动 key 冲突返回 AI_AGENT_KEY_EXISTS。不接受 id/requestId；响应未知时查询核对，不自动重放创建。",
+        "maxProperties": 8
+      },
+      "AgentUpdate": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 20,
+            "description": "当前获权应用实例内的 Agent 业务 key；创建后不可修改。",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_]{1,19}$",
+            "not": {
+              "pattern": "[^A-Za-z0-9_]"
+            }
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "供用户阅读的展示名称。",
+            "maxLength": 255
+          },
+          "description": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "省略保持；null 与空字符串统一为未设置，规范化后参与等值比较，不裁剪非空字符串。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "prompt": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "省略保持；null 规范化为空字符串，之后参与等值比较，不裁剪非空字符串。",
+            "minLength": 0,
+            "maxLength": 32768
+          },
+          "runtimeKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "显式更换选定执行服务；省略保持，不接受 null 或空串，仅影响后续新 Run。"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "enabled",
+              "disabled"
+            ],
+            "description": "更新 Agent 启用状态；省略时保持。",
+            "minLength": 7,
+            "maxLength": 8
+          },
+          "plugins": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PluginBindingWrite"
+            },
+            "description": "Agent 的包级插件使用绑定集合；省略创建时默认空集合，省略更新时保持，更新提供数组时整体替换。 同一数组内已存在的 id 不得重复；pluginKey 可以重复。",
+            "minItems": 0,
+            "maxItems": 32
+          },
+          "appKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "\\S",
+            "description": "应用的可读 key；Make 中为实际环境 App 的 appKey。服务端固定原实例，不按同名新对象重定向历史。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "appKey"
+        ],
+        "maxProperties": 8,
+        "description": "appKey/key 定位当前活动实例；最新 Agent 行锁内应用字段补丁，同字段后提交覆盖。未传字段保持，plugins 提交时整体替换；当前权限或 Schema 校验失败原子拒绝。"
+      },
+      "EmptyResult": {
+        "type": "object",
+        "properties": {},
+        "additionalProperties": false,
+        "maxProperties": 0
+      },
+      "agent_CreateResourceResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentDetail",
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "maxProperties": 3
+      },
+      "agent_GetResourceResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentDetail",
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "maxProperties": 3
+      },
+      "agent_ListResourcesResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AgentSummary"
+            },
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。",
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Page",
+            "description": "分页参数或当前页的分页结果，见对应子结构。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "maxProperties": 4
+      },
+      "agent_UpdateResourceResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "$ref": "#/components/schemas/AgentDetail",
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "maxProperties": 3
+      },
+      "agent_DeleteResourceResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "$ref": "#/components/schemas/EmptyResult",
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "maxProperties": 3
+      },
+      "model_ListResourcesResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Model"
+            },
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。",
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Page",
+            "description": "分页参数或当前页的分页结果，见对应子结构。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "maxProperties": 4
+      },
+      "runtime_ListResourcesResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/Runtime"
+            },
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。",
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Page",
+            "description": "分页参数或当前页的分页结果，见对应子结构。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "maxProperties": 4
+      },
+      "PluginList": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "$ref": "#/components/schemas/Filter",
+            "description": "附加业务筛选；不能扩大获权集合，白名单见本接口。"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/Sort",
+            "description": "排序规则列表，按数组顺序决定优先级；字段白名单见本接口。"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PageRequest",
+            "description": "分页参数或当前页的分页结果，见对应子结构。"
+          }
+        },
+        "additionalProperties": false,
+        "description": "每 key 最高 available 版本，再按 key/name/type 筛选；不以目录查询代替准确版本读取。",
+        "maxProperties": 3
+      },
+      "PluginBindingCreate": {
+        "type": "object",
+        "properties": {
+          "pluginKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "所选插件 key；普通配置不携带发布修订，已有项不能原地更换 pluginKey。"
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "是否启用本次插件绑定；新建默认 true，编辑已有绑定省略时保持。"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "当前 configSchema 的普通参数和 writeOnly 密钥；秘密以认证密文保存于所属绑定 config 与完整配置版本，查询不回显秘密。普通字段整体替换；已有项父对象保留时沿用省略密钥，新增或重建分支重新提供必填密钥。",
+            "x-make-json-limits": {
+              "maxBytes": 65536,
+              "maxDepth": 16,
+              "maxNodes": 8192,
+              "maxPropertiesPerObject": 128,
+              "maxArrayItems": 256,
+              "maxStringCharacters": 32768,
+              "maxKeyCharacters": 128
+            },
+            "minProperties": 0,
+            "maxProperties": 128,
+            "propertyNames": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 128
+            }
+          },
+          "pluginVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pluginKey",
+          "config",
+          "pluginVersion"
+        ],
+        "maxProperties": 4,
+        "description": "新建绑定输入；服务端生成稳定 ID，使用准确插件版本。"
+      },
+      "PluginBindingWrite": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "仅编辑当前 Agent 原实例的已有绑定时提供；同一数组内不得重复。新增项省略，不能自造或跨 Agent 引用。"
+          },
+          "pluginKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "所选插件 key；普通配置不携带发布修订，已有项不能原地更换 pluginKey。"
+          },
+          "enabled": {
+            "type": "boolean",
+            "description": "已有绑定省略时保持原值，新绑定省略时为 true。"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "当前 configSchema 的普通参数和 writeOnly 密钥；秘密以认证密文保存于所属绑定 config 与完整配置版本，查询不回显秘密。普通字段整体替换；已有项父对象保留时沿用省略密钥，新增或重建分支重新提供必填密钥。 秘密字段省略保留、完整字符串替换、null 明确删除后校验最终 Schema；必需秘密不可清空，展示摘要不能回写。",
+            "x-make-json-limits": {
+              "maxBytes": 65536,
+              "maxDepth": 16,
+              "maxNodes": 8192,
+              "maxPropertiesPerObject": 128,
+              "maxArrayItems": 256,
+              "maxStringCharacters": 32768,
+              "maxKeyCharacters": 128
+            },
+            "minProperties": 0,
+            "maxProperties": 128,
+            "propertyNames": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 128
+            }
+          },
+          "pluginVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "pluginKey",
+          "config",
+          "pluginVersion"
+        ],
+        "description": "绑定列表整体替换输入；已有 ID 固定原 Agent 和 pluginKey。",
+        "maxProperties": 5
+      },
+      "AgentPluginBinding": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "readOnly": true,
+            "description": "绑定关系标识；不能由展示名称推导。"
+          },
+          "pluginKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "description": "所选插件 key；普通配置不携带发布修订，已有项不能原地更换 pluginKey。"
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true,
+            "description": "是否启用本次插件绑定；新建默认 true，编辑已有绑定省略时保持。"
+          },
+          "config": {
+            "type": "object",
+            "additionalProperties": true,
+            "description": "按当前 configSchema 投影的普通配置；writeOnly 密钥及未知存储字段不回传。",
+            "x-make-json-limits": {
+              "maxBytes": 65536,
+              "maxDepth": 16,
+              "maxNodes": 8192,
+              "maxPropertiesPerObject": 128,
+              "maxArrayItems": 256,
+              "maxStringCharacters": 32768,
+              "maxKeyCharacters": 128
+            },
+            "minProperties": 0,
+            "maxProperties": 128,
+            "propertyNames": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 128
+            }
+          },
+          "channelEndpoint": {
+            "$ref": "#/components/schemas/ChannelEndpoint",
+            "description": "仅配置管理者可见的 HTTP 渠道公网回调地址；非 HTTP 渠道省略。",
+            "readOnly": true
+          },
+          "secretFields": {
+            "type": "object",
+            "readOnly": true,
+            "additionalProperties": {
+              "$ref": "#/components/schemas/PluginSecretField"
+            },
+            "propertyNames": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 4096
+            },
+            "maxProperties": 8192,
+            "description": "可选新增只读投影；JSON Pointer 到 writeOnly 字段状态，包括未配置字段。旧客户端忽略此响应字段，不得原样回写。"
+          },
+          "pluginVersion": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "pluginKey",
+          "enabled",
+          "config",
+          "pluginVersion"
+        ],
+        "description": "当前保存的准确版本绑定；凭据材料剔除，阶段保留只读秘密摘要和渠道地址。",
+        "maxProperties": 7
+      },
+      "AgentDelete": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 2,
+            "maxLength": 20,
+            "description": "当前获权应用范围内的业务 key；软删除保留内部 id 与历史，释放活动名称，同名重建使用新内部身份。",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9_]{1,19}$",
+            "not": {
+              "pattern": "[^A-Za-z0-9_]"
+            }
+          },
+          "appKey": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "pattern": "\\S",
+            "description": "应用的可读 key；Make 中为实际环境 App 的 appKey。服务端固定原实例，不按同名新对象重定向历史。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "appKey"
+        ],
+        "maxProperties": 3,
+        "description": "按当前 appKey/key 定位活动 Agent 并软删除，停用绑定/渠道并取消任务，返回空对象；没有配置版本或旧实例令牌。"
+      },
+      "plugin_ListResourcesResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PluginOption",
+              "description": "完整插件配置选项，不需要逐项查询详情。"
+            },
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。",
+            "minItems": 0,
+            "maxItems": 100
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Page",
+            "description": "分页参数或当前页的分页结果，见对应子结构。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "maxProperties": 4
+      },
+      "ChannelEndpoint": {
+        "type": "object",
+        "properties": {
+          "serverURL": {
+            "type": "string",
+            "format": "uri",
+            "pattern": "^https://",
+            "maxLength": 2048,
+            "description": "获权配置管理者可见的 HTTP 渠道入口地址；不含内部连接或凭据定位。",
+            "minLength": 1
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "serverURL"
+        ],
+        "description": "所属绑定的获权 HTTP 回调展示信息，不表示连接已就绪。",
+        "maxProperties": 1
+      },
+      "ModelProvider": {
+        "type": "string",
+        "description": "Model.provider 的已知服务商代码字典，按实际提供云端模型 API 的服务商区分，不按模型研发方或模型名称猜测。本表是目标公共代码约定，不是当前组织已开通清单；有效取值仍来自获权 Model.List 返回的 provider。字典允许受信目录扩展，客户端遇到新值保留原值展示；不把下列已知值写成拒绝新服务商的闭合 enum。",
+        "x-extensible-enum": [
+          "volcengine",
+          "aliyun",
+          "deepseek",
+          "tencent",
+          "baidu",
+          "huawei",
+          "siliconflow",
+          "moonshot",
+          "zhipu",
+          "minimax",
+          "openai",
+          "anthropic",
+          "google"
+        ],
+        "x-make-provider-dictionary": [
+          {
+            "value": "volcengine",
+            "name": "火山引擎（火山云）",
+            "platform": "火山方舟 Ark",
+            "description": "火山引擎提供的云端模型 API；不是 Doubao/DeepSeek 等模型系列名。",
+            "documentation": "https://api.volcengine.com/api-explorer/?action=ChatCompletions&serviceCode=ark&version=2024-01-01"
+          },
+          {
+            "value": "aliyun",
+            "name": "阿里云",
+            "platform": "百炼 / DashScope",
+            "description": "阿里云提供的云端模型 API；Qwen/通义千问为模型系列。",
+            "documentation": "https://www.alibabacloud.com/help/en/model-studio/qwen-api-reference/"
+          },
+          {
+            "value": "deepseek",
+            "name": "DeepSeek",
+            "platform": "DeepSeek 官方 API",
+            "description": "直接调用 DeepSeek 官方服务；第三方云平台托管的 DeepSeek 不使用此值。",
+            "documentation": "https://api-docs.deepseek.com/"
+          },
+          {
+            "value": "tencent",
+            "name": "腾讯云",
+            "platform": "TokenHub / 混元 API",
+            "description": "腾讯云提供的模型 API 服务；具体模型及服务入口以目录为准。",
+            "documentation": "https://cloud.tencent.com/document/product/1729/101848"
+          },
+          {
+            "value": "baidu",
+            "name": "百度智能云",
+            "platform": "千帆",
+            "description": "百度智能云提供的模型 API 服务。",
+            "documentation": "https://cloud.baidu.com/doc/qianfan-docs/s/Fm9l6ocai"
+          },
+          {
+            "value": "huawei",
+            "name": "华为云",
+            "platform": "ModelArts / MaaS",
+            "description": "华为云提供的模型即服务 API。",
+            "documentation": "https://support.huaweicloud.com/intl/zh-cn/model-call-maas/model-call-029.html"
+          },
+          {
+            "value": "siliconflow",
+            "name": "硅基流动",
+            "platform": "SiliconCloud",
+            "description": "硅基流动提供的模型 API，包括其目录中的获准托管模型。",
+            "documentation": "https://docs.siliconflow.cn/docs/userguide/quickstart"
+          },
+          {
+            "value": "moonshot",
+            "name": "月之暗面 / Moonshot AI",
+            "platform": "Kimi API",
+            "description": "月之暗面官方云端模型 API；Kimi 为模型及应用名称。",
+            "documentation": "https://platform.kimi.ai/docs/guide/prompt-best-practice"
+          },
+          {
+            "value": "zhipu",
+            "name": "智谱 AI",
+            "platform": "BigModel 开放平台",
+            "description": "智谱提供的云端模型 API；GLM 为模型系列。",
+            "documentation": "https://docs.bigmodel.cn/cn/best-practice/case/ai-search-engine"
+          },
+          {
+            "value": "minimax",
+            "name": "MiniMax",
+            "platform": "MiniMax 开放平台",
+            "description": "MiniMax 提供的云端模型 API。",
+            "documentation": "https://platform.minimax.io/cooperate"
+          },
+          {
+            "value": "openai",
+            "name": "OpenAI",
+            "platform": "OpenAI API",
+            "description": "OpenAI 官方云端模型 API。",
+            "documentation": "https://developers.openai.com/api/reference/overview"
+          },
+          {
+            "value": "anthropic",
+            "name": "Anthropic",
+            "platform": "Claude API",
+            "description": "Anthropic 官方云端模型 API；其他云平台托管 Claude 时按实际服务商标识。",
+            "documentation": "https://platform.claude.com/docs/en/api/overview"
+          },
+          {
+            "value": "google",
+            "name": "Google",
+            "platform": "Gemini API / Google Cloud",
+            "description": "Google 提供的云端模型 API；具体区域与平台映射由权威目录确定。",
+            "documentation": "https://ai.google.dev/gemini-api/docs/get-started"
+          }
+        ],
+        "minLength": 1,
+        "maxLength": 64
+      },
+      "PluginOption": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "readOnly": true,
+            "description": "权威目录生成并返回的可读标识，与该目录内部技术 id 独立；更新名称或发布修订不改变 key，不作为内部 id 的别名。"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "description": "供用户阅读的展示名称。",
+            "maxLength": 255
+          },
+          "description": {
+            "type": "string",
+            "description": "用途说明或描述文本。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "status": {
+            "enum": [
+              "available",
+              "retired"
+            ],
+            "description": "该发布修订的目录准入状态；available 可用于新绑定，retired 不接受新绑定但保留获权历史读取。",
+            "minLength": 7,
+            "maxLength": 9
+          },
+          "configSchema": {
+            "type": "object",
+            "additionalProperties": true,
+            "readOnly": true,
+            "description": "所选修订的包级配置表单，含普通参数和 writeOnly 秘密录入；最大 48 KiB，完整目录项最大 64 KiB；不含内部实现、依赖和执行 Schema。",
+            "x-make-json-limits": {
+              "maxBytes": 49152,
+              "maxDepth": 16,
+              "maxNodes": 4096,
+              "maxPropertiesPerObject": 128,
+              "maxArrayItems": 128,
+              "maxStringCharacters": 32768,
+              "maxKeyCharacters": 128
+            },
+            "minProperties": 0,
+            "maxProperties": 128,
+            "propertyNames": {
+              "type": "string",
+              "minLength": 0,
+              "maxLength": 128
+            }
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "type": {
+            "$ref": "#/components/schemas/PluginType"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "key",
+          "name",
+          "description",
+          "status",
+          "configSchema",
+          "version",
+          "type"
+        ],
+        "description": "准确平台定义版本的公开投影；目录每个 key 选择最高 available 版本。",
+        "maxProperties": 7,
+        "x-make-json-limits": {
+          "maxBytes": 65536,
+          "maxDepth": 20,
+          "maxNodes": 4608,
+          "maxPropertiesPerObject": 128,
+          "maxArrayItems": 128,
+          "maxStringCharacters": 32768,
+          "maxKeyCharacters": 128
+        }
+      },
+      "AgentList": {
+        "type": "object",
+        "properties": {
+          "filter": {
+            "$ref": "#/components/schemas/Filter",
+            "description": "公共可选筛选结构；本接口业务上要求 expression 唯一限定 appKey。可继续组合其他支持的字段，不扩大获权范围。"
+          },
+          "sort": {
+            "$ref": "#/components/schemas/Sort",
+            "description": "排序规则列表，按数组顺序决定优先级；字段白名单见本接口。"
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/PageRequest",
+            "description": "分页参数或当前页的分页结果，见对应子结构。"
+          },
+          "view": {
+            "type": "string",
+            "enum": [
+              "webchat"
+            ],
+            "description": "应用聊天入口视图。省略时读取 Agent 管理列表。"
+          }
+        },
+        "additionalProperties": false,
+        "description": "Agent 列表使用公共列表结构；appKey 仅由 filter.expression 的 CEL 等值条件传递，必须唯一限定一个获权应用范围。缺少筛选、空表达式、无应用条件或范围不唯一均返回 HTTP 400。",
+        "maxProperties": 4,
+        "allOf": [
+          {
+            "if": {
+              "required": [
+                "view"
+              ]
+            },
+            "then": {
+              "not": {
+                "required": [
+                  "sort"
+                ]
+              }
+            }
+          }
+        ]
+      },
+      "PluginSecretField": {
+        "type": "object",
+        "properties": {
+          "configured": {
+            "type": "boolean",
+            "description": "是否已保存该字段；不证明凭据有效或渠道就绪。"
+          },
+          "maskedValue": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "minLength": 8,
+            "maxLength": 16,
+            "description": "已配置时由服务端派生前四位、固定八星号、后四位；不超过八码点时仅八星号。未配置时为 null。"
+          }
+        },
+        "required": [
+          "configured",
+          "maskedValue"
+        ],
+        "additionalProperties": false,
+        "minProperties": 2,
+        "maxProperties": 2,
+        "description": "仅供配置管理界面展示的秘密状态；不是秘密原值或可提交占位符。"
+      },
+      "ConfigVersionSummary": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^agent_config_version_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "id",
+          "version"
+        ],
+        "additionalProperties": false,
+        "maxProperties": 2
+      },
+      "PluginType": {
+        "type": "string",
+        "enum": [
+          "model",
+          "toolset",
+          "skill",
+          "channel",
+          "execution_environment",
+          "context_source"
+        ]
+      },
+      "PluginGet": {
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128,
+            "readOnly": true,
+            "description": "权威目录生成并返回的可读标识，与该目录内部技术 id 独立；更新名称或发布修订不改变 key，不作为内部 id 的别名。"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          }
+        },
+        "required": [
+          "key",
+          "version"
+        ],
+        "additionalProperties": false,
+        "maxProperties": 2
+      },
+      "AgentConfigVersion": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^agent_config_version_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$"
+          },
+          "version": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 9007199254740991
+          },
+          "config": {
+            "type": "object",
+            "properties": {
+              "name": {
+                "type": "string",
+                "minLength": 1,
+                "pattern": "\\S",
+                "description": "供用户阅读的展示名称。",
+                "maxLength": 255
+              },
+              "description": {
+                "type": "string",
+                "description": "用途说明或描述文本。",
+                "minLength": 0,
+                "maxLength": 4096
+              },
+              "status": {
+                "type": "string",
+                "enum": [
+                  "enabled",
+                  "disabled"
+                ],
+                "description": "Agent 启用状态；disabled 与内部软删除分别表达。",
+                "minLength": 7,
+                "maxLength": 8
+              },
+              "runtimeKey": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 128,
+                "description": "AgentDefinition 同名持久字段，直接引用 Runtime.key；创建默认选择后也返回确定值，不另存 Runtime 技术 id 关系。"
+              },
+              "prompt": {
+                "type": "string",
+                "maxLength": 32768
+              },
+              "plugins": {
+                "type": "array",
+                "maxItems": 32,
+                "items": {
+                  "$ref": "#/components/schemas/AgentPluginBinding"
+                }
+              }
+            },
+            "required": [
+              "name",
+              "status",
+              "runtimeKey",
+              "prompt",
+              "plugins"
+            ],
+            "additionalProperties": false,
+            "maxProperties": 6
+          },
+          "meta": {
+            "type": "object",
+            "properties": {
+              "createdAt": {
+                "type": "string",
+                "format": "date-time"
+              }
+            },
+            "required": [
+              "createdAt"
+            ],
+            "additionalProperties": false,
+            "maxProperties": 1
+          }
+        },
+        "required": [
+          "id",
+          "version",
+          "config",
+          "meta"
+        ],
+        "additionalProperties": false,
+        "maxProperties": 4
+      },
+      "DeleteAppAgents": {
+        "type": "object",
+        "properties": {
+          "appId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 128
+          }
+        },
+        "required": [
+          "appId"
+        ],
+        "additionalProperties": false,
+        "maxProperties": 1
+      },
+      "plugin_GetResourceResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "$ref": "#/components/schemas/PluginOption"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "maxProperties": 3
+      },
+      "agents_DeleteResourceResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "$ref": "#/components/schemas/EmptyResult",
+            "description": "当前操作的获权结果；ListResources 直接为数组，分页位于顶层 pagination。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data"
+        ],
+        "maxProperties": 3
+      },
+      "InputCapabilities": {
+        "type": "object",
+        "properties": {
+          "isMultiModal": {
+            "type": "boolean",
+            "description": "所选模型当前是否声明多模态能力；false 时客户端隐藏上传入口。"
+          },
+          "maxFileBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "maxTotalBytes": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "inputKinds": {
+            "type": "array",
+            "items": {
+              "enum": [
+                "text",
+                "image",
+                "file",
+                "audio",
+                "video"
+              ]
+            },
+            "minItems": 1,
+            "uniqueItems": true
+          },
+          "supportedContentTypes": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "minLength": 1
+            },
+            "uniqueItems": true
+          }
+        },
+        "required": [
+          "isMultiModal",
+          "maxFileBytes",
+          "maxTotalBytes",
+          "inputKinds",
+          "supportedContentTypes"
+        ],
+        "additionalProperties": false
+      },
+      "WebchatEntry": {
+        "type": "object",
+        "properties": {
+          "agentId": {
+            "type": "string",
+            "pattern": "^agent_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+            "minLength": 38,
+            "maxLength": 38,
+            "description": "Agent 实体 ID。\n例：agent_01a161562d0075acb5711eb302238265。"
+          },
+          "name": {
+            "type": "string",
+            "minLength": 1,
+            "pattern": "\\S",
+            "description": "供用户阅读的展示名称。",
+            "maxLength": 255
+          }
+        },
+        "required": [
+          "agentId",
+          "name"
+        ],
+        "additionalProperties": false
+      },
+      "AgentWebchatListResult": {
+        "type": "object",
+        "properties": {
+          "code": {
+            "const": 200,
+            "description": "与 HTTP 状态一致的业务状态码。"
+          },
+          "msg": {
+            "type": "string",
+            "description": "供人阅读的结果说明；客户端按 code 和 reason 判断分支。",
+            "minLength": 0,
+            "maxLength": 4096
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/WebchatEntry"
+            },
+            "description": "本页可用的应用聊天助手。",
+            "minItems": 0,
+            "maxItems": 1
+          },
+          "pagination": {
+            "$ref": "#/components/schemas/Page",
+            "description": "分页参数或当前页的分页结果，见对应子结构。"
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "code",
+          "msg",
+          "data",
+          "pagination"
+        ],
+        "maxProperties": 4
+      },
+      "AgentListResponse": {
+        "anyOf": [
+          {
+            "$ref": "#/components/schemas/agent_ListResourcesResult"
+          },
+          {
+            "$ref": "#/components/schemas/AgentWebchatListResult"
+          }
+        ],
+        "description": "省略 view 返回管理列表，webchat 视图返回应用内可使用的助手。"
+      }
+    }
+  },
+  "x-make-length-rules": {
+    "characterUnit": "Unicode code point",
+    "unicodeNormalization": "none",
+    "publicJsonRequestBytes": 8388608,
+    "publicJsonResponseBytes": 8388608,
+    "multipartFileBytes": 134217728,
+    "multipartMetadataBytes": 65536,
+    "multipartBodyBytes": 134283264,
+    "authorizationHeaderBytes": 16384,
+    "allRequestHeaderBytes": 32768,
+    "messageTextCharacters": 131072,
+    "messageTextUtf8Bytes": 524288,
+    "sseFrameBytes": 8388608,
+    "dynamicJson": {
+      "maxBytes": 65536,
+      "maxDepth": 16,
+      "maxNodes": 8192,
+      "maxPropertiesPerObject": 128,
+      "maxArrayItems": 256,
+      "maxStringCharacters": 32768,
+      "maxKeyCharacters": 128
+    },
+    "schemaJson": {
+      "maxBytes": 262144,
+      "maxDepth": 32,
+      "maxNodes": 16384,
+      "maxPropertiesPerObject": 1024,
+      "maxArrayItems": 1024,
+      "maxStringCharacters": 32768,
+      "maxKeyCharacters": 128
+    },
+    "multipartOverheadBytes": 65536,
+    "publicMessageBytes": 1048576
+  }
+}

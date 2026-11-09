@@ -54,7 +54,7 @@ instead of applying its stale response.
 Only while `presetContext.enabled`, load normalized runtime fields and:
 
 ```text
-GET /api/entities/:entityKey/preset
+GET /api/make/app/entities/:entityKey/preset
 ```
 
 before the first records query. Capture the complete permission-aware context
