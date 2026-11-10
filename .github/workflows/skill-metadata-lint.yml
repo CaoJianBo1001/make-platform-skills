@@ -72,7 +72,7 @@ jobs:
       - name: Check official Agent package and documented host example
         run: |
           npm exec --yes --ignore-scripts --registry=https://registry.npmjs.org/ \
-            --package=typescript@5.9.3 --package=@qfei-design/make-ai-assistant@0.4.1 \
+            --package=typescript@5.9.3 --package=@qfei-design/make-ai-assistant@0.4.2 \
             --package=react@19.2.6 --package=react-dom@19.2.6 \
             --package=@types/react@19.2.14 --package=@types/react-dom@19.2.3 -- sh -ec '
             agent_test_dependencies="$(dirname "$(dirname "$(command -v tsc)")")"

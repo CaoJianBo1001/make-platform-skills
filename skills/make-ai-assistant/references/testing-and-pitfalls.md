@@ -19,7 +19,7 @@
 
 ## 独立 fresh-agent forward test
 
-协议、接入流程或职责边界大改后，在隔离临时 App 进行独立新代理正向测试。只提供本 Skill、关联技能、已安装公开 0.4.1、认证 Shell/请求层/空 Service 骨架，以及来自固定合同源的 Gateway fixture。不能提供参考 App 实现、既有修复答案或提示预期漏洞。验证者仅在临时目录修改，不部署、不用真实凭据、不写远端。
+协议、接入流程或职责边界大改后，在隔离临时 App 进行独立新代理正向测试。只提供本 Skill、关联技能、已安装公开 0.4.2、认证 Shell/请求层/空 Service 骨架，以及来自固定合同源的 Gateway fixture。不能提供参考 App 实现、既有修复答案或提示预期漏洞。验证者仅在临时目录修改，不部署、不用真实凭据、不写远端。
 
 原始合同随 Skill 分发在 `scripts/fixtures/agent-v1/`：`openapi.json`、`data.openapi.json`、`events.schema.json` 和记录固定提交及逐文件 SHA-256 的 `source.json`。它们是合同 `7ddbacac599b3fc6780fb7f01f2cf466731c2369` 的不可改写快照，不从 Skill 操作清单反向生成，不依赖内部文档登录、包源码或参考 App。
 
@@ -41,4 +41,4 @@ node scripts/prepare-gateway-fixture.mjs "<isolated-app>/tests/contracts"
 
 分别说明：静态预检、合成协议/宿主行为、真实后端、模型、浏览器验收。未执行/跳过的测试列为未验证；不宣传“完整对接”覆盖未测能力。
 
-发现问题先归属：宿主路径/认证/字节丢失修宿主；公开包解析、生命周期/上传/SSE/UI 缺陷提交版本和最小复现给包维护者；服务端权限/部署/模型错误交平台。当前 0.4.1 client 替换的入口解析竞态见 package-integration，不在宿主添加兼容逻辑，也不因此修改包。
+发现问题先归属：宿主路径/认证/字节丢失修宿主；公开包解析、生命周期/上传/SSE/UI 缺陷提交版本和最小复现给包维护者；服务端权限/部署/模型错误交平台。当前 0.4.2 client 替换的入口解析竞态见 package-integration，不在宿主添加兼容逻辑，也不因此修改包。

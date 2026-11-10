@@ -38,7 +38,7 @@ function fixture(project, code = source, options = {}) {
   write(
     path.join(ui, 'package.json'),
     JSON.stringify({
-      dependencies: { '@qfei-design/make-ai-assistant': '0.4.1' },
+      dependencies: { '@qfei-design/make-ai-assistant': '0.4.2' },
     })
   );
   write(path.join(ui, 'src/entry.tsx'), code);
@@ -62,7 +62,7 @@ function fixture(project, code = source, options = {}) {
     JSON.stringify({
       name: '@qfei-design/make-ai-assistant',
       type: 'module',
-      version: options.version ?? '0.4.1',
+      version: options.version ?? '0.4.2',
       exports,
     })
   );
@@ -101,7 +101,7 @@ function fixture(project, code = source, options = {}) {
 function check(project, error, script = audit) {
   const result = spawnSync(
     process.execPath,
-    [script, project, '--expected-package-version=0.4.1'],
+    [script, project, '--expected-package-version=0.4.2'],
     { encoding: 'utf8' }
   );
   const output = result.stdout + result.stderr;

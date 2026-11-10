@@ -1,6 +1,6 @@
 # Agent Public API v1 与 Service 边界
 
-核对来源：[接口总览](https://make-agent-design-1183132516685447241.make.qfei.cn/api-reference/overview)、正式包 0.4.1 的 `/agent` 生成类型和校验器。包固定合同源为 `agent-design/docs/contracts/public` 提交 `7ddbacac599b3fc6780fb7f01f2cf466731c2369`。网站与已安装包不一致时记录具体差异，不能擅自合成第三套协议。
+核对来源：[接口总览](https://make-agent-design-1183132516685447241.make.qfei.cn/api-reference/overview)、正式包 0.4.2 的 `/agent` 生成类型和校验器。包固定合同源为 `agent-design/docs/contracts/public` 提交 `7ddbacac599b3fc6780fb7f01f2cf466731c2369`。网站与已安装包不一致时记录具体差异，不能擅自合成第三套协议。
 
 ## 路径与操作
 
