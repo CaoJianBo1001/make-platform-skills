@@ -12,7 +12,7 @@
 
 ## 上传和识图
 
-0.4.1 是 `POST /content` multipart 原件上传，不是“初始化→分片→complete”的旧协议。包公开 `AgentAttachmentController` 与 `AGENT_UPLOAD_LIMIT` 管理上传、重试、未知回执恢复；宿主不复制上传引擎。消息只引用获确认的 Content；失败项保留重试/移除，不能把本地文件名当成功引用。
+0.4.2 是 `POST /content` multipart 原件上传，不是“初始化→分片→complete”的旧协议。包公开 `AgentAttachmentController` 与 `AGENT_UPLOAD_LIMIT` 管理上传、重试、未知回执恢复；宿主不复制上传引擎。消息只引用获确认的 Content；失败项保留重试/移除，不能把本地文件名当成功引用。
 
 `agents.getInputCapabilities({agentId,source:"webchat"})` 是获权入口输入能力，包负责读取和刷新。上传接口可用不代表模型支持该格式；不要在宿主固定 text-only，也不要承诺所有文件都可理解。
 

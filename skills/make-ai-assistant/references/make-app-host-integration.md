@@ -51,6 +51,6 @@ import "@qfei-design/make-ai-assistant/styles.css";
 
 桥保持 method、SDK 生成的 headers、signal，使用宿主既有认证 fetch 与 `credentials:"include"`。不读取或复制 Cookie/Token，不拼 Authorization。401 按统一登录策略恢复；403 保留权限拒绝，不默认触发登录循环。检查错误类型如需读取正文，使用 clone，不吞掉 SDK 的原始响应。
 
-浏览器 Fetch 不能直接使用 SDK 的异步迭代 multipart body 时，在桥边界有界转换为 Blob。上限使用 `AGENT_UPLOAD_LIMIT` 加有界 multipart 元数据预算（0.4.1 参考 64 KiB），逐块检查取消与累计字节；不把整个上传转成 JSON、字符串或 base64。原 Content-Type 的 multipart boundary 必须与字节匹配；Service 重建 FormData 时让运行时生成新 boundary。
+浏览器 Fetch 不能直接使用 SDK 的异步迭代 multipart body 时，在桥边界有界转换为 Blob。上限使用 `AGENT_UPLOAD_LIMIT` 加有界 multipart 元数据预算（0.4.2 参考 64 KiB），逐块检查取消与累计字节；不把整个上传转成 JSON、字符串或 base64。原 Content-Type 的 multipart boundary 必须与字节匹配；Service 重建 FormData 时让运行时生成新 boundary。
 
 响应保持 status、all headers 与惰性字节迭代器。正常结束、错误、主动取消和未消费就取消均释放 reader/body；Trace 仅结束一次。JSON、SSE、下载都传 `traceparent` 与对应 `X-Log-Id`，日志只包含操作、状态、尝试和安全标识。

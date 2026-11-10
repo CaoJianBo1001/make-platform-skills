@@ -10,7 +10,7 @@ const root = path.resolve(
 const skill = path.join(root, 'skills/make-ai-assistant');
 const read = (name) => fs.readFileSync(path.join(skill, name), 'utf8');
 const guide = read('SKILL.md');
-assert.match(guide, /version:\s*0\.4\.1/); // Skill 与 npm 版本独立，本次补丁恰为同号。
+assert.match(guide, /version:\s*0\.4\.2/); // Skill 与 npm 版本独立，本次补丁恰为同号。
 for (const file of fs.readdirSync(path.join(skill, 'references'))) {
   assert.ok(
     guide.includes('references/' + file),

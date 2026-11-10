@@ -10,6 +10,10 @@ LICENSE             仓库许可证
 ```
 
 Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建时另行嵌入固定快照。
+2026-11-10：在独立 beta 集成分支合入 canvas/skill 的 Agent 0.4.2 更新，保留 beta 的分析包 0.1.8、布局规范、认证与管理员反馈检查；Service 使用合并后的 0.2.28，不向 canvas/skill 回灌 beta。
+
+2026-11-10：Agent 接入基线同步正式 npm 0.4.2，核对公开类型和固定合同；UI／Service 同版，包内消息排序由包负责，宿主筛选与上传边界独立验收，不覆盖全局 Skill 或发布应用。
+
 2026-11-10：在独立 beta 集成分支合入分析包 0.1.8 接入及布局验收规范，保留 beta 的 Agent 0.4.1、Service 路由、App 上下文、管理员反馈和全部检查；Service／UI 使用合并后的新版本，不向 make-app-analytics 或 canvas/skill 回灌 beta。
 2026-11-09：在独立集成分支合入远程 canvas/skill 的 Agent 0.4.1 与 Service 路由更新，保留 beta 的分析 Skill、App 上下文及管理员反馈检查；合并后的认证、筛选、Service 与 UI Skill 使用新版本，不向 canvas/skill 回灌 beta。
 2026-11-09：Agent 接入基线同步正式包 0.4.1，使用 /agent 与 MakeAppAssistantEntry 的受限 webchat 发现；更新 25 项 Service 操作组合、认证字节桥、真实 App ID、生命周期、文件图片与正向验证，宿主不补丁包内逻辑。
