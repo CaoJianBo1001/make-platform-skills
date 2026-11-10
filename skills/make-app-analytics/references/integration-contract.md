@@ -2,7 +2,7 @@
 
 ## 先核对可用制品
 
-能力说明以正式包 `@qfei-design/make-app-analytics@0.1.6` 为基线，发布源为 npmjs；这不是对 registry 最新版本的判断。读取宿主 manifest、锁文件和实际安装产物的 `package.json`、exports、类型声明；UI 与 Service 固定同一正式版本，完整性由锁文件记录。通过宿主既有包管理器安装，不再维护本地压缩包、指向相邻源码的 file/link 依赖或验证包别名，不直接编辑 node_modules。
+能力说明以正式包 `@qfei-design/make-app-analytics@0.1.8` 为基线，发布源为 npmjs；这不是对 registry 最新版本的判断。读取宿主 manifest、锁文件和实际安装产物的 `package.json`、exports、类型声明；UI 与 Service 固定同一正式版本，完整性由锁文件记录。通过宿主既有包管理器安装，不再维护本地压缩包、指向相邻源码的 file/link 依赖或验证包别名，不直接编辑 node_modules。
 
 升级时先核验目标 registry 的实际版本、公开合同和兼容性，再更新清单、锁文件并执行冻结安装、宿主回归和构建。包源码通过不替代发布产物验证；安装正式包不授权重新发布、推送或覆盖全局 Skill。正式包不可获取时保留清晰的失败状态，不偷偷退回旧本地制品或伪装接入成功。
 
@@ -14,13 +14,13 @@
 
 | 已验证入口 | 主要能力 |
 | --- | --- |
-| 包根入口 | 基础定义／结果校验、固定展示与查询集合；`evaluateBusinessMetrics`、`evaluateDashboardMetrics`；`GroupedSeriesDefinition/Result`、`evaluateGroupedSeries`、`buildSeriesChartModel` 和逐点解释 |
+| 包根入口 | 基础定义／结果校验、固定展示与查询集合；业务指标、分组序列、累计／窗口／逐月比较、派生排名；`buildSeriesChartModel`、`buildTargetModel`、`buildExplorationChartModel`及对应公开Schema |
 | `/server` | `AnalysisRegistration`、`AnalysisScope`、`AnalysisHost`、`AnalysisSession`、`createAnalysisService`、`createDashboardService`、Make 适配与执行错误 |
-| `/react` | 基础卡、图、面板、帮助、明细、结果表与查询 Hook；`DashboardMetricGroup`、`ContributionBreakdown`、`AnalysisMultiMetricView`、`AnalysisSeriesView`、`AnalysisSeriesTable` |
+| `/react` | 基础卡、图、面板、帮助、明细、结果表与查询Hook；工作台与序列展示、`AnalysisTargetView`和`AnalysisExplorationView` |
 | `/echarts` | 受控图形模型与引擎适配；不是任意 option 透传端口 |
 | `/react/styles.css` | 包拥有的内容布局、指标、图表、结果表和响应式样式 |
 
-此表不代替安装产物检查。基础查询结果、工作台结果与分组序列分别消费自己的公开合同；该基线不提供独立 `AnalysisPresentation` 协议、运行时分析 Agent 或 BI 设计器，也无累计／滚动、派生指标全局排名、专用目标序列、复合键对齐；散点／热力／漏斗等未封装图形和中位数／P90 等数据依赖须另行评估，不能用任意引擎配置绕开。
+此表不代替安装产物检查。0.1.7新增能力、0.1.8目标紧凑格式及剩余边界见[能力与示例](release-017.md)。基础结果、工作台、分组序列分别消费自己的公开合同；散点／热力消费原标准结果，目标消费分组序列。该基线仍无独立`AnalysisPresentation`协议、运行时分析Agent、BI设计器、复合键对齐、降低型／负值目标或记录加权滚动均值；漏斗、留存、层级及分位数仍需对应数据和公共合同。DateTime分桶仍须核对后端支持。
 
 ## 服务端：注册业务，注入可信端口
 
@@ -83,6 +83,8 @@ import { AnalysisPanel } from "@qfei-design/make-app-analytics/react";
 ```
 
 派生指标卡使用 DashboardMetricGroup；贡献与其他使用 ContributionBreakdown；同一聚合的多指标柱线使用 AnalysisMultiMetricView；跨来源逐组计算与对照使用 AnalysisSeriesView。组件按本次问题选用，不因包公开多个入口就全部挂载。单图也可直接消费宿主已有状态，无需强制建立整页目录和查询控制器。
+
+0.1.7目标卡使用`AnalysisTargetView`，多来源／派生双轴使用`AnalysisSeriesView`的combo，散点／热力使用`AnalysisExplorationView`。均复用同一Provider、主题及汇总明细，不向基础views枚举塞入新图形，不透传ECharts option。
 
 ## 业务页面与验证环境
 

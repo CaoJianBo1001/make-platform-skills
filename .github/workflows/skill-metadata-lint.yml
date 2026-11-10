@@ -43,6 +43,12 @@ jobs:
           node --test skills/make-app-permission/scripts/test-create-payload-signals.mjs
           node --test skills/make-app-permission/scripts/test-scoped-route-feedback.mjs
 
+      - name: Execute analytics Skill examples against released 0.1.8
+        run: |
+          npm exec --yes --ignore-scripts \
+            --package=@qfei-design/make-app-analytics@0.1.8 --package=react@19.2.9 --package=react-dom@19.2.9 \
+            -- node scripts/test-analytics-release-examples.mjs --installed
+
       - name: Check feedback package and SDK compatibility
         run: |
           npm exec --yes --ignore-scripts --package=typescript@5.9.3 \

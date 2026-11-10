@@ -2,7 +2,7 @@
 name: make-app-analytics
 description: "Use when a Make App PRD or iteration requests business reports, analytical charts, KPI cards, trends, composition, rankings, 数据分析/可视化, or fixes to existing analytics layout/request/performance behavior. Includes intent such as 看每月金额如何变化. Select the smallest useful surface from verified business metrics and data, then guide host–analytics-package integration. Does not own temporary CLI lookups, existing list totals, record-list grouping, print/export reports, IAM policy, or runtime conversational BI; ordinary App creation alone does not trigger analytics."
 metadata:
-  version: 0.1.11
+  version: 0.1.15
 ---
 
 # make-app-analytics
@@ -24,9 +24,10 @@ metadata:
 4. 读取 [选图与业务口径](references/selection-and-scope.md)，结合实际结果选择已实现的模板。使用 [接入合同](references/integration-contract.md) 核对实际制品、公开导出与宿主分工；字段、数据质量或模板不适合时说明限制，采用可信的结果表或调整已授权范围内的方案。
 5. 在宿主服务端注册现有 `AnalysisDefinition` 与 `AnalysisRegistration`。同时记录业务标签、解释条目及选择原因；不新增一套分析 DSL，也不向严格 V1 定义塞入布局字段。UI 只引用服务端已注册的 ID、版本与视图。
    需要同比／环比、条件比率、贡献度、质量指标或多来源工作台时，先读 [高级指标与共同范围](references/advanced-metrics.md)。需要跨来源逐月计算、部门／整体对照、面积／分组柱／堆叠柱时，再读 [分组序列与对照展示](references/grouped-series.md)。查询和解释从共同范围注册生成，不仅凭相同 scopeKey 或文字证明分母一致。
-6. 编排图形前读 [图表占位与布局](references/chart-layout.md)，按类型、分类／系列数和实际容器宽度安排跨列、并排或堆叠。同排同层级卡片对齐上下边缘及已有页脚底缘，各行按内容分配高度，避免全页机械等高或只拉长外框留下空白。页面外边距与业务文案遵循宿主规范和 [业务页面约束](references/integration-contract.md#业务页面与验证环境)；不复制验证标记，不覆盖包私有样式，公开能力不足时说明包侧缺口。
+   需要累计、滚动、逐月同比环比、派生排名、目标模板、组合双轴、百分比堆叠或散点／热力时，读 [0.1.7／0.1.8能力与接入示例](references/release-017.md)。这些已有正式公共合同，不在宿主重写计算；按需求选用，不把所有新模板自动加入每个App。
+6. 编排图形前读 [图表占位与布局](references/chart-layout.md)，按类型、分类／系列数、实际卡数和所属容器宽度安排跨列、并排或堆叠；指标末行、单图空轨道及嵌套区块须检查整组占位。同排同层级卡片对齐上下边缘及已有页脚底缘，各行按内容分配高度，避免全页机械等高或只拉长外框留下空白。页面外边距与业务文案遵循宿主规范和 [业务页面约束](references/integration-contract.md#业务页面与验证环境)；不复制验证标记，不覆盖包私有样式，公开能力不足时说明包侧缺口。
    需要汇总明细时按 [默认容器](references/integration-contract.md#汇总明细的默认容器) 接入宿主唯一适配器：PC 居中弹窗，手机底部弹层；原始业务记录沿用宿主详情／抽屉。同一 App 不按图表或数据量随意切换容器。
-7. 按 [验收要求](references/acceptance.md) 检查真实查询、权限、口径、覆盖范围、固定展示、手机和异常状态；测量首次初始化、筛选、页面返回、刷新及取消的实际下游次数和耗时，不只看浏览器路由数。测试所生成的接入产物与实际请求，不能仅凭文档关键词检查声称 AI 任务验证完成。
+7. 按 [验收要求](references/acceptance.md) 检查真实查询、权限、口径、覆盖范围、固定展示、手机和异常状态；布局用截图及真实边界测量覆盖至应用最宽内容区，不能只验算列数。测量首次初始化、筛选、页面返回、刷新及取消的实际下游次数和耗时，不只看浏览器路由数。测试所生成的接入产物与实际请求，不能仅凭文档关键词检查声称 AI 任务验证完成。
 
 ## 职责交接
 
