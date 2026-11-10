@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.66
+  version: 0.4.69
 ---
 
 # makeui
@@ -11,9 +11,11 @@ PRD 或本次迭代已提出分析指标、趋势、构成、排名或可视化�
 
 列表旁统计需要跟随筛选时，按 [列表筛选联动](../make-app-analytics/references/list-filter-integration.md) 消费已应用快照。条件不能完整映射时，保留列表筛选，在分析区域说明限制，取消旧统计并卸载旧图形、数值和明细；不能继续显示宽范围或旧范围统计。
 
-已触发的图表页面按 [图表占位与布局](../make-app-analytics/references/chart-layout.md) 编排：以实际内容区、图形类型和数据密度决定跨列与高度，同排同层级卡片的上下边缘及已有页脚底缘对齐，各行保留自身合理高度。避免全页固定等高、只拉长外框、重复边距及少量数据的大空框。宿主负责外层排列，包负责内部绘图区和引擎尺寸生命周期；只用核验后的公开端口，缺少能力时说明包侧依赖，不覆盖私有样式。
+已触发的图表页面按 [图表占位与布局](../make-app-analytics/references/chart-layout.md) 编排：以实际内容区、图形类型、数据密度及卡片数量决定跨列与高度，同排同层级卡片的上下边缘及已有页脚底缘对齐，各行保留自身合理高度。避免全页固定等高、只拉长外框、重复边距及少量数据的大空框。指标末行、单图空轨道与嵌套容器按 [交叉验收](../make-app-analytics/references/acceptance.md#布局数量与宽度的交叉验收) 用截图及真实边界覆盖至应用最宽内容区。宿主负责外层排列，包负责内部绘图区和引擎尺寸生命周期；只用核验后的公开端口，缺少能力时说明包侧依赖，不覆盖私有样式。
 
 图表的分组汇总明细按 [统一容器](../make-app-analytics/references/integration-contract.md#汇总明细的默认容器) 使用 PC 居中弹窗／手机底部弹层，同一 App 复用公共 `DetailsSurface`；原始业务记录沿用既有详情与操作容器。
+
+分析包0.1.8的目标、combo双轴、百分比堆叠、散点／热力使用[对应公共组件](../make-app-analytics/references/release-017.md)，宿主只组合固定业务模板和布局，不复制计算／明细，不向基础views塞入新类型。0.1.8大额目标可用公开numberNotation="compact"，旧0.1.7先升级；完整值说明沿宿主Help适配器、明细保留标准金额。新图沿用主题及同一Provider；手机核对轴、颜色单位、点击提示和底部明细，不能仅以SVG渲染通过代替交互验收。
 
 所有表示当前应用名称的展示位置必须动态消费接口名称，禁止硬编码业务应用名；统一来源、刷新、长名称和验收见 [动态应用名称](references/app-shell-layout.md#动态应用名称)。
 

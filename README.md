@@ -129,6 +129,8 @@ Codex 判断优先级：
 
 在 PRD 或迭代明确提出分析需求后，指导 Agent 选择业务指标、可信统计来源及固定展示，再由宿主接入 `@qfei-design/make-app-analytics`。普通项目初始化不启用分析；npm 包安装与 Skill 安装是两件事。
 
+当前分析能力基线为正式0.1.8，新增累计／滚动、逐月比较、派生排名、目标、组合双轴、百分比堆叠和散点／热力，按[可执行接入示例](skills/make-app-analytics/references/release-017.md)及实际制品核验。旧宿主需要同步依赖、注册与页面，更新Skill不自动迁移App，也不开放尚缺后端合同的能力。
+
 安装或验证时确认 [SKILL.md](skills/make-app-analytics/SKILL.md)、全部 references 及需要的 Service、UI、筛选、权限 Skill 实际可读。安装后只依赖各 Skill 的分发目录，不要求存在仓库根 README 或仓库维护脚本。
 
 首次添加新增的 `make-app-analytics` 并更新关联 Skill，来源沿用所选 stable／beta 通道。`npx skills update` 只更新已安装技能，新增入口使用 `makecli skills update` 或前述 `npx skills add`；makecli 内嵌快照不等于已安装文件。可发现 Skill 只代表开发引导就绪，是否安装 npm 包及生成分析区域仍按需求触发。

@@ -10,7 +10,7 @@
 
 ## 按实际制品选择接法
 
-参数能力以 [制品合同](integration-contract.md#参数形状与日期边界) 为准。0.1.6 的注册参数仅提供 scalar 等值与 Date 字段的 dateRange；并不提供接受任意列表 expression 或条件树的 execute 参数。
+参数能力以[制品合同](integration-contract.md#参数形状与日期边界)为准。0.1.7的注册参数仍仅提供scalar等值与Date字段的dateRange，不提供接受任意列表expression或条件树的execute参数；新增图形不扩大筛选能力。
 
 | 已应用条件 | 可采用的接法 | 必须核对 |
 | --- | --- | --- |
