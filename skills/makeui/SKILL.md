@@ -2,10 +2,12 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.62
+  version: 0.4.63
 ---
 
 # makeui
+
+新 App 按审批默认规则生成能力，或存量需求包含飞书等外部入口的 BPM 独立填单／任务详情时，读取 [审批独立页面合同](../make-app-approval/references/standalone-pages.md)：新增适用的 `/bpm/...` 容器，复用宿主表单及公共审批状态机，保留原对象 Drawer／手机任务路由；此例外不改变普通对象的新建／编辑／详情默认展示。
 
 所有表示当前应用名称的展示位置必须动态消费接口名称，禁止硬编码业务应用名；统一来源、刷新、长名称和验收见 [动态应用名称](references/app-shell-layout.md#动态应用名称)。
 

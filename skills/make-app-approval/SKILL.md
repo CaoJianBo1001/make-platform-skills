@@ -1,8 +1,8 @@
 ---
 name: make-app-approval
-description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成、任务详情办理和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
+description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、BPM 独立新建与任务页、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成、任务详情办理和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.29
+  version: 0.2.30
 ---
 
 # Make App 前台审批完整接入
@@ -17,12 +17,16 @@ metadata:
 4. 使用现有 UI → Service → Make 链路，先同步宿主 API 文档。包拥有的列表/详情状态机直接复用；宿主适配器、字段序列化和请求分层，不复制包实现。桌面/手机共享数据和业务合同，分别按实际组件能力完成 View。
 5. 按 [验证场景](references/verification.md) 为宿主行为先补失败测试，再实现。实际包能力、宿主回归、浏览器验收和真实审批写入联调分别报告；只运行技能检查不能宣称应用已接通。
 
+涉及三方审批独立入口时，按 [独立页面合同](references/standalone-pages.md) 先列出当前 App 的能力映射。Console 为统一管理端，各 App 适配自身表单、控件和业务规则；样板目录与代码不作为所有项目的必需结构。
+
 ## 按落点读取
 
 | 落点 | 参考 |
 | --- | --- |
 | 是否生成、导航位置、多端复用 | [默认生成规则](references/generation-rules.md) |
 | 审批新建字段、保存与保存并提交 | [发起侧合同](references/initiation-contract.md) |
+| 飞书等深链的 BPM 独立新建、待处理／已完成任务页及存量迁移 | [独立页面合同](references/standalone-pages.md)（与 makeui 配合，复用表单及公共任务状态机） |
+| 独立页对象定位与逐次附件预上传的边界参考 | [安全边界参考](assets/standalone-page-boundaries.mjs)（非 npm API；宿主仍须验证自身真实链路） |
 | 未提交发起、失败恢复、发起人撤回、重新发起边界 | [记录生命周期](references/record-lifecycle.md) |
 | 包版本、公开入口、控件适配、我的审批列表与筛选 | [包与列表](references/package-and-list.md) |
 | 节点字段、同意/拒绝/退回/继续提交、任务附件及失败恢复 | [任务详情与办理](references/task-detail.md) |

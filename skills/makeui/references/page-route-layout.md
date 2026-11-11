@@ -1,5 +1,9 @@
 # Route-based form and detail pages
 
+飞书三方审批等外部深链的独立页面另按 [BPM 独立页面合同](../../make-app-approval/references/standalone-pages.md)：使用 `/bpm/objects/:entityKey/new` 和 `/bpm/tasks/:processInstanceId/:taskId`，保留本页原对象地址；两种容器复用同一表单／任务控制器，独立页不挂载列表 Shell。
+
+下文对象 Drawer／页面及手机保存后返回列表规则适用于普通对象入口。BPM 独立入口的完成、退出及容器布局以独立页面合同为准，不因复用表单而带入列表 Shell 或强制返回列表。项目原表单可以是 Drawer、弹窗或页面，接入时保留其组件库和业务逻辑。
+
 审批新建的字段来源、保存/首次发起及详情状态使用 [make-app-approval](../../make-app-approval/SKILL.md)。下文 `createFields` 仅用于普通新建；手机与桌面共享审批配置、保存会话和状态映射。仅保存成功或首次发起成功沿用已有返回规则；保存成功但发起失败时保留原记录及恢复入口，不能丢失 ID 后重新新建。
 
 ## 展示模式优先级
