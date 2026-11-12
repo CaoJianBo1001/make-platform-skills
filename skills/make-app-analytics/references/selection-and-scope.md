@@ -12,7 +12,8 @@
 
 ## 有边界的数据核对
 
-- 维度使用 `capabilities.aggregable`，不以列表 `groupable` 替代。sum/avg 等指标按函数和字段类型判断，不要求数值字段 aggregable=true。日期分桶的后端支持以 [Data API 合同](../../makedsl/references/DataAPIDesign.md#聚合统计-record-数据) 为准。
+- 从可读 Schema 字段选维度。直接聚合分组看 `capabilities.aggregable`，不以列表 `groupable` 替代。业务 DateTime 是特例，保持 `aggregable=false`，在同一个 `group` 项中指定 `granularity` 后可作为时间维度。sum/avg 等指标按函数和字段类型判断，不要求指标字段 `aggregable=true`。参见 [Data API 合同](../../makedsl/references/DataAPIDesign.md#聚合统计-record-数据)。
+- DateTime 统计优先复用正式分析包0.1.9的 [DateTime 合同](datetime.md)：UI／Service同版，公开校验器和查询均须实际验证。0.1.8及旧版先升级，不因旧限制生成一条宿主专用直查／通用计算链。原本直接使用Data API的场景仍按 [App Service 接入](../../make-app-service/references/make-data-adapter.md#aggregate-statistics) 执行，不据此推断所有旧制品都支持。
 - 优先请求本次问题的全局指标和受限分组，核对 `pagination.total`、空分组、日期跨度和实际分类数；样例页或前 N 组不能代替整体分布。
 - 严重缺失的分类不默认做业务占比；全零、负值、只有一个时间点或极端数值会改变适合的展示。质量提示来自查证结果，不将某个验证集的异常写成所有项目常驻提示。
 - 保留 Lookup 的分组记录 ID，同名标签不合并；Lookup 的过滤值、展示值和分组身份按原合同分别处理。

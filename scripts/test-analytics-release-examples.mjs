@@ -4,6 +4,18 @@ import { resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { resolveAnalyticsInstall } from './lib/analytics-install-location.mjs';
+import { verifyDateTimeExample } from './lib/analytics-datetime-example.mjs';
+
+const dateTimeDocument = await readFile(new URL('../skills/make-app-analytics/references/datetime.md', import.meta.url), 'utf8');
+const dateTimeCode = dateTimeDocument.match(/<!-- analytics-datetime-example -->\s*```js\n([\s\S]*?)```/)?.[1];
+assert.ok(dateTimeCode, 'DateTime 接入须提供可执行的公开配置');
+const dateTimeExample = await import(`data:text/javascript,${encodeURIComponent(dateTimeCode)}`);
+assert.equal(dateTimeExample.dateTimeFields[0].type, 'Make.Field.DateTime');
+assert.equal(dateTimeExample.dateTimeFields[0].capabilities.aggregable, false);
+if (process.env.MAKE_ANALYTICS_DATETIME_PACKAGE_ROOT) {
+  await verifyDateTimeExample(dateTimeExample, process.env.MAKE_ANALYTICS_DATETIME_PACKAGE_ROOT, true);
+  console.info('DateTime candidate: public definition, request and chart passed');
+}
 
 // 直接执行Skill提供的配置，不以关键词匹配代替公开包行为验证。
 const document = await readFile(
@@ -55,14 +67,15 @@ const root =
     : undefined);
 if (!root) {
   console.info(
-    'analytics examples: SKIP runtime (set MAKE_ANALYTICS_PACKAGE_ROOT to an installed 0.1.8 package); example modules parsed',
+    'analytics examples: SKIP runtime (set MAKE_ANALYTICS_PACKAGE_ROOT to an installed 0.1.9 package); example modules parsed',
   );
 } else {
   const manifest = JSON.parse(
     await readFile(resolve(root, 'package.json'), 'utf8'),
   );
   assert.equal(manifest.name, '@qfei-design/make-app-analytics');
-  assert.equal(manifest.version, '0.1.8');
+  assert.equal(manifest.version, '0.1.9');
+  await verifyDateTimeExample(dateTimeExample, root, true);
   const load = (entry) =>
     import(pathToFileURL(resolve(root, manifest.exports[entry].import)).href);
   const sdk = await load('.'),
@@ -316,6 +329,6 @@ if (!root) {
     assert.equal(typeof react[name], 'function');
   assert.equal(typeof charts.createExplorationChartOption, 'function');
   console.info(
-    'analytics 0.1.8 examples: PASS (cumulative, rolling, period comparison, ranking, target, combo, composition, scatter, heatmap; explicit zero/default missing/NULL; public exports)',
+    'analytics 0.1.9 examples: PASS (DateTime, cumulative, rolling, period comparison, ranking, target, combo, composition, scatter, heatmap; explicit zero/default missing/NULL; public exports)',
   );
 }

@@ -2,7 +2,7 @@
 name: makecli
 description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, read build/deployment logs, entities, relations, records, query server-side statistics (统计、汇总、分组统计), inspect resources, switch backend context, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"发布到 production\", \"promote\", \"部署进度\", \"构建状态\", \"构建日志\", \"部署日志\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", \"切换环境\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.7.3
+  version: 0.7.6
 ---
 
 # makecli — Make Platform CLI
@@ -20,14 +20,17 @@ makecli update          # self-update + sync Make platform skills
 
 ## Pre-flight Check
 
-Before executing ANY makecli command, verify the environment:
+Check that `makecli` is installed; if missing, use the installation above.
 
-0. Check `makecli` is installed — missing: run the installation above
-1. Run `makecli configure verify --output=json` to check token status
-   - Not configured / expired: user must run `makecli login` (browser OAuth)
-   - **INTERACTIVE** (opens browser, blocks) — instruct user to run it themselves via the `!` shell prefix (supported by Claude Code and Codex)
-   - Fallback for manual tokens: `makecli configure token` (also interactive, via `!`)
-2. Config errors mentioning stale keys → run `makecli doctor` (read-only report); `makecli doctor --fix` migrates them in place
+Local help, version and local configuration inspection (for example `makecli --help` and `makecli settings get channel`) do not require a valid login. Login and manual token setup must also remain usable when credentials are missing or expired; do not put an authentication check in front of them.
+
+For commands that call an authenticated remote Make API:
+
+1. Resolve this task's backend context and credentials profile from its explicit options, environment and existing configuration. Keep the same selection for verification, login and the actual operation; do not change global defaults merely to run a check.
+2. Run `makecli configure verify --context <context> --profile <profile> --output=json`, replacing both placeholders with the resolved task selection.
+3. If credentials are missing or expired, ask the user to run `makecli login --context <context> --profile <profile>` in their terminal and complete the interactive login. Manual token setup, when selected, uses the same context/profile. Do not send the task to another environment or repeat a successful check before every local command.
+
+For configuration errors mentioning stale keys, use `makecli doctor` for a read-only report. `makecli doctor --fix` modifies configuration; review its migration scope and keep it within the authorized task.
 
 Backend context defaults to `production`. Switch the global default with `makecli context use dev|test`, a profile default with `makecli configure set context <ctx>`, or per-call `--context`. Resolution order: `--context` > `$MAKE_CLI_CONTEXT` > profile `context` > `[settings] context` > `production`.
 

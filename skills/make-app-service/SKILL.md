@@ -2,7 +2,7 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts, including server-side aggregation for dashboards, charts and 统计/汇总. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.26
+  version: 0.2.32
 ---
 
 # make-app-service
@@ -11,7 +11,7 @@ metadata:
 
 统计接入前读取 [聚合查询规划](references/aggregate-query-planning.md)：同范围兼容指标合并，重复来源复用，避免逐对象 N+1；区分必要授权复核和重复网络初始化，使用有界并发、分页及请求预算。测量真实下游调用，不能只通过增大并发／超时或缓存业务结果解决慢页。
 
-分析包0.1.8的累计／滚动／逐月比较、派生排名、目标、组合与散点／热力按[公共合同](../make-app-analytics/references/release-017.md)注册；本Skill只负责业务来源、真实范围、目标唯一匹配及执行端口。排名先取完整候选，散点／热力不按点补查；多图和明细复用同份结果。UI／Service同版升级，npm发布不代表宿主已接入或后端DateTime能力已改变。
+扩展分析模板按[公共合同](../make-app-analytics/references/release-017.md)注册，DateTime按[自然日范围合同](../make-app-analytics/references/datetime.md)接入；制品基线归分析Skill统一维护。本Skill负责业务来源、真实范围、目标唯一匹配及执行端口；排名先取完整候选，散点／热力不按点补查，多图和明细复用同份结果。
 
 应用显示名称从运行时接口归一为共享 appName，后台改名后随既有刷新更新，禁止用配置或 DSL 固定名称覆盖；见 [应用名称来源](references/make-data-adapter.md#应用名称来源)。
 

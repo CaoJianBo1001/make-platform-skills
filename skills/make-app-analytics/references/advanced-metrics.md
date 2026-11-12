@@ -6,7 +6,7 @@
 
 只有实际制品公开以下入口和类型后才生成对应代码：根入口的 `dashboardResultSchema`、`evaluateBusinessMetrics`、`createMonthComparisonPeriods`、`MetricExplanation`，`/server` 的 `createDashboardService`、`AnalysisScope` 及注册的 `scopeKey`，`/react` 的 `DashboardMetricGroup`、`AnalysisMultiMetricView` 和 `ContributionBreakdown`。根据本次需求检查所需子集，不为一张条件比例卡引入所有图形。
 
-宿主版本缺少本次所需能力时，按接入合同评估 UI／Service 同版升级并验证兼容性；无法升级或获取制品时说明实际缺口。已有 Service 允许少量汇总组合，但不能假装旧包有新导出。用户明确授权本地研发验证时可使用隔离副本与指定候选 tarball；UI/Service 必须消费同一个制品，记录文件校验值、实际导出、测试与浏览器结果。生产依赖仍锁定正式版，不自动发布 npm、不更改全局安装的 Skill。
+缺少所需能力时，按[接入合同](integration-contract.md#先核对可用制品)处理升级、缺口或已授权的候选联调。已有Service允许少量汇总组合，但不能假装旧包有新导出。
 
 ## 一份共同范围生成查询与解释
 
@@ -91,7 +91,7 @@ sum 型排名未取齐全部分组时，同范围、完整的全局总体查询�
 
 复杂指标的 MetricExplanation 随服务端结果返回：统计口径、时间范围、时区、公式、分子与分母、单位精度、结果完整性。页面复用 DashboardMetricGroup 或 ContributionBreakdown，不重算统计。一般统计也可通过 metricExplanationItems 复用说明组织。
 
-宿主只配置一套 AnalysisUIProvider：Help 复用现有问号／Tooltip，桌面 hover/focus、手机 click；长内容分条换行、限制宽度，窄屏限制高度并能内部滚动，不能裁掉首尾。DetailsSurface 负责现有弹层、Portal、主题和手机容器，包负责明细内容、列宽、对齐与格式。页面外边距属于宿主，图表和指标内部排版属于包。
+帮助、汇总明细、Portal主题和桌面／手机交互统一复用[公共适配合同](integration-contract.md#帮助与汇总明细)，不为高级指标另建一套容器或格式化逻辑。
 
 idle、loading、error、unavailable、成功 0 分别处理。NULL、失败、未加载、部分结果、零分母不显示为成功 0；实际读取被拒绝时清除旧业务结果。精度只影响显示，不改原始数值；小于显示精度的非零比例采用边界提示（如 <0.01%），不能误读为真实零。前端不下载明细计算，Skill 不参与线上每次请求，不引入用户选图器或运行时 LLM。
 

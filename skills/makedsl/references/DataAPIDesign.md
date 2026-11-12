@@ -606,7 +606,7 @@ X-Make-Target: MakeService.ListResources
   "entityKey": "order",
   "group": [
     { "fieldKey": "status" },
-    { "fieldKey": "orderDate", "granularity": "month", "alias": "month" }
+    { "fieldKey": "orderTime", "granularity": "month", "alias": "month" }
   ],
   "aggregates": [
     { "aggregate": "count", "alias": "orderCount" },
@@ -621,8 +621,9 @@ X-Make-Target: MakeService.ListResources
 
 #### 维度与指标
 
-- `group` 可省略或为 `[]`，表示全局聚合；最多 3 项。维度使用 Schema 的 `capabilities.aggregable`，与列表 `groupable` 独立，见 [Schema 字段能力](MetaAPIDesign.md#schema)。
-- 分组元素为 `{fieldKey, granularity?, alias?}`，不含 `order`。`granularity` 仅用于 `Make.Field.Date`，支持 `day/week/month/quarter/year`；自然日/月/季/年桶分别形如 `2026-03-05`、`2026-03`、`2026-Q1`、`2026`。周桶为该周周一日期，例如 `2026-03-02`，跨年不拆周；日期桶的 `label=value`。
+- `group` 可省略或为 `[]`，表示全局聚合；最多 3 项。按可读 [Schema 字段](MetaAPIDesign.md#schema) 的 `capabilities.aggregable` 判断直接分组能力，与列表 `groupable` 独立。分组元素为 `{fieldKey, granularity?, alias?}`，不含 `order`，排序由 `sort` 声明。
+- **DateTime 特例**：可读业务 `Make.Field.DateTime` 字段保持 `aggregable=false`，仍可作时间分桶维度，须在同一个 `group` 项中指定合法的 `granularity`。上例的 `orderTime` 是 DateTime。Date 的 `granularity` 可选；其余字段类型不支持。
+- `granularity` 支持 `day/week/month/quarter/year`。自然日、月、季、年桶分别形如 `2026-03-05`、`2026-03`、`2026-Q1`、`2026`。周桶为该周周一日期，跨年不拆周。非空时间桶的 `label=value`。
 - `aggregates` 必填且为 1–10 项。指标 `alias` 必填；维度输出名默认 `fieldKey`，同字段不同日期粒度需用 `alias` 区分，全部输出列名不得重复。
 
 | `aggregate` | `fieldKey` / 类型 |
@@ -669,6 +670,8 @@ Lookup 始终引用当前 Entity 的字段 key：分组 `value` 是关联记录 
 维度支持严格一对一 FK 两侧，或标准 one→many FK 的 TO/many 侧；无有效关联或目标记录已删除时进入空值组。聚合主体保持单个 Entity，不支持通过 `targetEntity.field` 对 many 侧目标集合求指标；这类需求通常改为对明细 Entity 聚合。
 
 失败沿用 Make 的 `code/msg/data` 包装。参数错误可能在 `data.errors` 中提供 `{path,message,suggestion}`，据此修正对应参数后重试；保留原统计目标与筛选口径。权限或执行错误按原错误反馈，不当作 0 或完整结果。
+
+DateTime 缺少粒度时，`data.errors[].path` 为 `plan.resolve`，从消息中的 `group[i]` 和字段名定位维度。粒度值非法时，路径为 `group[i].granularity`。保留字段并选择符合统计口径的粒度。
 
 #### 不能直接表达时的方案选择
 

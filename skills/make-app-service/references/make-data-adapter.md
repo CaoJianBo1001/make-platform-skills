@@ -198,6 +198,8 @@ For dashboard metrics, charts, or AI analysis over matching Make records, prefer
 
 Call `POST /data/v1/aggregate` with `X-Make-Target: MakeService.ListResources` through the existing Make adapter. Reuse its runtime path scope, configured `appKey`, login context, cancellation, and response handling. Push supported calculations down, then perform any needed result combination or reasonably sized detail calculation in the Service; UI consumes the resulting business metrics. Read [query-planning examples](../../makedsl/references/DataAPIDesign.md#不能直接表达时的方案选择) when a single aggregate cannot meet the requirement. Record-list expansion and `groupFilter` remain the separate `make-app-group` workflow.
 
+For time buckets, select readable business Date or DateTime fields by Schema type and use the grains defined by the Data API. DateTime keeps `capabilities.aggregable=false` and can group only when the same `group` item supplies `granularity`. Date can also group by its original value. Use the returned bucket `value` as the chart key and `label` for display. This is the Data API contract; see [Analytics package compatibility](../../make-app-analytics/references/selection-and-scope.md#有边界的数据核对) before registering a DateTime dimension with the package.
+
 已提出 Make App 分析需求时，按 [make-app-analytics](../../make-app-analytics/SKILL.md) 规划最小接入：宿主注册业务口径与可信端口，包在 Service 内负责已有的分页、工作台编排、派生指标和分组序列；不在宿主重写同一通用算法。一次聚合仍针对单个 Entity，多来源组合不代表跨对象 JOIN 或同一数据库事务快照。包合同未覆盖的业务计算仍按上面的等价查询、受限明细和专用接口方案评估，不把实现缺口简单解释为业务不可实现。
 
 新增或优化统计先读 [聚合查询规划](aggregate-query-planning.md)：在相同筛选／分组下合并兼容指标，复用同一次工作台内的总体与来源，避免按卡片、月份或部门逐个请求。通过现有会话和快照合同减少重复元数据网络读取，保留后端授权、必要复核、分页完整性与取消；预算按真实下游调用计数，不能仅看浏览器的一次业务请求。
