@@ -10,6 +10,12 @@
 
 Use this reference before implementation and before reporting permission work complete.
 
+## 验证命令与安装路径
+
+本地验证先定位当前安装的 `make-app-permission` 目录，将 `<skill-dir>` 替换为该目录的绝对路径；`<project-root>`、宿主适配器及配置文件参数也使用实际绝对路径，保留引号。下文的本地命令可从宿主工作目录运行，不要求克隆 Skill 源仓库。适配器继续调用宿主生产代码，不复制权限判断。
+
+接入项目测试／CI／发布门禁时，按 [Host gate integration](#host-gate-integration) 将工具纳入项目或使用版本化依赖，不能把本机安装路径写入可移植门禁。
+
 ## Service and Schema tests
 
 - Principal permission route, App scope, IAM `/api/make/iam/**`, target header, login forwarding, tenant resolution, errors, and runtime-mode scopes.
@@ -91,7 +97,7 @@ Required field cases:
 Run:
 
 ```bash
-node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
+node "<skill-dir>/scripts/audit-make-app-permission.mjs" "<project-root>"
 ```
 
 For a nonstandard layout, pass `--config <json-file>` (relative paths resolve from the audited project root):
@@ -152,7 +158,7 @@ isEditCapableField
 Run:
 
 ```bash
-node skills/make-app-permission/scripts/permission-conformance-suite.mjs <adapter-module>
+node "<skill-dir>/scripts/permission-conformance-suite.mjs" "<adapter-module>"
 ```
 
 For TypeScript adapters, invoke the command with the project's existing TypeScript runner. The adapter must delegate to production App code rather than duplicate permission logic. Test operation gates, current-App/entity isolation, response validation, field visibility, editability, submit filtering, refresh and host field capabilities. Fixture behavior is not authority for a backend aggregation rule or a client-side resource priority.
@@ -162,7 +168,7 @@ For TypeScript adapters, invoke the command with the project's existing TypeScri
 运行独立的写入契约，不能以纯 helper 返回值替代提交和拒写验证：
 
 ```bash
-node skills/make-app-permission/scripts/write-permission-conformance-suite.mjs <host-write-adapter-module>
+node "<skill-dir>/scripts/write-permission-conformance-suite.mjs" "<host-write-adapter-module>"
 ```
 
 适配器导出 `createWriteHarness({snapshot, entityKey, operation, onRequest, onWrite})`。每次创建隔离的宿主实例：`snapshot.access` 是原始 IAM DTO，`snapshot.fields` 是当前对象的 Schema 可见字段上限，`snapshot.editableFields` 是普通 update 的 Schema 可编辑集合（批量不得依赖它）；`entityKey` 为对象键，`operation` 为 `data.record.update` 或 `data.record.bulkUpdate`。套件保留 `meta.entity.read`、`data.record.read` 作为进入编辑场景的前置权限，只单独改变待验证的字段或记录写权限。使用字段定义 `{key, type}`，适配器只映射数据形状，不实现权限判断。适配器可准备固定测试记录和选中目标，仍需经真实 UI 提交及 Service 更新处理器。
@@ -190,7 +196,7 @@ Service 必须在持久化前独立验证当前记录操作和全部写入字段
 
 ## UI wire-response conformance
 
-Copy `scripts/principal-response-conformance-suite.mjs` into project-local test tooling. Export `createPermissionLoader(request)` from a thin host adapter: `request` is an injected SDK-level request function returning parsed JSON (or throwing an HTTP error), and the export returns the actual production permission load function. Delegate to the existing API factory; do not duplicate its parser or model in the adapter. For a factory that accepts `auth.api.request`, this can be:
+本地执行 `node "<skill-dir>/scripts/principal-response-conformance-suite.mjs" "<host-loader-adapter-module>"`；接入项目门禁时按下节保留完整工具目录。Export `createPermissionLoader(request)` from a thin host adapter: `request` is an injected SDK-level request function returning parsed JSON (or throwing an HTTP error), and the export returns the actual production permission load function. Delegate to the existing API factory; do not duplicate its parser or model in the adapter. For a factory that accepts `auth.api.request`, this can be:
 
 ```javascript
 import { createServiceApi } from '../../ui/src/lib/service-api/client';
@@ -201,19 +207,25 @@ export const createPermissionLoader = (request) =>
 Adapt the import/factory names to the host without adding a production test switch. Use its existing TypeScript runner when needed:
 
 ```bash
-node scripts/principal-response-conformance-suite.mjs test/adapters/principal-response.mjs
+node tools/make-app-permission/principal-response-conformance-suite.mjs test/adapters/principal-response.mjs
 ```
 
 The loader resolves a validated `{scope,permissions,...}` DTO for successful IAM responses and rejects completed failures/malformed success; adapt a different existing host error-state API through its actual failure signal, not a synthetic successful empty result. The suite injects SDK transport responses, not a fake normalized model: success and empty envelopes, business errors with valid-looking data, invalid data, identity claims, and HTTP 401/403/503 including structured denial contacts. It also rejects missing/invalid `fieldAccess`, empty member arrays, unknown or non-string members in selected rows, even alongside a valid row; neither dropping the bad row nor returning successful empty grants is valid. Clearly unrelated rows remain outside selected-row validation, and valid empty grants/maps remain valid. Keep a host integration test for the subsequent permission-to-Schema ordering and zero protected requests after invalid IAM.
 
 ## Host gate integration
 
+将当前安装 Skill 的完整 `scripts/` 目录复制到项目工具目录，例如 `tools/make-app-permission/`，保留相对导入的依赖；项目已有目录时沿用实际位置，或使用版本化构建依赖。以下为项目根目录运行的门禁示例，工具路径相对于项目，不依赖本机 Skill 安装：
+
+```bash
+node tools/make-app-permission/audit-make-app-permission.mjs "<project-root>"
+```
+
 - Keep the audit and conformance runner project-local, or consume them from a versioned build dependency. Do not make CI depend on a sibling checkout or an unversioned local Skill installation.
 - Make the host's default test, CI workflow, or publish verification invoke the audit, pure-model conformance, UI/Service write conformance and UI wire-response conformance. A change record stating that two projects passed once is acceptance evidence, not a continuing gate.
 - Add a host contract test that asserts the gate commands still exist and that the vendored/current runners contain the multi-state-array audit and behavior cases.
 - Treat source-to-installed-Skill comparison as a local install/release verification. Generic CI must not require a developer home-directory copy.
 
-For that local install/release verification, run the directory-level checker with explicit paths:
+For that local install/release verification, run the directory-level checker from the Skill source repository root with explicit paths:
 
 ```bash
 node skills/make-app-permission/scripts/check-installed-skill-sync.mjs \

@@ -109,7 +109,7 @@ When metadata is authorized but record read is denied, keep the authorized navig
 
 ## Create flow
 
-先判断普通新建或审批新建。以下计算、提交步骤及普通 create 的就绪检查适用于无有效 `bpmDefinitionKey` 的场景；有效审批的新建字段、附件和 Lookup 源字段白名单按 [审批发起合同](../../make-app-approval/references/initiation-contract.md) 切换，UI/Service 同步执行，不能把本文件的普通源字段交集再次套到审批字段。目标对象授权、类型能力与已有记录编辑规则保持不变。
+先按 [独立绑定查询](../../make-app-approval/references/entity-bindings.md) 判断普通新建或审批新建，不从 Schema 取 key。以下计算、提交步骤及普通 create 的就绪检查适用于绑定查询成功而无有效 `bpmDefinitionKey` 的场景，绑定加载／失败暂停创建并允许重试；有效审批的新建字段、附件和 Lookup 源字段白名单按 [审批发起合同](../../make-app-approval/references/initiation-contract.md) 切换，UI/Service 同步执行，不能把本文件的普通源字段交集再次套到审批字段。目标对象授权、类型能力与已有记录编辑规则保持不变。
 
 Compute create fields only from the create collection and create permission:
 

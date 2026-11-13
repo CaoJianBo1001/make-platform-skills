@@ -2,10 +2,12 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, fieldAccess, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.4.6
+  version: 0.4.7
 ---
 
 # make-app-permission
+
+流程绑定按 [实体绑定合同](../make-app-approval/references/entity-bindings.md) 独立查询；Workflow 不过滤对象权限，必须先限定当前权限过滤 Schema 的对象范围。绑定不代表发起授权，不能替代 IAM／节点权限，也不能用 Schema 残留 key 兜底。
 
 Direct URL and runtime resource denial follow `references/scoped-route-feedback.md`: App guard outside shell, object/fixed-route guards inside shell. Replace the entire denied business content, not just table rows; keep authorized navigation and the global identity header. Require rendered-tree and zero-denied-request regression tests. React renders the verified package through `makeui/references/permission-feedback.md`; this Skill decides scope and access lifecycle, not component styling. Read `make-app-auth/references/access-help.md` for current-App personnel contacts without sending denied business requests.
 
@@ -24,7 +26,7 @@ This skill owns Make App consumption of configured permission results: navigatio
 5. Read `references/system-field-contract.md` before implementing ID/audit create or edit capability.
 6. Read `references/testing-and-audit.md` before implementation and before reporting completion.
 7. Implement tests first, then the Service/schema boundary, permission pure model, route/action gates, field-set consumers, submit allowlists, and refresh invalidation.
-8. Run host tests, the behavioral conformance suite, and `node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>`. For nonstandard roots, helper names or create-call signatures use the [audit configuration](references/testing-and-audit.md#audit); do not force the host to match example names. `REVIEW_REQUIRED` is not PASS: retain the result and verify the identified production branches before a manual review conclusion. Wire permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
+8. Run host tests, the behavioral conformance suite, and `node "<skill-dir>/scripts/audit-make-app-permission.mjs" "<project-root>"` using the [installed paths](references/testing-and-audit.md#验证命令与安装路径). For nonstandard roots, helper names or create-call signatures use the [audit configuration](references/testing-and-audit.md#audit); do not force the host to match example names. `REVIEW_REQUIRED` is not PASS: retain the result and verify the identified production branches before a manual review conclusion. Wire permission checks into the host's default test, CI, or publish gate; a one-off local run is not a continuous gate.
 9. When publishing or installing this Skill, run `check-installed-skill-sync.mjs` with explicit source and installed directories. When the release changes shared Make response/auth/permission guidance, publish the platform package, run `npx skills update qfeius/make-platform-skills`, then run the repository-wide `check-installed-make-platform-skills-sync.mjs` with explicit source and installed Skill roots. Keep these local release checks out of portable host CI.
 
 ## Make App permission contract
@@ -78,8 +80,10 @@ Read [permission-boundaries.md](references/permission-boundaries.md#platform-aut
 
 ## Audit
 
+本地运行先定位当前安装的 Skill 目录，将 `<skill-dir>` 替换为其绝对路径；项目根目录和宿主适配器参数也使用绝对路径，并保留引号。命令可从宿主工作目录执行，详见 [验证命令与安装路径](references/testing-and-audit.md#验证命令与安装路径)。
+
 ```bash
-node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root>
+node "<skill-dir>/scripts/audit-make-app-permission.mjs" "<project-root>"
 ```
 
 Treat failures as blockers and warnings as review items. Exit codes are 0 for PASS, 1 for failure and 2 for REVIEW_REQUIRED or invalid usage; distinguish the latter by the diagnostic. Do not mask nonzero exits or describe REVIEW_REQUIRED as an automated pass. The audit is heuristic and never replaces runtime tests.
@@ -88,13 +92,13 @@ It rejects obvious `fieldAccess` state-array coercion through `String(...)`, tex
 Also expose a thin host adapter and run the executable behavior contract:
 
 ```bash
-node skills/make-app-permission/scripts/permission-conformance-suite.mjs <host-adapter-module>
+node "<skill-dir>/scripts/permission-conformance-suite.mjs" "<host-adapter-module>"
 ```
 
 Also verify UI submit and Service rejection through production boundaries:
 
 ```bash
-node skills/make-app-permission/scripts/write-permission-conformance-suite.mjs <host-write-adapter-module>
+node "<skill-dir>/scripts/write-permission-conformance-suite.mjs" "<host-write-adapter-module>"
 ```
 
 Use the write harness contract in `references/testing-and-audit.md`; a passing pure model cannot replace this check.
@@ -102,15 +106,15 @@ Use the write harness contract in `references/testing-and-audit.md`; a passing p
 Also run the wire-response contract against a thin adapter to the production UI permission loader:
 
 ```bash
-node skills/make-app-permission/scripts/principal-response-conformance-suite.mjs <host-loader-adapter-module>
+node "<skill-dir>/scripts/principal-response-conformance-suite.mjs" "<host-loader-adapter-module>"
 ```
 
 This protects business-code validation, one-time unwrap, empty IAM grants and retained denial contacts; the existing pure-model suite does not exercise SDK response decoding. The adapter contract and host-gate instructions are in `references/testing-and-audit.md`.
 
 If the adapter is TypeScript, run the same command through the host's existing TypeScript runner. Do not add a runtime dependency only for this check. The adapter must delegate to the production permission helpers and create-capability guard; it must not reimplement them in the test.
-Keep the audit and conformance runner project-local or install them through a versioned dependency before making them a host gate. Do not hardcode another workspace checkout or a developer home-directory Skill path into portable CI.
+Keep the audit and conformance runner project-local or install them through a versioned dependency before making them a host gate. Follow [Host gate integration](references/testing-and-audit.md#host-gate-integration) to retain sibling script dependencies. Do not hardcode another workspace checkout or a developer home-directory Skill path into portable CI.
 
-For local Skill install/release verification, compare the complete source and installed directories:
+For local Skill install/release verification, run from the Skill source repository root and compare the complete source and installed directories:
 
 ```bash
 node skills/make-app-permission/scripts/check-installed-skill-sync.mjs \

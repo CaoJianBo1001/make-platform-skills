@@ -2,10 +2,12 @@
 name: make-app-service
 description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts, including server-side aggregation for dashboards, charts and 统计/汇总. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.26
+  version: 0.2.27
 ---
 
 # make-app-service
+
+审批对象的 `bpmDefinitionKey` 按 [独立绑定查询合同](../make-app-approval/references/entity-bindings.md) 从 Workflow 获取；先限定当前可访问对象，再查询绑定，不读取 Schema 旧属性。保持 UI → Service → Make 的可信配置、错误透传及取消链路，失败不能降级普通创建。
 
 应用显示名称从运行时接口归一为共享 appName，后台改名后随既有刷新更新，禁止用配置或 DSL 固定名称覆盖；见 [应用名称来源](references/make-data-adapter.md#应用名称来源)。
 
@@ -73,7 +75,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 
 ## Default Service responsibilities
 
-审批新建、`bpmDefinitionKey`、发起/撤回、我的审批任务查询/办理/继续提交、历史和状态传输使用 [make-app-approval](../make-app-approval/SKILL.md)。Service 保留对象顶层 key 及记录系统状态/锁字段；审批新建的可写字段来自权威启动配置，普通新建仍用原 `createFields`/IAM 合同，已有记录编辑仍用原更新链路。不要让普通源字段交集二次裁掉审批授权，也不要信任客户端声明的审批模式。BPM 源字段基础信息及任务附件类型核验使用 对应 bpm-start-config、bpm-task、bpm-process GetResource 响应的 data.formMetadata；不另请求元数据；不从普通 entity 或权限过滤的 Schema 补源字段，不覆盖普通 Schema 缓存。任务动作及其 recordPatch 走 [Workflow 接口合同](../make-app-approval/references/workflow-api.md)，不经过普通记录 PATCH 或 Lookup 关系转换；任务附件按当前节点授权预上传。保留完整上游信封、业务错误与 Trace，不把任务办理改成普通 IAM 更新。
+审批新建、`bpmDefinitionKey`、发起/撤回、我的审批任务查询/办理/继续提交、历史和状态传输使用 [make-app-approval](../make-app-approval/SKILL.md)。Service 从 Workflow 独立查询对象绑定，保留记录系统状态/锁字段；审批新建的可写字段来自权威启动配置，普通新建仍用原 `createFields`/IAM 合同，已有记录编辑仍用原更新链路。不要让普通源字段交集二次裁掉审批授权，也不要信任客户端声明的审批模式。BPM 源字段基础信息及任务附件类型核验使用 对应 bpm-start-config、bpm-task、bpm-process GetResource 响应的 data.formMetadata；不另请求元数据；不从普通 entity 或权限过滤的 Schema 补源字段，不覆盖普通 Schema 缓存。任务动作及其 recordPatch 走 [Workflow 接口合同](../make-app-approval/references/workflow-api.md)，不经过普通记录 PATCH 或 Lookup 关系转换；任务附件按当前节点授权预上传。保留完整上游信封、业务错误与 Trace，不把任务办理改成普通 IAM 更新。
 
 Generated or refactored Make App Service code should provide these capabilities when the UI needs them and the host project does not already have equivalent routes:
 

@@ -71,7 +71,7 @@ X-Make-Target: MakeService.GetResource
 
 请求字段是 `key`，不是 `entityKey`。成功响应为 `{ code: 200, msg, data: entity }`；校验 `data.key` 与 `data.appKey` 后读取 `data.properties.fields`。保留每个字段的 key/name/type/properties/validations，普通 CRUD 仍遵循 fields/createFields 与 IAM 合同。审批任务另走节点元数据，完整授权、缺失定义处理与附件校验见 [任务详情](../../make-app-approval/references/task-detail.md)。关系为独立元数据资源，不能把 Entity fields 当成完整关系集合。
 
-审批启动配置返回 field key，通过同次 bpm-start-config 的 data.formMetadata 匹配基础定义，授权和顺序仍取启动配置。Lookup 依赖也从同次 formMetadata.relations 获取；缺失或不一致直接报错，不另发补查请求，详见 [表单依赖合同](../../make-app-approval/references/lookup-metadata.md)。普通 Schema 仍负责对象绑定与普通权限场景。
+审批启动配置返回 field key，通过同次 bpm-start-config 的 data.formMetadata 匹配基础定义，授权和顺序仍取启动配置。Lookup 依赖也从同次 formMetadata.relations 获取；缺失或不一致直接报错，不另发补查请求，详见 [表单依赖合同](../../make-app-approval/references/lookup-metadata.md)。普通 Schema 只负责对象及普通权限场景；流程绑定从 [Workflow 独立查询](../../make-app-approval/references/entity-bindings.md)，不再从 Meta 获取。
 
 ## Relation
 

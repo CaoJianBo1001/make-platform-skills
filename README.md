@@ -146,6 +146,16 @@ BPM 字段定义及 Lookup 依赖直接使用 bpm-start-config、bpm-task、bpm-
 
 #### 审批 Skill 维护验证（仅源仓库）
 
+实体绑定和操作授权边界使用以下检查；第二项在含空格的临时安装副本中实际注入旧指导，确认检查会失败，同时覆盖合法新接口取值和明确禁止说明。检查只覆盖已登记的静态合同，不替代语义复核或宿主行为测试。
+
+```bash
+node scripts/test-bpm-entity-bindings-contract.mjs
+node scripts/test-bpm-entity-bindings-regressions.mjs
+node scripts/test-bpm-binding-session-behavior.mjs
+```
+
+绑定时序工具的仓库回归使用合成控制器和 14 种故障注入，另外验证新会话合法更新、初始化迟到清理、超时关闭 I/O、含空格安装及实际文档命令；它证明验证器能检出指定错误，不代表任何真实 App 已通过。宿主按 [薄桥接合同](skills/make-app-approval/references/binding-session-verification.md) 导出真实控制器适配器，保留原请求／状态来源并单独记录 6 项场景的结果；升级工具后重跑，不沿用旧版通过结论覆盖新增检查。
+
 维护者在本仓库根目录执行字段转换及接入指引回归：
 
 ```bash
@@ -154,9 +164,11 @@ node scripts/test-bpm-form-metadata-behavior.mjs
 node scripts/test-bpm-form-metadata-contract.mjs
 node scripts/test-bpm-skill-review-regressions.mjs
 node scripts/test-bpm-history-guidance-contract.mjs
+node scripts/test-bpm-standalone-pages-contract.mjs
+node scripts/test-approval-host-adapters.mjs
 ```
 
-这些仓库测试覆盖真实转换器、文档样例、故障注入及隔离安装。CI 的 `scripts/test-*.mjs` 循环自动执行上述仓库级脚本；故障注入验证错误类型、配置丢失和定位跳过等退化能够检出，安装回归实际执行分发文档中的命令并覆盖含空格路径。历史指导回归另外检查真实章节锚点、完整快照说明和无需 taskId 的实例历史请求示例。
+这些仓库测试覆盖真实转换器、文档样例、故障注入及隔离安装。CI 的 `scripts/test-*.mjs` 循环自动执行上述仓库级脚本；故障注入验证错误类型、配置丢失和定位跳过等退化能够检出。安装回归读取字段转换指南与主验收文档中的代码块、行内命令，在含空格的独立目录执行随包转换器；恢复源仓库相对路径时必须失败，不自动修正命令。需要宿主 SDK 的任务验证器只检查入口及随包依赖可加载，实际 SDK 能力由宿主另验。历史指导回归另外检查真实章节锚点、完整快照说明和无需 taskId 的实例历史请求示例。
 
 仓库级测试不随 Skill 分发。安装后及宿主适配按[字段转换指南](skills/make-app-approval/references/form-metadata.md#行为验证与宿主适配)使用随包验证器和实际安装路径；宿主真实请求、授权、审批写入和浏览器验收分别执行。
 
@@ -398,6 +410,12 @@ npx skills update make-app-permission
 - 刷新时重新获取权限，再决定是否刷新数据或关闭已打开工作区
 - 使用 `scripts/audit-make-app-permission.mjs` 做权限合同检查
 - 不负责后台权限策略配置、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 建模或部署
+
+#### 权限 Skill 维护验证（仅源仓库）
+
+在仓库根目录运行 `node scripts/test-permission-installed-guidance.mjs`。测试从含空格的独立安装及应用目录执行入口与参考文档中的四类验证命令，检查审计帮助路径，恢复旧相对路径时必须失败；项目工具在移除 Skill 安装目录后仍可运行。该测试验证命令可移植性及原失败结果的保留，不代表生成 App 的权限行为已经验收。
+
+本地宿主验证按 [安装路径说明](skills/make-app-permission/references/testing-and-audit.md#验证命令与安装路径) 定位随包脚本；持续门禁按 [项目工具接入](skills/make-app-permission/references/testing-and-audit.md#host-gate-integration) 保留完整工具依赖，不引用维护者本机路径。
 
 ### make-app-runtime
 指导 Make App 运行态和打包发布契约，覆盖 `apps/` workspace、`apps/ui/dist`、`apps/service` 构建产物、Service 端口、镜像启动入口和发布前契约检查。

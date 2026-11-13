@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、BPM 独立新建与任务页、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成/已发起、任务及实例详情和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.35
+  version: 0.2.39
 ---
 
 # Make App 前台审批完整接入
@@ -25,6 +25,7 @@ metadata:
 | --- | --- |
 | 是否生成、导航位置、多端复用 | [默认生成规则](references/generation-rules.md) |
 | 审批新建字段、保存与保存并提交 | [发起侧合同](references/initiation-contract.md) |
+| 同 key 绑定刷新、迟到保存结果、未知结果与撤回取消边界 | [宿主时序桥接合同](references/binding-session-verification.md)、[随包行为验证器](scripts/verify-bpm-binding-session.mjs)；必须接入宿主真实控制器 |
 | 飞书等深链的 BPM 独立新建、待处理／已完成任务页及存量迁移 | [独立页面合同](references/standalone-pages.md)（与 makeui 配合，复用表单及公共任务状态机） |
 | 独立页对象定位与逐次附件预上传的边界参考 | [安全边界参考](assets/standalone-page-boundaries.mjs)（非 npm API；宿主仍须验证自身真实链路） |
 | 未提交发起、失败恢复、发起人撤回、重新发起边界 | [记录生命周期](references/record-lifecycle.md) |
@@ -48,11 +49,11 @@ metadata:
 
 - **导航是方案决策。** 业务新增、录入、编辑保存，或明确审批处理需求即可触发；不要求先绑定流程。无任务、全部流程停用或解绑后仍保留已生成入口及历史访问路径。
 - **入口独立位于最外层。** “我的审批”是一级菜单，桌面/平板中紧接所有业务对象/模块分组之后，与其他菜单在同一导航列表中按正常间距排列、共同滚动；不固定到侧栏底部，不单独增加分隔区。它不属于任何对象、模块或可折叠分组，折叠分组不会隐藏它；手机为它保留一个底部 Tab，并按剩余容量展示业务对象和工作台，总数不超过五项。具体布局与复用规则见 [默认生成规则](references/generation-rules.md)。
-- **新建是运行时决策。** 成功取得的 Schema 对象含有效 `bpmDefinitionKey` 才进入审批新建分支。配置读取失败是错误态，不能等同未绑定。
+- **新建是运行时决策。** 按 [实体流程绑定](references/entity-bindings.md) 从 Workflow 独立批量查询 `bpmDefinitionKey`，不再从 Schema 取值或回退；绑定加载／失败时暂停依赖它的创建和首次发起并提供重试，普通浏览、编辑和历史仍按原规则可用。绑定不等于发起授权。
 - **审批新建字段独立授权。** 使用 `bpm-start-config.fields` 的 `readable/editable`；字段定义直接取同次 bpm-start-config 响应的 data.formMetadata，再交给 UI；不另请求元数据或兼容旧字段对象。不与普通 IAM 字段集合或 `createFields` 求交。应用、对象、新建操作、关联目标和后台最终授权仍保留。
 - **任务办理另用当前节点授权。** 任务详情的 fieldPermission/actions 决定字段和动作；字段基础定义取同次 bpm-task 响应的 data.formMetadata，不从普通 entity 或 Schema 获取。节点字段定义不代表全部可见或可写；不能套普通编辑字段或启动节点字段，也不经普通记录 PATCH 保存任务修改。
 - **区分新建提交和已有记录发起。** 仅保存不发起；新建“保存并提交”使用一次 `bpm-process-submit`，不先普通创建再发起。已有记录仍用原 `bpm-process`。发起前查询当前登录人的所属部门，多部门时选择 `starterDepartmentId`；普通保存和任务 SUBMIT 不触发部门选择。错误沿用 code=200 成功、其他 code 显示对应信息的统一处理，不增加“核查流程”按钮；合并提交失败码不等于记录未创建，落库结果未确认时阻止重复创建，详见 [保存会话](references/initiation-contract.md)。
-- **已有记录的发起与保存独立。** 对象有有效 BPM 绑定、记录明确 UNSUBMITTED 且未锁定时，业务详情保留独立“发起审批”，不要求普通编辑权限且不执行普通保存；具备普通编辑资格时，编辑页另提供“保存”和“保存并提交”，沿用原 IAM、记录权限及原 ID。保存会话内的失败恢复仍只执行尚未完成的发起阶段。
+- **已有记录的发起与保存独立。** 对象有有效 BPM 绑定、记录明确 UNSUBMITTED 且未锁定时，业务详情保留独立“发起审批”，不要求普通编辑权限且不执行普通保存，也不读取 START 字段或附加普通 CRUD 权限；最终发起资格交 Workflow。具备普通编辑资格时，编辑页另提供“保存”和“保存并提交”，沿用原 IAM、记录权限及原 ID。保存会话内的失败恢复仍只执行尚未完成的发起阶段。
 - **恢复与继续提交分开。** 已有记录仅明确 UNSUBMITTED 且未锁定时首次发起；RETURNING 通过当前任务 SUBMIT“继续提交”继续原实例。已撤回/拒绝/通过的记录不生成终态重新发起。
 - **撤回由真实发起人资格决定。** 读取最新流程及 starter，确认时重查；使用 appKey/entityKey/recordId 定位，不需要 bpmKey，不以业务申请人或普通编辑权限推断资格。
 - **状态来自记录。** `qfei_process_instance_status` 是只读系统字段；不新建同名 DSL 业务字段，不用业务状态、任务结果、锁字段或当前绑定推导流程状态。

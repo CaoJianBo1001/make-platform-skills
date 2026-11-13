@@ -6,7 +6,8 @@
 
 | 路由（均以 /api 开头） | 请求与返回形状 |
 | --- | --- |
-| GET `/api/schema` | 普通业务运行时的权限过滤 Schema、对象流程绑定判定；不用于审批任务字段基础信息或任务附件类型核验 |
+| GET `/api/schema` | 普通业务运行时的权限过滤 Schema；不提供流程绑定或审批节点字段定义 |
+| POST `/api/bpm/entity-definitions/query` | `{entityKeys}`；Service 注入 appKey，按 [实体绑定合同](entity-bindings.md) 返回 `{code:200,data:[{entityKey,bpmDefinitionKey}]}` |
 | POST `/api/bpm/tasks/form` | `{ processInstanceId, taskId }`；一次读取任务并核验定位，从 data.formMetadata 解析字段及内嵌 Lookup 关系和目标 key/type；返回 `{ ...Workflow原信封, metadata: 宿主MakeAppSchema }`，metadata 仅含可见字段和必要 Lookup 辅助定义 |
 | POST `/api/bpm/tasks/lookup-options` | reference、fieldKey、可选 keyword/pagination；每次重查任务及目标读取权限，返回 `{ options, searchable, total }`，不复用普通源字段授权 |
 | GET `/api/entities/:entityKey/bpm-start-config` | 新建不带 recordID；返回规范化启动配置 |
@@ -33,6 +34,7 @@
 
 | 资源 | Target | 正文 |
 | --- | --- | --- |
+| `/workflow/v1/bpm-entity-definitions` | MakeService.GetResource | `{appKey,entityKeys}`；当前有效绑定，不代表发起权限 |
 | `/workflow/v1/bpm-start-config` | MakeService.GetResource | `{ appKey, entityKey }` |
 | `/workflow/v1/bpm-process-submit` | MakeService.CreateResource | `{ appKey, entityKey, bpmKey, data, starterDepartmentId? }`，仅新建提交 |
 | `/data/v1/user` | MakeService.GetResource | `{ userId }`，取得该人员的 departments |

@@ -16,16 +16,27 @@ const verifyInstalledCommands = document => {
     cpSync(new URL('../skills/make-app-approval/', import.meta.url), skillDir, {recursive: true});
     const bridge = path.join(workspace, 'host-adapter.mjs');
     writeFileSync(bridge, "export {normalizeBpmFormMetadata} from './.agents/skills/make-app-approval/assets/bpm-form-metadata.mjs';\n");
-    const commands = [...document.matchAll(/```bash\n([\s\S]*?)\n```/g)]
-      .flatMap(match => match[1].split('\n')).map(line => line.trim()).filter(line => line.startsWith('node '));
+    const commands = [
+      ...[...document.matchAll(/```bash\n([\s\S]*?)\n```/g)]
+        .flatMap(match => match[1].split('\n')),
+      ...[...document.replace(/```[\s\S]*?```/g, '').matchAll(/`([^`\n]+)`/g)]
+        .map(match => match[1]),
+    ].map(line => line.trim()).filter(line => line.startsWith('node '));
     assert.ok(commands.length > 0, '安装指南必须提供可执行验证命令');
     for (const command of commands) {
       const args = command.match(/"[^"]*"|'[^']*'|\S+/g).slice(1)
         .map(token => token.replace(/^(["'])(.*)\1$/, '$2'))
         .map(token => token.replaceAll('<skill-dir>', skillDir)
-          // 旧写法按原文说明映射到实际 Skill 目录，仓库根 scripts 不做补齐。
-          .replace(/^skills\/make-app-approval\//, `${skillDir}/`)
           .replace('/absolute/path/to/host-adapter.mjs', bridge));
+      if (args.includes('<host-ui-directory>')) {
+        // 此用例只核验随包脚本及本地依赖能加载；实际 SDK 能力由宿主另验。
+        // 不传宿主参数，使用脚本现有的 usage 分支，避免依赖维护者本机的 npm 包。
+        assert.equal(args.length, 2, `宿主校验命令参数不完整：${command}`);
+        const result = spawnSync(process.execPath, [args[0]], {cwd: workspace, encoding: 'utf8'});
+        assert.equal(result.status, 2, `${command} 的安装入口无法加载：${result.stderr}`);
+        assert.match(result.stderr, /Usage: node verify-task-detail-policy\.mjs <host-ui-directory>/);
+        continue;
+      }
       const result = spawnSync(process.execPath, args, {cwd: workspace, encoding: 'utf8'});
       assert.equal(result.status, 0, `${command} 在独立安装后失败：${result.stderr}`);
       assert.match(result.stdout, /PASS/);
@@ -37,6 +48,17 @@ const verifyInstalledCommands = document => {
 
 test('分发指南中的验证命令在仅安装 Skill 的含空格目录可运行', () => {
   verifyInstalledCommands(read('make-app-approval/references/form-metadata.md'));
+});
+test('主验收指南的行内命令在独立安装后能定位随包入口', () => {
+  verifyInstalledCommands(read('make-app-approval/references/verification.md'));
+});
+test('故障注入：代码块恢复源仓库相对路径时不得自动纠正命令', () => {
+  const document = '```bash\nnode skills/make-app-approval/scripts/verify-form-metadata.mjs\n```';
+  assert.throws(() => verifyInstalledCommands(document), /独立安装后失败/);
+});
+test('故障注入：行内命令恢复源仓库相对路径也必须失败', () => {
+  const document = '节点字段转换先执行 `node skills/make-app-approval/scripts/verify-form-metadata.mjs`。';
+  assert.throws(() => verifyInstalledCommands(document), /独立安装后失败/);
 });
 test('故障注入：把仓库级测试重新放回随包命令时能够检出缺失文件', () => {
   const document = read('make-app-approval/references/form-metadata.md');

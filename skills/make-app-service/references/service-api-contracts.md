@@ -121,7 +121,7 @@ Rules:
 
 ## Schema routes
 
-审批场景配合 [审批发起合同](../../make-app-approval/references/initiation-contract.md)：无损保留对象顶层 `bpmDefinitionKey`，启动配置规范化接口与普通 Schema 字段集合分开。以下 `createFields` 源字段授权及普通记录关系创建规则用于普通新建；审批新建改用 Service 最新取得的启动字段授权，复用相同创建/关系/附件编排及目标授权，不能二次套用普通字段交集。记录列表和详情必须保留 `qfei_process_instance_status`、`qfei_is_locked`，不接受其作为客户端可写字段。
+审批场景配合 [审批发起合同](../../make-app-approval/references/initiation-contract.md) 和 [独立绑定查询](../../make-app-approval/references/entity-bindings.md)：`bpmDefinitionKey` 仅从 Workflow 获取，不读取 Schema 同名旧属性；Schema 负责当前对象范围及普通字段。启动配置规范化接口与普通 Schema 字段集合分开。以下 `createFields` 源字段授权及普通记录关系创建规则用于普通新建；审批新建改用 Service 最新取得的启动字段授权，复用相同创建/关系/附件编排及目标授权，不能二次套用普通字段交集。记录列表和详情必须保留 `qfei_process_instance_status`、`qfei_is_locked`，不接受其作为客户端可写字段。
 
 Default:
 
