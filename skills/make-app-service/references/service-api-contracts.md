@@ -1,10 +1,10 @@
 # Service API Contracts
 
-任务节点的 recordPatch 与下面的普通记录更新/关系合同分开：按 [审批 Workflow 合同](../../make-app-approval/references/workflow-api.md) 通过任务动作一次提交；Lookup 直接保留字段下的单选 ID/null、多选 ID 数组，File 通过任务授权预上传后一起提交。任务字段定义及附件类型核验读取 bpm-node-form-metadata 的 TASK 场景，不从普通 entity/Schema 取得或回退；字段权限仍由当前任务决定，不覆盖普通 Schema 缓存。不得转普通 PATCH、qfei_relation 或二次套用普通 IAM 字段集。
+任务节点的 recordPatch 与下面的普通记录更新/关系合同分开：按 [审批 Workflow 合同](../../make-app-approval/references/workflow-api.md) 通过任务动作一次提交；Lookup 直接保留字段下的单选 ID/null、多选 ID 数组，File 通过任务授权预上传后一起提交。任务字段定义及附件类型核验读取 bpm-task 响应的 data.formMetadata，不从普通 entity/Schema 取得或回退；字段权限仍由当前任务决定，不覆盖普通 Schema 缓存。不得转普通 PATCH、qfei_relation 或二次套用普通 IAM 字段集。
 
 Use this reference when designing or reviewing `apps/service` routes and `apps/docs/api.md`.
 
-审批任务 UI 使用 `/api/make/app/bpm/tasks/form` 聚合原任务信封与 节点 metadata 及必要 Lookup 依赖；保留原 detail 直接代理。Lookup 使用 `/api/make/app/bpm/tasks/lookup-options`，每次候选读取重查节点授权、只解析当前字段，并保留目标对象/字段/记录读取检查。审批合同中的 `/api/bpm/**` 是逻辑路径，新应用由共享请求/路由层统一映射到这里的发布前缀，页面不另拼路径。元数据去重仅限单次编排；具体定位、响应包装和调用次数见上述审批合同。启动配置仅返回 field key 时由 bpm-node-form-metadata 的 START 场景补定义，不从普通 Schema 裁剪集合补齐。
+审批任务 UI 使用 `/api/make/app/bpm/tasks/form` 聚合原任务信封与 节点 metadata 及必要 Lookup 依赖；保留原 detail 直接代理。Lookup 使用 `/api/make/app/bpm/tasks/lookup-options`，每次候选读取重查节点授权、只解析当前字段，并保留目标对象/字段/记录读取检查。审批合同中的 `/api/bpm/**` 是逻辑路径，新应用由共享请求/路由层统一映射到这里的发布前缀，页面不另拼路径。元数据去重仅限单次编排；具体定位、响应包装和调用次数见上述审批合同。启动配置的 field key 直接匹配同次 data.formMetadata 的定义，不从普通 Schema 裁剪集合补齐。
 
 ## Contract source
 

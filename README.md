@@ -138,11 +138,27 @@ npx skills update make-app-approval
 
 生成规则和验证场景见 [make-app-approval](skills/make-app-approval/SKILL.md)。审批新建消费 `bpm-start-config.fields` 的 `readable/editable`，不再与普通 `createFields`/IAM 字段集合求交；UI 与 Service 同步切换，保留应用、对象和新建操作资格。普通已有记录编辑仍沿用原 IAM/更新链路；任务办理从 fieldPermission/actions 取得授权，经 form 聚合任务与节点元数据，Lookup 使用当前任务候选接口。
 
-BPM 字段定义及 Lookup 依赖使用 `bpm-node-form-metadata`：新建按 START 场景补齐，任务使用 TASK 场景，请求与定位校验见 [节点元数据合同](skills/make-app-approval/references/workflow-api.md#审批节点字段元数据)。关系及目标 key/type 来自节点响应，完整性判定与权限边界见 [Lookup 依赖合同](skills/make-app-approval/references/lookup-metadata.md)。不回退普通 Entity/Relation 或 Schema 补齐，也不把节点定义并入普通权限缓存。
+BPM 字段定义及 Lookup 依赖直接使用 bpm-start-config、bpm-task、bpm-process 对应读取响应的 `data.formMetadata`，不另发元数据请求，请求与定位校验见 [节点元数据合同](skills/make-app-approval/references/workflow-api.md#审批节点字段元数据)。关系及目标 key/type 来自节点响应，依赖校验与权限边界见 [Lookup 依赖合同](skills/make-app-approval/references/lookup-metadata.md)。不回退普通 Entity/Relation 或 Schema 补齐，也不把节点定义并入普通权限缓存。
 
 任务中的 Lookup/File 随 Workflow recordPatch 保存，不能普通 PATCH 补写。历史一次读取完整列表（含实际待办），逐行直接展示 actionResult（如“已退回”），业务当前状态独立；列表图标、列宽及滚动复用包能力。包、列表、任务详情、接口、记录生命周期及历史均有独立参考文件，全部从主入口可达。
 
 自动发现需要当前 Agent 能看到已安装的 `make-app-approval`，并同步本次更新的 `makeui`、权限、Service、actions 和 DSL skill。仅把源码放在此仓库、或只升级已安装的旧技能，不代表新增技能已经进入新项目的可用技能目录。发布后按上方命令首次添加新技能并更新关联技能，使用仓库安装同步检查验证完整文件一致；未安装时也可在任务中明确提供本地 `SKILL.md` 路径要求读取。README 路由表是说明，实际生成入口还通过 `makeui`、`makedsl` 的正文路由到默认生成规则。
+
+#### 审批 Skill 维护验证（仅源仓库）
+
+维护者在本仓库根目录执行字段转换及接入指引回归：
+
+```bash
+node skills/make-app-approval/scripts/verify-form-metadata.mjs
+node scripts/test-bpm-form-metadata-behavior.mjs
+node scripts/test-bpm-form-metadata-contract.mjs
+node scripts/test-bpm-skill-review-regressions.mjs
+node scripts/test-bpm-history-guidance-contract.mjs
+```
+
+这些仓库测试覆盖真实转换器、文档样例、故障注入及隔离安装。CI 的 `scripts/test-*.mjs` 循环自动执行上述仓库级脚本；故障注入验证错误类型、配置丢失和定位跳过等退化能够检出，安装回归实际执行分发文档中的命令并覆盖含空格路径。历史指导回归另外检查真实章节锚点、完整快照说明和无需 taskId 的实例历史请求示例。
+
+仓库级测试不随 Skill 分发。安装后及宿主适配按[字段转换指南](skills/make-app-approval/references/form-metadata.md#行为验证与宿主适配)使用随包验证器和实际安装路径；宿主真实请求、授权、审批写入和浏览器验收分别执行。
 
 ### make-env-setup
 准备或更新本地 Make 开发环境，覆盖 Node、包管理器、git、makecli、Make platform skills、Make 环境选择和登录校验；新 App 使用固定 Node/Corepack/pnpm 基线，存量 App 保留兼容的既有运行时与锁文件。

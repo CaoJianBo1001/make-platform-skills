@@ -7,7 +7,7 @@
 | 路由（均以 /api 开头） | 请求与返回形状 |
 | --- | --- |
 | GET `/api/schema` | 普通业务运行时的权限过滤 Schema、对象流程绑定判定；不用于审批任务字段基础信息或任务附件类型核验 |
-| POST `/api/bpm/tasks/form` | `{ processInstanceId, taskId }`；先取任务并核验定位，再取 TASK 节点定义并解析内嵌的 Lookup 关系及目标 key/type；返回 `{ ...Workflow原信封, metadata: 宿主MakeAppSchema }`，metadata 仅含可见字段和必要 Lookup 辅助定义 |
+| POST `/api/bpm/tasks/form` | `{ processInstanceId, taskId }`；一次读取任务并核验定位，从 data.formMetadata 解析字段及内嵌 Lookup 关系和目标 key/type；返回 `{ ...Workflow原信封, metadata: 宿主MakeAppSchema }`，metadata 仅含可见字段和必要 Lookup 辅助定义 |
 | POST `/api/bpm/tasks/lookup-options` | reference、fieldKey、可选 keyword/pagination；每次重查任务及目标读取权限，返回 `{ options, searchable, total }`，不复用普通源字段授权 |
 | GET `/api/entities/:entityKey/bpm-start-config` | 新建不带 recordID；返回规范化启动配置 |
 | POST `/api/entities/:entityKey/records` | 原创建接口；普通/审批模式在 Service 判定 |
@@ -16,6 +16,8 @@
 | GET `/api/users/:userId` | 单人详情及所属部门；规范化结果见 [发起部门](initiation-contract.md#发起部门) |
 | POST `/api/entities/:entityKey/records/:recordID/bpm-start` | `{ starterDepartmentId? }`；返回规范化流程发起结果 |
 | POST `/api/entities/:entityKey/records/:recordID/bpm-withdraw` | `{comment}`；保留 Workflow 信封 |
+| POST `/api/bpm/process/form` | 一个实例或业务记录定位；从同次读取的 data.formMetadata 返回 `{ ...原信封, metadata: 宿主MakeAppSchema }`，只读 |
+| POST `/api/bpm/process/query` | 固定 viewType: MY；已发起列表，详见 [已发起合同](initiated-instances.md) |
 | POST `/api/bpm/process/detail` | 一个实例定位或一个业务记录定位；保留 Workflow 信封 |
 | POST `/api/bpm/tasks/query` | taskStatus、分页及可选条件；保留 data 数组和 pagination.total |
 | POST `/api/bpm/tasks/detail` | `{ processInstanceId, taskId }`；保留 Workflow 原始信封，任务 UI 加载改用 form 聚合接口 |
@@ -31,12 +33,12 @@
 
 | 资源 | Target | 正文 |
 | --- | --- | --- |
-| `/workflow/v1/bpm-node-form-metadata` | MakeService.GetResource | `{ scene: "START", appKey, processKey }` 或 `{ scene: "TASK", processInstanceId, taskId }` |
 | `/workflow/v1/bpm-start-config` | MakeService.GetResource | `{ appKey, entityKey }` |
 | `/workflow/v1/bpm-process-submit` | MakeService.CreateResource | `{ appKey, entityKey, bpmKey, data, starterDepartmentId? }`，仅新建提交 |
 | `/data/v1/user` | MakeService.GetResource | `{ userId }`，取得该人员的 departments |
 | `/workflow/v1/bpm-process` | MakeService.CreateResource | `{ appKey, entityKey, recordId, starterDepartmentId? }`，已有记录发起 |
 | `/workflow/v1/bpm-process` | MakeService.UpdateResource | `{ appKey, entityKey, recordId, comment }` |
+| `/workflow/v1/bpm-process` | MakeService.ListResources | `{ appKey, viewType: "MY", pagination, entityKey?, processStatus?, startDate?, endDate? }` |
 | `/workflow/v1/bpm-process` | MakeService.GetResource | `{ processInstanceId }` 或 `{ appKey, entityKey, recordId }` |
 | `/workflow/v1/bpm-task` | MakeService.ListResources | `{ appKey, viewType: 'MY', taskStatus, pagination, ...filters }` |
 | `/workflow/v1/bpm-task` | MakeService.GetResource | `{ processInstanceId, taskId }` |
@@ -47,20 +49,25 @@
 
 ## 审批节点字段元数据
 
-字段基础信息使用 `POST /workflow/v1/bpm-node-form-metadata` + `X-Make-Target: MakeService.GetResource`，沿用上述运行时网关、登录、Trace 和取消上下文。两种场景不混传参数，不追加 entityKey、recordId 或自造的 fieldKeys 筛选：
+三个读取资源一次返回 `data.formMetadata`；成功仍以 code === 200 判断。沿用上述网关、登录、Trace 和取消上下文，不另发元数据请求，不提供旧接口或旧完整字段对象的回退。
 
-- 发起：`{ scene: "START", appKey: 部署配置, processKey: 启动配置.processKey }`。先取得权威 bpm-start-config，再读取最新已部署流程的发起节点定义；后端核验发起资格。
-- 任务：`{ scene: "TASK", processInstanceId, taskId }`。先校验任务所属应用及 reference，再读取实例绑定版本的节点定义；不使用当前对象绑定的新版流程或启动字段替代历史节点。
+| 页面 | GetResource | 参数 | 元数据对照 |
+| --- | --- | --- | --- |
+| 新建/发起 | bpm-start-config | `{ appKey, entityKey }` | 当前启动配置 processKey/startNodeKey |
+| 待处理/已完成 | bpm-task | `{ processInstanceId, taskId }` | 已授权任务 appKey/entityKey；有 bpmKey 时核对 processKey |
+| 已发起实例 | bpm-process | `{ processInstanceId }` 或 `{ appKey, entityKey, recordId }` | 实例 bpmKey 对应 formMetadata.processKey |
 
-成功信封为 `{ code: 200, msg, data: { appKey, entityKey, processKey, nodeKey, nodeName, fields, relations } }`。fields 是当前节点可见/可编辑 key 的去重并集；空集合返回空数组。校验应用/对象定位，START 还须与启动配置的 processKey/startNodeKey 对齐；缺失或重复定义明确报错。接口不提供 formData、fieldPermission、actions；这些仍来自 bpm-task，readable/editable 仍来自 bpm-start-config，元数据不能扩大授权。
+formMetadata 为 `{ appKey, entityKey, processKey, nodeKey, nodeName, fields, relations }`。节点和字段范围取实例绑定的 BPM 版本，字段名称、选项、校验、关系等读取当前 Meta。新建取当前已启用且已部署流程发起节点；实例详情取其绑定版本发起节点。退回重提 taskDefinitionKey 可能带 `bpm_resubmit_` 前缀，实际表单节点以 formMetadata.nodeKey 为准，不能强行比较这两个 key，也不能挑 currentTasks 代替实例表单。
 
-fields 必须保留完整 properties、validations、capabilities 及类型专用配置。在 Service 边界规范化 `fieldKey/fieldName/makeFieldType` 为宿主 key/name/type；数字 `type: 1` 不代表控件类型。完整的 18 种枚举映射、配置归位、脱敏响应、规范化示例和可执行参考见 [节点字段转换合同](node-form-metadata.md)。标准 Make.Field.* 与 makeFieldType 同时存在时核对一致性；未知枚举、冲突或非法结构明确报错，不能猜类型或丢校验。
+fields 必须保留完整 properties、validations、capabilities 及类型专用配置。Service 规范化 fieldKey/fieldName/makeFieldType 为现有字段合同，见 [18 种字段转换合同](form-metadata.md)。类型专属配置允许缺省或为空，已提供但非法或冲突的配置明确报错；空节点 fields/relations 均为空数组，没有 Lookup 时 relations 为空数组。
 
-启动配置的可见字段定义或所需 Lookup 依赖不齐时，只请求一次 START 元数据；旧的完整字段对象响应仍按 [START 完整性判定](lookup-metadata.md#start-何时可以省略额外请求) 检查所需关系及目标 key/type，全部齐全且定位一致才省略额外请求。任务详情、办理前重读、任务附件类型校验及候选源字段使用 TASK 元数据；已完成/无动作任务仍可加载只读定义，不开放编辑、上传和候选。结果不写入普通 Schema 缓存，源定义失败不回退 entity/Schema；完成的上游错误保持 HTTP、业务码、Content-Type、正文和 Trace。
+元数据不替代 formData、fieldPermission、actions；新建仍按 fields[].field 字符串匹配定义，按启动配置顺序投影 readable 字段并使用 editable。任务按当前 fieldPermission/actions；已完成/无动作任务只读。实例按 viewPermission 固定只读。隐藏字段不要求定义，额外元数据不扩大授权。
+
+任务详情、办理前重读、任务附件类型核验、候选源字段均从本次 bpm-task 响应取得 formMetadata。每次只读一次对应资源，不另请求元数据；合法空字段直接展示，缺失内嵌定义或可见 key 缺定义直接报错，不回退 entity/Schema 或最新 START。结果不写入普通 Schema 缓存。已完成上游错误保留 HTTP、业务码、Content-Type、正文和 Trace，HTTP 200 不代表业务成功。
 
 ### Lookup 依赖边界
 
-2026-10-28 已核验 dev/test 的 START 和 dev 的 TASK 成功响应：`data.relations[]` 返回标准 `Make.Relation`，Lookup 字段的 `lookup`（规范化后 `properties`）包含 `relationKey/targetFieldKey/targetFieldType`。不再通过普通 `/meta/v1/relation`、`/meta/v1/entity` 或 Schema 补齐 BPM 字段依赖。test 当时没有可用任务样本，不能将 START 结果当作 test TASK 联调证据。
+三个读取响应的 formMetadata.relations[] 返回标准 Make.Relation，Lookup 配置含 relationKey/targetFieldKey/targetFieldType；不通过普通 Meta 或 Schema 补依赖。
 
 最小合同和实现见 [Lookup 节点依赖](lookup-metadata.md)、[纯依赖解析器](../assets/bpm-lookup-metadata.mjs)。关系需要 key、from/to.entityKey、from/to.cardinality；目标对象取当前对象的另一端，目标端 one/many 决定单选/多选。目标字段 key/type 足以定位候选列和判断现有文本搜索能力；无需为了选择记录强求目标实体完整定义。若要增加依赖 options、格式等配置的展示能力，先确认对应合同，不能自行伪造。
 

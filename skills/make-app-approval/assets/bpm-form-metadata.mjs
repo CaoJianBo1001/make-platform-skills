@@ -20,16 +20,16 @@ const propertyKeys = Object.freeze({
 const object = value => value !== null && typeof value === 'object' && !Array.isArray(value);
 const text = value => typeof value === 'string' && value.trim().length > 0;
 
-export class BpmNodeFormMetadataError extends Error {
+export class BpmFormMetadataError extends Error {
   constructor(path, reason) {
     super(`审批节点元数据 ${path} ${reason}`);
-    this.name = 'BpmNodeFormMetadataError';
-    this.code = 'BPM_NODE_FORM_METADATA_INVALID';
+    this.name = 'BpmFormMetadataError';
+    this.code = 'BPM_FORM_METADATA_INVALID';
     this.status = 502;
     this.path = path;
   }
 }
-const invalid = (path, reason = '缺失或无效') => { throw new BpmNodeFormMetadataError(path, reason); };
+const invalid = (path, reason = '缺失或无效') => { throw new BpmFormMetadataError(path, reason); };
 const requireObject = (value, path) => { if (!object(value)) invalid(path); };
 const requireText = (value, path) => { if (!text(value)) invalid(path); };
 
@@ -95,19 +95,20 @@ export function normalizeBpmField(source, index = 0) {
   if (enumType === 'SINGLE_SELECT' || enumType === 'MULTI_SELECT') {
     if (source.selection !== undefined) {
       requireObject(source.selection, `${path}.selection`);
-      requireOptions(source.selection.fieldSelections, `${path}.selection.fieldSelections`);
-      properties = mergeConfig(properties, { options: source.selection.fieldSelections }, `${path}.properties`);
+      if (source.selection.fieldSelections !== undefined) {
+        requireOptions(source.selection.fieldSelections, `${path}.selection.fieldSelections`);
+        properties = mergeConfig(properties, { options: source.selection.fieldSelections }, `${path}.properties`);
+      }
     }
-    requireOptions(properties.options, `${path}.properties.options`);
+    if (properties.options !== undefined) requireOptions(properties.options, `${path}.properties.options`);
   }
   // 不按已知键白名单重建字段，扩展配置、校验及原始专用属性全部保留。
   return { ...source, key, name, type, properties };
 }
 
-export function normalizeBpmNodeFormMetadata(data, expected) {
+export function normalizeBpmFormMetadata(data, expected) {
   requireObject(expected, 'expected');
-  if (!['START', 'TASK'].includes(expected.scene)) invalid('expected.scene');
-  const required = expected.scene === 'START' ? ['appKey', 'entityKey', 'processKey', 'nodeKey'] : ['appKey', 'entityKey'];
+  const required = ['appKey', 'entityKey'];
   for (const key of required) requireText(expected[key], `expected.${key}`);
   requireObject(data, 'data');
   for (const key of ['appKey', 'entityKey', 'processKey', 'nodeKey', 'nodeName']) requireText(data[key], `data.${key}`);
@@ -118,6 +119,7 @@ export function normalizeBpmNodeFormMetadata(data, expected) {
     }
   }
   if (!Array.isArray(data.fields)) invalid('data.fields');
+  if (!Array.isArray(data.relations)) invalid('data.relations');
   const keys = new Set();
   const fields = data.fields.map((source, index) => {
     const field = normalizeBpmField(source, index);

@@ -20,8 +20,8 @@ const verifyRoutes = page => {
   const routes = page.split('\n').filter(line => line.startsWith('|'))
     .flatMap(line => line.split('|').map(cell => cell.trim()))
     .filter(cell => /^`\/bpm\/[^`]+`$/.test(cell)).map(cell => cell.slice(1, -1));
-  assert.deepEqual(routes, ['/bpm/objects/:entityKey/new', '/bpm/tasks/:processInstanceId/:taskId'],
-    '地址表必须保留两个标准 BPM 入口，不得改名或自动增加实例详情');
+  assert.deepEqual(routes, ['/bpm/objects/:entityKey/new', '/bpm/tasks/:processInstanceId/:taskId', '/bpm/instances/:processInstanceId'],
+    '地址表必须保留新建、任务和已确认的实例详情入口');
 };
 
 // 只验证已知的文档冲突及交接边界，不作为宿主成功回调已实现的证据。
@@ -59,6 +59,19 @@ test('标准地址及独立页参考边界可从两个 Skill 发现', () => {
   assert.ok(entry.includes(`(${reference})`), '审批入口必须直接发现可验证的安全边界参考');
   assert.ok(page.includes(`../${reference}`), '独立页合同必须连接安全边界参考');
   verifyRoutes(page);
+});
+
+test('已发起合同可发现，区分任务和实例定位并保留后端授权及字段来源', () => {
+  const entry = read('SKILL.md');
+  assert.ok(entry.includes('(references/initiated-instances.md)'));
+  const page = read('references/initiated-instances.md');
+  for (const token of ['viewType: "MY"', 'MakeService.ListResources', 'processInstanceId', 'ApprovalInstanceDetail', '实例绑定版本', '后端', 'taskId']) assert.ok(page.includes(token), token);
+  assert.match(page, /不.*伪造.*taskId/);
+  assert.match(page, /不.*普通.*Schema/);
+  assert.match(page, /recordId.*未.*支持|未.*recordId/);
+  assert.match(page, /0\.2\.13[^\n]*正式产物/);
+  assert.doesNotMatch(page, /新能力为源码候选|源码候选的/);
+  assert.ok(!read('references/standalone-pages.md').includes('此能力不实现飞书配置、通知中心、Bot、流程引擎或实例级详情'));
 });
 
 test('文档一致性：成功回调按普通容器与 BPM 独立页分别交接并保留成功结果', () => {

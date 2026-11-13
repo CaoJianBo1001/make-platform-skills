@@ -10,6 +10,11 @@
  *   actions: import('@qfei-design/make-app-mobile/primitives').MobileFormAction[]
  * }} MobileLayout
  */
+/** @param {{application: ReactNode, history?: ReactNode}} sections */
+const composeSections = ({ application, history }) => [
+  { key: 'application', label: '审批详情', content: application },
+  ...(history == null || typeof history === 'boolean' ? [] : [{ key: 'history', label: '审批记录', content: history }]),
+];
 /**
  * @overload
  * @param {ApprovalSlots} slots
@@ -36,10 +41,7 @@ export function composeApprovalTaskLayout(slots, { presentation = 'desktop', has
   const { application, history, opinion, feedback } = slots.sections;
   return {
     content: null,
-    sections: [
-      { key: 'application', label: '审批详情', content: application },
-      ...(history == null || typeof history === 'boolean' ? [] : [{ key: 'history', label: '审批记录', content: history }]),
-    ],
+    sections: composeSections({application, history}),
     opinion,
     feedback,
     actions: (slots.actionItems ?? []).map((item) => ({
@@ -51,4 +53,31 @@ export function composeApprovalTaskLayout(slots, { presentation = 'desktop', has
       variant: item.actionType === 'APPROVE' || item.actionType === 'SUBMIT' ? 'primary' : 'default',
     })),
   };
+}
+
+/**
+ * @typedef {import('@qfei-design/make-app-approval/detail').ApprovalInstanceDetailLayoutSlots} InstanceSlots
+ * @typedef {{content: ReactNode, sections: {key: string, label: string, content: ReactNode}[], feedback: ReactNode}} MobileInstanceLayout
+ */
+/**
+ * @overload
+ * @param {InstanceSlots} slots
+ * @param {{presentation: 'mobile'}} options
+ * @returns {MobileInstanceLayout}
+ */
+/**
+ * @overload
+ * @param {InstanceSlots} slots
+ * @param {{presentation?: 'desktop' | 'tablet'}} [options]
+ * @returns {InstanceSlots}
+ */
+/**
+ * @param {InstanceSlots} slots
+ * @param {{presentation?: 'desktop' | 'tablet' | 'mobile'}} [options]
+ * @returns {InstanceSlots | MobileInstanceLayout}
+ */
+export function composeApprovalInstanceLayout(slots, {presentation = 'desktop'} = {}) {
+  if (presentation !== 'mobile') return slots;
+  if (!slots.sections) return {content: slots.content, sections: [], feedback: null};
+  return {content: null, sections: composeSections(slots.sections), feedback: slots.sections.feedback};
 }

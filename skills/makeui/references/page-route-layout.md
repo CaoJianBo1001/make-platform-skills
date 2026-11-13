@@ -1,6 +1,6 @@
 # Route-based form and detail pages
 
-飞书三方审批等外部深链的独立页面另按 [BPM 独立页面合同](../../make-app-approval/references/standalone-pages.md)：使用 `/bpm/objects/:entityKey/new` 和 `/bpm/tasks/:processInstanceId/:taskId`，保留本页原对象地址；两种容器复用同一表单／任务控制器，独立页不挂载列表 Shell。
+飞书三方审批等外部深链的独立页面另按 [BPM 独立页面合同](../../make-app-approval/references/standalone-pages.md)：使用 `/bpm/objects/:entityKey/new`、`/bpm/tasks/:processInstanceId/:taskId`，已确认实例查看时提供 `/bpm/instances/:processInstanceId`，保留本页原对象地址；各容器复用宿主表单或公共任务／实例控制器，实例固定只读且不要求 taskId，独立页不挂载列表 Shell。
 
 下文对象 Drawer／页面及手机保存后返回列表规则适用于普通对象入口。BPM 独立入口的完成、退出及容器布局以独立页面合同为准，不因复用表单而带入列表 Shell 或强制返回列表。项目原表单可以是 Drawer、弹窗或页面，接入时保留其组件库和业务逻辑。
 
