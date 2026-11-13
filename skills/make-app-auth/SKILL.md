@@ -2,7 +2,7 @@
 name: make-app-auth
 description: Use when generating, modifying, reviewing, or debugging Make App unified login and authenticated /api/make requests with @qfeius/make-app-auth. Covers unified login, OAuth/ngrok mode, 401/403 handling, logout, current-user/account-drawer auth wiring, current-context identity, Feishu-container logout visibility, cookies, sessions, redirect callbacks, and Make App auth troubleshooting. Preserve authenticated context for the default /api/make/app/principal/permission flow. Does not cover UI layout, account menu placement, page structure, build output, Service API contracts, permission logic, DSL modeling, or canvas-table internals; use makeui for account surfaces and make-app-permission for single-app permission enforcement.
 metadata:
-  version: 0.1.30
+  version: 0.1.31
 ---
 
 # make-app-auth
@@ -55,6 +55,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - Ordinary frontend Make backend requests go through `auth.api`, including schema/meta, record CRUD, ordinary file/lookup/user/department requests. The fixed Make App AI v1 `/client` contract is a narrow exception: its `AuthenticatedTransport` needs HTTP status, headers and raw `AsyncIterable<Uint8Array>` for 202/204, SSE and file bytes, which `auth.api` does not expose. Implement that bridge only under same-origin `/api/make/app/ai/v1/**` inside the shared authenticated adapter, preserve unified-login cookie handling, and follow `make-ai-assistant` for its exact scope and lifecycle. This does not authorize generic raw fetch for other `/api/make/**` calls.
 - Generated Apps must centralize Make backend access in a shared API adapter or data-source layer that wraps `auth.api`.
 - Every new Make App's shared authenticated business-request adapter must apply the `make-app-observability` Trace ID contract: send `traceparent` and matching `X-Log-Id` without exposing tokens or changing unified-login behavior. Authentication remains owned here; Trace generation, propagation, and error display belong to `make-app-observability`.
+- Direct-gateway App business requests set `X-Make-Source: app` in that same adapter and include the actual app key as `X-Make-App-Key` when available from the established App runtime context. Service-fronted requests follow the Service adapter contract in `make-app-service`; do not expose Service-only configuration to the browser or invent a new browser app-key source.
 - Service-fronted Apps must preserve the `UI -> Service -> make-gateway` contract; do not let UI bypass Service for meta/data calls.
 - Service-fronted Apps must preserve this contract for the default permission call. UI uses `auth.api("/app/principal/permission")`, and the single-app permission behavior belongs to `make-app-permission`.
 - Service-fronted published Apps use `gatewayBaseUrl: "/api/make"` in UI. UI calls `auth.api("/app/**")`, which becomes browser requests to `/api/make/app/**`. Auth bootstrap and OAuth callbacks must stay under `/api/make/auth/**` and `/api/make/oauth/**`; do not generate `/api/auth/**`, `/api/oauth/**`, or `gatewayBaseUrl: "/api"` for this mode.

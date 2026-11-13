@@ -8,6 +8,8 @@ All ordinary frontend requests to Make backend must go through one shared adapte
 
 Do not call raw `window.fetch('/api/make/...')` for ordinary business APIs. Do not scatter unhandled `auth.api` calls across UI components, drawers, tables, field editors, or route loaders.
 
+For UI business calls, the shared adapter sets `X-Make-Source: app` along with the existing Trace headers. In direct-gateway mode also set `X-Make-App-Key` from the App's existing authoritative runtime context when it exposes the actual app key; never hard-code or guess the environment. If no authoritative app key is available in direct mode, report the application-log attribution gap instead of inventing one. In Service-fronted mode do not expose `MAKE_APP_KEY` through a new browser config endpoint: the Service derives the key and sets the Make-bound headers in its shared adapter. Do not change authentication or add headers to unrelated static resources solely for logging.
+
 The Make App AI v1 `/client` contract is one narrow raw-response exception.
 `auth.api` consumes successful responses and cannot return the required
 `{ status, headers, body?: AsyncIterable<Uint8Array> }` for JSON, 204, SSE and
@@ -39,9 +41,13 @@ const makeRequestInit = (traceHeaders: TraceHeaders, extraHeaders = {}) => ({
 Direct gateway mode example:
 
 ```ts
-export async function listRecords(payload: unknown) {
+// appKey is supplied by the App's existing runtime context, not a guessed key.
+export async function listRecords(payload: unknown, appKey: string) {
   return requestWithTrace((traceHeaders: TraceHeaders) =>
-    auth.api.post('/data/v1/record', payload, makeRequestInit(traceHeaders)));
+    auth.api.post('/data/v1/record', payload, makeRequestInit(traceHeaders, {
+      'X-Make-Source': 'app',
+      'X-Make-App-Key': appKey,
+    })));
 }
 ```
 
