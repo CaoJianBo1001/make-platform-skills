@@ -34,7 +34,7 @@ The first-load sequence is:
 
 ```text
 resolve enabled entity context
-  -> load normalized schema + GET /api/entities/:entityKey/preset
+  -> load normalized schema + GET /api/make/app/entities/:entityKey/preset
   -> hydrate filter, sanitize sort, sanitize group against schema
   -> if applied group is empty: GET records
   -> if applied group exists: GET root record-groups page
@@ -56,7 +56,7 @@ Confirmation follows:
 
 ```text
 validate draft
-  -> PATCH /api/entities/:entityKey/preset with { group }
+  -> PATCH /api/make/app/entities/:entityKey/preset with { group }
   -> save success in the active context
   -> replace applied group
   -> reset table/query/group cache context

@@ -14,6 +14,6 @@
 
 ## 直连 Gateway 与 AI
 
-直连 Gateway 的 App 仍由共享 UI 请求适配器注入 Header；不为 Trace ID 绕开 `auth.api`。若使用 AI v1 原始响应桥接，沿用 `make-app-auth` 限定的已认证 transport，JSON、SSE、上传和二进制请求都携带相同 Header。AI HTTP 非 2xx 即使带可读响应体或无响应体，也必须将 Span 标记为错误并记录实际状态码；流式响应在读取结束、失败或取消时只收束一次 Trace。短暂重连不应直接当成最终失败。不要把 `traceparent` 放进 query，也不要把 SSE 事件正文写入日志。
+直连 Gateway 的 App 仍由共享 UI 请求适配器注入 Header；不为 Trace ID 绕开 `auth.api`。若使用 Agent Public API v1 原始响应桥接，沿用 `make-app-auth` 限定的已认证 transport，JSON、SSE、上传和二进制请求都携带相同 Header。AI HTTP 非 2xx 即使带可读响应体或无响应体，也必须将 Span 标记为错误并记录实际状态码；流式响应在读取结束、失败或取消时只收束一次 Trace。短暂重连不应直接当成最终失败。不要把 `traceparent` 放进 query，也不要把 SSE 事件正文写入日志。
 
 Trace ID 关联日志并帮助定位请求；只有在另行配置经确认的采集与导出链路后，才能声称支持集中式 Trace 查询。本 Skill 不推断后端已有 Collector 或 exporter。

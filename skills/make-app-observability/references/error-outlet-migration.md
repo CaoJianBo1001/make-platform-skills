@@ -11,7 +11,17 @@
 
 ## 门禁
 
-新建或本次明确迁移反馈出口的 App，在原 Trace 审计之外，将 `scripts/audit-error-outlets.mjs` 与 `scripts/test-audit-error-outlets.mjs` 复制到项目本地工具目录。按宿主的包管理器接入默认测试和发布前检查，不迁移项目运行时。审计使用宿主已安装的 TypeScript 解析器，缺少解析器会明确失败，不静默跳过。兼容宿主 TypeScript 4.8.4：使用新语法的识别 API 前检查其存在性，不要求旧宿主仅为审计升级解析器。4.8.4 的兼容回归覆盖该版本可解析的普通请求、局部校验与缺失 API 场景；satisfies 语法本身仍需支持它的宿主解析器，5.9.3 执行完整自测。
+新建或本次明确迁移反馈出口的 App，在原 Trace 审计之外，从本 Skill 实际安装目录将下列完整文件组复制到项目本地工具目录，保留文件名与相对导入。更新已有门禁时也须复制全部文件，不依赖其他 Skill 或本机绝对路径。
+
+| Source under this Skill | Target under the App workspace |
+| --- | --- |
+| `scripts/audit-error-outlets.mjs` | `scripts/audit-error-outlets.mjs` |
+| `scripts/test-audit-error-outlets.mjs` | `scripts/test-audit-error-outlets.mjs` |
+| `scripts/load-typescript-compiler.mjs` | `scripts/load-typescript-compiler.mjs` |
+
+按宿主的包管理器接入默认测试和发布前检查，不迁移项目运行时。加载器按能力依次检查工作区的 `typescript`、`@typescript/typescript6`、官方制品的 `typescript-compiler-api` 别名；原生 TypeScript 7 缺少旧 API 时使用兼容入口。兼容 API 仅作为开发工具安装，例如 `typescript-compiler-api: npm:typescript@6.0.3`；也可在审计命令追加 `--compiler-workspace="<tooling-workspace>"`，显式目录必须存在并具备能力，不退回消费工作区或主动扫描全局/私有目录。能力缺失明确返回 `request_error_parser_missing` 与 `compiler_api_unavailable`，不崩溃或跳过检查；日志分别标记安装包版本和 API 版本。
+
+保留对 TypeScript 4.8.4 的兼容：使用新语法识别 API 前检查其存在性，不要求旧宿主仅为审计升级解析器。4.8.4 的兼容回归覆盖该版本可解析的普通请求、局部校验与缺失 API 场景；satisfies 语法本身仍需支持它的解析器，5.9.3 执行完整自测，7.0.2 配合官方兼容入口复跑完整自测。该工具检查不替代 App 原生类型检查或构建。
 
 ```bash
 node scripts/audit-error-outlets.mjs <project-root>

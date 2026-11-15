@@ -91,12 +91,14 @@ Do not implement Make-backed Service APIs by shelling out to `makecli` or readin
 
 ## Make API references
 
-Use the Make backend API designs as the source of truth for Service-to-Make calls:
+Use the contracts bundled with the platform Skills as the baseline for Service-to-Make calls:
 
-- Meta API: `https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/MetaAPIDesign.md?ref_type=heads`
-- Data API: `https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/DataAPIDesign.md?ref_type=heads`
+- [Meta API](../../makedsl/references/MetaAPIDesign.md)
+- [Data API](../../makedsl/references/DataAPIDesign.md)
 
-Do not infer Meta/Data payload shapes from UI components, local DSL files, screenshots, or demo data. If those docs are unavailable in the current environment, preserve the host project's existing adapter contract and mark the missing API reference as a blocker before inventing new Make request shapes.
+These contracts ship with the related `makedsl` Skill. If that Skill is missing from the installation, install or update it from the same platform Skill source and channel. Access to a private design repository or a reference App is not a prerequisite; upstream links only record provenance.
+
+Do not infer Meta/Data payload shapes from UI components, local DSL files, screenshots, or demo data. If the bundled contracts do not define a required operation, report that specific contract gap before inventing a request shape; preserve an existing host adapter while the gap is resolved.
 
 ## Runtime base URL config
 
@@ -194,7 +196,7 @@ Rules:
 
 ## Aggregate statistics
 
-For dashboard metrics, charts, or AI analysis over matching Make records, prefer the server-side aggregate API when it expresses the requested calculation. Read the bundled [Data API aggregate contract](../../makedsl/references/DataAPIDesign.md#聚合统计-record-数据); the [upstream design](https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/DataAPIDesign.md#聚合统计-record-数据) is the authoritative reference.
+For dashboard metrics, charts, or AI analysis over matching Make records, prefer the server-side aggregate API when it expresses the requested calculation. Read the bundled [Data API aggregate contract](../../makedsl/references/DataAPIDesign.md#聚合统计-record-数据); the [upstream design](https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/DataAPIDesign.md#聚合统计-record-数据) records provenance and is not required for using the bundled contract.
 
 Call `POST /data/v1/aggregate` with `X-Make-Target: MakeService.ListResources` through the existing Make adapter. Reuse its runtime path scope, configured `appKey`, login context, cancellation, and response handling. Push supported calculations down, then perform any needed result combination or reasonably sized detail calculation in the Service; UI consumes the resulting business metrics. Read [query-planning examples](../../makedsl/references/DataAPIDesign.md#不能直接表达时的方案选择) when a single aggregate cannot meet the requirement. Record-list expansion and `groupFilter` remain the separate `make-app-group` workflow.
 

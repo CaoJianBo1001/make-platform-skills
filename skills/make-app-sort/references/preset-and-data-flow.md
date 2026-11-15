@@ -39,9 +39,9 @@ The first-load sequence is:
 
 ```text
 resolve enabled entity context
-  -> load normalized schema + GET /api/entities/:entityKey/preset
+  -> load normalized schema + GET /api/make/app/entities/:entityKey/preset
   -> hydrate filter and sanitize sort against schema
-  -> GET /api/entities/:entityKey/records with applied filter/sort
+  -> GET /api/make/app/entities/:entityKey/records with applied filter/sort
 ```
 
 Schema and Preset may load concurrently only when access is enabled. Records wait
@@ -58,7 +58,7 @@ Confirmation follows:
 
 ```text
 validate draft
-  -> PATCH /api/entities/:entityKey/preset with { sort }
+  -> PATCH /api/make/app/entities/:entityKey/preset with { sort }
   -> save success in the active context
   -> replace applied sort
   -> reset table/query context

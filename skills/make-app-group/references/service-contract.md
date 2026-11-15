@@ -10,22 +10,23 @@ and must not handle Make tokens.
 
 Entity Preset:
 
-- `GET /api/entities/:entityKey/preset`
-- `PATCH /api/entities/:entityKey/preset`
+- `GET /api/make/app/entities/:entityKey/preset`
+- `PATCH /api/make/app/entities/:entityKey/preset`
 
 Records:
 
-- `GET /api/entities/:entityKey/records`
+- `GET /api/make/app/entities/:entityKey/records`
 - accepts JSON-query `fields`, `filter`, `groupFilter`, `sort`, and `pagination`
 
 Record groups:
 
-- `GET /api/entities/:entityKey/record-groups`
+- `GET /api/make/app/entities/:entityKey/record-groups`
 - accepts JSON-query `filter`, `groupFilter`, `group`, and `pagination`
 
-In unified-login projects these paths may live under a host auth scope such as
-`/api/make/app/**`. Follow the host's existing Service route prefix, but keep the
-payload contract unchanged.
+These are the new Service-fronted App's published paths. UI uses the shared
+authenticated adapter and the corresponding `/app/**` paths with
+`gatewayBaseUrl: "/api/make"`. An existing host may retain its documented
+equivalent mount and matching UI adapter; keep the payload contract unchanged.
 
 Update API docs before changing UI or Service behavior.
 

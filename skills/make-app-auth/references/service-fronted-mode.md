@@ -20,7 +20,7 @@ UI business code calls Service-owned paths such as:
 await requestWithTrace((traceHeaders) =>
   auth.api.get('/app/schema', { headers: traceHeaders }));
 await requestWithTrace((traceHeaders) =>
-  auth.api.post('/app/records/customer', payload, { headers: traceHeaders }));
+  auth.api.get('/app/entities/customer/records', { headers: traceHeaders }));
 ```
 
 UI must not bypass Service by calling `/data/**`, `/meta/**`, meta/data service domains, or k8s-internal service names directly.

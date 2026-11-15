@@ -361,12 +361,12 @@ assert.match(
 
 assert.match(
   serviceContract,
-  /GET\s+\/api\/entities\/:entityKey\/record-groups/,
+  /GET\s+\/api\/make\/app\/entities\/:entityKey\/record-groups/,
   'Service must expose record-groups route',
 );
 assert.match(
   serviceContract,
-  /GET\s+\/api\/entities\/:entityKey\/records[\s\S]*groupFilter/,
+  /GET\s+\/api\/make\/app\/entities\/:entityKey\/records[\s\S]*groupFilter/,
   'records route must accept groupFilter',
 );
 assert.match(

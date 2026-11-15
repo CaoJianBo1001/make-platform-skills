@@ -123,8 +123,8 @@ const reviewedSkillMarkdown = [
   ...collectMarkdown('skills/make-app-filter'),
   ...collectMarkdown('skills/makeui'),
 ];
-const exactUserCandidateContract = /GET \/api\/users\?keyword=&page=&size=/g;
-const exactDepartmentCandidateContract = /GET \/api\/departments\?keyword=&page=&size=/g;
+const exactUserCandidateContract = /GET \/api\/make\/app\/users\?keyword=&page=&size=/g;
+const exactDepartmentCandidateContract = /GET \/api\/make\/app\/departments\?keyword=&page=&size=/g;
 const countMatches = (content, pattern) => [...content.matchAll(pattern)].length;
 
 assert.equal(
@@ -145,7 +145,7 @@ assert.equal(
 );
 assert.match(
   read('skills/makeui/references/component-usage.md'),
-  /GET \/api\/users\?keyword=&page=&size=[\s\S]*GET \/api\/departments\?keyword=&page=&size=/,
+  /GET \/api\/make\/app\/users\?keyword=&page=&size=[\s\S]*GET \/api\/make\/app\/departments\?keyword=&page=&size=/,
   'makeui component usage must remain the canonical candidate-source UI contract',
 );
 

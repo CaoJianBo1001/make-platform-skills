@@ -1,0 +1,35 @@
+{
+  "title": "补充信息",
+  "form": {
+    "type": "object",
+    "properties": {
+      "note": { "type": "string", "title": "备注" },
+      "password": { "type": "string", "title": "密码", "writeOnly": true },
+      "secret": {
+        "type": "string",
+        "title": "敏感信息",
+        "x-make-sensitive": true
+      },
+      "date": {
+        "type": "string",
+        "format": "date",
+        "title": "日期",
+        "default": "2026-11-15"
+      },
+      "datetime": {
+        "type": "string",
+        "x-make-control": "datetime-local",
+        "x-make-timezone": "Asia/Shanghai",
+        "title": "日期时间",
+        "default": "2026-11-15 08:30:45"
+      },
+      "range": {
+        "type": "object",
+        "x-make-control": "date-range",
+        "title": "日期范围",
+        "default": { "begin": "2026-11-15", "end": "2026-11-17" }
+      }
+    }
+  },
+  "fieldOrder": ["note", "password", "secret", "date", "datetime", "range"]
+}

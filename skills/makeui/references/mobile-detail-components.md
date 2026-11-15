@@ -16,7 +16,7 @@ import '@qfei-design/make-app-mobile/styles.css';
 
 | 使用处 | 使用公共组件 | 宿主仍负责 |
 | --- | --- | --- |
-| 历史/流程时间线 | `MobileTimeline`，items 提供 key/title/result/meta/description | 与 PC 共用[数据源与滚动加载合同](../../make-app-approval/references/history.md#共享数据源与滚动加载)、顺序及[历史结果适配](../../make-app-approval/references/history.md#共享历史结果)，手机只适配续载触发、布局与空意见展示 |
+| 历史/流程时间线 | `MobileTimeline`，items 提供 key/title/result/meta/description | 与 PC 共用[完整快照与本地滚动合同](../../make-app-approval/references/history.md#共享数据源与滚动展示)、顺序及[历史结果适配](../../make-app-approval/references/history.md#共享历史结果)，手机直接展示完整事件数组，只适配布局与空意见展示，滚动不再发起请求 |
 | 宿主自建标题和区块 | `MobileDetailSection title/children`；独立全宽区块传 `inset`，已有正文左右留白时不传 | 区块内容、可见性；审批包自带标题的 section 不重复包同名标题 |
 | 宿主自建混合编辑/只读字段行 | `MobileFieldRow label/htmlFor/required/readOnly`，附件可传 stacked | 字段权限、值格式化、候选、校验；审批任务 renderField 已有包外框，只返回值控件，不嵌套完整字段行 |
 | 多行意见、原因、文本字段 | `MobileTextArea value/onChange`；默认两行到五行，字段行内用 appearance="inline" | 草稿、字数限制、必填、错误和提交；禁用时传 disabled |

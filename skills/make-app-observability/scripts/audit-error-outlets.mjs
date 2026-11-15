@@ -1,16 +1,28 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
-import { createRequire } from 'node:module';
+import { loadTypeScriptCompiler } from './load-typescript-compiler.mjs';
 
 // 仅用于新建或明确迁移反馈出口的 App；原 Trace 审计继续兼容未迁移的存量 App。
 const root = path.resolve(process.argv[2] ?? '.');
+const args = process.argv.slice(3);
+if (args.length > 1 || args.some(arg => !arg.startsWith('--compiler-workspace=') || !arg.slice('--compiler-workspace='.length))) {
+  console.error('usage: node audit-error-outlets.mjs <project-root> [--compiler-workspace=<tooling-workspace>]');
+  process.exit(2);
+}
+const compilerWorkspace = args[0]?.slice('--compiler-workspace='.length);
 const uiRoot = ['apps/ui', 'ui', '.'].map(dir => path.join(root, dir))
   .find(dir => fs.existsSync(path.join(dir, 'src')) && fs.existsSync(path.join(dir, 'package.json')));
 if (!uiRoot) { console.error('FAIL request_error_ui_missing'); process.exit(2); }
 let ts;
-try { ts = createRequire(path.join(uiRoot, 'package.json'))('typescript'); }
-catch { console.error('FAIL request_error_parser_missing: install the host TypeScript dependency before auditing'); process.exit(2); }
+try {
+  const loaded = loadTypeScriptCompiler(uiRoot, {
+    compilerWorkspace,
+    requiredFunctions: `createProgram forEachChild getLeadingCommentRanges isArrayBindingPattern isAsExpression isAwaitExpression isBindingElement isCallExpression isCatchClause isFunctionLike isIdentifier isImportDeclaration isJsxAttribute isJsxAttributes isJsxElement isJsxExpression isJsxOpeningElement isJsxSelfClosingElement isNamedImports isNamespaceImport isNewExpression isNonNullExpression isNumericLiteral isObjectLiteralExpression isOmittedExpression isParenthesizedExpression isPropertyAccessExpression isPropertyAssignment isReturnStatement isShorthandPropertyAssignment isStringLiteral isTaggedTemplateExpression isThrowStatement isTryStatement isTypeAssertionExpression isVariableDeclaration isYieldExpression`.split(/\s+/),
+  });
+  ts = loaded.compiler;
+  console.log(`compiler API: ${loaded.name}@${loaded.version} (API ${loaded.apiVersion})`);
+} catch (error) { console.error('FAIL request_error_parser_missing: ' + error.message); process.exit(2); }
 const collect = dir => fs.readdirSync(dir, { withFileTypes: true }).flatMap(entry => {
   const file = path.join(dir, entry.name);
   if (entry.isDirectory()) return /^(?:node_modules|dist|build|coverage|__fixtures__|\.git)$/.test(entry.name) ? [] : collect(file);

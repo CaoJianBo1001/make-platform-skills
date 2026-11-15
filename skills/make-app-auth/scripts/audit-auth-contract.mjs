@@ -1,12 +1,14 @@
 #!/usr/bin/env node
 import fs from 'node:fs';
 import path from 'node:path';
+import { loadTypeScriptCompiler } from './load-typescript-compiler.mjs';
+import { auditRawMakeFetches } from './agent-byte-bridge-contract.mjs';
 
 const SDK_PACKAGE_NAME = '@qfeius/make-app-auth';
 const MINIMUM_SDK_VERSION = [0, 1, 5];
 
 const USAGE = `Usage:
-  node skills/make-app-auth/scripts/audit-auth-contract.mjs <project-root> [--mode direct|service-fronted|auto] [--published]
+  node skills/make-app-auth/scripts/audit-auth-contract.mjs <project-root> [--mode direct|service-fronted|auto] [--published] [--compiler-workspace=<tooling-workspace>]
 
 Checks Make App unified-login contract drift. This is auth-scoped; it does not verify schema rendering or UI layout.`;
 
@@ -19,9 +21,15 @@ if (args.includes('--help') || args.includes('-h')) {
 let projectRoot = null;
 let mode = 'auto';
 let published = false;
+let compilerWorkspace;
 
 for (let index = 0; index < args.length; index += 1) {
   const arg = args[index];
+  if (arg.startsWith('--compiler-workspace=')) {
+    if (compilerWorkspace !== undefined || !arg.slice('--compiler-workspace='.length)) failUsage('Provide one non-empty --compiler-workspace');
+    compilerWorkspace = arg.slice('--compiler-workspace='.length);
+    continue;
+  }
   if (arg === '--published') {
     published = true;
     continue;
@@ -68,8 +76,9 @@ const serviceFiles = collectSourceFiles(firstExisting([
   'server/src'
 ]));
 const serviceRuntimeFiles = serviceFiles.filter(isRuntimeSourceFile);
+const uiRuntimeFiles = uiFiles.filter(isRuntimeSourceFile);
 const allProjectFiles = collectSourceFiles(root);
-const uiText = readJoined(uiFiles);
+const uiText = readJoined(uiRuntimeFiles);
 const serviceText = readJoined(serviceRuntimeFiles);
 const projectText = readJoined(allProjectFiles);
 const sdkDependencyDeclarations = findSdkDependencyDeclarations(allProjectFiles);
@@ -87,8 +96,9 @@ if (!/@qfeius\/make-app-auth/.test(projectText) && !/createMakeAppAuth\s*\(/.tes
   failures.push('sdk_missing: project does not appear to use @qfeius/make-app-auth');
 }
 
-for (const hit of findRawMakeFetches(uiFiles)) {
-  failures.push(`raw_make_fetch: ${relative(hit.file)} uses raw fetch for ${hit.url}; use auth.api through the shared adapter`);
+for (const hit of findRawMakeFetches(uiRuntimeFiles)) {
+  const findings = hit.review ? warnings : failures;
+  findings.push(`${hit.reason ?? 'raw_make_fetch'}: ${relative(hit.file)} uses raw fetch for ${hit.url}; ordinary APIs use auth.api; Agent bytes require a typed, scoped shared transport`);
 }
 
 if (hasTokenMode(uiText) || hasServiceTokenModeWithoutLocalPreview(serviceText)) {
@@ -130,7 +140,7 @@ if (inferredMode === 'service-fronted') {
   if (hasUiDirectGatewayCalls(uiText)) {
     failures.push('service_fronted_ui_bypass: UI calls /data/** or /meta/** through auth.api; UI should call Service-owned /app/** paths');
   }
-  for (const hit of findRawMakeDownloadResourceUrls(uiFiles)) {
+  for (const hit of findRawMakeDownloadResourceUrls(uiRuntimeFiles)) {
     failures.push(`service_fronted_raw_download_resource: ${relative(hit.file)} uses ${hit.attribute} with raw Make download URL ${hit.url}; use a Service-owned download proxy URL`);
   }
   if (hasRawMakeDownloadLiteral(uiText) && !hasServiceDownloadProxyLiteral(uiText)) {
@@ -252,7 +262,7 @@ function isSourceFile(file) {
 function isRuntimeSourceFile(file) {
   const basename = path.basename(file);
   return !/\.(?:test|spec)\.[cm]?[jt]sx?$/i.test(basename)
-    && !/(?:^|[/\\])(?:__tests__|test|tests)(?:[/\\]|$)/i.test(file);
+    && !/(?:^|[/\\])(?:__tests__|test|tests)(?:[/\\]|$)/i.test(path.relative(root, file));
 }
 
 function readJoined(files) {
@@ -486,9 +496,25 @@ function inferMode() {
 }
 
 function findRawMakeFetches(files) {
+  const runtime = files.filter(file => /\.[cm]?[jt]sx?$/.test(file) && isRuntimeSourceFile(file));
   const hits = [];
+  if (runtime.some(file => /\bfetch\s*\(/.test(fs.readFileSync(file, 'utf8')))) {
+    const uiRoot = ['apps/ui', 'ui', '.'].map(dir => path.join(root, dir)).find(dir => fs.existsSync(path.join(dir, 'package.json')));
+    let ts;
+    try {
+      const loaded = loadTypeScriptCompiler(uiRoot ?? root, {
+        compilerWorkspace,
+        requiredFunctions: `createProgram forEachChild isAsExpression isAwaitExpression isBinaryExpression isBlock isCallExpression isDeleteExpression isElementAccessExpression isFunctionLike isIdentifier isIfStatement isImportDeclaration isJsxElement isJsxSelfClosingElement isMethodDeclaration isNamespaceImport isNewExpression isNonNullExpression isObjectLiteralExpression isParenthesizedExpression isPrefixUnaryExpression isPropertyAccessExpression isPropertyAssignment isQualifiedName isReturnStatement isShorthandPropertyAssignment isSpreadAssignment isStringLiteralLike isThrowStatement isTypeReferenceNode isVariableDeclaration`.split(/\s+/),
+        requiredEnums: `JsxEmit.Preserve NodeFlags.Const SyntaxKind.BarBarToken SyntaxKind.ExclamationEqualsEqualsToken SyntaxKind.ExclamationToken SyntaxKind.ExportKeyword SyntaxKind.FirstAssignment SyntaxKind.LastAssignment SyntaxKind.PlusToken`.split(/\s+/),
+      });
+      ts = loaded.compiler;
+      console.log(`compiler API: ${loaded.name}@${loaded.version} (API ${loaded.apiVersion})`);
+    } catch (error) { return [{ file: uiRoot ?? root, url: '<unparsed>', reason: 'agent_bridge_parser_missing: ' + error.message }]; }
+    hits.push(...auditRawMakeFetches(ts, runtime));
+  }
   const rawFetch = /(?:window\.)?fetch\s*\(\s*([`'"])([^`'"]*\/api\/make[^`'"]*)\1/g;
   for (const file of files) {
+    if (runtime.includes(file)) continue;
     const text = fs.readFileSync(file, 'utf8');
     let match;
     while ((match = rawFetch.exec(text))) {

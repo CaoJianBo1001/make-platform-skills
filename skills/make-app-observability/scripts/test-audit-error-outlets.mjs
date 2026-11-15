@@ -6,13 +6,16 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, test } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { loadTypeScriptCompiler } from './load-typescript-compiler.mjs';
 
 const audit = fileURLToPath(new URL('./audit-error-outlets.mjs', import.meta.url));
 const host = path.resolve(process.argv[2] ?? fileURLToPath(new URL('..', import.meta.url)));
 const dependencyEntry = process.env.MAKE_FEEDBACK_TEST_DEPENDENCIES
   ? path.join(process.env.MAKE_FEEDBACK_TEST_DEPENDENCIES, '__error_outlet_test__.cjs')
   : path.join(host, 'ui/package.json');
-const tsDirectory = path.dirname(createRequire(dependencyEntry).resolve('typescript'));
+const dependencyWorkspace = path.dirname(dependencyEntry);
+const loadedParser = loadTypeScriptCompiler(dependencyWorkspace);
+const parserRoot = path.dirname(createRequire(dependencyEntry).resolve(loadedParser.name + '/package.json'));
 const temp = mkdtempSync(path.join(tmpdir(), 'make-error-outlet-audit-'));
 after(() => rmSync(temp, { recursive: true, force: true }));
 const write = (root, file, text) => {
@@ -20,23 +23,58 @@ const write = (root, file, text) => {
 };
 let id = 0;
 const run = (files, options = {}) => {
-  const { withoutSatisfiesApi = false, ...spawnOptions } = options;
+  const { withoutSatisfiesApi = false, nativeParser = false, compatParser, compilerWorkspace, ...spawnOptions } = options;
   const root = path.join(temp, String(++id));
   write(root, 'apps/ui/package.json', '{}');
   mkdirSync(path.join(root, 'apps/ui/node_modules'), { recursive: true });
-  if (withoutSatisfiesApi) {
+  if (nativeParser) {
+    write(root, 'apps/ui/node_modules/typescript/package.json', JSON.stringify({main:'index.cjs'}));
+    write(root, 'apps/ui/node_modules/typescript/index.cjs', 'module.exports={version:"7.0.2"};');
+  } else if (withoutSatisfiesApi) {
     write(root, 'apps/ui/node_modules/typescript/index.js',
-      `module.exports = { ...require(${JSON.stringify(path.dirname(tsDirectory))}), isSatisfiesExpression: undefined };`);
+      `module.exports = { ...require(${JSON.stringify(parserRoot)}), isSatisfiesExpression: undefined };`);
   } else {
-    symlinkSync(path.dirname(tsDirectory), path.join(root, 'apps/ui/node_modules/typescript'));
+    symlinkSync(parserRoot, path.join(root, 'apps/ui/node_modules/typescript'));
+  }
+  if (compatParser) {
+    const target = path.join(root, 'apps/ui/node_modules', compatParser);
+    mkdirSync(path.dirname(target), {recursive:true});
+    symlinkSync(parserRoot, target, 'junction');
   }
   write(root, 'apps/ui/src/outlet.tsx', `import {MakeAppErrorNotice,MakeAppErrorNoticeViewport} from '@qfei-design/make-app-observability/react';
     export const Outlet=()=> <MakeAppErrorNoticeViewport><MakeAppErrorNotice title="失败" /></MakeAppErrorNoticeViewport>;`);
   for (const [file, text] of Object.entries(files)) write(root, `apps/ui/src/${file}`, text);
-  const result = spawnSync(process.execPath, [audit, root], { encoding: 'utf8', ...spawnOptions });
+  const result = spawnSync(process.execPath, [audit, root, ...(compilerWorkspace !== undefined ? ['--compiler-workspace=' + compilerWorkspace] : [])], { encoding: 'utf8', ...spawnOptions });
   return { code: result.status, output: `${result.stdout}${result.stderr}` };
 };
 const imports = `import {MakeAppErrorNotice as Card} from '@qfei-design/make-app-observability/react';`;
+for (const compatParser of ['@typescript/typescript6', 'typescript-compiler-api']) {
+  test(`TypeScript 7 使用兼容入口且仍阻断请求错误降级：${compatParser}`, () => {
+    const valid = run({'local.ts': 'function validate(input){try{JSON.parse(input)}catch(error){messageApi.error(error.message)}}'}, {nativeParser:true,compatParser});
+    assert.equal(valid.code, 0, valid.output);
+    const invalid = run({'remote.ts': "async function save(){try{await fetch('/api/save')}catch(error){messageApi.error(error.message)}}"}, {nativeParser:true,compatParser});
+    assert.equal(invalid.code, 1, invalid.output);
+    assert.match(invalid.output, /request_error_string_toast/);
+  });
+}
+test('TypeScript 7 缺少兼容 API 时明确失败，不崩溃或跳过检查', () => {
+  const result = run({}, {nativeParser:true});
+  assert.equal(result.code, 2, result.output);
+  assert.match(result.output, /request_error_parser_missing.*compiler_api_unavailable/);
+  assert.doesNotMatch(result.output, /TypeError/);
+});
+test('显式工具工作区有效时可用，无效时不退回消费工作区', () => {
+  const valid = run({}, {nativeParser:true,compilerWorkspace:dependencyWorkspace});
+  assert.equal(valid.code, 0, valid.output);
+  const emptyTooling = path.join(temp, 'empty-tooling');
+  mkdirSync(emptyTooling);
+  for (const compilerWorkspace of [emptyTooling, path.join(emptyTooling, 'missing')]) {
+    const invalid = run({}, {compilerWorkspace});
+    assert.equal(invalid.code, 2, invalid.output);
+    assert.match(invalid.output, /request_error_parser_missing.*compiler_api_unavailable/);
+    assert.doesNotMatch(invalid.output, /TypeError/);
+  }
+});
 test('保留唯一全局出口、明确常驻内嵌卡和本地字符串提示', () => {
   const result = run({ 'form.tsx': `${imports} export const Form=()=> <Card duration={0} title="失败"/>;`,
     'local.ts': `const [hint] = useMessage(); hint.error('请先选择记录'); hint.success('已保存');` });
@@ -152,8 +190,9 @@ test('含中文和空格的安装路径可以运行自测（默认解析及 CI �
   // 使用正确的文件系统路径复制；待测脚本自身仍须正确转换其 import.meta.url。
   copyFileSync(new URL(import.meta.url), path.join(scripts, 'test-audit-error-outlets.mjs'));
   copyFileSync(new URL('./audit-error-outlets.mjs', import.meta.url), path.join(scripts, 'audit-error-outlets.mjs'));
+  copyFileSync(new URL('./load-typescript-compiler.mjs', import.meta.url), path.join(scripts, 'load-typescript-compiler.mjs'));
   write(root, 'ui/package.json', '{}'); mkdirSync(path.join(root, 'ui/node_modules'), { recursive: true });
-  symlinkSync(path.dirname(tsDirectory), path.join(root, 'ui/node_modules/typescript'));
+  symlinkSync(parserRoot, path.join(root, 'ui/node_modules/typescript'));
   for (const ci of [false, true]) {
     const env = { ...process.env }; delete env.MAKE_FEEDBACK_TEST_DEPENDENCIES;
     delete env.NODE_TEST_CONTEXT;

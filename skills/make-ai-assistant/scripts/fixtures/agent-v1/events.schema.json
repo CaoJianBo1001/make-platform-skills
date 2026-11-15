@@ -1,0 +1,560 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://make.qfei.cn/contracts/agent/events.schema.json",
+  "title": "Agent SSE decoded frame",
+  "description": "持久 changed 事件带 id；临时预览和 error 不带 id；注释心跳不属于 JSON 事件。",
+  "oneOf": [
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "session.changed"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40
+            },
+            "item": {
+              "$ref": "data.openapi.json#/components/schemas/Session"
+            }
+          },
+          "required": [
+            "sessionId",
+            "item"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event",
+        "id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "message.changed"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40
+            },
+            "item": {
+              "$ref": "data.openapi.json#/components/schemas/Message"
+            },
+            "requiredActions": {
+              "type": "array",
+              "items": {
+                "$ref": "data.openapi.json#/components/schemas/MessageRequiredAction"
+              }
+            }
+          },
+          "required": [
+            "sessionId",
+            "item"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event",
+        "id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "task.changed"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40
+            },
+            "item": {
+              "$ref": "data.openapi.json#/components/schemas/Task"
+            },
+            "requiredAction": {
+              "anyOf": [
+                {
+                  "$ref": "data.openapi.json#/components/schemas/RequiredAction"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          },
+          "required": [
+            "sessionId",
+            "item"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event",
+        "id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "run.changed"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40
+            },
+            "item": {
+              "$ref": "data.openapi.json#/components/schemas/RunSummary"
+            }
+          },
+          "required": [
+            "sessionId",
+            "item"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event",
+        "id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "question.changed"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40
+            },
+            "item": {
+              "$ref": "data.openapi.json#/components/schemas/QuestionView"
+            }
+          },
+          "required": [
+            "sessionId",
+            "item"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event",
+        "id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "steer.changed"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40
+            },
+            "item": {
+              "$ref": "data.openapi.json#/components/schemas/Steer"
+            }
+          },
+          "required": [
+            "sessionId",
+            "item"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event",
+        "id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "request.changed"
+        },
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9]+$"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40
+            },
+            "item": {
+              "$ref": "data.openapi.json#/components/schemas/RequestResult"
+            }
+          },
+          "required": [
+            "sessionId",
+            "item"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event",
+        "id",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "message.delta"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40,
+              "description": "临时内容所属会话。"
+            },
+            "item": {
+              "type": "object",
+              "properties": {
+                "messageId": {
+                  "type": "string",
+                  "pattern": "^message_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                  "minLength": 40,
+                  "maxLength": 40,
+                  "description": "正式保存沿用同一 ID；预览先到时查询该 ID 仍可能不存在。"
+                },
+                "streamId": {
+                  "type": "string",
+                  "pattern": "^stream_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                  "minLength": 39,
+                  "maxLength": 39,
+                  "description": "用它隔离不同预览，只在同一 streamId 内比较 seq。普通重连沿用，接手或重建时更换。"
+                },
+                "taskId": {
+                  "type": "string",
+                  "pattern": "^task_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                  "minLength": 37,
+                  "maxLength": 37,
+                  "description": "与最终 Message.producedByTaskId 一致。"
+                },
+                "seq": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991,
+                  "description": "在可丢弃队列之前编号；snapshot 表示内容已覆盖至本位置，本身不消耗新序号。"
+                },
+                "kind": {
+                  "type": "string",
+                  "enum": [
+                    "start",
+                    "delta",
+                    "end",
+                    "snapshot"
+                  ],
+                  "description": "start 建立预览；delta 追加文字；end 结束预览；snapshot 恢复已覆盖至 seq 的完整预览。均不确认正式消息完成。"
+                },
+                "author": {
+                  "$ref": "data.openapi.json#/components/schemas/AgentIdentity"
+                },
+                "parts": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "data.openapi.json#/components/schemas/ContentPart"
+                  }
+                },
+                "ended": {
+                  "type": "boolean",
+                  "enum": [
+                    true,
+                    false
+                  ],
+                  "description": "是否已收到本 streamId 的合法 end；true 时 seq 已覆盖该 end，停止预览动画并等待正式 Message。false 时从 seq+1 继续，不表示 Message 或 Task 状态。"
+                },
+                "partIndex": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 9007199254740991,
+                  "description": "等于当前 parts 长度时新增内容项；已有项只能追加同类型文字，不能跳过下标。"
+                },
+                "partType": {
+                  "type": "string",
+                  "enum": [
+                    "text",
+                    "reasoning"
+                  ],
+                  "description": "临时文字的展示类型；不从正文猜测思考或答案。"
+                },
+                "delta": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]+$",
+                  "minLength": 1,
+                  "description": "追加到指定文本项末尾；一次可带一批文字，不要求逐字发一个网络事件。"
+                }
+              },
+              "required": [
+                "messageId",
+                "streamId",
+                "seq",
+                "kind"
+              ],
+              "additionalProperties": false,
+              "description": "不是 Message 实体。",
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "kind": {
+                        "enum": [
+                          "start",
+                          "snapshot"
+                        ]
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "taskId",
+                      "author",
+                      "parts"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "kind": {
+                        "const": "snapshot"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "ended"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "kind": {
+                        "const": "delta"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "partIndex",
+                      "partType",
+                      "delta"
+                    ]
+                  }
+                }
+              ]
+            }
+          },
+          "required": [
+            "sessionId",
+            "item"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "run.progress"
+        },
+        "data": {
+          "type": "object",
+          "properties": {
+            "sessionId": {
+              "type": "string",
+              "pattern": "^session_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+              "minLength": 40,
+              "maxLength": 40,
+              "description": "工具所属会话；须与 Run 经 Task 确定的归属一致。"
+            },
+            "item": {
+              "type": "object",
+              "properties": {
+                "runId": {
+                  "type": "string",
+                  "pattern": "^run_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                  "minLength": 36,
+                  "maxLength": 36,
+                  "description": "按实际调用归属。概要尚未加载时通过 N12 的 summary 视图读取并暂存进度；不为展示创建 Run。"
+                },
+                "streamId": {
+                  "type": "string",
+                  "pattern": "^stream_[0-9a-f]{12}7[0-9a-f]{3}[89ab][0-9a-f]{15}$",
+                  "minLength": 39,
+                  "maxLength": 39,
+                  "description": "用于隔离不同进度流；普通重连沿用，接手或重建时更换。"
+                },
+                "seq": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 9007199254740991,
+                  "description": "每帧已含完整进度，不补放中间值，普通重连不归零。"
+                },
+                "text": {
+                  "type": "string",
+                  "pattern": "^[^\\u0000]+$",
+                  "minLength": 1,
+                  "description": "由工具或 Harness 明确发布的当前说明；整体替换，不追加日志，不包含 raw payload/result、凭据或未获准披露的内容。"
+                },
+                "progress": {
+                  "type": [
+                    "object",
+                    "null"
+                  ],
+                  "properties": {
+                    "current": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 9007199254740991,
+                      "description": "当前已完成数量，与 total 使用相同单位。达到 total 仍不表示 Run 已完成。"
+                    },
+                    "total": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 9007199254740991,
+                      "description": "已知且为正的总量；零或未知总量不构造进度对象。"
+                    }
+                  },
+                  "required": [],
+                  "additionalProperties": false,
+                  "description": "当前同一统计口径的可靠计数；没有可核实的总量时用 null，不估算百分比。null 清除旧计数，只显示 text。"
+                }
+              },
+              "required": [
+                "runId",
+                "streamId",
+                "seq",
+                "text",
+                "progress"
+              ],
+              "additionalProperties": false,
+              "description": "独立展示数据，不是 Run 实体，也不改变 RunSummary。"
+            }
+          },
+          "required": [
+            "sessionId",
+            "item"
+          ],
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "event",
+        "data"
+      ],
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "properties": {
+        "event": {
+          "const": "error"
+        },
+        "data": {
+          "$ref": "data.openapi.json#/components/schemas/Error"
+        }
+      },
+      "required": [
+        "event",
+        "data"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}

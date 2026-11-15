@@ -13,6 +13,41 @@ const section = (content, heading) => {
   return content.slice(start).split(/\n## /, 1)[0];
 };
 
+const phoneTimelineRow = read('makeui/references/mobile-detail-components.md')
+  .split(/\r?\n/)
+  .find((line) => line.startsWith('| 历史/流程时间线 |'));
+assert.ok(phoneTimelineRow, 'phone timeline handoff must exist');
+
+const assertLocalTimelineGuidance = (row) => {
+  assert.doesNotMatch(row, /续载触发|触底加载|远端分页/, 'phone timeline must not restore remote incremental loading');
+  assert.match(row, /完整快照|一次加载完整/, 'phone timeline must consume the shared full snapshot');
+};
+
+test('phone timeline consumes the complete snapshot without remote incremental loading', () => {
+  assertLocalTimelineGuidance(phoneTimelineRow);
+  const history = read('make-app-approval/references/history.md');
+  assert.match(history, /手机直接映射完整事件数组，滚动不再续发请求/);
+});
+
+test('phone timeline history links resolve to current contract headings', () => {
+  const links = [...phoneTimelineRow.matchAll(/\]\(([^)#]+)#([^)]*)\)/g)];
+  assert.ok(links.length > 0, 'phone timeline must link to its owning history contract');
+  for (const [, target, fragment] of links) {
+    const file = path.resolve(repoRoot, 'skills/makeui/references', target);
+    const document = fs.readFileSync(file, 'utf8');
+    const headings = [...document.matchAll(/^#{1,6}\s+(.+)$/gm)]
+      .map(([, heading]) => heading.toLowerCase().replace(/[^\p{L}\p{N}_\s-]/gu, '').replace(/\s/g, '-'));
+    assert.ok(headings.includes(decodeURIComponent(fragment)), `missing timeline contract anchor: ${target}#${fragment}`);
+  }
+});
+
+test('phone timeline regression rejects the removed incremental-loading instruction', () => {
+  assert.throws(
+    () => assertLocalTimelineGuidance('| 历史/流程时间线 | MobileTimeline | 手机只适配续载触发、布局与空意见展示 |'),
+    /must not restore remote incremental loading/,
+  );
+});
+
 test('unmounting desktop selection has one owner; phone cannot retain or replay its target', () => {
   const defaults = read('makeui/references/mobile-defaults.md');
   const cards = read('make-app-actions/references/mobile-card-actions.md');

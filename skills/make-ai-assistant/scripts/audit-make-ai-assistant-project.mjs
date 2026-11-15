@@ -4,453 +4,661 @@ import path from 'node:path';
 import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { isReactComponentExport } from './react-component-contract.mjs';
+import { loadAgentCompiler } from './load-agent-compiler.mjs';
 
-const projectRoot = path.resolve(process.argv[2] ?? '');
-const options = process.argv.slice(3);
-const unsupportedOption = options.find((arg) => !arg.startsWith('--expected-package-version='));
-const expectedPackageVersionArgs = options.filter((arg) =>
-  arg.startsWith('--expected-package-version='));
-const expectedPackageVersionArg = expectedPackageVersionArgs[0];
-const expectedPackageVersion = expectedPackageVersionArg
-  ?.slice('--expected-package-version='.length)
-  .trim();
-if (!process.argv[2] || !fs.existsSync(projectRoot)) {
-  console.error('usage: node audit-make-ai-assistant-project.mjs <project-root> [--expected-package-version=x.y.z]');
+const root = process.argv[2] && path.resolve(process.argv[2]);
+const args = process.argv.slice(3);
+const versions = args.filter((a) =>
+  a.startsWith('--expected-package-version='),
+);
+const expected = versions[0]?.slice('--expected-package-version='.length);
+const compilerArgs = args.filter((arg) =>
+  arg.startsWith('--compiler-workspace='),
+);
+const compilerWorkspace = compilerArgs[0]?.slice(
+  '--compiler-workspace='.length,
+);
+if (
+  !root ||
+  !fs.existsSync(root) ||
+  args.some(
+    (a) =>
+      !a.startsWith('--expected-package-version=') &&
+      !a.startsWith('--compiler-workspace='),
+  ) ||
+  versions.length > 1 ||
+  compilerArgs.length > 1 ||
+  (compilerArgs.length && !compilerWorkspace) ||
+  (versions.length && !/^\d+\.\d+\.\d+(?:-[\w.-]+)?$/.test(expected))
+) {
+  console.error(
+    'usage: node audit-make-ai-assistant-project.mjs <project-root> [--expected-package-version=x.y.z] [--compiler-workspace=<tooling-workspace>]',
+  );
   process.exit(2);
 }
-if (unsupportedOption || expectedPackageVersionArgs.length > 1) {
-  console.error(`unsupported option: ${unsupportedOption ?? 'duplicate --expected-package-version'}`);
-  process.exit(2);
-}
-if (expectedPackageVersionArg && !expectedPackageVersion) {
-  console.error('expected package version must be a non-empty exact version');
-  process.exit(2);
-}
-
-const ignoredDirectories = new Set([
-  '.git', 'node_modules', 'dist', 'build', 'coverage', '.next', '.turbo',
+const failures = [],
+  warnings = [];
+const fail = (code, detail) => failures.push(code + ': ' + detail);
+const ignored = new Set([
+  '.git',
+  'node_modules',
+  'dist',
+  'build',
+  'coverage',
+  '.next',
+  '.turbo',
 ]);
-const sourceExtensions = new Set(['.js', '.jsx', '.ts', '.tsx', '.mjs', '.cjs']);
-
-const isVendoredAssistantPackage = (directory) => {
-  const manifest = path.join(directory, 'package.json');
-  if (!fs.existsSync(manifest)) return false;
-  try {
-    return JSON.parse(fs.readFileSync(manifest, 'utf8')).name === '@qfei-design/make-ai-assistant';
-  } catch {
-    return false;
-  }
-};
-
-const walk = (directory) => fs.readdirSync(directory, { withFileTypes: true })
-  .flatMap((entry) => {
-    const absolutePath = path.join(directory, entry.name);
-    if (entry.isDirectory()) {
-      const isInstalledSkills = entry.name === 'skills'
-        && ['.agents', '.codex'].includes(path.basename(directory));
-      return ignoredDirectories.has(entry.name) || isInstalledSkills || isVendoredAssistantPackage(absolutePath)
-        ? [] : walk(absolutePath);
-    }
-    return [absolutePath];
+function walk(dir) {
+  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((e) => {
+    const file = path.join(dir, e.name);
+    if (e.isSymbolicLink()) return [];
+    if (!e.isDirectory()) return [file];
+    if (
+      ignored.has(e.name) ||
+      (e.name === 'skills' &&
+        ['.agents', '.codex'].includes(path.basename(dir)))
+    )
+      return [];
+    try {
+      if (
+        JSON.parse(fs.readFileSync(path.join(file, 'package.json'), 'utf8'))
+          .name === '@qfei-design/make-ai-assistant'
+      )
+        return [];
+    } catch {}
+    return walk(file);
   });
-
-const files = walk(projectRoot);
-const sourceFiles = files.filter((file) => sourceExtensions.has(path.extname(file)));
-const sourceEntries = sourceFiles.map((file) => ({
-  file,
-  relative: path.relative(projectRoot, file),
-  text: fs.readFileSync(file, 'utf8'),
-}));
-const productionEntries = sourceEntries.filter(({ relative }) =>
-  !/(^|\/)(?:tests?|__tests__)(?:\/|$)|\.(?:test|spec)\.[^.]+$/i.test(relative));
-const source = productionEntries.map(({ relative, text }) => `\n/* ${relative} */\n${text}`).join('\n');
-const failures = [];
-
-const fail = (code, detail) => failures.push(`${code}: ${detail}`);
-const has = (pattern) => pattern.test(source);
-
-const packageFiles = files.filter((file) => path.basename(file) === 'package.json');
-const packageDefinitions = packageFiles.flatMap((file) => {
-  try {
-    return [{ file, value: JSON.parse(fs.readFileSync(file, 'utf8')) }];
-  } catch {
-    return [];
-  }
-});
-const consumerEntries = productionEntries.filter(({ text }) =>
-  /["']@qfei-design\/make-ai-assistant\/(?:client|make-app)["']/.test(text));
-const consumerPackages = new Map();
-for (const entry of consumerEntries) {
-  const owner = packageDefinitions
-    .filter(({ file }) => entry.file.startsWith(`${path.dirname(file)}${path.sep}`))
-    .sort((left, right) => right.file.length - left.file.length)[0];
-  if (!owner || ![owner.value.dependencies, owner.value.devDependencies, owner.value.peerDependencies]
-    .some((group) => group?.['@qfei-design/make-ai-assistant'])) {
-    fail('consumer_dependency_missing', `${entry.relative} does not belong to a package declaring @qfei-design/make-ai-assistant`);
-    continue;
-  }
-  consumerPackages.set(owner.file, owner);
 }
-if (consumerEntries.length === 0) {
-  fail('package_missing', 'no production source imports a public Make App client or adapter entry');
-}
-
-for (const dependency of consumerPackages.values()) {
-  const relativePackage = path.relative(projectRoot, dependency.file);
-  const packageDirectory = `${path.dirname(dependency.file)}${path.sep}`;
-  const packageSource = productionEntries
-    .filter(({ file }) => file.startsWith(packageDirectory))
-    .map(({ text }) => text)
-    .join('\n');
-  validateAppWiring(relativePackage, packageSource);
-  const resolveFrom = createRequire(path.join(path.dirname(dependency.file), '__make_ai_assistant_audit__.cjs'));
-  let resolvedAdapterPath;
-  let resolvedClientPath;
-  let resolvedReactPath;
-  try {
-    resolvedAdapterPath = resolveFrom.resolve('@qfei-design/make-ai-assistant/make-app');
-    resolvedReactPath = resolveFrom.resolve('@qfei-design/make-ai-assistant/react');
-    resolvedClientPath = resolveFrom.resolve('@qfei-design/make-ai-assistant/client');
-  } catch {
-    fail('package_unresolved', `${relativePackage} cannot resolve all required public package entries`);
-    continue;
-  }
-  validateResolvedPackagePublicTypes(resolvedAdapterPath, relativePackage);
-  try {
-    const adapterExports = await import(pathToFileURL(resolvedAdapterPath).href);
-    const factoryName = 'createMakeAppAssistantTransport';
-    if (typeof adapterExports[factoryName] !== 'function') {
-      fail('package_factory_missing', `${factoryName} is absent from the resolved package entry`);
+const files = walk(root);
+const production = files
+  .filter(
+    (f) =>
+      /\.(?:[cm]?[jt]sx?|less|css)$/.test(f) &&
+      !/(?:^|\/)(?:tests?|__tests__)(?:\/|$)|\.(?:test|spec)\.[^.]+$/i.test(
+        path.relative(root, f),
+      ),
+  )
+  .map((file) => ({
+    file,
+    text: fs.readFileSync(file, 'utf8'),
+    relative: path.relative(root, file),
+  }));
+const manifests = files
+  .filter((f) => path.basename(f) === 'package.json')
+  .flatMap((file) => {
+    try {
+      return [{ file, value: JSON.parse(fs.readFileSync(file, 'utf8')) }];
+    } catch {
+      return [];
     }
+  });
+const nearestManifests = [...manifests].sort(
+  (a, b) => b.file.length - a.file.length,
+);
+const sourceOwners = new Map(
+  production.map((entry) => [
+    entry.file,
+    nearestManifests.find((manifest) =>
+      entry.file.startsWith(path.dirname(manifest.file) + path.sep),
+    ),
+  ]),
+);
+const consumers = new Map();
+const packageReference = /["'`]@qfei-design\/make-ai-assistant(?=[\/"'`$])/;
+const currentPublicReference =
+  /["'`]@qfei-design\/make-ai-assistant\/(?:agent|react|make-app)["'`]/;
+for (const entry of production) {
+  if (!packageReference.test(entry.text)) continue;
+  const owner = sourceOwners.get(entry.file);
+  if (!owner) {
+    fail('consumer_dependency_missing', entry.relative);
+    continue;
+  }
+  consumers.set(owner.file, owner);
+}
+let currentConsumer = false;
+for (const owner of consumers.values()) {
+  const relative = path.relative(root, owner.file);
+  const sources = production.filter((e) => sourceOwners.get(e.file) === owner);
+  const code = sources.map((e) => e.text).join('\n');
+  const require = createRequire(
+    path.join(path.dirname(owner.file), '__agent_audit__.cjs'),
+  );
+  // 可用时按语法识别所有入口；纯 Service 不因解析器缺失而新增依赖。
+  let parser, parserError;
+  try {
+    const loaded = loadAgentCompiler(path.dirname(owner.file), {
+      compilerWorkspace,
+    });
+    parser = loaded.compiler;
+    if (loaded.name !== 'typescript' || compilerWorkspace)
+      warnings.push(
+        relative +
+          ': compiler API ' +
+          loaded.name +
+          '@' +
+          loaded.version +
+          ' (API ' +
+          loaded.apiVersion +
+          ')',
+      );
   } catch (error) {
+    parserError = error;
+  }
+  const usage = parser && packageUsage(parser, sources);
+  if (usage?.referenceCount === 0) continue;
+  currentConsumer ||= usage
+    ? usage.currentPublic
+    : currentPublicReference.test(code);
+  const hasReactReference = usage
+    ? usage.reactReference
+    : /["'`]@qfei-design\/make-ai-assistant\/react["'`]/.test(code);
+  if (
+    ![
+      owner.value.dependencies,
+      owner.value.devDependencies,
+      owner.value.peerDependencies,
+    ].some((g) => g?.['@qfei-design/make-ai-assistant'])
+  ) {
+    for (const entry of sources.filter((e) => packageReference.test(e.text)))
+      fail('consumer_dependency_missing', entry.relative);
+    continue;
+  }
+  const runtimeDependency =
+    owner.value.dependencies?.['@qfei-design/make-ai-assistant'];
+  if (hasReactReference && !parser)
     fail(
-      'package_entry_load_failed',
-      `resolved adapter entry could not be loaded (${error instanceof Error ? error.name : typeof error})`,
+      'agent_parser_missing',
+      relative +
+        ': install the consumer TypeScript dependency; ' +
+        (parserError?.message ?? 'unknown'),
+    );
+  const ui = hasReactReference && !usage?.onlyReactTypes;
+  if (!runtimeDependency && !usage?.onlyTypes) {
+    fail(
+      'consumer_runtime_dependency_missing',
+      relative +
+        ': runtime imports require dependencies; dev/peer-only declarations need proven explicit type-only usage',
     );
   }
-  try {
-    const clientExports = await import(pathToFileURL(resolvedClientPath).href);
-    if (typeof clientExports.createMakeAgentClient !== 'function') {
-      fail('package_client_missing', 'createMakeAgentClient is absent from /client');
+  if (ui) {
+    if (parser) {
+      const bindings = publicBindings(
+        parser,
+        sources.map((e) => e.file),
+      );
+      if (!bindings.client) fail('agent_client_missing', relative);
+      if (!bindings.entry) fail('app_entry_missing', relative);
     }
-  } catch (error) {
-    fail('package_client_load_failed', `public /client could not be loaded (${error instanceof Error ? error.name : typeof error})`);
+    for (const [pattern, reason] of [
+      [/\/api\/make\/app\/agent\/v1\b/, 'service_base_path_missing'],
+      [
+        /["']@qfei-design\/make-ai-assistant\/styles\.css["']/,
+        'styles_import_missing',
+      ],
+      [/\bretryOwner\s*:\s*["'](?:sdk|transport)["']/, 'retry_owner_missing'],
+      [/\bcredentials\s*:\s*["']include["']/, 'session_credentials_missing'],
+      [/\bsignal\b/, 'signal_forwarding_missing'],
+      [/\bdispose\s*\(/, 'client_dispose_missing'],
+    ])
+      if (!pattern.test(code)) fail(reason, relative);
   }
-  try {
-    const reactExports = await import(pathToFileURL(resolvedReactPath).href);
-    const missing = ['MakeAiAssistant', 'AssistantPanel']
-      .filter((name) => !isReactComponentExport(reactExports[name]));
-    if (missing.length > 0) {
-      fail('package_react_missing', `${relativePackage} public /react lacks ${missing.join(', ')}`);
+  let packageRoot;
+  for (const subpath of ['agent', 'make-app', ...(ui ? ['react'] : [])]) {
+    let resolved;
+    try {
+      resolved = require.resolve('@qfei-design/make-ai-assistant/' + subpath);
+    } catch {
+      fail('package_unresolved', relative + ' /' + subpath);
+      continue;
     }
-  } catch (error) {
-    fail('package_react_load_failed', `${relativePackage} public /react could not be loaded (${error instanceof Error ? error.name : typeof error})`);
+    packageRoot ??= findRoot(resolved);
+    try {
+      const exports = await import(pathToFileURL(resolved).href);
+      const needed =
+        subpath === 'agent'
+          ? ['createAgentClient', 'assertAgentRequest']
+          : subpath === 'make-app'
+            ? ['createMakeAppAssistantTransport']
+            : ['MakeAppAssistantEntry'];
+      for (const name of needed)
+        if (
+          subpath === 'react'
+            ? !isReactComponentExport(exports[name])
+            : typeof exports[name] !== 'function'
+        )
+          fail(
+            subpath === 'react'
+              ? 'package_react_missing'
+              : subpath === 'agent'
+                ? 'package_client_missing'
+                : 'package_factory_missing',
+            relative + ' ' + name,
+          );
+    } catch (error) {
+      fail(
+        'package_entry_load_failed',
+        relative + ' /' + subpath + ' ' + (error?.name ?? 'unknown'),
+      );
+    }
   }
-}
-
-for (const { relative, text } of productionEntries) {
-  if (/@qfei-design\/make-ai-assistant\/(?:src|dist|examples?|gallery|internal)(?:\/|["'])/.test(text)) {
-    fail('internal_import', `${relative} imports a package-internal path`);
-  }
-  if (/https?:\/\/[^\s"']+\/api\/make\/app\/ai(?:\/|[?"'])/i.test(text)) {
-    fail('hardcoded_assistant_origin', `${relative} hard-codes an assistant API origin`);
-  }
-  if (/chats\/locate/.test(text)) {
-    fail('removed_locate_route', `${relative} retains chats/locate`);
-  }
-  if (/<(?:MakeAiAssistant|AssistantPanel)\b[^>]*(?:subtitle|privacyNotice)\s*=/s.test(text)) {
-    fail('legacy_header_prop', `${relative} passes an ignored legacy header prop`);
-  }
-}
-
-// The fixed AI v1 AuthenticatedTransport is allowed to use a shared, same-origin
-// raw-response bridge. A source regex cannot prove auth or origin safety; cover
-// that boundary with executable host tests instead of rejecting valid bridges.
-
-if (!has(/\/v1(?:\/|["'`])/)) {
-  fail('v1_route_missing', 'the Service must expose the versioned Make App AI family');
-}
-if (!has(/\/capabilities\b/)) {
-  fail('capabilities_route_missing', 'the Service must expose the v1 capabilities operation');
-}
-for (const { relative, text } of productionEntries) {
-  if (
-    /(?:process\.env|import\.meta\.env)[\s\S]{0,100}(?:AGENT|agentId)/i.test(text)
-    || /\b(?:config|runtimeConfig|publicConfig)\??\.agentId\b/i.test(text)
-    || /\bagentId\s*[:=]\s*["'`][^"'`]+["'`]/i.test(text)
-  ) {
-    fail('agent_id_external_source', `${relative} sources agentId outside the current paginated Agent discovery`);
-  }
-}
-
-if (failures.length > 0) {
-  console.error('make-ai-assistant project audit: FAIL');
-  for (const failure of failures) console.error(`- ${failure}`);
-  process.exitCode = 1;
-} else {
-  console.log('make-ai-assistant project audit: STATIC PREFLIGHT PASS (make-app); 18 Service operations require executable host tests, and deployed runtime behavior remains unverified');
-}
-
-function validateAppWiring(consumerPackage, packageSource) {
-  const hasInPackage = (pattern) => pattern.test(packageSource);
-  const failInPackage = (code, detail) => fail(code, `${consumerPackage}: ${detail}`);
-  if (!hasInPackage(/(?:from\s*|import\s*)["']@qfei-design\/make-ai-assistant\/react["']/)) {
-    failInPackage('public_react_import_missing', 'no public package React import found');
-  }
-  if (!hasInPackage(/["']@qfei-design\/make-ai-assistant\/styles\.css["']/)) {
-    failInPackage('styles_import_missing', 'package styles.css is not imported');
-  }
-  if (!hasInPackage(/import\s*\{[^}]*\bcreateMakeAppAssistantTransport\b[^}]*\}\s*from\s*["']@qfei-design\/make-ai-assistant\/make-app["']/s)) {
-    failInPackage('make_app_factory_missing', 'the published createMakeAppAssistantTransport factory is not imported');
-  }
-  if (!hasInPackage(/from\s*["']@qfei-design\/make-ai-assistant\/client["']/)) {
-    failInPackage('make_app_client_import_missing', 'the public /client entry is not imported');
-  }
-  if (!hasInPackage(/\bcreateMakeAgentClient\s*\(/)) {
-    failInPackage('make_app_client_missing', 'createMakeAgentClient is not used');
-  }
-  if (hasInPackage(/\bcreateMakeAppTransport\b/)) {
-    failInPackage('nonexistent_make_app_factory', 'createMakeAppTransport is not a published Make App export');
-  }
-  if (!hasInPackage(/\.agents\.list\s*\(/)) {
-    failInPackage('agent_discovery_missing', 'Agent discovery must use the public Client');
-  }
-  if (!hasInPackage(/agentType\s*===?\s*["'`]app_internal["'`]/)) {
-    failInPackage('app_internal_agent_gate_missing', 'discovery must select the App-internal Agent, not a channel Agent');
-  }
-  if (!hasInPackage(/\bhasMore\b/) || !hasInPackage(/\bnextCursor\b/)) {
-    failInPackage('agent_pagination_missing', 'Agent discovery must account for every cursor page');
-  }
-  if (!hasInPackage(/\bretryOwner\s*:\s*["'`](?:sdk|transport)["'`]/)) {
-    failInPackage('retry_owner_missing', 'AuthenticatedTransport must declare one retry owner');
-  }
-  if (!hasInPackage(/credentials\s*:\s*["'`]include["'`]/)) {
-    failInPackage('session_credentials_missing', 'the AI byte bridge must preserve browser session credentials');
-  }
-  if (!hasInPackage(/\bdispose\s*\(/)) {
-    failInPackage('client_dispose_missing', 'the host must release the Client on identity/App changes');
-  }
-  if (!hasInPackage(/\bsignal\b/)) {
-    failInPackage('signal_forwarding_missing', 'Agent discovery and byte bridge must propagate AbortSignal');
-  }
-}
-
-function validateResolvedPackagePublicTypes(resolvedAdapterPath, consumerPackage) {
-  const packageRoot = findPackageRoot(resolvedAdapterPath);
   if (!packageRoot) {
-    fail('package_manifest_unresolved', 'resolved adapter is not inside the declared package');
-    return;
+    fail('package_manifest_unresolved', relative);
+    continue;
   }
-
-  const packageJsonPath = path.join(packageRoot, 'package.json');
-  let packageJson;
-  try {
-    packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-  } catch {
-    fail('package_manifest_invalid', 'resolved package.json cannot be read');
-    return;
-  }
-  if (expectedPackageVersion && packageJson.version !== expectedPackageVersion) {
+  const manifest = JSON.parse(
+    fs.readFileSync(path.join(packageRoot, 'package.json'), 'utf8'),
+  );
+  if (expected && manifest.version !== expected)
     fail(
       'package_version_mismatch',
-      `${consumerPackage} resolves ${packageJson.version ?? 'unknown'}, not expected ${expectedPackageVersion}`,
+      relative + ' resolves ' + manifest.version + ', expected ' + expected,
     );
+  if (!expected && !/^0\.4\.[1-9]\d*$/.test(manifest.version))
+    warnings.push(
+      relative +
+        ': unverified package version ' +
+        manifest.version +
+        '; pass the exact expected version after contract verification',
+    );
+  for (const [subpath, names] of [
+    [
+      'agent',
+      [
+        'createAgentClient',
+        'assertAgentRequest',
+        'AgentClient',
+        'AgentAuthenticatedTransport',
+        'AgentHttpRequest',
+      ],
+    ],
+    ['make-app', ['createMakeAppAssistantTransport']],
+    ...(ui
+      ? [['react', ['MakeAppAssistantEntry', 'MakeAppAssistantEntryProps']]]
+      : []),
+  ]) {
+    const target = typesTarget(manifest.exports?.['./' + subpath]);
+    const declaration = target
+      ? publicTypes(path.resolve(packageRoot, target), packageRoot + path.sep)
+      : '';
+    for (const name of names)
+      if (!hasExport(declaration, name))
+        fail(
+          'package_public_types_missing',
+          relative + ' /' + subpath + ' ' + name,
+        );
   }
-
-  const packageRootPrefix = `${packageRoot}${path.sep}`;
-  const requiredTypes = [
-    {
-      subpath: './make-app',
-      tokens: ['createMakeAppAssistantTransport', 'MakeAppAssistantTransportOptions'],
-    },
-    { subpath: './react', tokens: ['MakeAiAssistant', 'AssistantPanel', 'MakeAiTheme', 'AssistantPanelProps', 'MakeAiAssistantProps'] },
-    { subpath: './client', tokens: ['createMakeAgentClient'] },
-  ];
-
-  let clientTypesEntry;
-  let reactDeclaration = '';
-  for (const requirement of requiredTypes) {
-    const relativePath = findTypesTarget(packageJson.exports?.[requirement.subpath]);
-    if (!relativePath) {
-      fail(
-        'package_public_types_missing',
-        `${requirement.subpath} has no public types for resolved version ${packageJson.version ?? 'unknown'}`,
-      );
-      continue;
-    }
-    const absolutePath = path.resolve(packageRoot, relativePath);
-    if (
-      (absolutePath !== packageRoot && !absolutePath.startsWith(packageRootPrefix))
-      || !fs.existsSync(absolutePath)
-    ) {
-      fail('package_public_types_missing', `${requirement.subpath} public types cannot be read`);
-      continue;
-    }
-    if (requirement.subpath === './client') clientTypesEntry = absolutePath;
-    const declaration = readPublicTypeClosure(absolutePath, packageRootPrefix);
-    if (requirement.subpath === './react') reactDeclaration = declaration;
-    const missingTokens = requirement.tokens.filter((token) => !hasExportedDeclaration(declaration, token));
-    if (missingTokens.length > 0) {
-      fail(
-        'package_public_types_missing',
-        `${requirement.subpath} lacks ${missingTokens.join(', ')} in resolved version ${packageJson.version ?? 'unknown'}`,
-      );
-    }
-  }
-  const declaration = clientTypesEntry
-    ? readPublicTypeClosure(clientTypesEntry, packageRootPrefix)
-    : '';
-  const missing = ['ClientOptions', 'AuthenticatedTransport', 'Client', 'Scope', 'Agent', 'Capabilities']
-    .filter((token) => !new RegExp(`\\b${token}\\b`).test(declaration));
-  if (missing.length > 0) {
-    fail('package_public_types_missing', `/client lacks ${missing.join(', ')}`);
-  }
-  const snapshotBody = exportedInterfaceBody(declaration, 'ResponseSnapshot');
-  if (!snapshotBody || !hasStringField(snapshotBody, 'code') || !hasStringField(snapshotBody, 'message')) {
-    fail('package_public_types_missing', `/client ResponseSnapshot lacks public code/message in resolved version ${packageJson.version ?? 'unknown'}`);
-  }
-  const failedEventVariants = discriminatedUnionVariants(
-    declaration,
-    'ResponseEvent',
-    'kind',
-    'failed',
+  const styles = manifest.exports?.['./styles.css'];
+  const target = typeof styles === 'string' ? styles : styles?.default;
+  if (
+    !target ||
+    !path.resolve(packageRoot, target).startsWith(packageRoot + path.sep) ||
+    !fs.existsSync(path.resolve(packageRoot, target))
+  )
+    fail('package_styles_export_missing', relative);
+}
+if (!currentConsumer)
+  fail(
+    'package_missing',
+    'no current public /agent, /react or /make-app consumer',
   );
-  if (failedEventVariants.length === 0 || failedEventVariants.some((variant) =>
-    !['code', 'message', 'requestId'].every((field) => hasStringField(variant, field)))) {
-    fail('package_public_types_missing', `/client response.failed lacks public safe message/requestId in resolved version ${packageJson.version ?? 'unknown'}`);
+for (const { relative, text } of production) {
+  if (
+    /@qfei-design\/make-ai-assistant\/(?:src|dist|examples?|internal)(?:\/|["'`])/.test(
+      text,
+    )
+  )
+    fail('internal_import', relative);
+  if (/https?:\/\/[^\s"'`]+\/api\/make\/(?:app\/)?agent\/v1/i.test(text))
+    fail('hardcoded_assistant_origin', relative);
+  if (/\/agent\/v1\/v1\b/.test(text)) fail('invalid_agent_base_path', relative);
+  if (
+    /(?:process\.env|import\.meta\.env)[^\n;]{0,120}(?:AGENT|agentId)|\b(?:config|runtimeConfig|publicConfig)\??\.agentId\b|\bagentId\s*[:=]\s*["'`][^"'`]+["'`]/i.test(
+      text,
+    )
+  )
+    fail('agent_id_external_source', relative);
+  if (
+    /\.(?:css|less)$/.test(relative) &&
+    /\.make-ai-(?:agent|assistant)__[\w-]+/.test(text)
+  )
+    fail('internal_style_override', relative);
+  if (
+    /["'`]@qfei-design\/make-ai-assistant\/client["'`]|\/app\/ai\/v1/.test(text)
+  )
+    warnings.push(
+      relative +
+        ': legacy API present; manually verify it cannot supply the current Agent entry',
+    );
+}
+if (failures.length) {
+  console.error('make-ai-assistant project audit: FAIL');
+  for (const f of failures) console.error('- ' + f);
+  process.exitCode = 1;
+} else
+  console.log(
+    'make-ai-assistant project audit: STATIC PREFLIGHT PASS; 25 Service operations require executable host tests; lifecycle, auth, streaming and deployed model behavior remain unverified',
+  );
+for (const warning of warnings) console.log('REVIEW: ' + warning);
+
+// 只认证显式类型引用；解析不完整时不猜测编译器是否会消除普通导入。
+function packageUsage(ts, sources) {
+  const references = new Set();
+  const typeReferences = new Set();
+  const isPackage = (node) => {
+    const text =
+      node && ts.isStringLiteralLike(node)
+        ? node.text
+        : node && ts.isTemplateExpression(node)
+          ? node.head.text
+          : '';
+    return (
+      text === '@qfei-design/make-ai-assistant' ||
+      text.startsWith('@qfei-design/make-ai-assistant/')
+    );
+  };
+  const typeBindings = (clause) =>
+    clause &&
+    !clause.name &&
+    ts.isNamedImports(clause.namedBindings) &&
+    clause.namedBindings.elements.length > 0 &&
+    clause.namedBindings.elements.every((item) => item.isTypeOnly);
+  const record = (specifier, typeOnly) => {
+    if (typeOnly) typeReferences.add(specifier);
+  };
+  const visit = (node) => {
+    // 包路径作为运行时值出现（包括变量动态导入）时，不能认证为纯类型依赖。
+    if (isPackage(node)) references.add(node);
+    if (ts.isImportDeclaration(node) && isPackage(node.moduleSpecifier))
+      record(
+        node.moduleSpecifier,
+        node.importClause?.isTypeOnly || typeBindings(node.importClause),
+      );
+    if (ts.isExportDeclaration(node) && isPackage(node.moduleSpecifier))
+      record(
+        node.moduleSpecifier,
+        node.isTypeOnly ||
+          (node.exportClause &&
+            ts.isNamedExports(node.exportClause) &&
+            node.exportClause.elements.length > 0 &&
+            node.exportClause.elements.every((item) => item.isTypeOnly)),
+      );
+    if (
+      ts.isImportEqualsDeclaration(node) &&
+      ts.isExternalModuleReference(node.moduleReference) &&
+      isPackage(node.moduleReference.expression)
+    )
+      record(node.moduleReference.expression, node.isTypeOnly);
+    if (
+      ts.isImportTypeNode(node) &&
+      ts.isLiteralTypeNode(node.argument) &&
+      isPackage(node.argument.literal)
+    )
+      record(node.argument.literal, true);
+    ts.forEachChild(node, visit);
+  };
+  for (const { file, text } of sources) {
+    if (!/\.[cm]?[jt]sx?$/.test(file)) continue;
+    const source = ts.createSourceFile(
+      file,
+      text,
+      ts.ScriptTarget.Latest,
+      true,
+    );
+    if (source.parseDiagnostics.length) return null;
+    visit(source);
   }
-  const featureBody = exportedInterfaceBody(reactDeclaration, 'AssistantTransportFeatures');
-  if (!featureBody || !/\blimits\??\s*:\s*\{/u.test(featureBody)
-    || !/\bmaxUploadBytes\s*:\s*number\b/u.test(featureBody)
-    || !/\bmaxInputParts\s*:\s*number\b/u.test(featureBody)) {
-    fail('package_public_types_missing', `/react AssistantTransportFeatures lacks negotiated limits in resolved version ${packageJson.version ?? 'unknown'}`);
-  }
-  const stylesExport = packageJson.exports?.['./styles.css'];
-  const stylesPath = typeof stylesExport === 'string' ? stylesExport : stylesExport?.default;
-  const resolvedStylesPath = typeof stylesPath === 'string'
-    ? path.resolve(packageRoot, stylesPath)
-    : '';
-  if (!resolvedStylesPath.startsWith(packageRootPrefix) || !fs.existsSync(resolvedStylesPath)) {
-    fail('package_styles_export_missing', './styles.css is not publicly exported');
-  }
+  const reactReferences = [...references].filter(
+    (node) => node.text === '@qfei-design/make-ai-assistant/react',
+  );
+  return {
+    referenceCount: references.size,
+    currentPublic: [...references].some((node) =>
+      [
+        '@qfei-design/make-ai-assistant/agent',
+        '@qfei-design/make-ai-assistant/react',
+        '@qfei-design/make-ai-assistant/make-app',
+      ].includes(node.text),
+    ),
+    reactReference: reactReferences.length > 0,
+    onlyTypes: references.size > 0 && references.size === typeReferences.size,
+    onlyReactTypes:
+      reactReferences.length > 0 &&
+      reactReferences.every((node) => typeReferences.has(node)),
+  };
 }
 
-function exportedInterfaceBody(declaration, name) {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return declaration.match(new RegExp(`\\bexport\\s+interface\\s+${escaped}(?:\\s+extends\\s+[^\\{]+)?\\s*\\{([^}]*)\\}`, 'u'))?.[1];
-}
-
-function hasStringField(body, name) {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`\\b${escaped}\\??\\s*:\\s*string\\b`, 'u').test(body);
-}
-
-function discriminatedUnionVariants(declaration, typeName, discriminant, literal) {
-  const expression = exportedTypeAliasExpression(declaration, typeName);
-  if (!expression) return [];
-  return splitTopLevelUnion(expression).filter((variant) => {
-    const escaped = discriminant.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    const annotation = variant.match(new RegExp(`\\b${escaped}\\??\\s*:\\s*([^;}]+)`, 'u'))?.[1] ?? '';
-    return [...annotation.matchAll(/["']([^"']+)["']/gu)]
-      .some(([, value]) => value === literal);
-  });
-}
-
-function exportedTypeAliasExpression(declaration, name) {
-  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  const match = new RegExp(`\\bexport\\s+type\\s+${escaped}(?:\\s*<[^;=]+>)?\\s*=`, 'u').exec(declaration);
-  if (!match) return '';
-  const start = match.index + match[0].length;
-  const end = scanTypeExpression(declaration, start, (character, depth) =>
-    character === ';' && depth === 0);
-  return declaration.slice(start, end).trim();
-}
-
-function splitTopLevelUnion(expression) {
-  const parts = [];
-  let start = 0;
-  scanTypeExpression(expression, 0, (character, depth, index) => {
-    if (character !== '|' || depth !== 0) return false;
-    parts.push(expression.slice(start, index).trim());
-    start = index + 1;
-    return false;
-  });
-  parts.push(expression.slice(start).trim());
-  return parts.filter(Boolean);
-}
-
-function scanTypeExpression(source, start, visit) {
-  let braces = 0;
-  let brackets = 0;
-  let parentheses = 0;
-  let quote = '';
-  for (let index = start; index < source.length; index += 1) {
-    const character = source[index];
-    if (quote) {
-      if (character === '\\') index += 1;
-      else if (character === quote) quote = '';
-      continue;
+function publicBindings(ts, files) {
+  const program = ts.createProgram(
+    files.filter((f) => /\.[cm]?[jt]sx?$/.test(f)),
+    {
+      allowJs: true,
+      noResolve: true,
+      noLib: true,
+      jsx: ts.JsxEmit.Preserve,
+    },
+  );
+  const checker = program.getTypeChecker();
+  const result = { client: false, entry: false };
+  for (const source of program.getSourceFiles()) {
+    const bindings = new Map();
+    for (const statement of source.statements) {
+      if (
+        !ts.isImportDeclaration(statement) ||
+        !ts.isStringLiteral(statement.moduleSpecifier)
+      )
+        continue;
+      const module = statement.moduleSpecifier.text;
+      if (
+        ![
+          '@qfei-design/make-ai-assistant/agent',
+          '@qfei-design/make-ai-assistant/react',
+        ].includes(module)
+      )
+        continue;
+      const clause = statement.importClause;
+      if (!clause || clause.isTypeOnly || !clause.namedBindings) continue;
+      const imports = clause.namedBindings;
+      if (ts.isNamespaceImport(imports)) {
+        bindings.set(checker.getSymbolAtLocation(imports.name), {
+          module,
+          name: '*',
+        });
+      } else
+        for (const item of imports.elements) {
+          if (!item.isTypeOnly)
+            bindings.set(checker.getSymbolAtLocation(item.name), {
+              module,
+              name: (item.propertyName ?? item.name).text,
+            });
+        }
     }
-    if (character === '"' || character === "'" || character === '`') {
-      quote = character;
-      continue;
-    }
-    const depth = braces + brackets + parentheses;
-    if (visit(character, depth, index)) return index;
-    if (character === '{') braces += 1;
-    else if (character === '}') braces -= 1;
-    else if (character === '[') brackets += 1;
-    else if (character === ']') brackets -= 1;
-    else if (character === '(') parentheses += 1;
-    else if (character === ')') parentheses -= 1;
+    // 默认参数可注入公开工厂；赋值过的参数不能再作为该导入的证据。
+    const reassigned = new Set();
+    const assignmentTargets = (node) => {
+      if (ts.isIdentifier(node))
+        reassigned.add(checker.getSymbolAtLocation(node));
+      else if (ts.isShorthandPropertyAssignment(node))
+        reassigned.add(checker.getShorthandAssignmentValueSymbol(node));
+      else if (ts.isObjectLiteralExpression(node))
+        node.properties.forEach(assignmentTargets);
+      else if (ts.isArrayLiteralExpression(node))
+        node.elements.forEach(assignmentTargets);
+      else if (
+        ts.isObjectBindingPattern(node) ||
+        ts.isArrayBindingPattern(node)
+      )
+        node.elements.forEach(assignmentTargets);
+      else if (ts.isBindingElement(node)) assignmentTargets(node.name);
+      else if (ts.isPropertyAssignment(node))
+        assignmentTargets(node.initializer);
+      else if (
+        ts.isSpreadAssignment(node) ||
+        ts.isSpreadElement(node) ||
+        ts.isParenthesizedExpression(node) ||
+        ts.isAsExpression(node) ||
+        ts.isTypeAssertionExpression(node) ||
+        ts.isNonNullExpression(node) ||
+        ts.isSatisfiesExpression?.(node)
+      )
+        assignmentTargets(node.expression);
+      else if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind === ts.SyntaxKind.EqualsToken
+      )
+        assignmentTargets(node.left);
+      // 属性接收者、计算键和默认值只是读取；内嵌赋值由外层遍历单独收集。
+    };
+    const collectAssignments = (node) => {
+      // var 初始化和循环声明可能写回参数；符号身份区分真正的局部遮蔽。
+      if (ts.isVariableDeclaration(node) && node.initializer)
+        assignmentTargets(node.name);
+      if (
+        ts.isBinaryExpression(node) &&
+        node.operatorToken.kind >= ts.SyntaxKind.FirstAssignment &&
+        node.operatorToken.kind <= ts.SyntaxKind.LastAssignment
+      )
+        assignmentTargets(node.left);
+      if (
+        (ts.isPrefixUnaryExpression(node) ||
+          ts.isPostfixUnaryExpression(node)) &&
+        [ts.SyntaxKind.PlusPlusToken, ts.SyntaxKind.MinusMinusToken].includes(
+          node.operator,
+        )
+      )
+        assignmentTargets(node.operand);
+      if (ts.isForOfStatement(node) || ts.isForInStatement(node)) {
+        if (ts.isVariableDeclarationList(node.initializer))
+          node.initializer.declarations.forEach((declaration) =>
+            assignmentTargets(declaration.name),
+          );
+        else assignmentTargets(node.initializer);
+      }
+      ts.forEachChild(node, collectAssignments);
+    };
+    collectAssignments(source);
+    const imported = (expression, module, name, seen = new Set()) => {
+      if (ts.isIdentifier(expression)) {
+        const symbol = checker.getSymbolAtLocation(expression);
+        const binding = bindings.get(symbol);
+        if (binding) return binding.module === module && binding.name === name;
+        const declaration = symbol?.valueDeclaration;
+        if (
+          !symbol ||
+          seen.has(symbol) ||
+          reassigned.has(symbol) ||
+          !declaration ||
+          !ts.isParameter(declaration) ||
+          !declaration.initializer
+        )
+          return false;
+        return imported(
+          declaration.initializer,
+          module,
+          name,
+          new Set([...seen, symbol]),
+        );
+      }
+      if (
+        ts.isPropertyAccessExpression(expression) &&
+        ts.isIdentifier(expression.expression)
+      ) {
+        const binding = bindings.get(
+          checker.getSymbolAtLocation(expression.expression),
+        );
+        return (
+          binding?.module === module &&
+          binding.name === '*' &&
+          expression.name.text === name
+        );
+      }
+      return false;
+    };
+    const visit = (node) => {
+      if (
+        ts.isCallExpression(node) &&
+        imported(
+          node.expression,
+          '@qfei-design/make-ai-assistant/agent',
+          'createAgentClient',
+        )
+      )
+        result.client = true;
+      if (
+        (ts.isJsxOpeningElement(node) || ts.isJsxSelfClosingElement(node)) &&
+        imported(
+          node.tagName,
+          '@qfei-design/make-ai-assistant/react',
+          'MakeAppAssistantEntry',
+        )
+      )
+        result.entry = true;
+      ts.forEachChild(node, visit);
+    };
+    visit(source);
   }
-  return source.length;
+  return result;
 }
 
-function hasExportedDeclaration(declaration, token) {
-  const escaped = token.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-  return new RegExp(`\\bexport\\s+(?:(?:declare|default|abstract)\\s+)*(?:type|interface|function|class|const|let|enum)\\s+${escaped}\\b`).test(declaration)
-    || new RegExp(`\\bexport\\s+(?:type\\s+)?\\{[^}]*\\b${escaped}\\b[^}]*\\}`).test(declaration);
+function findRoot(entry) {
+  let dir = path.dirname(entry);
+  while (true) {
+    try {
+      if (
+        JSON.parse(fs.readFileSync(path.join(dir, 'package.json'), 'utf8'))
+          .name === '@qfei-design/make-ai-assistant'
+      )
+        return dir;
+    } catch {}
+    const parent = path.dirname(dir);
+    if (parent === dir) return;
+    dir = parent;
+  }
 }
-
-function readPublicTypeClosure(entry, packageRootPrefix, seen = new Set()) {
-  if (seen.has(entry) || !entry.startsWith(packageRootPrefix) || !fs.existsSync(entry)) return '';
-  seen.add(entry);
-  const declaration = fs.readFileSync(entry, 'utf8');
-  const exportedTargets = [...declaration.matchAll(
-    /\bexport\s+(?:type\s+)?(?:\*|\{[^}]*\})\s+from\s+["']([^"']+)["']/g,
-  )];
-  return declaration + exportedTargets.map(([, specifier]) => {
-    if (!specifier.startsWith('.')) return '';
-    const target = path.resolve(path.dirname(entry), specifier.replace(/\.(?:m?js|cjs)$/, '.d.ts'));
-    return readPublicTypeClosure(target, packageRootPrefix, seen);
-  }).join('');
-}
-
-function findTypesTarget(exportValue) {
-  if (!exportValue || typeof exportValue !== 'object') return undefined;
-  if (typeof exportValue.types === 'string') return exportValue.types;
-  for (const nested of Object.values(exportValue)) {
-    const target = findTypesTarget(nested);
+function typesTarget(value) {
+  if (!value || typeof value !== 'object') return;
+  if (typeof value.types === 'string') return value.types;
+  for (const nested of Object.values(value)) {
+    const target = typesTarget(nested);
     if (target) return target;
   }
-  return undefined;
 }
-
-function findPackageRoot(resolvedEntryPath) {
-  let current = path.dirname(resolvedEntryPath);
-  while (true) {
-    const packageJsonPath = path.join(current, 'package.json');
-    if (fs.existsSync(packageJsonPath)) {
-      try {
-        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf8'));
-        if (packageJson.name === '@qfei-design/make-ai-assistant') return current;
-      } catch {
-        // Keep walking so a malformed nested manifest cannot hide the real package root.
-      }
-    }
-    const parent = path.dirname(current);
-    if (parent === current) return undefined;
-    current = parent;
-  }
+function publicTypes(entry, prefix, seen = new Set()) {
+  if (seen.has(entry) || !entry.startsWith(prefix) || !fs.existsSync(entry))
+    return '';
+  seen.add(entry);
+  const text = fs.readFileSync(entry, 'utf8');
+  return (
+    text +
+    [
+      ...text.matchAll(
+        /\bexport\s+(?:type\s+)?(?:\*|\{[^}]*\})\s+from\s+["']([^"']+)["']/g,
+      ),
+    ]
+      .map(([, specifier]) =>
+        specifier.startsWith('.')
+          ? publicTypes(
+              path.resolve(
+                path.dirname(entry),
+                specifier.replace(/\.(?:m?js|cjs)$/, '.d.ts'),
+              ),
+              prefix,
+              seen,
+            )
+          : '',
+      )
+      .join('\n')
+  );
+}
+function hasExport(declaration, name) {
+  return (
+    new RegExp(
+      '\\bexport\\s+(?:(?:declare|default|abstract)\\s+)*(?:type|interface|function|class|const|let|enum)\\s+' +
+        name +
+        '\\b',
+    ).test(declaration) ||
+    new RegExp(
+      '\\bexport\\s+(?:type\\s+)?\\{[^}]*\\b' + name + '\\b[^}]*\\}',
+    ).test(declaration)
+  );
 }

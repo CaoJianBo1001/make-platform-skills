@@ -1,73 +1,37 @@
-# Make App v1 stream and file/image transfer
+# 会话、流与文件图片
 
-## SDK-owned response stream
+## SDK 状态机
 
-The public Client uses Fetch and `AsyncIterable<Uint8Array>` for SSE. A host
-provides the authenticated raw-byte transport and AbortSignal propagation; it
-does **not** provide `EventSource`, a parser or a reconnect loop for Make App
-v1. `client.responses.subscribe` and the `/make-app` adapter own event parsing,
-bounded retry, deduplication, snapshot recovery and history reconciliation.
+包负责 Session/Message/Task/Run、获权快照、SSE、问题回答、反馈、队列、追加、停止及请求回执恢复。宿主只提供认证字节传输与显式 Service 代理，不自行构建 reducer、事件解析、EventSource 或重连循环。
 
-The supported `response.*` events include `subscribed`, `state`, output item
-added, text delta, item done, reset, snapshot and completed/failed/cancelled
-terminal events. Incremental text appends; a snapshot replaces the matching
-response state. Unknown optional events are not permission to execute actions.
-Only non-empty persistent event IDs can advance resume. The SDK treats an
-unconfirmed stream failure using its snapshot/history recovery; the host must
-not replay a send with a new `messageId` or mix a stale stream into a new
-chat/identity. A drawer close or local iterator close is not remote
-cancellation; explicit stop uses `client.responses.cancel` through the package
-transport. `cancelRequested` can precede the terminal state.
+数据写入的 requestId 是同一用户意图的稳定 ID。网络中断、超时或 5xx 导致结果未知时，协议要求只查询 RequestResult，不再发送第二次写入，即使用相同 requestId 也不重写；查询失败或未找到不能证明未执行。0.4.5 的低层 SDK 与回答、停止、取消排队、继续消息的高层控制器统一遵循此规则；控制器重建后仍查询原 requestId，并保持原 targetId。老恢复记录若缺失继续消息的目标，包阻止新的不明写入，宿主不猜测目标。pending 回执保留原意图，终态回执由包消化后才结束该意图。只有明确已拒绝且可重试的请求（如 429）才按 SDK 策略保留原 ID 有界重试；读取请求可按唯一 retryOwner 处理网络/429/5xx。配置写入不自动重试，401/403、范围/协议错误停止自动重试。
 
-## Upload, media reference and download
+回执查询 401/403 保留其结构化鉴权状态；`AgentApiError.unconfirmedWrite` 标明原写入仍未确认，不能据查询拒绝清空原意图或生成新 requestId。重新登录属于宿主认证职责，重连只恢复获权事实与订阅，不重放原消息、答案或未确认写入。普通 App/Console 对话固定本人 `owner` 范围；范围切换和恢复键由包管理，宿主不扩大为历史管理范围。
 
-The package Client and React attachment flow own the sequence: stable `fileId` → start upload → split by
-server-returned `partSize` → `putPart` with raw bytes and stable zero-based
-`:part` index → complete → ready `contentRef` → message `parts`. It can resume
-confirmed parts and retry an individual failed part with the same bytes. Do
-not hard-code part sizing or recreate this sequence in a host callback. A host
-must preserve binary request/response bodies and avoid JSON-unwrapping content.
+重新打开会话先读获权事实与安全 asOf，再续订。持久事件 after/Last-Event-ID 保持字符串；delta 的 messageId/streamId/seq 是临时预览位置，不推进持久位置，正式消息到达后由包合并去重。连接断开不等于任务失败；本地 dispose 不等于远端 stop。停止受理与 Task 最终终态分别显示。
 
-For A13/A14/A16 test fixtures, the v1 `Upload` response requires `id`,
-`status`, `name`, `contentType`, `sizeBytes`, `partSize` and `completedParts`.
-An `uploading` response additionally requires `expiresAt`; a `ready` response
-requires `content` with `kind: "reference"`, `contentRef`, `sizeBytes` and
-`digestSha256`. These are conditional backend schema requirements even if an
-individual public TypeScript property is optional. A fixture missing them can
-correctly fail the package decoder with `AI_PROTOCOL_ERROR`; do not diagnose
-that as a Service upload failure.
+Task/TaskView 的可选 `waitReason` 只在 `state: "running"` 时出现：`user_input` 为等待回复，`outcome_confirmation` 为等待核实，`authentication` 为等待重新登录。其他状态不携带该字段。它不是新终态，也不授予重试或继续写入权限；显示由包负责，Service 保留该公开字段。HTTP 或 SSE 错误中的 401/403 由包保留结构化连接状态和提示；宿主不为触发登录而另解析 SSE，不凭文案判断权限，403 不进入登录循环。
 
-The composer presents one package-owned “上传文件或图片” entry when its negotiated
-`attachments.upload` feature and required transport methods are present. If
-`attachments.read` is absent, there is no download entry. The host must not
-add a second hidden file input or split file/image into competing menus.
+会话标题、重命名、置顶、归档走 sessions/preference；没有硬删除。新对话先清空视图；输入非空消息正文时包可预建 Session，发送时复用该会话。宿主不在打开面板时额外建会话，不再依赖“只有发送才建会话”的假设。历史标题可能含旧测试版本文字，不是 npm 版本展示。宿主持久化仅保留身份隔离的必要标识和恢复元数据，不另存 Token、消息正文、题面或答案。
 
-`modelInputKinds` comes from the Agent's current capabilities. It describes
-what the model is reported to accept, independently from upload/storage
-capability. A host may narrow the displayed list for a documented product or
-security policy; broadening or claiming model support requires deployed-model
-validation. Do not globally prescribe a text-only override.
-Uploading a file/image successfully is not proof that the model interpreted
-it. A valid media message can be accepted with HTTP 202 and later terminate
-with `response.failed` and top-level snapshot `code/message` carrying
-`AI_UNSUPPORTED_MEDIA`; report the terminal run failure
-separately from transport completion. Do not turn it into an upload failure,
-silently discard the attachment or retry a terminal model error.
+0.4.3 起包拥有问答草稿恢复：按用户/租户身份、App、Agent、渠道、会话和 runId 隔离，在当前标签页的 sessionStorage 中保存经题面授权和敏感字段筛选的非敏感草稿。已关闭、不可答或已提交的问题按包的规则清理；敏感/密码/凭据/附件等字段不进入持久草稿。宿主不复制存储器、不覆盖包内键、不通过改写题面绕过敏感声明。未确认答案的原 requestId 和摘要属于恢复元数据，不是允许宿主另存完整答案；包恢复草稿不等于自动提交。
 
-The UI offers a generic file/image picker, not a client-side MIME capability
-catalog. An unsupported upload MIME is a pre-acceptance 415 /
-`AI_UNSUPPORTED_MEDIA` at A13; an input kind recognized by v1 but unavailable
-for the selected Agent can be a 422 / `AI_UNSUPPORTED_INPUT` at A08. A 202
-means only message acceptance, not model understanding. Service validation
-must follow the backend v1 contract rather than silently rejecting valid
-InputPart kinds. Do not force client-side MIME conversion or infer support
-merely from file extension.
+问题提交状态由包按原 requestId、resource/action 和目标关联回执；异步回执到达后清理对应未知提示，有实际派发值的已受理结果只读查看；没有原值则仅展示已确认的状态。题面变为 answered/closed 不单独证明该次答案受理。提交摘要只使用实际派发时捕获的值；冷恢复仅有回执/元数据而没有原值时，不把 schema 默认值、当前草稿或后续编辑值展示成已提交内容。宿主不复制状态标记或重建答案。
 
-The Client validates the media tuple and reference shape; the package composer
-sends only locally ready content references with returned size/digest. The
-server remains authoritative for ready state, ownership and expiry, and can
-reject a stale or foreign reference. Do not claim the Client alone detects an
-expired upload. Apply server-advertised limits before large allocations, retain
-safe progress/error state, and avoid logging bytes or private file content.
-Abort and identity changes stop local work; explicit cancel is a separate
-remote operation.
+日期、日期范围和时间题面使用包内控件，保留确认/取消及当地日历时间，时间包含秒；不由宿主转成 UTC 或截掉秒。题面 schema 及公开 DTO 仍是数据合同，不能因为 UI 改版新增私有字段。
+
+## 上传和识图
+
+0.4.5 使用 `POST /content` multipart 原件上传，不是“初始化→分片→complete”的旧协议。包公开 `AgentAttachmentController` 与 `AGENT_UPLOAD_LIMIT` 管理上传、重试、未知回执恢复；宿主不复制上传引擎。消息只引用获确认的 Content；失败项保留重试/移除，不能把本地文件名当成功引用。重试不等于重传：上传字节已发出后暂停、断开或丢失响应，后续仅查原回执；404/pending 不恢复 file.open 或重新 POST。尚未发出的上传与明确拒绝的可重试上传按包规则处理，宿主不做上传补偿。
+
+`agents.getInputCapabilities({agentId,source:"webchat"})` 是获权入口输入能力，包负责读取和刷新。上传接口可用不代表模型支持该格式；不要在宿主固定 text-only，也不要承诺所有文件都可理解。
+
+`content.get` 读元信息，`content.download` 按字节读取原件。读取需要合法 via 上下文，不能接收任意 URL。中断/超时是错误，不伪装成完整文件；预览对象 URL 在切换、关闭和卸载时释放。
+
+定位失败按边界记录：
+1. Service 返回“接口不存在”：检查最终版本前缀、POST /content allowlist 与 Target，不先断言模型不支持。
+2. 上传 4xx/5xx：核对 multipart boundary、字段、大小、Origin、认证和公开 reason。
+3. 上传成功但发送失败：核对已确认 Content 引用及消息数据面，不在宿主改写文件 DTO。
+4. 消息/Task 受理但不能识图：核对输入能力与实际模型配置，记录正式 Run/Task 错误。
+
+包按统一时间线展示消息、问题、附件、Markdown、思考和生成中的预览，保留问题表单 DOM 与滚动位置。思考默认折叠，保留用户手动展开/折叠选择，流式生成标记独立于折叠状态；不能为新流片段强制展开。附件原生 dialog 定位由包 styles.css 负责，宿主不覆盖内部样式。HTML 不执行，Markdown 图片不自动加载，外部链接只允许安全协议。是否展示具体思考只能使用当前公开 props，不能用内部 CSS 隐藏或透传未声明字段。

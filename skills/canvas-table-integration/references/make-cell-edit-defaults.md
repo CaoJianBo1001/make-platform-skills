@@ -177,8 +177,8 @@ A panel that contains a title, toolbar button, inner bordered list row, and card
 | DateRange | popup host RangePicker / 日期区间选择器 opens immediately; use `field.properties.begin` and `field.properties.end` to disable dates outside the allowed range | `{ begin, end }` or host equivalent |
 | SingleSelect | popup host Select / 选择器 opens immediately; single selection may request commit after change; empty value is clear state/placeholder, not a `-` option | option value |
 | MultiSelect | popup host Select / 多选选择器 opens immediately; keep responsive tags and `+N` overflow; empty value is `[]`, not a `-` tag | option value array |
-| SingleUser / MultiUser | searchable user selector opens immediately; include current value and candidates from `/api/users` or host equivalent; `MultiUser` enforces `field.properties.maxCount` by disabling or preventing extra selection while remove/clear still works; do not add a fake `-` candidate | user id or user id array |
-| SingleDepartment / MultiDepartment | searchable department selector opens immediately; include current value and candidates from `/api/departments` or host equivalent; `MultiDepartment` enforces `field.properties.maxCount` by disabling or preventing extra selection while remove/clear still works; do not add a fake `-` candidate | department id or department id array |
+| SingleUser / MultiUser | searchable user selector opens immediately; include current value and candidates from `/api/make/app/users` or host equivalent; `MultiUser` enforces `field.properties.maxCount` by disabling or preventing extra selection while remove/clear still works; do not add a fake `-` candidate | user id or user id array |
+| SingleDepartment / MultiDepartment | searchable department selector opens immediately; include current value and candidates from `/api/make/app/departments` or host equivalent; `MultiDepartment` enforces `field.properties.maxCount` by disabling or preventing extra selection while remove/clear still works; do not add a fake `-` candidate | department id or department id array |
 | File | attachment panel/editor opens as host popup; empty state shows only upload zone; upload/delete goes through host data-source boundary; `field.properties.maxCount` limits upload, drag/drop, paste, and append actions | normalized file payload |
 | Lookup | read-only by default; if editable, use a relation/lookup selector popup, not plain text | backend relation payload |
 
@@ -218,7 +218,7 @@ Person-field echo requirements:
 
 - `SingleUser` may arrive as one object, a one-item array, a scalar id, or an identity API object; normalize all of them before opening the editor.
 - `MultiUser` may arrive as an array of record-style or identity-service objects; normalize every item independently.
-- When a current user value has a stable id plus label, merge it into the selector options as an echo option before rendering, even if `/api/users` has not loaded or does not include that user in the current page.
+- When a current user value has a stable id plus label, merge it into the selector options as an echo option before rendering, even if `/api/make/app/users` has not loaded or does not include that user in the current page.
 - When a current user value has a label but no stable id, display that label as a temporary echo value and require the user to choose a real candidate before committing a changed value. Do not clear the editor to empty.
 - The people editor is empty only when the normalized current value has neither stable id nor display label.
 - Existing selected users must stay visible while remote search/candidate loading updates; a later candidate response must merge with, not replace, the selected echo options.

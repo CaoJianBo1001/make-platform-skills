@@ -1,0 +1,9 @@
+{
+  "source": "agent-design/docs/contracts/public",
+  "sourceCommit": "1238c719e70ed80fd26976aedbc174bdff7998b4",
+  "sha256": {
+    "openapi.json": "a3c77518616e6508877f06baeb815622df08f893981e261c637158aee6798303",
+    "data.openapi.json": "7372ee21a1bde993d73fa43e8374b87dd96d406847a77d0806b1ad21df8915b0",
+    "events.schema.json": "47b44cdab77abdd1545c443edd0e0cbf116736060c8e7afce089d9bd3ee53959"
+  }
+}

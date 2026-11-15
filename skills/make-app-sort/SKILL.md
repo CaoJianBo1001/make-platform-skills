@@ -2,7 +2,7 @@
 name: make-app-sort
 description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list sorting with @qfei-design/make-app-sort. Triggered by 排序, 高级排序, 多字段排序, 排序优先级, 升序/降序, 排序条件拖拽, 表格/表头/列头排序, openWithField, sortable capabilities, Entity Preset sort save/load/echo, records sort payloads, or sorting tests. Covers one integrated toolbar, CanvasTable header, Entity Preset, and Service sorting flow. When make-app-actions is present, a successfully applied sort must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Does not own page shell/layout, CanvasTable rendering internals, Service route implementation, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, npm package internals, or grouping."
 metadata:
-  version: 0.1.6
+  version: 0.1.7
 ---
 
 # make-app-sort

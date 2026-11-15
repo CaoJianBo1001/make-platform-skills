@@ -2,7 +2,7 @@
 name: make-env-setup
 description: Use when preparing or updating the local Make development environment before development. Triggered by Make 环境安装, Make 环境初始化, 更新 Make 环境. Distinguishes new Apps from existing Apps whose runtime must be preserved; does not manage Make resources, deploy Apps, or write PRD, DSL, Service, or UI code; use makecli for resource/deploy operations and the owning skills for implementation.
 metadata:
-  version: 0.4.2
+  version: 0.4.4
   homepage: https://github.com/qfeius/make-platform-skills
 ---
 
@@ -66,10 +66,14 @@ For an existing Make App without migration, verify its declared Node version wit
 5. Install or update Make platform skills every run.
 
    ```bash
-   npx skills add qfeius/make-platform-skills --all -y
+   makecli skills update
    ```
 
-   Show a compact Make skills result based on the command output, such as installed, updated, or already current.
+   Keep the current makecli `settings.channel` and selected roles/install targets: stable resolves `main`, beta resolves `beta`. Do not change the channel or broaden the install scope during an environment update. Show a compact result from the command output, including the selected channel and installed, updated, or already-current status.
+
+   If the installed CLI cannot select Skill channels, report the unsupported CLI version and update it first. Do not fall back to an unqualified repository URL or `--all`. A user-requested direct npx installation must explicitly select `/tree/main` or `/tree/beta` and the intended `--skill`, `--agent` and project/global scope; use the repository installation instructions for that separate flow.
+
+   Agent 接入跨 make-ai-assistant、auth、service、UI、runtime 和 observability；同步同一来源/通道的关联技能后再进入实现，不能只更新助手技能却混用旧协议的关联副本。具体版本与接线由 make-ai-assistant 的公开包基线决定；不为技能同步迁移宿主运行时，也不把 makecli 内嵌快照当作已更新的安装文件。
 
 ## Verify Versions
 
