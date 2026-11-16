@@ -17,8 +17,8 @@ try {
     );
     return { root, bin: join(modules, '.bin') };
   };
-  const old = await install('old', '0.1.7');
-  const release = await install('npm-exec', '0.1.8');
+  const old = await install('old', '0.1.8');
+  const release = await install('npm-exec', '0.1.9');
   assert.equal(
     await resolveAnalyticsInstall(
       [globalBin, old.bin, release.bin].join(delimiter),
@@ -28,7 +28,7 @@ try {
   );
   await assert.rejects(
     resolveAnalyticsInstall([globalBin, old.bin].join(delimiter)),
-    /0\.1\.8/,
+    /0\.1\.9/,
     '缺少正式制品必须失败，不能误报运行时通过',
   );
   await writeFile(join(release.root, 'package.json'), '{broken');

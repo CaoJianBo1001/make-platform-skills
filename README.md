@@ -129,7 +129,7 @@ Codex 判断优先级：
 
 在 PRD 或迭代明确提出分析需求后，指导 Agent 选择业务指标、可信统计来源及固定展示，再由宿主接入 `@qfei-design/make-app-analytics`。普通项目初始化不启用分析；npm 包安装与 Skill 安装是两件事。
 
-当前分析能力基线为正式0.1.8，新增累计／滚动、逐月比较、派生排名、目标、组合双轴、百分比堆叠和散点／热力，按[可执行接入示例](skills/make-app-analytics/references/release-017.md)及实际制品核验。旧宿主需要同步依赖、注册与页面，更新Skill不自动迁移App，也不开放尚缺后端合同的能力。
+当前已验证制品与升级规则统一维护在[接入合同](skills/make-app-analytics/references/integration-contract.md#先核对可用制品)，扩展模板按[可执行示例](skills/make-app-analytics/references/release-017.md)接入；DateTime五粒度与自然日范围见[配套合同](skills/make-app-analytics/references/datetime.md)。旧宿主需要同步依赖、注册与页面，更新Skill不自动迁移App。
 
 安装或验证时确认 [SKILL.md](skills/make-app-analytics/SKILL.md)、全部 references 及需要的 Service、UI、筛选、权限 Skill 实际可读。安装后只依赖各 Skill 的分发目录，不要求存在仓库根 README 或仓库维护脚本。
 
@@ -137,9 +137,20 @@ Codex 判断优先级：
 
 维护者在本仓库执行 `node scripts/check-installed-make-platform-skills-sync.mjs <source-skills-dir> <installed-skills-dir>`，检查完整文件一致和安装布局中本地链接／锚点可达。检查涵盖内联与引用式链接，拒绝不可移植的 file URL、越出技能根目录、缺失目标和错误章节；代码围栏中的示例不参与检查，合法关联 Skill 必须同样存在。此命令属于仓库维护工具，不是安装后 Agent 的接入依赖。
 
-#### 分析 Skill 维护状态（2026-11-06）
+#### 分析 Skill 维护验收（仅仓库内）
 
-分析内容仍为工作区候选，未由本次修改发布或覆盖全局安装。验证任务可明确提供当前源入口路径；正式自动发现须以实际通道发布、安装完整性及 Agent 可读目录为准。维护状态只在本说明和需求记录保存，不写入发布 Skill 的运行规则。
+维护者按接入合同准备正式npm制品，实际安装须有React及ReactDOM依赖。在本仓库根目录执行：
+
+```bash
+MAKE_ANALYTICS_PACKAGE_ROOT="<正式npm包安装目录>" \
+  node scripts/test-analytics-release-examples.mjs
+```
+
+脚本直接执行Skill中的配置并核对独立答案；它检查实际安装版本，未提供制品时明确跳过运行时验证。CI的隔离安装命令见[工作流](.github/workflows/skill-metadata-lint.yml)，仓库回归同时检查CI制品与接入基线一致。
+
+需要额外验证DateTime候选时，可在同一命令中另设`MAKE_ANALYTICS_DATETIME_PACKAGE_ROOT`为候选目录；该检查不替代正式制品验收。以上脚本及环境变量仅用于仓库维护，不属于分发Skill或其他App的接入依赖，不复制到宿主。
+
+Skill源规范、通道分发、安装文件和宿主验收分别记录；维护验证通过不代表已发布、已覆盖全局安装或已完成浏览器验收。
 
 ### make-app-approval
 

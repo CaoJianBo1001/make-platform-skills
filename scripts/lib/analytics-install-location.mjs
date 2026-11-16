@@ -16,9 +16,9 @@ export async function resolveAnalyticsInstall(searchPath = '') {
     }
     if (
       manifest.name === '@qfei-design/make-app-analytics' &&
-      manifest.version === '0.1.8'
+      manifest.version === '0.1.9'
     )
       return root;
   }
-  throw new Error('隔离环境没有安装 @qfei-design/make-app-analytics@0.1.8');
+  throw new Error('隔离环境没有安装 @qfei-design/make-app-analytics@0.1.9');
 }
