@@ -50,6 +50,52 @@ const verifyCompletionContract = ({ task, page, verification }) => {
   assert.match(verification, /\| 独立任务办理成功后重读失败 \|[^\n]*办理成功，刷新未完成[^\n]*不能重办同一动作/);
 };
 
+// 仅检查跨 Skill 的指导完整性；宿主仍须挂载真实页面及样式验证布局。
+const mobileDocuments = () => ({
+  form: fs.readFileSync(new URL('../skills/makeui/references/mobile-form-controls.md', import.meta.url), 'utf8'),
+  page: read('references/standalone-pages.md'),
+  verification: read('references/verification.md'),
+});
+const verifyStandaloneMobileGuidance = ({ form, page, verification }) => {
+  const section = form.split('### 独立页面的样式作用域\n')[1]?.split(/\n##? /)[0];
+  assert.ok(section, '共享手机字段规范必须覆盖独立页面作用域');
+  assert.match(section, /不依赖.*Shell.*祖先/);
+  assert.match(section, /普通字段.*Lookup.*单列/);
+  assert.match(section, /附件.*完整.*宽度/);
+  assert.match(section, /桌面.*平板.*原有/);
+  assert.ok(page.includes('../../makeui/references/mobile-form-controls.md#独立页面的样式作用域'),
+    '审批页应引用共享作用域规则，避免重复维护布局合同');
+  const rows = verification.split('\n').filter(line => line.startsWith('|'));
+  const layout = rows.find(line => line.startsWith('| 手机直接访问 BPM 独立新建页，无工作台 Shell |'));
+  assert.match(layout ?? '', /真实页面.*编译.*样式/);
+  assert.match(layout ?? '', /普通字段.*Lookup.*单列/);
+  assert.match(layout ?? '', /320.*390.*767/);
+  assert.match(layout ?? '', /桌面.*平板/);
+  const interaction = rows.find(line => line.startsWith('| 独立页手机字段交互及底栏 |'));
+  assert.match(interaction ?? '', /长文本.*选择器.*附件.*软键盘.*底栏/);
+  assert.match(interaction ?? '', /真机.*待验/);
+};
+
+test('手机独立页样式与真实布局验收交接共享规则', () => {
+  verifyStandaloneMobileGuidance(mobileDocuments());
+});
+
+test('故障注入：缺少独立作用域、关联字段覆盖或真实样式验收时拒绝通过', () => {
+  const documents = mobileDocuments();
+  verifyStandaloneMobileGuidance(documents);
+  for (const [key, token] of [
+    ['form', '### 独立页面的样式作用域'],
+    ['page', '../../makeui/references/mobile-form-controls.md#独立页面的样式作用域'],
+    ['verification', '真实页面及编译后的样式'],
+    ['verification', '普通字段及 Lookup／关联字段区域均为单列'],
+  ]) {
+    assert.ok(documents[key].includes(token), `故障注入目标必须存在：${token}`);
+    assert.throws(() => verifyStandaloneMobileGuidance({
+      ...documents, [key]: documents[key].replaceAll(token, '缺失规则'),
+    }));
+  }
+});
+
 test('标准地址及独立页参考边界可从两个 Skill 发现', () => {
   const entry = read('SKILL.md');
   const page = read('references/standalone-pages.md');
