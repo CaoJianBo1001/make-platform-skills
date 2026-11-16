@@ -65,7 +65,7 @@ function withMakeLogContext(
 // 页面请求和 Service 任务均使用：withMakeLogContext(headers, config)
 ```
 
-示例只补充请求头，认证、已有 Trace 上下文和上游响应透传仍由现有适配器负责。接口本身要求 body/query 中的 `appKey` 时，继续按其合同使用 `config.appKey` 并与 Header 保持一致；已有 `appRole` 按接口约定放在 query，不自行增加默认环境。当前 Gateway 对部分请求还需要可解析且一致的 body/query 应用信息，单有 Header 不保证获得 `app_id`；无请求体、multipart 文件等请求应做真实验证，缺失时报告限制，不改变接口协议来凑日志字段。
+示例只补充请求头，认证、已有 Trace 上下文和上游响应透传仍由现有适配器负责。接口本身要求 body/query 中的 `appKey` 时，继续按其合同使用 `config.appKey` 并与 Header 保持一致；已有 `appRole` 按接口约定放在 query，不自行增加默认环境。Gateway 根据 Header 中的 appKey、已验证身份和环境解析应用归属，不依赖 body/query 中的 appKey。对无请求体、multipart 文件等场景仍应做真实验证；应用无法解析时报告日志归属缺口。
 
 ### Endpoint-specific success and prerequisites
 

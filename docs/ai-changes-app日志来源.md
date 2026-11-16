@@ -1,5 +1,9 @@
 # AI 变更记录
 
+## 2026-11-16：同步 Gateway 归属规则
+
+- 应用归属使用 `X-Make-App-Key`，不再要求请求体或 query 包含 appKey。
+
 ## 2026-11-13：统一应用来源
 
 - 应用页面及应用 Service 请求统一使用 `X-Make-Source: app`。
