@@ -2,7 +2,7 @@
 
 权限及 Schema 初次加载、刷新校验的占位遵循 [区域加载态](../../makeui/references/app-shell-layout.md#区域加载态)：Shell 已挂载时填满主内容区并水平、垂直居中，尚未挂载时使用有完整高度的启动 fallback；禁止左上角裸文本。布局不得提前开放受保护内容，不改变 Provider 顺序、失败关闭及错误出口。
 
-以下普通编辑/更新字段规则不用于我的审批节点办理。任务表单按 [审批任务详情](../../make-app-approval/references/task-detail.md) 消费当前节点 fieldPermission/actions，字段定义读取 bpm-node-form-metadata 的 TASK 场景，不从普通 entity 或权限过滤的 Schema 补齐；节点定义不并入普通权限缓存。任务附件重查节点权限并用同一节点元数据来源校验类型，任务写入交 Workflow，不经普通记录更新门禁，也不以此放宽普通 CRUD。
+以下普通编辑/更新字段规则不用于我的审批节点办理。任务表单按 [审批任务详情](../../make-app-approval/references/task-detail.md) 消费当前节点 fieldPermission/actions，字段定义读取 bpm-task 响应的 data.formMetadata，不从普通 entity 或权限过滤的 Schema 补齐；节点定义不并入普通权限缓存。任务附件重查节点权限并用同一节点元数据来源校验类型，任务写入交 Workflow，不经普通记录更新门禁，也不以此放宽普通 CRUD。
 
 Use this reference for frontend permission providers, matching, route/action gates, field sets, payloads, and refresh.
 
@@ -109,7 +109,7 @@ When metadata is authorized but record read is denied, keep the authorized navig
 
 ## Create flow
 
-先判断普通新建或审批新建。以下计算、提交步骤及普通 create 的就绪检查适用于无有效 `bpmDefinitionKey` 的场景；有效审批的新建字段、附件和 Lookup 源字段白名单按 [审批发起合同](../../make-app-approval/references/initiation-contract.md) 切换，UI/Service 同步执行，不能把本文件的普通源字段交集再次套到审批字段。目标对象授权、类型能力与已有记录编辑规则保持不变。
+先按 [独立绑定查询](../../make-app-approval/references/entity-bindings.md) 判断普通新建或审批新建，不从 Schema 取 key。以下计算、提交步骤及普通 create 的就绪检查适用于绑定查询成功而无有效 `bpmDefinitionKey` 的场景，绑定加载／失败暂停创建并允许重试；有效审批的新建字段、附件和 Lookup 源字段白名单按 [审批发起合同](../../make-app-approval/references/initiation-contract.md) 切换，UI/Service 同步执行，不能把本文件的普通源字段交集再次套到审批字段。目标对象授权、类型能力与已有记录编辑规则保持不变。
 
 Compute create fields only from the create collection and create permission:
 

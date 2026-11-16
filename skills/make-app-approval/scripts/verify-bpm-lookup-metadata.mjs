@@ -3,14 +3,14 @@
 import assert from 'node:assert/strict';
 import { readFileSync, realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
-import { normalizeBpmNodeFormMetadata } from '../assets/bpm-node-form-metadata.mjs';
-const fixture = JSON.parse(readFileSync(new URL('./fixtures/node-form-metadata.json', import.meta.url), 'utf8'));
-const base = () => normalizeBpmNodeFormMetadata(structuredClone(fixture.response.data), fixture.expected);
+import { normalizeBpmFormMetadata } from '../assets/bpm-form-metadata.mjs';
+const fixture = JSON.parse(readFileSync(new URL('./fixtures/form-metadata.json', import.meta.url), 'utf8'));
+const base = () => normalizeBpmFormMetadata(structuredClone(fixture.response.data.formMetadata), fixture.expected);
 export async function verifyBpmLookupMetadata(resolve) {
   let passed = 0;
   const check = async (name, run) => { try { await run(); passed++; } catch (cause) { throw new Error(`Lookup 依赖契约未通过：${name}`, { cause }); } };
   const reject = async (input, keys = ['relatedName']) => assert.rejects(async () => resolve(input, keys), error => {
-    assert.equal(error.code, 'BPM_NODE_FORM_METADATA_INVALID'); assert.equal(error.status, 502); return true;
+    assert.equal(error.code, 'BPM_FORM_METADATA_INVALID'); assert.equal(error.status, 502); return true;
   });
   await check('真实结构、无副作用及最小目标描述', async () => {
     const data = base(), before = structuredClone(data);

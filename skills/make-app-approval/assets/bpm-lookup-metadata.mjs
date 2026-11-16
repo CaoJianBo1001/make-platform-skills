@@ -1,7 +1,7 @@
 // 节点 Lookup 纯依赖解析：输入须先经过节点定位与字段规范化；不发请求、不读取权限或记录。
-import { BpmNodeFormMetadataError, isBpmFieldType, normalizeBpmNodeFormMetadata } from './bpm-node-form-metadata.mjs';
+import { BpmFormMetadataError, isBpmFieldType } from './bpm-form-metadata.mjs';
 const text = value => typeof value === 'string' && Boolean(value.trim());
-const invalid = (path, reason = '缺失或无效') => { throw new BpmNodeFormMetadataError(path, reason); };
+const invalid = (path, reason = '缺失或无效') => { throw new BpmFormMetadataError(path, reason); };
 export function resolveBpmLookupDependencies(metadata, fieldKeys) {
   if (!metadata || !text(metadata.appKey) || !text(metadata.entityKey) || !Array.isArray(metadata.fields)
     || !Array.isArray(fieldKeys) || fieldKeys.some(key => !text(key))) invalid('metadata/fieldKeys');
@@ -28,18 +28,4 @@ export function resolveBpmLookupDependencies(metadata, fieldKeys) {
     targets.set(identity, targetFieldType);
     return [{ fieldKey, relationKey, targetEntityKey: target.entityKey, targetFieldKey, targetFieldType, multiple: target.cardinality === 'many' }];
   });
-}
-
-// 仅判断同一次 START 编排内的已有成功资料；不是跨请求缓存或上游错误恢复策略。
-export function canReuseBpmStartMetadata(data, expected, fieldKeys) {
-  if (expected?.scene !== 'START') invalid('expected.scene', '必须为 START');
-  if (!Array.isArray(fieldKeys) || fieldKeys.some(key => !text(key))) invalid('fieldKeys');
-  try {
-    const metadata = normalizeBpmNodeFormMetadata(data, expected);
-    resolveBpmLookupDependencies(metadata, fieldKeys);
-    return true;
-  } catch (error) {
-    if (!(error instanceof BpmNodeFormMetadataError) || error.path.startsWith('expected')) throw error;
-    return false;
-  }
 }

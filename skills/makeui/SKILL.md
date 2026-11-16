@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.70
+  version: 0.4.72
 ---
 
 # makeui
@@ -16,6 +16,10 @@ PRD 或本次迭代已提出分析指标、趋势、构成、排名或可视化�
 图表的分组汇总明细按 [统一容器](../make-app-analytics/references/integration-contract.md#汇总明细的默认容器) 使用 PC 居中弹窗／手机底部弹层，同一 App 复用公共 `DetailsSurface`；原始业务记录沿用既有详情与操作容器。
 
 分析包0.1.8的目标、combo双轴、百分比堆叠、散点／热力使用[对应公共组件](../make-app-analytics/references/release-017.md)，宿主只组合固定业务模板和布局，不复制计算／明细，不向基础views塞入新类型。0.1.8大额目标可用公开numberNotation="compact"，旧0.1.7先升级；完整值说明沿宿主Help适配器、明细保留标准金额。新图沿用主题及同一Provider；手机核对轴、颜色单位、点击提示和底部明细，不能仅以SVG渲染通过代替交互验收。
+
+审批新建先消费 [独立实体绑定状态](../make-app-approval/references/entity-bindings.md)，不读取 Schema 的 `bpmDefinitionKey`。加载／失败提供局部反馈和重试，暂停依赖绑定的创建／发起；普通浏览、已有记录普通编辑及任务／实例历史沿用原规则，不能被绑定查询整体阻塞。
+
+新 App 按审批默认规则生成能力，或存量需求包含飞书等外部入口的 BPM 独立填单／任务详情／实例只读详情时，读取 [审批独立页面合同](../make-app-approval/references/standalone-pages.md)：新增适用的 `/bpm/...` 容器，复用宿主表单及公共审批状态机，保留原对象 Drawer／手机任务路由；此例外不改变普通对象的新建／编辑／详情默认展示。
 
 所有表示当前应用名称的展示位置必须动态消费接口名称，禁止硬编码业务应用名；统一来源、刷新、长名称和验收见 [动态应用名称](references/app-shell-layout.md#动态应用名称)。
 

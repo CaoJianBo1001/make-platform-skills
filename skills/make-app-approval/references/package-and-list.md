@@ -1,6 +1,6 @@
 # 审批包与我的审批列表
 
-适用于完整接入或升级任务中心。本文基于已核对的 `@qfei-design/make-app-approval@0.2.12` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
+适用于完整接入或升级任务中心。本文默认描述两个任务页签；新增第三页签先读 [已发起与实例详情](initiated-instances.md)，按实际包能力启用实例 provider。本文基于已核对的 `@qfei-design/make-app-approval@0.2.13` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
 
 ## 依赖与职责
 
@@ -8,15 +8,15 @@
 - Service 如消费状态、禁编或撤回校验函数，也安装同一审批包版本，只加载根入口。依赖与锁文件可在干净环境重装；生产不依赖开发机路径、未发布 tgz、node_modules 修改或未随构建分发的补丁。
 - 应用入口一次导入 `@qfei-design/make-app-approval/styles.css`，表格样式沿用宿主 CanvasTable 接入。Ant Design/dayjs 是包的示例依赖，不要求宿主更换 UI 库。
 - 0.2.10 发布包携带 `examples/field-adapters`，包含人员缓存、数值原文校验和 `use-input-modality.ts`。这些是宿主源码适配示例，按 [字段适配回归](../../makeui/references/field-adapter-regressions.md) 复用已有控件与校验，不当作新的 npm 公开子路径导入。
-- 0.2.12 原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
-- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.12 原生检查失败是已知缺口；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
+- 0.2.13 原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
+- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.13 原生检查失败是已知缺口；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
 
 | 公开入口 | 使用内容 |
 | --- | --- |
 | 根入口 | `APPROVAL_STATUS_FIELD`、`APPROVAL_LOCK_FIELD`、`getApprovalStatusDisplay`、`hasApprovalDefinition`、`isApprovalSystemField`、`getRecordApprovalWriteRestriction`、撤回意见校验及类型 |
 | `/react` | `ApprovalStatus`，用于只读状态文字/Tag |
 | `/list` | `MyApprovalsPage`、`ApprovalListProvider`、列表 DTO、基础控件适配类型 |
-| `/detail` | `ApprovalTaskDetail`、`readApprovalTaskDetail`、`getApprovalTaskFields`、`buildApprovalTaskAction`、`ApprovalTaskValidationError` 及详情类型 |
+| `/detail` | `ApprovalTaskDetail`、`readApprovalTaskDetail`、`getApprovalTaskFields`、`buildApprovalTaskAction`、`ApprovalTaskValidationError`、`ApprovalInstanceDetail`、`readApprovalInstanceDetail` 及任务/实例类型 |
 
 业务代码只导入公开入口，不深层导入 src/dist。包负责列表状态、查询草稿、虚拟表格和详情办理状态机；宿主负责导航、应用/身份上下文、Service 请求、字段与控件适配、详情容器、历史查询及错误出口。不要复制公共包源码、构造第二张任务表格或另做一套桌面列表分页状态。
 
@@ -26,7 +26,7 @@
 
 - `scopeKey` 从环境、应用、租户/权限范围、当前用户派生，不含 token；上下文改变时同时销毁旧详情和候选状态。它用于隔离缓存，不是鉴权凭据。
 - `provider.loadPage(query, { signal })` 仅经统一 UI → Service 请求层取得当前用户任务，返回 `{ rows, total }`。稳定 provider 身份，透传 AbortSignal，忽略过期结果，不能吞掉错误返回空数组。
-- `onOpenApproval(row)` 使用 `processInstanceId + taskId` 打开详情。缺任一标识时报合同错误；不拿 recordId 代替 taskId，不根据当前对象是否绑定流程阻断历史任务。
+- `onOpenApproval(row)` 先按 referenceType 分流；任务使用 `processInstanceId + taskId` 打开详情，缺任一标识时报合同错误；实例只要求 processInstanceId，按 [实例接线](initiated-instances.md) 打开只读详情。不拿 recordId 代替 taskId，不根据当前对象是否绑定流程阻断历史访问。
 - 动作成功后改变 `refreshKey`，重新查当前页签和已查询条件，按包的刷新机制保留有效滚动位置；仅关闭详情不刷新。动态主题改变用 `themeKey` 通知 Canvas 重读主题。
 - `pageSize` 默认 20，合法范围 1–200；包的 provider 页码从 1 开始。Canvas 内部页码转换、缓存、并发、取消和后续页失败重试由包负责，宿主不能再加 1。
 
@@ -84,9 +84,11 @@ Service 固定当前部署 `appKey` 和 `viewType: MY`。已完成是当前用�
 
 ## 多端边界
 
-已核验的 0.2.12 发布产物包含 `MyApprovalsPage presentation="mobile"`、详情布局插槽 `detail/sections/actionItems` 及 `ApprovalTaskDetail presentation="mobile"` 字段展示能力。0.2.11 缺少最后一项，0.2.7 不包含这些手机能力；旧版本先核对并升级到具备所需能力的正式产物，不能直接传入不存在的参数。审批包与 `make-app-mobile` 分别核验，不能因审批包升级就认定移动组件包也已支持所有控件。
+已核验的 0.2.13 发布产物包含 `MyApprovalsPage presentation="mobile"`、详情布局插槽 `detail/sections/actionItems` 及 `ApprovalTaskDetail presentation="mobile"` 字段展示能力。0.2.11 缺少最后一项，0.2.7 不包含这些手机能力；旧版本先核对并升级到具备所需能力的正式产物，不能直接传入不存在的参数。审批包与 `make-app-mobile` 分别核验，不能因审批包升级就认定移动组件包也已支持所有控件。
 
 支持该能力的产物中，宿主由已有响应式上下文选择 `presentation="mobile"`，桌面/平板不传或传 `desktop`。手机公共卡片、列表查询状态、滚动追加、失败重试与下拉刷新归审批包；宿主只提供手机基础控件适配、导航、provider 和详情容器，不复制一套列表/分页 Controller。不生成不存在的 `MobileMyApprovalsPage` 导出。
+
+以下 ID／申请人筛选、任务完成时间和结果规则仅用于两个任务页签。启用 initiated 后，实例只按发起日期筛选；任务和实例共享列表控制器，按 referenceType 选择详情。实例详情使用 application/history/feedback 插槽，没有意见或办理动作；字段展示同样显式传入 mobile。完整接线见 [手机实例详情](mobile.md#手机实例详情)。
 
 - 卡片显示业务表单、字符串申请单 ID、申请人、申请时间；已完成增加审批结果和完成时间。可选 `completionResult` 为已确认的任务动作展示值，`completionTime` 为宿主格式化的任务完成时间，缺失显示 `—`，不得由流程状态推断结果，也不得以申请时间冒充完成时间。当前 Workflow 列表可读 `taskCompletedAt`，但未明确提供完成动作；没有此字段时按缺失展示，不逐卡读取详情。
 - ID 搜索按钮/回车后精确查询，清空立即生效；人员、完整日期范围选择和清空立即应用，但不顺带提交 ID 草稿。搜索框及时间/申请人入口使用宿主小号尺寸，编辑输入保持 iOS 安全字号。时间与申请人入口同一行左右排列，均打开移动包底部弹层；手机不展示筛选操作、重置、刷新按钮。桌面仍使用查询/重置/刷新，不改变现有行为。
