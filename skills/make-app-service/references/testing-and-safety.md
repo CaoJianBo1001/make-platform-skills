@@ -85,6 +85,10 @@ Config tests should cover:
 
 Adapter tests should cover:
 
+- all Make App calls, including Service-initiated jobs, use `X-Make-Source: app`, without trusting arbitrary client source values
+- `X-Make-App-Key` comes from `MAKE_APP_KEY`, agrees with appKey already required in body/query, and preserves existing auth and Trace headers; cover JSON, GET and multipart without changing their protocols
+- where the deployed Gateway and log-query environment are available, verify request and downstream logs for Trace ID, source and actual appId; report unresolvable application ownership rather than claiming all calls are covered
+
 - Make Meta/Data requests include the configured `appKey` when the backend API requires it
 - route handlers do not accept `appKey` from UI query/body/header input
 - record reads use `/api/make/data/v1/record` in local preview and `/make/data/v1/record` in published mode

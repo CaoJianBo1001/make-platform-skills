@@ -8,6 +8,8 @@
 
 ## Service-fronted
 
+应用页面和应用 Service 发起的 Make 请求统一使用日志来源 `app`。Service 的公共 Make 适配器设置来源，并从 `MAKE_APP_KEY` 设置应用 Header；不要把不可信入站来源或 appKey 当作鉴权依据。Gateway 接收后负责向下游传递，Trace ID 仍按下文规则保持一致。
+
 请求入口只接收合法的 `X-Log-Id` 和 `traceparent`：Trace ID 必须为 32 位非零十六进制，parent span ID 必须为 16 位非零十六进制。优先使用合法的 `X-Log-Id`；若它缺失或非法，则使用合法 `traceparent` 中的 trace-id；两者均不可用时生成新 Trace ID。两者不一致时保留合法的 `X-Log-Id`，丢弃不一致的入站 `traceparent`，并以保留的 Trace ID 和新生成的非零 span-id 重新生成下游 `traceparent`；入站 `traceparent` 缺失或非法时也按此规则生成，不能转发原值。响应无论成功或失败都返回 `X-Log-Id`，不改变原有 JSON 合同。异步请求上下文供安全日志及下游 adapter 读取同一个 ID。
 
 向 Make Gateway 仅白名单传递有效且一致的 `traceparent`、`X-Log-Id` 和原有认证所需的上下文。不要直接转发未经校验的浏览器 Header，也不要把 Service token、Cookie 或 Authorization 写入日志。`make-app-auth` 继续拥有认证上下文；`make-app-service` 继续拥有实际代理路由和响应形状。

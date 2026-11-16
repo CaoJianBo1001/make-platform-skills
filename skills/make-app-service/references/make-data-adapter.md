@@ -47,6 +47,27 @@ The wrapper should:
 
 Do not duplicate Make fetch logic in each route.
 
+### 日志来源和应用归属
+
+在 Service 的公共 Make 客户端设置日志请求头，不在每个路由重复构造。`config.appKey` 来自部署注入的 `MAKE_APP_KEY`；应用请求统一使用 `X-Make-Source: app`，包括页面发起和 Service 自行发起的请求。不要直接信任浏览器提交的 source 或 appKey 来决定日志归属；这两个字段仅用于日志，不代替鉴权。
+
+```ts
+function withMakeLogContext(
+  headers: HeadersInit,
+  config: { appKey: string },
+): Headers {
+  const result = new Headers(headers); // 保留现有认证、Trace 和 X-Make-Target
+  result.set("X-Make-Source", "app");
+  result.set("X-Make-App-Key", config.appKey);
+  return result;
+}
+
+// 页面请求和 Service 任务均使用：withMakeLogContext(headers, config)
+```
+
+示例只补充请求头，认证、已有 Trace 上下文和上游响应透传仍由现有适配器负责。接口本身要求 body/query 中的 `appKey` 时，继续按其合同使用 `config.appKey` 并与 Header 保持一致；已有 `appRole` 按接口约定放在 query，不自行增加默认环境。Gateway 根据 Header 中的 appKey、已验证身份和环境解析应用归属，不依赖 body/query 中的 appKey。对无请求体、multipart 文件等场景仍应做真实验证；应用无法解析时报告日志归属缺口。
+
+
 ### Endpoint-specific success and prerequisites
 
 Meta/Data envelope parsing applies only to endpoints that define it. Existing auth current-context consumers follow the response, prerequisite and regression contract in `make-app-auth/references/service-fronted-mode.md#current-context-consumption`; do not extend business parsing rules to auth responses.
