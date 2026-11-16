@@ -109,6 +109,8 @@ Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建�
 
 2026-11-06：补强手机新建入口防漏合同：PC/手机共用创建资格，授权空列表及筛选后为空时恰好一个可操作入口，无资格／任务页零个；覆盖提前返回、底栏遮挡及真实点击，保留字段、审批、权限和写入链路，不宣称截图项目已修复。
 
+2026-11-16：应用页面和应用 Service 的 Make 请求统一使用来源 app，应用归属使用 X-Make-App-Key。
+
 修改 Skill 后运行 `node scripts/lint-skill-metadata.mjs` 及 `.github/workflows/skill-metadata-lint.yml` 中的契约测试；规则与可观测结果保持一致。
 
 2026-11-04：在独立 beta 集成分支解决 AppKey／管理员审计冲突，保留 beta 权限审计配置、共享源码与 REVIEW_REQUIRED，补测双参数组合；不向原需求分支回灌 beta。
