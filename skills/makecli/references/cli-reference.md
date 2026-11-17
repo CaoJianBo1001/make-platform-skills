@@ -42,7 +42,7 @@ Manages `~/.make/credentials` (tokens) and `~/.make/config` (INI, `[settings]` +
 | `configure config` | Prompt for `meta-server-url`, `repo-server-url`, `auth-server-url`, `X-Tenant-ID`, `X-Operator-ID`. **INTERACTIVE** — user runs via `!` |
 | `configure set <key> <value>` | Non-interactive single-value write |
 | `configure get <key>` | Read a single value |
-| `configure verify [--output table\|json]` | Check the current profile has a valid token |
+| `configure verify [--output table\|json]` | Check token validity for the remote task's same `--context` and `--profile`; local help/config inspection does not require this check |
 | `configure resolve [--target local-preview]` | Token-free, offline; prints JSON (`profile`, `context`, `make_api_origin`, `tenant_id`, `operator_id`) for wiring a local preview backend |
 | `configure --sample` | Print a commented INI reference template |
 

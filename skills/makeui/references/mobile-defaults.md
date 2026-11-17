@@ -188,6 +188,8 @@ export function composeApprovalNavigation({ businessItems, approvalItem, assista
 
 ## 创建、编辑与详情任务页
 
+本节适用于原始业务记录。图表分组汇总明细使用 [分析明细容器](../../make-app-analytics/references/integration-contract.md#汇总明细的默认容器) 规定的底部弹层，宽表在所属区域内滚动；不把这类只读汇总自动转成记录详情任务页。
+
 - 本节只定义任务页框架；字段控件、详情展示、弹层视口和保存区必须同时遵循 `mobile-form-controls.md`。仅把桌面 Drawer 改成全屏一列，不算完成移动端适配。
 - 手机端创建、编辑和详情默认使用可寻址的全屏任务路由，不把桌面右侧 Drawer 缩成底部抽屉。
 - 使用 `MobilePageHeader`：返回按钮必需；关闭按钮只在宿主任务容器确实支持关闭时显示；更多操作按需显示。
