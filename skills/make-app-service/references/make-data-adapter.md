@@ -200,6 +200,8 @@ For dashboard metrics, charts, or AI analysis over matching Make records, prefer
 
 Call `POST /data/v1/aggregate` with `X-Make-Target: MakeService.ListResources` through the existing Make adapter. Reuse its runtime path scope, configured `appKey`, login context, cancellation, and response handling. Push supported calculations down, then perform any needed result combination or reasonably sized detail calculation in the Service; UI consumes the resulting business metrics. Read [query-planning examples](../../makedsl/references/DataAPIDesign.md#不能直接表达时的方案选择) when a single aggregate cannot meet the requirement. Record-list expansion and `groupFilter` remain the separate `make-app-group` workflow.
 
+For time buckets, select readable business Date or DateTime fields by Schema type and use the grains defined by the Data API. DateTime keeps `capabilities.aggregable=false` and can group only when the same `group` item supplies `granularity`. Date can also group by its original value. Use the returned bucket `value` as the chart key and `label` for display.
+
 ## User and department adapters
 
 Default candidate adapter contracts:

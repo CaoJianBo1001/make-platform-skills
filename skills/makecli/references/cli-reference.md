@@ -370,8 +370,9 @@ Use aggregation for the calculations it can express. When one request is insuffi
 See [query-planning examples](../../makedsl/references/DataAPIDesign.md#不能直接表达时的方案选择) for period comparisons, median calculations and composition limits. An argument, authentication or permission error is handled as that error, rather than treated as evidence that the calculation is unsupported.
 
 - `aggregate` is a server-side GROUP BY over one entity; `--group-json` (dimensions) + `--aggregates-json` (metrics, required) decide the columns. Omit `--group-json` for a global aggregate.
-  - choose dimensions from Schema `capabilities.aggregable`, independently of list `groupable`; a missing capability means unknown on older servers. Metric eligibility follows the aggregate function's field types, not this dimension flag
-  - group element: `{"fieldKey","granularity"?,"alias"?}` — `granularity` only on Date fields: `day|week|month|quarter|year`; same field twice needs distinct `alias`; at most 3 dimensions
+  - choose dimensions from readable Schema fields. `capabilities.aggregable=true` allows direct grouping independently of list `groupable`. A missing `aggregable` on an older server means unknown. A readable business `Make.Field.DateTime` keeps `aggregable=false` and supports time buckets with an explicit grain. Metric eligibility follows the aggregate function's field types, independently of the dimension flag
+  - group element: `{"fieldKey","granularity"?,"alias"?}` — `granularity` is optional for Date and required in the same item as the DateTime `fieldKey`. Choose `day|week|month|quarter|year`. Other field types omit it. Use distinct aliases for the same field at different grains. At most 3 dimensions
+  - if a DateTime grain is missing, find the group index and field in the `plan.resolve` error message. An invalid grain reports `group[i].granularity`. Keep the field and select a grain that matches the analysis
   - aggregates element: `{"fieldKey"?,"aggregate","alias"}` — `count` (no fieldKey) | `countDistinct` | `sum`/`avg` (Number/Currency/Percent) | `min`/`max` (numeric or Date/DateTime); `alias` required, unique across all columns; at most 10 metrics
   - `--filter` runs before aggregation (WHERE, same CEL as `list`); `--aggregate-filter` runs after (HAVING) and may only reference metric aliases
   - sort element: `{"alias":..}` or `{"fieldKey":..}` + `"order":"asc|desc"`; default is all dimensions ascending
@@ -380,7 +381,7 @@ See [query-planning examples](../../makedsl/references/DataAPIDesign.md#不能�
 
 ```bash
 makecli record aggregate --app crm --entity order \
-  --group-json '[{"fieldKey":"status"},{"fieldKey":"orderDate","granularity":"month","alias":"month"}]' \
+  --group-json '[{"fieldKey":"status"},{"fieldKey":"orderTime","granularity":"month","alias":"month"}]' \
   --aggregates-json '[{"aggregate":"count","alias":"orderCount"},{"fieldKey":"amount","aggregate":"sum","alias":"totalAmount"}]' \
   --filter "status != 'draft'" --aggregate-filter "totalAmount > 10000" \
   --sort-json '[{"alias":"totalAmount","order":"desc"}]'
