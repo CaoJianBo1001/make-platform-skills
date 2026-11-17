@@ -5,6 +5,7 @@ import { pathToFileURL } from 'node:url';
 import { createRequire } from 'node:module';
 import { resolveAnalyticsInstall } from './lib/analytics-install-location.mjs';
 import { verifyDateTimeExample } from './lib/analytics-datetime-example.mjs';
+import { verifyMonetaryExample } from './lib/analytics-monetary-example.mjs';
 
 const dateTimeDocument = await readFile(new URL('../skills/make-app-analytics/references/datetime.md', import.meta.url), 'utf8');
 const dateTimeCode = dateTimeDocument.match(/<!-- analytics-datetime-example -->\s*```js\n([\s\S]*?)```/)?.[1];
@@ -75,6 +76,7 @@ if (!root) {
   );
   assert.equal(manifest.name, '@qfei-design/make-app-analytics');
   assert.equal(manifest.version, '0.1.9');
+  await verifyMonetaryExample(root);
   await verifyDateTimeExample(dateTimeExample, root, true);
   const load = (entry) =>
     import(pathToFileURL(resolve(root, manifest.exports[entry].import)).href);
