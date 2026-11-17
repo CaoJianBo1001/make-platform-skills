@@ -51,6 +51,12 @@ import "@qfei-design/make-ai-assistant/styles.css";
 
 桥保持 method、SDK 生成的 headers、signal，使用宿主既有认证 fetch 与 `credentials:"include"`。不读取或复制 Cookie/Token，不拼 Authorization。401 按统一登录策略恢复；403 保留权限拒绝，不默认触发登录循环。检查错误类型如需读取正文，使用 clone，不吞掉 SDK 的原始响应。
 
-浏览器 Fetch 不能直接使用 SDK 的异步迭代 multipart body 时，在桥边界有界转换为 Blob。上限使用 `AGENT_UPLOAD_LIMIT` 加有界 multipart 元数据预算（0.4.5 参考 64 KiB），逐块检查取消与累计字节；不把整个上传转成 JSON、字符串或 base64。原 Content-Type 的 multipart boundary 必须与字节匹配；Service 重建 FormData 时让运行时生成新 boundary。
+浏览器 Fetch 不能直接使用 SDK 的异步迭代 multipart body 时，在桥边界有界转换为 Blob。上限使用 `AGENT_UPLOAD_LIMIT` 加有界 multipart 元数据预算（0.4.6 参考 64 KiB），逐块检查取消与累计字节；不把整个上传转成 JSON、字符串或 base64。原 Content-Type 的 multipart boundary 必须与字节匹配；Service 重建 FormData 时让运行时生成新 boundary。
 
 响应保持 status、all headers 与惰性字节迭代器。正常结束、错误、主动取消和未消费就取消均释放 reader/body；Trace 仅结束一次。JSON、SSE、下载都传 `traceparent` 与对应 `X-Log-Id`，日志只包含操作、状态、尝试和安全标识。
+
+每次 I/O 通过 `options.onAttemptFailure?.(notify)` 登记安全错误通知，闭包绑定本次 Trace 和请求信息；不在中间失败时直接弹出，也不按 `onDiagnostic.operation` 查找“最近请求”。SDK 决定终态时机，执行最终有效尝试的通知；通知异常不得替换原请求结果。Span 的成功、错误和取消收束仍由字节桥负责，不能等待失败通知回调才结束 Span。
+
+重试成功、主动取消、游标恢复成功或取得合法回执后不再报告原网络失败；回执内业务决定沿用包的处理。回执查询 404／普通失败使用原写入通知，401／403 则使用回执请求通知，并保留原写入未确认标记。`AgentSessionController` 接管游标恢复；直接订阅未恢复的游标错误仍是终态失败。需要自行组合恢复的调用方可用公开调用选项接管通知，只在自己的恢复失败时发布，不复制包内恢复链路。
+
+主动取消以实际 AbortSignal 为依据；服务端同名 `AI_CLIENT_ABORTED` 错误仍须保留错误和通知，流连接／读取超时按 `AI_REQUEST_TIMEOUT` 通知。按[可移植工具](validation-tools.md#sdk-终态失败通知)验证这些边界；宿主仍通过 `make-app-auth`、`make-app-observability` 的共享认证与错误出口接线。

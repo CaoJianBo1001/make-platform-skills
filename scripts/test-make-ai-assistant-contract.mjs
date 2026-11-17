@@ -10,7 +10,16 @@ const root = path.resolve(
 const skill = path.join(root, 'skills/make-ai-assistant');
 const read = (name) => fs.readFileSync(path.join(skill, name), 'utf8');
 const guide = read('SKILL.md');
-assert.match(guide, /version:\s*0\.4\.5/); // Skill 与 npm 版本独立，本次更新恰为同号。
+assert.match(guide, /version:\s*0\.4\.6/); // Skill 与 npm 版本独立，本次更新恰为同号。
+const workflow = fs.readFileSync(
+  path.join(root, '.github/workflows/skill-metadata-lint.yml'),
+  'utf8',
+);
+const packagePins = [...workflow.matchAll(/--package=@qfei-design\/make-ai-assistant@([^\s\\]+)/gu)];
+assert.ok(packagePins.length, 'CI must verify the official Agent package');
+for (const [, version] of packagePins)
+  assert.equal(version, '0.4.6', 'all Agent CI consumers must use the verified release');
+assert.match(workflow, /node skills\/make-ai-assistant\/scripts\/verify-agent-terminal-notice\.mjs/);
 for (const file of fs.readdirSync(path.join(skill, 'references'))) {
   assert.ok(
     guide.includes('references/' + file),
