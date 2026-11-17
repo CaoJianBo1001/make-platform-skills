@@ -150,6 +150,8 @@ MAKE_ANALYTICS_PACKAGE_ROOT="<正式npm包安装目录>" \
 
 需要额外验证DateTime候选时，可在同一命令中另设`MAKE_ANALYTICS_DATETIME_PACKAGE_ROOT`为候选目录；该检查不替代正式制品验收。以上脚本及环境变量仅用于仓库维护，不属于分发Skill或其他App的接入依赖，不复制到宿主。
 
+周显示候选使用`MAKE_ANALYTICS_WEEK_PACKAGE_ROOT="<候选包目录>" node scripts/test-analytics-week-example.mjs`执行文档原配置，核对公开轴、半周提示与同份明细；使用正式0.1.9目录并加`--expect-unsupported`，验证分桶支持与候选显示参数的边界。未提供目录时仅执行配置模块，明确跳过运行时验收；该维护检查不替代宿主或浏览器验收。
+
 Skill源规范、通道分发、安装文件和宿主验收分别记录；维护验证通过不代表已发布、已覆盖全局安装或已完成浏览器验收。
 
 ### make-app-approval

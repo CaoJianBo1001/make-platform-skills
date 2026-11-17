@@ -22,6 +22,20 @@
 
 此表不代替安装产物检查。0.1.7新增能力、0.1.8目标紧凑格式及剩余边界见[能力与示例](release-017.md)。基础结果、工作台、分组序列分别消费自己的公开合同；散点／热力消费原标准结果，目标消费分组序列。该基线仍无独立`AnalysisPresentation`协议、运行时分析Agent、BI设计器、复合键对齐、降低型／负值目标或记录加权滚动均值；漏斗、留存、层级及分位数仍需对应数据和公共合同。0.1.9 的 DateTime 显式分桶与自然日范围见 [DateTime 合同](datetime.md)，目标环境仍须核对后端支持。
 
+## 计数分布与轴文字的候选能力
+
+正式0.1.9没有`buildCountDistribution`、`countDistributionSpecSchema`、`AnalysisCountDistribution`或`chartDisplay`。这些是本轮公共包源码候选，尚不能作为所有App已可用的功能；正式接入须先核对包含这些公开导出、类型及行为的已发布制品，UI／Service同版。用户授权的本地候选验证只在隔离环境进行，不改写正式依赖或全局Skill。
+
+候选根入口的`buildCountDistribution(spec, sources)`接收稳定分类key、标签、source／metric及互斥说明，校验已返回的完整全局count，并生成图形与同份计算明细；它不执行查询，不证明宿主条件确实互斥，也不把计算类别注册成Make字段。`AnalysisCountDistribution`通过既有Provider复用图表、问号和汇总明细；宿主仅提供真实来源、分类顺序、业务口径及主题。
+
+基础`AnalysisView`／`AnalysisPanel`的候选`chartDisplay={{ valueAxisTitle: '记录数', showValueLabels: true }}`只控制轴文字和数值标签，金额轴保留币种，原数值不变；不传时保留旧展示。`/echarts`的`createChartOption`使用第四个受控参数，不开放任意ECharts option。不能向正式0.1.9传入这些未声明props。
+
+候选`chartDisplay.categoryLabels: 'all'`保留全部分类标签，竖图采用受控倾斜和留边；计数分布至多三类时自动使用，更多分类仍核对实际密度。默认`auto`沿用既有标签策略，不能以固定省略关键区间通过验收。
+
+按[区间与币种验收](acceptance.md#数值区间混币种与精度验收)核对成功0、失败／NULL、边界及图表明细一致；能力发布、Skill分发和宿主启用分别验收。
+
+周粒度区间轴、提示与明细是另一项未发布源码候选，新增`timeContext`及`AnalysisTimeContext`的字段、范围来源与组件传递规则见[周展示候选接入](datetime.md#周展示候选的接入)。正式0.1.9的分桶支持不代表包含该展示接口；服务端既有查询、身份、权限、Schema及UI适配器的归属不变。
+
 ## 服务端：注册业务，注入可信端口
 
 宿主保留既有 MakeClient、配置、登录、权限、Schema、Trace、日志与错误处理链路，按 [make-app-service](../../make-app-service/SKILL.md) 实现薄编排。MakeCLI 只用于开发和验证，不是线上 Service 的数据源。
