@@ -4,7 +4,7 @@
 
 包负责 Session/Message/Task/Run、获权快照、SSE、问题回答、反馈、队列、追加、停止及请求回执恢复。宿主只提供认证字节传输与显式 Service 代理，不自行构建 reducer、事件解析、EventSource 或重连循环。
 
-数据写入的 requestId 是同一用户意图的稳定 ID。网络中断、超时或 5xx 导致结果未知时，协议要求只查询 RequestResult，不再发送第二次写入，即使用相同 requestId 也不重写；查询失败或未找到不能证明未执行。0.4.5 的低层 SDK 与回答、停止、取消排队、继续消息的高层控制器统一遵循此规则；控制器重建后仍查询原 requestId，并保持原 targetId。老恢复记录若缺失继续消息的目标，包阻止新的不明写入，宿主不猜测目标。pending 回执保留原意图，终态回执由包消化后才结束该意图。只有明确已拒绝且可重试的请求（如 429）才按 SDK 策略保留原 ID 有界重试；读取请求可按唯一 retryOwner 处理网络/429/5xx。配置写入不自动重试，401/403、范围/协议错误停止自动重试。
+数据写入的 requestId 是同一用户意图的稳定 ID。网络中断、超时或 5xx 导致结果未知时，协议要求只查询 RequestResult，不再发送第二次写入，即使用相同 requestId 也不重写；查询失败或未找到不能证明未执行。当前基线的低层 SDK 与回答、停止、取消排队、继续消息的高层控制器统一遵循此规则；控制器重建后仍查询原 requestId，并保持原 targetId。老恢复记录若缺失继续消息的目标，包阻止新的不明写入，宿主不猜测目标。pending 回执保留原意图，终态回执由包消化后才结束该意图。只有明确已拒绝且可重试的请求（如 429）才按 SDK 策略保留原 ID 有界重试；读取请求可按唯一 retryOwner 处理网络/429/5xx。配置写入不自动重试，401/403、范围/协议错误停止自动重试。
 
 回执查询 401/403 保留其结构化鉴权状态；`AgentApiError.unconfirmedWrite` 标明原写入仍未确认，不能据查询拒绝清空原意图或生成新 requestId。重新登录属于宿主认证职责，重连只恢复获权事实与订阅，不重放原消息、答案或未确认写入。普通 App/Console 对话固定本人 `owner` 范围；范围切换和恢复键由包管理，宿主不扩大为历史管理范围。
 
@@ -22,7 +22,7 @@ Task/TaskView 的可选 `waitReason` 只在 `state: "running"` 时出现：`user
 
 ## 上传和识图
 
-0.4.5 使用 `POST /content` multipart 原件上传，不是“初始化→分片→complete”的旧协议。包公开 `AgentAttachmentController` 与 `AGENT_UPLOAD_LIMIT` 管理上传、重试、未知回执恢复；宿主不复制上传引擎。消息只引用获确认的 Content；失败项保留重试/移除，不能把本地文件名当成功引用。重试不等于重传：上传字节已发出后暂停、断开或丢失响应，后续仅查原回执；404/pending 不恢复 file.open 或重新 POST。尚未发出的上传与明确拒绝的可重试上传按包规则处理，宿主不做上传补偿。
+使用 `POST /content` multipart 原件上传，不是“初始化→分片→complete”的旧协议。包公开 `AgentAttachmentController` 与 `AGENT_UPLOAD_LIMIT` 管理上传、重试、未知回执恢复；宿主不复制上传引擎。消息只引用获确认的 Content；失败项保留重试/移除，不能把本地文件名当成功引用。重试不等于重传：上传字节已发出后暂停、断开或丢失响应，后续仅查原回执；404/pending 不恢复 file.open 或重新 POST。尚未发出的上传与明确拒绝的可重试上传按包规则处理，宿主不做上传补偿。
 
 `agents.getInputCapabilities({agentId,source:"webchat"})` 是获权入口输入能力，包负责读取和刷新。上传接口可用不代表模型支持该格式；不要在宿主固定 text-only，也不要承诺所有文件都可理解。
 

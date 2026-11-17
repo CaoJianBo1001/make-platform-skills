@@ -69,7 +69,7 @@ jobs:
         run: |
           npm exec --yes --ignore-scripts --omit=optional --registry=https://registry.npmjs.org/ \
             --package=typescript@7.0.2 --package=@typescript/typescript6@6.0.2 \
-            --package=@qfei-design/make-ai-assistant@0.4.5 \
+            --package=@qfei-design/make-ai-assistant@0.4.6 \
             --package=react@19.2.6 --package=react-dom@19.2.6 \
             --package=@types/react@19.2.14 --package=@types/react-dom@19.2.3 -- sh -ec '
             agent_compiler_dependencies="$(dirname "$(dirname "$(command -v tsc)")")"
@@ -90,7 +90,7 @@ jobs:
       - name: Check official Agent package and documented host example
         run: |
           npm exec --yes --ignore-scripts --registry=https://registry.npmjs.org/ \
-            --package=typescript@5.9.3 --package=@qfei-design/make-ai-assistant@0.4.5 \
+            --package=typescript@5.9.3 --package=@qfei-design/make-ai-assistant@0.4.6 \
             --package=jsdom@29.1.1 \
             --package=react@19.2.6 --package=react-dom@19.2.6 \
             --package=@types/react@19.2.14 --package=@types/react-dom@19.2.3 -- sh -ec '
@@ -104,7 +104,7 @@ jobs:
       - name: Check Agent UI with minimum React peer version
         run: |
           npm exec --yes --ignore-scripts --registry=https://registry.npmjs.org/ \
-            --package=typescript@5.9.3 --package=@qfei-design/make-ai-assistant@0.4.5 \
+            --package=typescript@5.9.3 --package=@qfei-design/make-ai-assistant@0.4.6 \
             --package=jsdom@29.1.1 --package=react@18.2.0 --package=react-dom@18.2.0 -- sh -ec '
             agent_test_dependencies="$(dirname "$(dirname "$(command -v tsc)")")"
             node skills/make-ai-assistant/scripts/verify-agent-ui.mjs "$agent_test_dependencies"
@@ -114,7 +114,7 @@ jobs:
         if: ${{ !cancelled() }}
         run: |
           npm exec --yes --ignore-scripts --registry=https://registry.npmjs.org/ \
-            --package=typescript@5.9.3 --package=@qfei-design/make-ai-assistant@0.4.5 -- sh -ec '
+            --package=typescript@5.9.3 --package=@qfei-design/make-ai-assistant@0.4.6 -- sh -ec '
             agent_notice_dependencies="$(dirname "$(dirname "$(command -v tsc)")")"
             node skills/make-ai-assistant/scripts/verify-agent-terminal-notice.mjs "$agent_notice_dependencies"
           '

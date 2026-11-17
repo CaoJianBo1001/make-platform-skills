@@ -202,6 +202,79 @@ try {
       }
     });
   }
+  for (const kind of ['json', 'stream', 'download']) {
+    await check('active cancellation ' + kind, async () => {
+      const value = fixture(() => new Promise(() => {}));
+      const controller = new AbortController();
+      try {
+        const call = { signal: controller.signal };
+        const pending = kind === 'json'
+          ? value.client.agents.list({ view: 'webchat' }, call)
+          : kind === 'stream'
+            ? value.client.stream.subscribe({ sessionId: id('session') }, call).next()
+            : value.client.content.download({ contentId: id('content') }, call);
+        const settled = pending.then(
+          () => assert.equal(kind, 'stream', 'only the cancelled stream may end normally'),
+          (error) => assert.equal(error.code, 'AI_CLIENT_ABORTED'),
+        );
+        assert.equal(value.attempts.length, 1);
+        controller.abort();
+        await settled;
+        expectNotices(value, []);
+      } finally {
+        controller.abort();
+        value.client.dispose();
+      }
+    });
+  }
+  for (const stage of ['connection', 'body']) {
+    await check('stream timeout ' + stage, async () => {
+      const value = fixture(() => stage === 'connection'
+        ? new Promise(() => {})
+        : {
+            status: 200,
+            headers: { 'content-type': 'text/event-stream' },
+            body: (async function* () { await new Promise(() => {}); })(),
+          });
+      try {
+        await assert.rejects(
+          value.client.stream.subscribe(
+            { sessionId: id('session') },
+            { timeoutMs: 20 },
+          ).next(),
+          { code: 'AI_REQUEST_TIMEOUT' },
+        );
+        assert.equal(value.attempts.length, 1);
+        expectNotices(value, value.attempts);
+      } finally {
+        value.client.dispose();
+      }
+    });
+  }
+  for (const kind of ['json', 'stream', 'download']) {
+    await check('server abort-like code ' + kind, async () => {
+      const value = fixture(() => http(403, {
+        code: 403,
+        msg: 'fixture denied',
+        data: { reason: 'AI_CLIENT_ABORTED' },
+      }), { maxAttempts: 1, maxDelayMs: 0 });
+      try {
+        const pending = kind === 'json'
+          ? value.client.agents.list({ view: 'webchat' })
+          : kind === 'stream'
+            ? value.client.stream.subscribe(
+                { sessionId: id('session') },
+                { timeoutMs: 100 },
+              ).next()
+            : value.client.content.download({ contentId: id('content') });
+        await assert.rejects(pending, { status: 403, code: 'AI_CLIENT_ABORTED' });
+        assert.equal(value.attempts.length, 1);
+        expectNotices(value, value.attempts);
+      } finally {
+        value.client.dispose();
+      }
+    });
+  }
   for (const ending of ['success', 'snapshot denied', 'stream denied']) {
     await check('cursor recovery ' + ending, async () => {
       let streams = 0,
