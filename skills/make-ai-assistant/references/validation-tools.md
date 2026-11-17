@@ -9,7 +9,7 @@ App 保留既有编译器和构建命令。审计及文档示例按能力依次�
 项目可使用现有包管理器，仅为开发工具安装正式兼容包并核对实际解析结果；不替换主编译器、不增加生产依赖。也可使用精确版本别名 `typescript-compiler-api: npm:typescript@6.0.3`，或显式提供已有工具工作区：
 
 ```bash
-node scripts/audit-make-ai-assistant-project.mjs "<project-root>" --expected-package-version=0.4.5 --compiler-workspace="<tooling-workspace>"
+node scripts/audit-make-ai-assistant-project.mjs "<project-root>" --expected-package-version=0.4.6 --compiler-workspace="<tooling-workspace>"
 node scripts/verify-host-example.mjs "<consumer-workspace>" --compiler-workspace="<tooling-workspace>"
 ```
 
@@ -26,6 +26,8 @@ node scripts/verify-agent-terminal-notice.mjs "<consumer-workspace>"
 需要机器可读报告时追加 `--report="<json-file>"`；SDK 自身可能输出诊断日志，不直接把整个标准输出当作 JSON。
 
 通过真实公开 `createAgentClient` / `AgentSessionController` 和隔离传输夹具验证 JSON HTTP/网络/业务/协议失败及重试成功、SSE 拒绝/协议错误、下载响应/正文失败、并发相同操作、游标快照/重订阅恢复、写入未知结果的回执 404/403。每次网络尝试分配独立测试 Trace 标识，通过公开 `CallOptions.onAttemptFailure` 登记闭包，检查通知次数、终态时机和请求归属。成功重试/恢复保持静默，不凭 `onDiagnostic.operation` 猜测最近请求。全部场景逐项执行并汇总，任一失败返回非零；不添加已知缺陷豁免。
+
+同时验证 JSON／SSE／下载主动取消不通知，流连接与读取超时以 `AI_REQUEST_TIMEOUT` 终止并通知，以及服务端同名 `AI_CLIENT_ABORTED` 仍按失败通知；不能仅按错误码字符串推断用户取消。
 
 夹具证明 SDK 通知合同，不证明宿主真实 Header/Span。宿主按 `make-app-auth` / `make-app-observability` 提供认证字节桥、每次网络尝试的 Trace、安全日志、取消和 reader 释放，每个 Span 只收束一次。SDK 负责协议/业务错误、唯一重试与恢复决策，执行最终有效尝试登记的失败通知。宿主不重复解析 JSON/SSE、不按 operation 全局关联、不重放写入来补漏。该公开回调是失败通知，不是成功或主动取消都应触发的通用结束回调。
 
