@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.72
+  version: 0.4.73
 ---
 
 # makeui
@@ -26,6 +26,8 @@ PRD 或本次迭代已提出分析指标、趋势、构成、排名或可视化�
 已触发的分析页面还须按 [分析请求与性能](../make-app-analytics/references/query-performance.md) 实施：当前区域按需加载、多卡多图共享统计结果、无用 catalog 零请求；复用初始化与访问代次，保持参数／transport 引用稳定并取消旧请求。图表重渲染、弹层和视觉主题切换不重复查询，不在浏览器下载全量明细统计；用实际下游次数及页面测试验收。
 
 区域阻塞加载统一遵循 [区域加载态](references/app-shell-layout.md#区域加载态)：在所属可见区域内水平、垂直居中，建立有效高度，覆盖刷新时的权限与 Schema 校验及局部面板加载。
+
+涉及手机表单、只读字段或候选反馈时，将 [公共验收工具](references/mobile-form-acceptance.md) 接入宿主真实组件测试及已有测试门禁；保留宿主技术栈，DOM 检查与真实浏览器几何验收分别记录。
 
 存量项目涉及加载或访问反馈布局时，先检查提前返回分支，包含权限守卫、认证／Schema Provider、路由 fallback 及局部面板；不能只检查业务页面内部的 Spin。发现左上角裸文本或单行高度的加载容器时，按上述区域合同修复并验收，保留原授权与请求行为。
 

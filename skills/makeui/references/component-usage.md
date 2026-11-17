@@ -10,6 +10,7 @@
 - [Make field properties contract](#make-field-properties-contract)
 - [Numeric input and IME composition](#numeric-input-and-ime-composition)
 - [Host form controlled field contract](#host-form-controlled-field-contract)
+- [远程候选加载反馈](#远程候选加载反馈)
 - [Detail value display](#detail-value-display)
 - [Table component rule](#table-component-rule)
 - [Action hierarchy](#action-hierarchy)
@@ -337,6 +338,18 @@ Detail display for identity fields:
 - `SingleDepartment` / `MultiDepartment`: read-only department tag/name display
 - if the record contains only ids and no labels, resolve labels through normalized current record values or the host candidate source before display; do not show raw ids as the intended final UI unless no label source exists and the UI explicitly marks the dependency gap
 - do not render detail identity fields as disabled text inputs
+
+## 远程候选加载反馈
+
+Lookup、人员、部门等远程选择器在桌面／平板及手机的候选面板内区分加载、成功、空结果及失败。首次展开与再次搜索等待时提供可见的加载图标和文字提示，使用宿主现有加载组件或公共包的公开状态插槽；仅设置 `aria-busy`、保留空白或暂时展示“暂无候选项”不算加载反馈。已选值和选择草稿继续保留，它们不等同于当前候选列表。手机 Lookup 使用加载占位时，旧候选不参与占位布局或点选，当前有效请求成功后再恢复候选；不通过清空已选值实现列表替换。
+
+只有当前有效请求成功且没有候选时才显示空态；失败提供错误及重试，不同时显示成功空态。状态结束后移除加载提示；旧请求迟到、取消及关闭继续沿用原请求所有权，不覆盖新结果或清空已提交值。加载、搜索和重试不自行调用字段 onChange，选择确认语义保持原合同。
+
+加载文案须实际可见，不能仅凭容器 textContent 判断；隐藏子节点的文字或图标文字不充当提示。真实几何验收按视口与裁剪／滚动祖先的可见交集检查反馈组，避免内部长容器居中但图形及文字已被裁掉。正常滚动且反馈在当前可见区域居中的布局仍可通过，不因存在 overflow 就一律拒绝。
+
+手机 Lookup 的加载视图占据标题、搜索／已选区和操作底栏之外的候选剩余可用区域，图标及提示在该可见区域水平、垂直居中；不能只在列表中插入一行固定高度的提示。核对内容区到候选区的实际高度链、滚动和最小高度，加载不挤走底栏或遮挡搜索／已选区。可用 flex、grid 或定位实现，不统一要求某个类名、绝对定位或固定像素高度。
+
+宿主用真实选择器与候选 provider 的延迟响应覆盖成功、有选中值、空结果、失败重试及搜索／关闭时序。无搜索的 Lookup 也要覆盖，不能只验证带搜索框或身份选择器的分支。分别以基础 UI 样式在宿主样式之前、之后加载验证实际组件，避免依赖导入先后维持加载区高度和居中；真实浏览器还需测量加载区域及图形与文案组成的实际反馈组中心、确认底栏可达，再做飞书手机交互验收。不能仅测占位外框，也不要求横向或上下排列时图标自身位于整区中心。自动样式检查不能代替浏览器几何验证。公共包缺少必要公开展示能力时报告具体缺口，不虚构 props 或修改包私有样式。
 
 ## Detail value display
 
