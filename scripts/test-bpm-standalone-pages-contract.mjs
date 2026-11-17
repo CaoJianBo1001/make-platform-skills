@@ -80,6 +80,39 @@ test('手机独立页样式与真实布局验收交接共享规则', () => {
   verifyStandaloneMobileGuidance(mobileDocuments());
 });
 
+// 验证审批验收能沿完整链接到达共享规则；不将链接通过当成宿主视觉或语义验证。
+const fieldFeedbackTargets = [
+  '../../makeui/references/mobile-form-controls.md#详情展示',
+  '../../makeui/references/styling-and-responsive.md#控件禁用态与容器衔接',
+  '../../makeui/references/component-usage.md#远程候选加载反馈',
+];
+const fieldFeedbackDocuments = () => Object.fromEntries(fieldFeedbackTargets.map(target => [
+  target, fs.readFileSync(new URL(target.split('#')[0], new URL('references/', skill)), 'utf8'),
+]));
+const verifyFieldFeedbackHandoffs = (verification, documents) => {
+  const links = [...verification.matchAll(/\[[^\]\n]*\]\(([^)\s]+)\)/g)].map(match => match[1]);
+  for (const target of fieldFeedbackTargets) {
+    assert.ok(links.includes(target), `审批验收必须交接共享规则：${target}`);
+    const headings = [...documents[target].matchAll(/^#{1,6}\s+(.+)$/gm)].map(match => match[1]
+      .replace(/`/g, '').toLowerCase().replace(/[^\p{L}\p{N}_\-\s]/gu, '').replace(/ /g, '-'));
+    assert.ok(headings.includes(target.split('#')[1]), `共享规则章节必须真实存在：${target}`);
+  }
+};
+
+test('字段对齐、禁用外观与候选状态验收能到达共享规则章节', () => {
+  verifyFieldFeedbackHandoffs(read('references/verification.md'), fieldFeedbackDocuments());
+});
+
+test('故障注入：验收链接改址或目标章节被删除时不能误报通过', () => {
+  const verification = read('references/verification.md');
+  const documents = fieldFeedbackDocuments();
+  verifyFieldFeedbackHandoffs(verification, documents);
+  for (const target of fieldFeedbackTargets) {
+    assert.throws(() => verifyFieldFeedbackHandoffs(verification.replaceAll(target, 'missing.md'), documents));
+    assert.throws(() => verifyFieldFeedbackHandoffs(verification, { ...documents, [target]: '' }));
+  }
+});
+
 test('故障注入：缺少独立作用域、关联字段覆盖或真实样式验收时拒绝通过', () => {
   const documents = mobileDocuments();
   verifyStandaloneMobileGuidance(documents);
