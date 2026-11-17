@@ -44,7 +44,7 @@ function fixture(project, code = source, options = {}) {
   write(
     path.join(ui, 'package.json'),
     JSON.stringify({
-      dependencies: { '@qfei-design/make-ai-assistant': '0.4.5' },
+      dependencies: { '@qfei-design/make-ai-assistant': '0.4.6' },
     }),
   );
   write(path.join(ui, 'src/entry.tsx'), code);
@@ -86,7 +86,7 @@ function fixture(project, code = source, options = {}) {
     JSON.stringify({
       name: '@qfei-design/make-ai-assistant',
       type: 'module',
-      version: options.version ?? '0.4.5',
+      version: options.version ?? '0.4.6',
       exports,
     }),
   );
@@ -125,7 +125,7 @@ function fixture(project, code = source, options = {}) {
 function check(project, error, script = audit, args = []) {
   const result = spawnSync(
     process.execPath,
-    [script, project, '--expected-package-version=0.4.5', ...args],
+    [script, project, '--expected-package-version=0.4.6', ...args],
     { encoding: 'utf8' },
   );
   const output = result.stdout + result.stderr;
@@ -497,7 +497,7 @@ try {
     "import {assertAgentRequest} from '@qfei-design/make-ai-assistant/agent';export const validate=(operation,body)=>assertAgentRequest(operation,body);";
   const typeImport =
     "import type {AgentClient} from '@qfei-design/make-ai-assistant/agent';export type Client=AgentClient;";
-  const sdkDependency = { '@qfei-design/make-ai-assistant': '0.4.5' };
+  const sdkDependency = { '@qfei-design/make-ai-assistant': '0.4.6' };
   function serviceDependency(name, code, groups, error, options = {}) {
     const project = path.join(temp, name);
     fixture(project, code, options);
