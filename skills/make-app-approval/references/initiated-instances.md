@@ -10,6 +10,7 @@
 
 ## 列表
 
+- 启用第三页签时同时检查宿主 [Tabs 事件适配](package-and-list.md#宿主控件与布局)，删除仅放行 `pending/approved` 的旧判断；按包传入的有效 `items` 转发点击，不只添加页面的 `tabs` 数组。
 - UI 经现有 Service 调用 Workflow `/workflow/v1/bpm-process`，POST、`X-Make-Target: MakeService.ListResources`；Service 注入部署 appKey，固定 `viewType: "MY"`。当前发起人由后端决定，不让浏览器替换 App、发起人或 ALL。
 - 支持 entityKey、processStatus、startDate/endDate、pagination。页面先只提供发起日期；未支持 recordId 搜索，不把任务 keyword、starterId、assigneeId 或通用 filter/sort 送入此查询，不在当前页本地过滤冒充全量查询。进入已发起清除任务专属筛选。
 - data 直接为数组，pagination 位于最外层，成功必须 code=200。分页页码从 1 开始，默认批量 20，后续加载及取消继续交由公共列表 Controller；宿主只分流 provider。
@@ -30,3 +31,5 @@
 scopeKey 隔离应用、环境、租户／权限范围和身份代次；切换实例、身份、权限或卸载取消旧请求，迟到响应不得展示旧字段。失败保留宿主错误出口与重试，不返回空数据伪装成功。
 
 验收覆盖三个页签分流、未支持条件不外发、实例长 ID、终态无 taskId、空字段／缺定义、多类型只读、已有任务办理、独立页登录回跳、刷新和来源参数、失败重试及迟到结果隔离。Skill 合同验证不替代真实 App 和后端联调。
+
+三个页签分流必须通过实际点击验证：挂载已安装的 `MyApprovalsPage`、真实宿主 Tabs 和 provider，仅替换请求等外部边界；桌面／手机均覆盖“待处理 → 已完成 → 已发起 → 待处理”。核对选中态随点击改变，已发起进入 MY 实例查询且不触发任务查询、任务专属筛选不展示／不外发，返回后恢复对应任务查询，活动面板始终只有一份；重复点击当前页签不重复查询。将公共列表或 Tabs mock 掉后仅断言 props，以及直接调用 provider 的单测，均不能替代此项宿主回归；测试进入宿主现有 test 门禁。

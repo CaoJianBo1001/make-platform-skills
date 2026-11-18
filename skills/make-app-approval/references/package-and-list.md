@@ -67,7 +67,18 @@ Service 固定当前部署 `appKey` 和 `viewType: MY`。已完成是当前用�
 | Select | 单选 `{value,label}[]`；`purpose: applicant` 仅为适配元数据，不透传 DOM；空字符串代表全部申请人 |
 | DateRangePicker | 真正的范围组件；值及回调为 `[YYYY-MM-DD, YYYY-MM-DD]`；清空 `['','']`；不以两个单日期控件代替 |
 | Button | `htmlType`、`variant`、onClick、disabled、loading、ariaLabel；查询为 submit，其他为 button |
-| Tabs | `items/value/onChange`，只挂载一次活动 children，保留键盘及 tab/panel 关联 |
+| Tabs | `items/value/onChange`，按传入 `items` 转发有效页签值，只挂载一次活动 children，保留键盘及 tab/panel 关联 |
+
+宿主 Tabs 事件适配不能写死只允许 `pending/approved`；新增 `initiated` 时，这会造成页签可见但点击被吞掉。底层控件回传 string key 时，从本次 `items` 查找匹配项，再用其已类型化的 value 调用 `onChange`，无需强制类型断言。例如适配器的事件处理可写为：
+
+```tsx
+onChange={key => {
+  const item = items.find(item => item.value === key);
+  if (item) onChange(item.value);
+}}
+```
+
+活动值和列表查询仍由审批包管理，宿主不另建页签状态或在点击回调里直接查询。桌面／手机分别核对实际使用的适配器；仅增加 `tabs` 数组、通过类型检查或单独调用 provider，不能证明点击链路已接通。
 
 申请人候选来自宿主 users 接口，可在 Select 适配器远程加载；提供加载、失败重试、取消和已选名称回显，不能用审批当前页的人员反推完整候选。筛选先改草稿，查询后生效，重置清空，切换页签保留已应用条件，由包处理。
 
