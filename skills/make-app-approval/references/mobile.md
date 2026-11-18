@@ -4,19 +4,27 @@
 
 ## 产物与职责
 
-- 当前已核验正式基线 0.2.12 包含手机列表、详情布局插槽与详情字段展示参数，见 [包与列表](package-and-list.md#多端边界)。以实际安装的 exports、类型和行为为门禁；旧版本缺少能力时升级正式依赖，不以本地链接替代交付。审批包和 make-app-mobile 的能力分别核验。
-- 包拥有 MyApprovalsPage 的查询、列表、追加页、取消和重试，以及 ApprovalTaskDetail 的草稿、权限复核、校验、预上传与提交状态机。宿主只提供路由、Service provider、控件、字段展示、历史和布局适配。
+- 当前已核验正式基线 0.2.13 包含手机列表、详情布局插槽与详情字段展示参数，见 [包与列表](package-and-list.md#多端边界)。以实际安装的 exports、类型和行为为门禁；旧版本缺少能力时升级正式依赖，不以本地链接替代交付。审批包和 make-app-mobile 的能力分别核验。
+- 包拥有 MyApprovalsPage 的查询、列表、追加页、取消和重试，ApprovalInstanceDetail 的只读加载、取消与重试，以及 ApprovalTaskDetail 的草稿、权限复核、校验、预上传与提交状态机。宿主只提供路由、Service provider、控件、字段展示、历史和布局适配。
 - 使用公开入口；不深导入 src/dist，不另写任务列表或办理 Controller。本机预览可以使用模拟接口，但不能当真实后端或真机验收。
 
-**旧版升级：** 0.2.11 虽有手机列表和详情布局插槽，但不支持详情字段展示参数，字段外框仍为桌面尺寸；`fullWidth` 只能让字段独占一行，`renderField` 只替换值控件。该版本手机字段验收未通过时，升级至 0.2.12 并按下文接线复验，不在宿主覆盖私有结构或另写列表、办理控制器。
+**旧版升级：** 0.2.11 虽有手机列表和详情布局插槽，但不支持详情字段展示参数，字段外框仍为桌面尺寸；`fullWidth` 只能让字段独占一行，`renderField` 只替换值控件。该版本手机字段验收未通过时，升级至 0.2.13 并按下文接线复验，不在宿主覆盖私有结构或另写列表、办理控制器。
 
-**字段展示能力：** 已核验的 0.2.12 正式产物提供 `ApprovalTaskDetail.presentation?: "desktop" | "mobile"`；传 `mobile` 启用下述手机字段外框，不传或传 `desktop` 保持桌面样式。详情和列表的 presentation 是各自组件的参数，必须分别传入；只升级版本不会自动启用详情手机模式。详情参数只调整包拥有的字段外框，宿主仍负责手机控件、路由、页头与底栏，不能期待包自动完成整页适配。
+**字段展示能力：** 已核验的 0.2.13 正式产物提供 `ApprovalTaskDetail.presentation?: "desktop" | "mobile"`，`ApprovalInstanceDetail.presentation` 使用相同枚举；传 `mobile` 启用下述手机字段外框，不传或传 `desktop` 保持桌面样式。详情和列表的 presentation 是各自组件的参数，必须分别传入；只升级版本不会自动启用详情手机模式。详情参数只调整包拥有的字段外框，宿主仍负责手机控件、路由、页头与底栏，不能期待包自动完成整页适配。
 
 ## 列表与筛选
 
 - 由已有响应式上下文显式选择 `presentation="mobile"`；不传时保持桌面。手机卡片不挂 Canvas，桌面/平板仍用原表格和查询/重置/刷新。
-- “待处理／已完成”页签栏与搜索区、卡片外缘共用左右留白；当前 0.2.12 包内手机搜索区和卡片列表的左右内边距为 16px。宿主 Tabs 通过公开布局参数与其实际边缘对齐，手机活动面板避免叠加桌面 padding，不覆盖公共组件私有结构；桌面间距保持原样。
-- 仅待处理与已完成。卡片展示类型、完整申请单 ID、申请人及申请/完成时间；申请人与时间同排两端对齐，窄屏可换行。完成时间取 taskCompletedAt，结果仅在列表合同确有动作字段时接入，缺失显示 `—`；不按流程状态推断，不逐卡追加详情请求。
+- 启用的“待处理／已完成／已发起”页签栏与搜索区、卡片外缘共用左右留白；当前 0.2.13 包内手机搜索区和卡片列表的左右内边距为 16px。宿主 Tabs 通过公开布局参数与其实际边缘对齐，手机活动面板避免叠加桌面 padding，不覆盖公共组件私有结构；桌面间距保持原样。
+- 通过包的 tabs 显式启用 initiated，与 PC 使用同一 provider；默认两任务页签不变。行类型以 referenceType 分流，不能因所有条目都来自“我的审批”而强制要求 taskId。
+
+| 条目 | 查询与筛选 | 全屏详情 |
+| --- | --- | --- |
+| 待处理／已完成任务 | 申请单 ID、申请时间、申请人；PENDING／COMPLETED 查询 | processInstanceId + taskId，使用 ApprovalTaskDetail |
+| 已发起实例（initiated） | 仅发起日期；不显示或提交 ID／申请人筛选，切入时清理任务专属条件 | referenceType: instance，只用 processInstanceId，使用 ApprovalInstanceDetail |
+
+- 实例不要求 taskId。已发起实例只显示日期筛选，不显示申请人条件；卡片时间取 startedAt，流程状态使用公共状态映射，不把 endedAt 当成任务完成时间或办理结果。具体查询和字段映射见 [已发起合同](initiated-instances.md)。
+- 以下 ID／申请人筛选及完成时间规则仅用于两个任务页签。任务卡片展示业务表单、完整申请单 ID、申请人及申请/完成时间；完成时间取 taskCompletedAt，结果缺失显示 `—`，不按流程状态推断，不逐卡追加详情。两种条目的滚动、取消、失败重试及返回保持共用列表控制器。
 - 搜索文案“搜索申请单ID”，trim 后精确查询，不增加标题搜索。点击搜索/回车生效，清空立即生效；输入草稿与已应用条件分离。
 - 时间和申请人使用小号入口，28px 为紧凑视觉规格，各自实际点击高度至少 44px，不要求将公共日期控件缩至 28px。申请时间在左、申请人在右，文字垂直居中；日期范围或长姓名可换行，不相互挤压。搜索仍为小号，输入文字保持 iOS 安全字号。两个入口均打开 make-app-mobile 底部弹层，不使用桌面下拉或另造弹层。
 - 完整日期范围/清空、申请人确认立即应用并回到第一页，不顺带提交 ID 草稿。当前日期条件筛选流程开始时间，两页签均叫“申请时间”，不能因卡片显示完成时间更名为任务完成时间。
@@ -24,12 +32,12 @@
 - 搜索候选关闭/重开时清空搜索词并恢复初始候选；已选名称独立保留，不污染别的关键词结果。只复用真实人员候选请求，不用样例数据替代。
 - 弹层相对真实手机视口定位；桌面居中窄容器预览应使用独立手机视口，不通过改公共弹层宽度补偿错误预览环境。
 
-## 详情、字段与操作
+## 任务详情、字段与操作
 
-- 卡片以真实 `processInstanceId + taskId` 进入可直达、刷新的全屏任务路由，保留租户/应用 query 和字符串 ID。手机根账户栏、底部 Tab 不与任务页重复叠加，返回保留列表条件、加载内容和滚动，办理成功才刷新。
+- 任务卡片以真实 `processInstanceId + taskId` 进入可直达、刷新的全屏任务路由；实例卡片以 processInstanceId 进入 `/bpm/instances/:processInstanceId`，不伪造 taskId。两种详情都保留租户/应用 query 和字符串 ID。手机根账户栏、底部 Tab 不与任务页重复叠加，返回保留列表条件、加载内容和滚动，办理成功才刷新。
 - 以 ApprovalTaskDetail 的 renderLayout 组合可选 `detail/sections/actionItems`（核验实际产物）。加载或失败时 sections 不存在，必须渲染原 content 中的加载/重试，并保留手机页头返回；只有 sections 存在的成功态才分别渲染 application/history/opinion/feedback，不再同时挂 content。可选 summary 只用于标题、发起人与提交时间，不作为授权依据。
 - 审批详情/审批记录页签点击后滚动定位同一正文中的区块，不隐藏或重建字段草稿；页头、操作底栏在正文滚动之外。桌面/平板继续原抽屉、宽度和全屏行为。
-- 当前节点 fieldPermission/actions 与 PC 同源，混合编辑和只读，不把手机详情统一设为只读。复用原数值、日期、附件、Lookup 和候选链路；只读不获取编辑候选，禁用状态不接受回写。
+- 任务当前节点 fieldPermission/actions 与 PC 同源，混合编辑和只读，不把手机任务详情统一设为只读；实例始终只读。复用原数值、日期、附件、Lookup 和候选链路；只读不获取编辑候选，禁用状态不接受回写。
 - 优先复用 MobilePageHeader、移动日期/范围/日期时间、选项、身份及附件字段；Lookup 复用宿主已有的任务授权候选。普通字段同排左标签右值，附件可全宽，长内容自然撑高；标签槽 minmax(96px,34%)、普通行至少 56px，只读 14px/24px，编辑输入至少 16px、交互高度至少 44px。使用公开 form-value/trigger 类，不覆盖公共组件私有结构。
 - 选择器取消不改值，时间秒值、长 ID、数值原文精度、已选名称及 File 对象保持；附件继续原预上传与授权，不另走普通记录保存。
 - 审批包的 sections.application 已拥有标题、字段 label、必填及错误布局；renderField 只返回值控件，不在其内再套 MobileFieldRow，也不为整个 application 再添加同名 MobileDetailSection 标题。宿主自建普通业务字段行/区块才使用这两个公共组件。连续任务详情用 MobileDetailPage 保留原 application/history ReactNode，opinion 和 feedback 进入尾部正文。只替换公开插槽；缺少必要结构或样式能力时报告包缺口，不复制 Controller、不删除包节点或修改 PC 共用模板。
@@ -65,6 +73,29 @@ const taskDetail = <ApprovalTaskDetail {...existingTaskProps}
 ```
 
 展示切换不改变 ApprovalTaskDetail 的 scopeKey、任务 reference 或控制器身份。没有 history 时不创建空历史页签；加载/失败不创建空操作栏；办理完成后空 actionItems 不恢复旧动作。参考适配器测试只证明插槽组合，宿主仍须用实际安装的审批包测试字段 DOM、加载失败后的重试、只读/可编辑混合字段、RETURN 与非必填数值错误，以及 PC 来回切换的草稿保持。
+
+## 手机实例详情
+
+已发起列表详情和实例独立页共用同一个 ApprovalInstanceProvider、字段转换及 renderField，读取一次 bpm-process 并从 data.formMetadata 取定义。定位只有 processInstanceId；不依赖 currentTasks，也不调用任务动作或编辑候选。复用 [实例合同](initiated-instances.md)，不要将实例包装成伪任务。
+
+实例 renderLayout 的 sections 只有 application/history/feedback，没有 opinion 或 actionItems；加载／失败时 sections 可能不存在，保留 content 中的加载与重试。手机使用同一 MobileDetailPage，实例不显示意见和办理底栏。下面的 composeApprovalInstanceLayout 与 composeApprovalTaskLayout 都是 [随包参考适配器](../assets/mobile-detail-layout.mjs) 的函数，不是 npm 导出；两个 renderExisting... 为宿主已有容器。
+
+```tsx
+import { ApprovalInstanceDetail, type ApprovalInstanceDetailProps } from '@qfei-design/make-app-approval/detail';
+const renderInstanceLayout: NonNullable<ApprovalInstanceDetailProps['renderLayout']> = (slots) => {
+  if (presentation !== 'mobile') return renderExistingDesktopInstanceLayout(slots);
+  const view = composeApprovalInstanceLayout(slots, { presentation });
+  return <MobileDetailPage
+    header={renderExistingMobileInstanceHeader(slots)}
+    sections={view.sections}
+    trailingContent={view.content ?? view.feedback}
+  />;
+};
+const instanceDetail = <ApprovalInstanceDetail {...existingInstanceProps}
+  presentation={presentation === 'mobile' ? 'mobile' : 'desktop'} renderLayout={renderInstanceLayout} />;
+```
+
+existingInstanceProps 包含宿主 scopeKey、`reference: { processInstanceId }`、只读 provider、Button、renderField、history 和错误出口；没有 submitAction、TextArea 或任务办理回调。展示切换不改变 scopeKey／实例标识，身份和实例切换仍由公共控制器取消旧请求。非任务详情不能套用上文任务草稿、意见及动作规则；字段、历史、页头和返回按同一只读实例数据组合。
 
 ## 紧凑审批时间线
 

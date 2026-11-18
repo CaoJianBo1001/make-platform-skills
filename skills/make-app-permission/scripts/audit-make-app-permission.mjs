@@ -12,7 +12,7 @@ import { auditAdministratorFeedback } from './administrator-feedback-audit.mjs';
 import { runAdministratorFeedbackConformance } from './administrator-feedback-conformance-suite.mjs';
 
 const USAGE = `Usage:
-  node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root> [--config <json-file>] [--feedback-adapter <host-module>]
+  node "<skill-dir>/scripts/audit-make-app-permission.mjs" "<project-root>" [--config <json-file>] [--feedback-adapter <host-module>]
 
 Checks Make App single-app permission enforcement, including record operations and operation-specific field states. This is a static contract audit; it does not replace Service/UI tests.`;
 
