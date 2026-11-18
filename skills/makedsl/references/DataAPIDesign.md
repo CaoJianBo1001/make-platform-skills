@@ -18,6 +18,30 @@ Entity 可以理解是一张 Table, Record 可以理解是一个 Row, 也就是 
 - 人员、部门类型字段在写入时必须提交字符串类型 ID；单选字段写入字符串，多选字段写入字符串数组，例如 `"owner": "19035"`、`"members": ["19034", "19035"]`、`"ownerDepartment": "2226"`、`"relatedDepartments": ["2227", "2228"]`
 - 在列表页编辑单列字段数据时必须使用 `批量更新一列数据` 接口
 
+## Record 草稿保存约定
+
+创建和单条更新 Record 时，可通过 URL 查询参数 `isDraft` 控制**本次保存**是否执行字段必填校验。该参数仅适用于 `/api/make/data/v1/record` 的 `MakeService.CreateResource` 和 `MakeService.UpdateResource`。
+
+| 查询参数 | 行为 |
+| --- | --- |
+| `isDraft=true` | 跳过字段 `validations.isRequired` 的必填校验，其余校验与保存逻辑按原规则执行。 |
+| `isDraft=false` 或省略 | 执行原有校验与保存逻辑。 |
+
+参数规则：
+
+- `isDraft` 仅通过 URL 查询参数传递，不放入请求体或业务 `data`。SDK、CLI 及其他调用方应将该选项映射为查询参数；请求体和响应结构沿用现有契约。
+- 参数去除首尾空白后，仅接受小写 `true` 或 `false`；空值、重复参数以及 `1`、`yes` 等非法值均按参数错误处理，HTTP 状态为 `200`，响应体 `code` 为 `400`。
+- 参数只影响当前请求，不持久化草稿状态，不新增草稿系统字段，也不自动修改 `qfei_process_instance_status`。后续请求仍根据各自的 `isDraft` 参数决定是否检查必填。
+
+校验与保存边界：
+
+- 草稿允许必填业务字段缺失或为空；空值判定沿用现有规则，包括 `null`、空白字符串、空集合和空对象。非空值继续执行原有类型、长度、范围、格式、选项及附件等校验；未知字段和禁止写入的派生字段仍按原规则处理。
+- 应用、Entity、更新时的 `recordID` 等接口参数仍按原规则校验。对象权限、字段权限、行级权限、记录锁及流程状态限制均不豁免。
+- 唯一约束、字段转换、编码生成、系统字段维护、关联同步、保存回调和事务处理均按原流程执行；草稿仍可能因这些既有规则而保存失败。
+- 草稿实际写入普通业务记录，详情、列表及其他查询的可见性沿用原有规则；保存回调仍会执行。BPM 绑定 Entity 新建记录时仍按原规则初始化为 `UNSUBMITTED`。
+- 普通创建检查全部字段的必填；普通更新只检查本次提交字段的必填，未提交字段不重新检查。草稿更新仍按提交字段进行局部更新，显式提交空值表示按原写入规则清空该字段。`isDraft=false` 不代表对整条记录执行完整性检查或执行“转正式”操作。
+- 批量更新字段、文件接口、内部服务及工作流调用本次不扩展草稿参数，继续沿用原有校验与保存行为。
+
 ## JSON-RPC 接口
 
 AI 使用 DataAPI
@@ -90,6 +114,8 @@ Response Body 格式如下：
 ## 接口
 
 ### 创建 Record 数据
+
+可选 URL 查询参数 `isDraft=true|false`，省略按 false；只影响本次必填校验，见 [Record 草稿保存约定](#record-草稿保存约定)。不要放入请求体；正常更新仍是局部校验。
 
 ```
 POST https://dev-make.qtech.cn/api/make/data/v1/record
@@ -177,6 +203,8 @@ Response Body
 ```
 
 ### 单条更新 Record 数据
+
+可选 URL 查询参数 `isDraft=true|false`，省略按 false；只影响本次必填校验，见 [Record 草稿保存约定](#record-草稿保存约定)。不要放入请求体；正常更新仍是局部校验。
 
 ```
 POST https://dev-make.qtech.cn/api/make/data/v1/record

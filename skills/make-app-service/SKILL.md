@@ -1,11 +1,13 @@
 ---
 name: make-app-service
-description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts, including server-side aggregation for dashboards, charts and 统计/汇总. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
+description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts, including server-side aggregation for dashboards, charts and 统计/汇总. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema fields/createFields and defaultValue, opt-in record drafts, CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.26
+  version: 0.2.27
 ---
 
 # make-app-service
+
+仅在用户明确需要持久化业务草稿时读取 [业务草稿合同](references/business-record-drafts.md)：接入按钮意图、Record URL 参数、项目保存状态及正式业务消费者资格。无此需求不生成草稿功能。字段固定默认值独立支持，Schema 归一化保留字段顶层 `defaultValue`；见 [字段合同](../makedsl/references/FieldDesign.md#字段默认值--default-value)。
 
 应用显示名称从运行时接口归一为共享 appName，后台改名后随既有刷新更新，禁止用配置或 DSL 固定名称覆盖；见 [应用名称来源](references/make-data-adapter.md#应用名称来源)。
 
@@ -44,6 +46,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 | Schema 缓存刷新、进行中请求复用与取消的组合场景 | `references/service-api-contracts.md`、`references/testing-and-safety.md` |
 | Service folder structure, layering, logging, errors | `references/service-layering.md` |
 | Make Data API adapter rules, schema `fields` / `createFields`, records, files, lookup, candidates | `references/make-data-adapter.md` |
+| Optional persisted business drafts, save-state injection, formal-data eligibility and consumer coverage | `references/business-record-drafts.md` |
 | Dashboards, charts, counts, sums, averages, grouped statistics / 聚合统计 | [Aggregate statistics](references/make-data-adapter.md#aggregate-statistics) |
 | Test requirements, contract checks, safety review | `references/testing-and-safety.md` |
 | Single-app permission proxy, Make IAM principal permission, app-scope permission payloads | Use `make-app-permission` |

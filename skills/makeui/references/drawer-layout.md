@@ -239,3 +239,9 @@ When a user opens a related record from a Lookup value, use the same Drawer stac
 The Drawer shell remains fixed. The body scrolls.
 
 Do not let the underlying page scroll when the Drawer is open.
+
+## 用户请求的业务草稿动作
+
+仅明确需要保存业务草稿时，按 [草稿交互](record-drafts-and-defaults.md) 在原新建/编辑操作组插入“保存草稿”，保持保存、符合资格的保存并提交及最右关闭入口。没有请求时维持本文件原动作数量。手机沿用对应公开组件及同一 Controller 的组合；不把新增第三个意图强行塞入不存在的包 props。
+
+桌面紧凑按钮不因保存错误、pending 或仅宽度变化而放大；触控尺寸只作用于对应移动/触控场景。确定未写入的普通校验错误结束 pending，允许原字段继续修改；未知写入仍按原恢复合同防重复创建。

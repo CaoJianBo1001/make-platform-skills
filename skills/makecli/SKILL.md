@@ -2,10 +2,12 @@
 name: makecli
 description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, read build/deployment logs, entities, relations, records, query server-side statistics (统计、汇总、分组统计), inspect resources, switch backend context, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"发布到 production\", \"promote\", \"部署进度\", \"构建状态\", \"构建日志\", \"部署日志\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", \"切换环境\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.7.3
+  version: 0.7.4
 ---
 
 # makecli — Make Platform CLI
+
+涉及字段固定默认值时，按 [字段合同](../makedsl/references/FieldDesign.md#字段默认值--default-value) 生成 DSL，apply 后读回字段顶层 `defaultValue`，并在获授权的测试范围验证缺 key 创建。仅在用户需要业务草稿时组合 [Service 草稿合同](../make-app-service/references/business-record-drafts.md)，正式统计沿用该项目资格；无草稿需求不添加状态字段。使用前检查已安装 CLI 的 `--help`，不编造 `--is-draft` 等未公开选项，缺少支持时走已确认 API 或说明限制。
 
 makecli is the CLI for the Make agentic development platform.
 It manages Apps, Entities, Relations, Records, code deployment, and build/deployment logs.

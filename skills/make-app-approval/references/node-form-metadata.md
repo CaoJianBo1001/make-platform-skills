@@ -37,6 +37,8 @@
 
 表内属性是示例，不能按这些键白名单重建对象：原始专用配置、`properties`、`validations`、`capabilities` 及扩展属性全部保留。专用配置合入 properties；同名键两处都存在且值不同则报错，不静默覆盖。不要凭空补必填、精度、默认值或编辑能力。配置完整性与值校验仍由宿主已确认的字段合同执行。
 
+上游实际提供字段顶层 `defaultValue` 时原样保留，包括 0、空串、空数组和 null，不移入 properties 或套包装；缺失则保持缺失，不从普通 Schema 或本地 DSL 补齐。新建初始化遵循 [默认值交互合同](../../makeui/references/record-drafts-and-defaults.md#新建表单使用固定默认值)，编辑、任务 formData 和已有草稿回显都不重新补默认值。下面的纯转换参考通过保留原始属性支持此行为，宿主不能改成只挑名称/类型的白名单转换。
+
 选项保持原数组顺序和每个对象的全部属性，包括 `id/label/value/isEnabled/sort` 及扩展键；不丢弃禁用选项、不重新排序、不把 value 改成 label。空选项数组合法，缺失选项或非字符串 label/value 报错。标准字段仅有 `properties.options` 可直接使用；同时存在 `selection.fieldSelections` 时两份必须一致。
 
 ## 规范化前后

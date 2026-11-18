@@ -2,10 +2,12 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, fieldAccess, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.4.5
+  version: 0.4.6
 ---
 
 # make-app-permission
+
+业务草稿和字段默认值不新增权限点、不扩大当前字段授权。对明确启用草稿的对象，项目生成的保存状态仍通过当前普通创建/编辑或 BPM START 白名单，隐藏输入不等于免检；详见 [草稿业务字段](../make-app-service/references/business-record-drafts.md#项目业务字段)。默认值只用于当前有权创建的字段，见 [默认值合同](../makedsl/references/FieldDesign.md#字段默认值--default-value)。
 
 Direct URL and runtime resource denial follow `references/scoped-route-feedback.md`: App guard outside shell, object/fixed-route guards inside shell. Replace the entire denied business content, not just table rows; keep authorized navigation and the global identity header. Require rendered-tree and zero-denied-request regression tests. React renders the verified package through `makeui/references/permission-feedback.md`; this Skill decides scope and access lifecycle, not component styling. Read `make-app-auth/references/access-help.md` for current-App personnel contacts without sending denied business requests.
 

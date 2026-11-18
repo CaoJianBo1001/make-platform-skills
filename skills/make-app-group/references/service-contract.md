@@ -211,3 +211,9 @@ Log entry, success, failure, and stale branches for:
 Safe context includes entity key, group count, depth, page, size, result count, and
 total. Do not log cookies, Authorization, tokens, full CEL expressions, records, or
 raw upstream sensitive payloads.
+
+## 草稿业务范围与分组一致性
+
+仅对明确启用草稿的正式业务入口，按 [Service 资格合同](../../make-app-service/references/business-record-drafts.md#查询批量与直接动作) 将资格附加到可信基础 filter；原用户 filter 与 groupFilter 的结构、职责和布尔语义保持不变。record-groups、叶子分页、total、下钻、导出和全选共享同一业务范围，不在得到分组结果后再删草稿。Preset 只保存用户维度；普通草稿管理分组不强制排除草稿。
+
+覆盖 OR 条件、空筛选、null 分组、跨页、状态转换缓存失效及关联草稿的验收。多个实体参与统计时逐个核查输入资格，不以主表过滤替代派生/关联检查。

@@ -1,11 +1,14 @@
 ---
 name: makedsl
-description: Use when designing or generating Make platform DSL YAML — defining apps, entities, fields, relations, views, or record schemas. Also triggered by requests like "建模", "建表", "加字段", "定义关联", or "生成 DSL". Does not deploy resources (use makecli), build frontend UI (makeui), implement Service/API code (make-app-service), handle auth (make-app-auth), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior (use canvas-table-integration).
+description: Use when designing or generating Make platform DSL YAML — defining apps, entities, fields, relations, views, record schemas, fixed field defaults, or opt-in business drafts. Also triggered by requests like "建模", "建表", "加字段", "字段默认值", "保存草稿", "定义关联", or "生成 DSL". Does not deploy resources (use makecli), build frontend UI (makeui), implement Service/API code (make-app-service), handle auth (make-app-auth), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior (use canvas-table-integration).
 metadata:
-  version: 0.2.10
+  version: 0.2.11
 ---
 
 # makedsl usage
+
+字段固定默认值使用 [字段顶层 defaultValue](references/FieldDesign.md#字段默认值--default-value)，与是否使用草稿无关。仅在用户明确需要业务草稿时，按 [按需草稿合同](../make-app-service/references/business-record-drafts.md) 建模项目保存状态字段，默认选择正常保存；无此需求不添加字段、按钮或草稿选项。`isDraft` 的单次校验语义见 [Data API](references/DataAPIDesign.md#record-草稿保存约定)，它不是持久化系统状态。
+
 Use this skill when you need to  design or generate dsl for make platform or make 开发平台.
 make platform 从 kubernetes 和 ansible 中借鉴了设计思路, 业务的模型通过 DSL 建模定义, 
 然后通过 DataAPI 来对数据进行 CRUD-LS. 
@@ -31,7 +34,7 @@ Use `canvas-table-integration` for CanvasTable display, columns, renderers, or c
 | Make Data API and relation payloads | `references/DataAPIDesign.md` |
 | Single-Entity aggregate API, dimensions, metrics, Lookup and NULL | [聚合统计](references/DataAPIDesign.md#聚合统计-record-数据); App integration belongs to `make-app-service` |
 | Relation declarations | `references/RelationDesign.md` |
-| Base field DSL and lookup fields | `references/FieldDesign.md` |
+| Base field DSL, fixed defaultValue and lookup fields | `references/FieldDesign.md` |
 | User field design | `references/UserFieldDesign.md` |
 | Department field design | `references/DepartmentFieldDesign.md` |
 | File field design | `references/FileFieldDesign.md` |

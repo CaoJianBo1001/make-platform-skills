@@ -2,10 +2,12 @@
 name: make-app-actions
 description: "Use when generating, integrating, refactoring, reviewing, or debugging Make record-list actions: CanvasTable actions are the default desktop/tablet selection and batch workflow, while 手机/phone 卡片/card and mobile detail pages reuse single edit/delete actions. Triggered by 复选框, 行操作, 选择操作栏, 编辑, 删除, 批量编辑, 暂无可用的操作, selectAll, Shift selection, selectionIntent, 手机卡片操作, 手机详情操作栏, 行级写权限预检, noPermissionRecordIds, record-write-permission, records/bulk, @qfei-design/make-app-actions, or action tests. Covers headless single-record action reuse, independent update/delete/bulkUpdate permissions, Canvas selection intent, immutable snapshots, Service precheck/bulk contracts, denial feedback, stale safety, and tests. Does not own CanvasTable internals, principal IAM policy, general Service layering, page shell, field editor internals, auth, runtime packaging, DSL, Make CLI, or filter/sort/group semantics."
 metadata:
-  version: 0.1.25
+  version: 0.1.26
 ---
 
 # make-app-actions
+
+宿主明确启用业务草稿时，按 [业务草稿合同](../make-app-service/references/business-record-drafts.md) 保持项目保存状态只读、局部修改不改状态，并在正式业务批量动作的预检与执行处落实资格。普通编辑/删除草稿仍沿用原权限；未启用时不添加草稿规则。
 
 Treat record operations, permission behavior, row-level precheck, single
 edit/delete, and desktop/tablet selection and batch edit as one integrated Make
