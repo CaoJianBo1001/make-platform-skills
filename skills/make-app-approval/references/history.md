@@ -1,21 +1,32 @@
 # 审批历史与业务详情流程区
 
-当前审批包只提供 `ApprovalTaskDetail.history` 插槽，**没有历史表格组件或 timeline provider 导出**。历史由宿主实现，查询只读 Workflow 时间线，不复制流程设计器。
+正式审批包 0.2.13 提供 `ApprovalTaskDetail.history` 和 `ApprovalInstanceDetail.history` 插槽，**没有历史表格组件或 timeline provider 导出**。任务与实例共用宿主实现的只读历史查询和展示，不复制流程设计器。
 
 ## 定位与数据
 
-- 我的审批详情：使用已核验 task detail 的 processInstanceId，标题“审批记录”。
+- 待处理／已完成任务详情：使用已核验 task detail 的 processInstanceId，标题“审批记录”，传入 ApprovalTaskDetail.history。
+- 已发起实例详情（列表详情与独立页）：使用已核验实例详情的 processInstanceId，标题“审批记录”，传入 ApprovalInstanceDetail.history；不要求 taskId，不调用 bpm-task 补定位，不以 currentTasks 是否为空决定能否查看，已结束实例仍可读取历史。详情与时间线的访问授权由各自后端接口判断。
 - 业务对象详情：使用 entityKey + recordId，标题“审批流程”；应用已接入且记录有非空、非 UNSUBMITTED 状态时查询。当前对象解绑不删除历史入口。
 - 请求经宿主 Service → `bpm-timeline / MakeService.ListResources`，实例定位与记录定位二选一，后者由 Service 注入 appKey；接口不分页，一次返回完整 data 数组，没有 pagination。新调用不发送 pagination；旧参数按后端合同兼容忽略，不校验页码、补默认值或转发。
 - 校验 data 数组、非空 eventId 及实例匹配。按记录定位时校验返回事件属于同一实例，不能把多个实例混在同一表格。
 - 事件包含 PROCESS_STARTED、TASK_ACTION、TASK_PENDING。保留后端顺序、重复节点与轮次，不按 nodeKey 合并，不自行按 eventTime 重排；后端把实际待办置顶，历史随后按后端顺序返回，不补造尚未创建的未来节点。
 - TASK_PENDING 的 operator 表示待审批人，eventTime/comment 不返回，actionResult 为 `-`；历史 operator 表示实际操作人。operator 缺失时显示 `-`，只返回 userId 时保留 ID，不额外查人；不得另取 assignee/candidateUsers 拼接记录。
 
+任务和实例按流程实例定位时，时间线请求体相同，均不传 taskId 或分页参数：
+
+```json
+{
+  "processInstanceId": "sample_instance"
+}
+```
+
+业务记录定位仍使用上述 appKey/entityKey/recordId 三元组，与实例定位互斥；不因复用历史组件而混传两种定位。
+
 ## 两个展示落点
 
 | 落点 | 按顺序展示 |
 | --- | --- |
-| 我的审批“审批记录” | 节点名称/轮次（nodeName）、审批时间（eventTime）、审批结果（actionResult）、审批人（operator）、审批意见（comment） |
+| 我的审批任务／实例“审批记录” | 节点名称/轮次（nodeName）、审批时间（eventTime）、审批结果（actionResult）、审批人（operator）、审批意见（comment） |
 | 业务详情“审批流程” | 节点名称（nodeName）、审批人（operator）、审批时间（eventTime）、审批结果（actionResult）、审批意见（comment） |
 
 只展示这五项，不添加序号、节点状态、关闭原因或推测轮次。名称取 nodeName，时间按宿主格式，缺省值 `-`；operator 优先 userName。固定列直接消费事件，不为读取历史请求 Entity 或节点表单字段定义。
@@ -47,7 +58,7 @@ const result = formatApprovalHistoryResult(event);
 
 ## 五列填满可用宽度
 
-业务详情“审批流程”和任务详情“审批记录”的五列占满表格可用宽度，不在右侧保留未分配的空白区域，不增加第六个占位列，也不把全部余量只加给审批意见。保留两种落点各自的列顺序、标题与只读属性。
+业务详情“审批流程”和任务／实例详情“审批记录”的五列占满表格可用宽度，不在右侧保留未分配的空白区域，不增加第六个占位列，也不把全部余量只加给审批意见。保留两种落点各自的列顺序、标题与只读属性。
 
 以五列可读基础宽度为下限，测量容器内容区的实际可用宽度（按宿主布局扣除边框和实际占位的滚动条）。容器宽于基础列宽之和时，将剩余宽度平均分给五列：`extra = max(0, availableWidth - sum(baseWidths))`，各列为 `baseWidth + extra / 5`；整数像素的余数分配到现有列，确保总宽与可用宽度一致。容器更窄时保留基础宽度与表格横向滚动，不强行压缩文字或引入页面横向滚动。
 
@@ -69,4 +80,6 @@ const result = formatApprovalHistoryResult(event);
 
 加载、失败重试和真实空态独立；关闭、切换实例/身份/环境取消请求，旧响应不能污染新上下文。Canvas 在容器可测量后创建并提交完整数据，提前返回的数据仍需保留，不以非空行数为门禁；全屏只调整尺寸，卸载清理表格与观察器。撤回成功后刷新业务历史；办理成功后按宿主关闭/刷新机制更新任务历史。
 
-任务正文顺序为申请信息 → 审批记录 → 审批意见，history 只读、不参与字段校验。0.2.12 插槽仍默认有“审批流程”标题；宿主已有“审批记录”标题时仅保留一个。优先采用包后续公开标题配置；基线需要时仅在审批详情宿主作用域处理重复标题和间距，禁止全局隐藏 h3、改 node_modules 或另造流程图。
+任务正文顺序为申请信息 → 审批记录 → 审批意见，history 只读、不参与字段校验。0.2.13 插槽仍默认有“审批流程”标题；宿主已有“审批记录”标题时仅保留一个。优先采用包后续公开标题配置；基线需要时仅在审批详情宿主作用域处理重复标题和间距，禁止全局隐藏 h3、改 node_modules 或另造流程图。
+
+实例正文为申请信息 → 审批记录，无审批意见输入区或办理动作；历史事件中已有的 comment 仍按历史列或时间线规则只读展示。复用 [实例详情合同](initiated-instances.md) 与 [手机实例插槽](mobile.md#手机实例详情)，不套用任务意见和办理状态机。

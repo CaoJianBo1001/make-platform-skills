@@ -61,7 +61,7 @@ Use the following desktop/tablet header grouping for Make approval surfaces. The
 | Surface | Left title group, in order | Right action group, in order |
 | --- | --- | --- |
 | Business record detail | Fullscreen toggle → `详情` mode badge → existing object/record title → approval status Tag | Eligible `发起审批` or authorized `撤回` → icon-only close X; standalone start does not require ordinary edit permission or save the record |
-| Business create/edit | Fullscreen toggle → `新建`/`编辑` mode badge → existing object title | Save → `保存并提交` when eligible → icon-only close X |
+| Business create/edit | Fullscreen toggle → `新建`/`编辑` mode badge → existing object title | `保存草稿` only when explicitly enabled → Save → `保存并提交` when eligible → icon-only close X |
 | My approvals task detail | Fullscreen toggle → `审批详情` title followed by one status Tag, following the approval status contract below | Package-provided authorized actions, in their supplied order → icon-only close X |
 
 Do not add unavailable actions merely to fill these slots. Save/recovery labels, eligibility and disabled/loading states remain owned by the approval contracts. Preserve selection-bar ownership of ordinary edit/delete. If fullscreen is absent, omit only that control and keep the other items in order.
@@ -239,3 +239,9 @@ When a user opens a related record from a Lookup value, use the same Drawer stac
 The Drawer shell remains fixed. The body scrolls.
 
 Do not let the underlying page scroll when the Drawer is open.
+
+## 用户请求的业务草稿动作
+
+动作资格、顺序和数量统一使用 [表单保存意图矩阵](mobile-form-controls.md#表单保存意图矩阵)，草稿仍仅按明确需求启用；本文件只规定桌面/平板的头部位置及最右关闭入口。手机按同一矩阵与 Controller 组合保存区，不在这里维护第二套组件兜底。
+
+桌面紧凑按钮不因保存错误、pending 或仅宽度变化而放大；触控尺寸只作用于对应移动/触控场景。确定未写入的普通校验错误结束 pending，允许原字段继续修改；未知写入仍按原恢复合同防重复创建。

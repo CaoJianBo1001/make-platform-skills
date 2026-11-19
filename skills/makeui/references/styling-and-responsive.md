@@ -117,3 +117,9 @@ Provide UI states without defining business logic:
 State copy should be generic unless the user provides domain-specific wording.
 
 For metadata-driven object pages, states belong around the object shell and content region, not only around individual controls. Keep a visible shell or scoped fallback when metadata, data, route, or render failures occur; do not let the UI become a blank white page.
+
+## 控件禁用态与容器衔接
+
+桌面／平板和手机的禁用控件均复用宿主组件库的语义化禁用底色、文字及交互状态，允许保留禁用底色，不强制透明或与可编辑态背景相同。按 token／公开配置的语义区分禁用外观与品牌强调，不直接用 primary／selected 等强调色表示禁用，也不因禁用 token 随主题变色就自行替换颜色。手机 [字段视觉骨架](mobile-form-controls.md#表单视觉骨架) 的行内编辑背景要求适用于可编辑态；禁用控件与只读详情分开，后者仍使用 display adapter。保留真实 disabled、不可写保护及可读对比度，不能只改颜色或单靠透明度禁用。宿主样式只作用于自有控件，公共包通过公开 API 接入，不覆盖其私有结构。
+
+独立页复用表单时，检查页头、内容区与表单容器叠加后的实际 padding、背景及边框，消除与当前设计不符的意外色带、重复分隔线和空占位。留白、卡片及边框是否保留以宿主设计为准，不统一要求所有 App 顶部零留白或去除所有边框。用真实页面及编译样式验证两端，不能只验证样式类名。

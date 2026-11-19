@@ -1,15 +1,23 @@
 ---
 name: makeui
-description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
+description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata/defaults, optional draft-save UI, field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.63
+  version: 0.4.72
 ---
 
 # makeui
 
+用户明确需要业务草稿，或任务涉及字段固定默认值时，读取 [草稿与默认值交互](references/record-drafts-and-defaults.md)。未要求草稿时不添加按钮、状态字段或功能选项；默认值可独立使用。数据资格及写入合同由 `make-app-service` 主责。
+
+审批新建先消费 [独立实体绑定状态](../make-app-approval/references/entity-bindings.md)，不读取 Schema 的 `bpmDefinitionKey`。加载／失败提供局部反馈和重试，暂停依赖绑定的创建／发起；普通浏览、已有记录普通编辑及任务／实例历史沿用原规则，不能被绑定查询整体阻塞。
+
+新 App 按审批默认规则生成能力，或存量需求包含飞书等外部入口的 BPM 独立填单／任务详情／实例只读详情时，读取 [审批独立页面合同](../make-app-approval/references/standalone-pages.md)：新增适用的 `/bpm/...` 容器，复用宿主表单及公共审批状态机，保留原对象 Drawer／手机任务路由；此例外不改变普通对象的新建／编辑／详情默认展示。
+
 所有表示当前应用名称的展示位置必须动态消费接口名称，禁止硬编码业务应用名；统一来源、刷新、长名称和验收见 [动态应用名称](references/app-shell-layout.md#动态应用名称)。
 
 区域阻塞加载统一遵循 [区域加载态](references/app-shell-layout.md#区域加载态)：在所属可见区域内水平、垂直居中，建立有效高度，覆盖刷新时的权限与 Schema 校验及局部面板加载。
+
+涉及手机表单、只读字段或候选反馈时，将 [公共验收工具](references/mobile-form-acceptance.md) 接入宿主真实组件测试及已有测试门禁；保留宿主技术栈，DOM 检查与真实浏览器几何验收分别记录。
 
 存量项目涉及加载或访问反馈布局时，先检查提前返回分支，包含权限守卫、认证／Schema Provider、路由 fallback 及局部面板；不能只检查业务页面内部的 Spin。发现左上角裸文本或单行高度的加载容器时，按上述区域合同修复并验收，保留原授权与请求行为。
 

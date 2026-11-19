@@ -2,10 +2,12 @@
 name: makecli
 description: "Use when the user asks to manage Make platform resources with makecli — create/deploy apps, promote beta to production, check build/deploy progress or app URLs, read build/deployment logs, entities, relations, records, query server-side statistics (统计、汇总、分组统计), inspect resources, switch backend context, log in to Make, or run makecli CLI commands. Also triggered by requests like \"部署\", \"发布到 production\", \"promote\", \"部署进度\", \"构建状态\", \"构建日志\", \"部署日志\", \"apply\", \"查看应用\", \"创建记录\", \"登录 Make\", \"切换环境\", or \"/makecli\". Does not own DSL schema design (use makedsl), frontend UI (makeui), auth (make-app-auth), Service/API code (make-app-service), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior."
 metadata:
-  version: 0.7.3
+  version: 0.7.6
 ---
 
 # makecli — Make Platform CLI
+
+涉及字段固定默认值时，按 [字段合同](../makedsl/references/FieldDesign.md#字段默认值--default-value) 生成 DSL，先按 [Schema 变更验证](references/schema-change-verification.md) 核实目标实际应用键及工具待发送载荷保留默认值，再展示差异、确认和应用；应用后读回字段顶层 `defaultValue`，并在获授权的测试范围验证缺 key 创建。仅在用户需要业务草稿时组合 [Service 草稿合同](../make-app-service/references/business-record-drafts.md)，正式统计沿用该项目资格；无草稿需求不添加状态字段。使用前检查已安装 CLI 的 `--help`，不编造 `--is-draft` 等未公开选项，缺少支持时走已确认 API 或说明限制。
 
 makecli is the CLI for the Make agentic development platform.
 It manages Apps, Entities, Relations, Records, code deployment, and build/deployment logs.
@@ -85,15 +87,17 @@ When building a Vibe App, use `make-app-service` to call the Data API from the A
 **When:** Creating or updating schema resources (App, Entity, Relation).
 **Why preferred:** Reproducible, diffable, safe (preview before apply).
 
+先按 [Schema 变更验证](references/schema-change-verification.md) 确认后端、租户、实际应用键及条件性工具能力；不从 deploy 的 Beta 默认行为推断 Meta 写入目标。
+
 1. **Write** DSL YAML under `apps/dsl/` — invoke the `makedsl` skill for schema reference
-2. **Diff:** `makecli diff -f apps/dsl` — preview changes against remote
+2. **Diff:** use the [Schema preview verifier](references/schema-change-verification.md#目标与差异), which runs read-only `makecli diff` with JSON output and verifies the result
 3. **Confirm** diff output with user
 4. **Apply:** `makecli apply -f apps/dsl`
-5. **Verify:** `makecli diff -f apps/dsl` (exit 0) or `makecli schema --app <appKey>`
+5. **Verify:** rerun the verified preview and read back the affected metadata with `makecli schema --app <appKey>`; follow the linked capability checks for defaults
 
 Key rules:
 - Entity/Relation: create if new, update if exists. **App is create-only — apply never updates an existing App**
-- diff exit code: 0 = no differences, 1 = differences found
+- A raw CLI exit `1` can also be an execution error. The verified preview tool returns `0` for verified no differences, `1` for verified differences, and `2` to stop; follow the linked workflow before confirmation or apply.
 - Directory scan recurses into immediate subdirs by default (`--max-depth 2`, shared by diff/apply)
 
 ## Workflow: Deploy Code
@@ -241,7 +245,7 @@ makecli whoami
 ! makecli login                                   # 1. Authenticate (user runs via !)
 makecli app create shop --name "我的商城"          # 2. Scaffold + register + initial commit
 cd shop                                           # 3. Write DSL (makedsl skill) under apps/dsl/
-makecli diff -f apps/dsl && makecli apply -f apps/dsl
+# 按 Declarative Schema 工作流分别预览、确认、应用；不得串联 diff 与 apply。
 git add -A && git commit -m "feat: initial app"   # 4. Develop, then commit
 makecli app deploy --wait                         # 5. Deploy to Beta, wait for build, get URL
 makecli app promote --wait                        # 6. Verified in Beta + user authorized? Publish it to Prod (confirm)

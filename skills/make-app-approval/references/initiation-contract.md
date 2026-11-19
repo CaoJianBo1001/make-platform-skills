@@ -4,15 +4,15 @@
 
 ## 运行时分支
 
-`bpmDefinitionKey?: string` 在 Schema 对象顶层，由 Meta 后端仅对有效且启用的配置返回。保留此属性；前端不再独立推算草稿、发布或启用状态，不向用户新增流程选择器。
+`bpmDefinitionKey` 仅从 [Workflow 实体绑定查询](entity-bindings.md) 获取，按 entityKey 独立关联当前可访问对象；Schema 不提供绑定，不回退旧属性或 Meta 查询。前端不自行推算草稿、发布或启用状态，不向用户新增流程选择器。
 
 | 已核实的上下文 | 新建字段 | 保存能力 |
 | --- | --- | --- |
-| Schema 成功返回，当前对象无有效 key | 普通 `createFields` / IAM 字段合同 | 普通保存，不调用 Workflow |
+| Schema 与绑定查询成功，当前对象无命中 | 普通 `createFields` / IAM 字段合同 | 普通保存，不调用 Workflow |
 | 对象有 key，启动配置读取成功 | `bpm-start-config.fields` | 保存，以及新建并发起的合并提交 |
-| Schema/配置加载中、读取失败或元数据无效 | 加载或错误态 | 暂停依赖配置的保存和发起，提供重试；不降级到普通字段 |
+| Schema／绑定／配置加载中、读取失败或元数据无效 | 加载或错误态 | 暂停依赖配置的保存和发起，提供重试；不降级到普通字段 |
 
-已有启用版本旁的新草稿不影响 Meta 返回的有效 key。流程以后启用不会自动提交旧记录；打开表单及保存/发起时重新核实当前配置，不能把首次生成时的快照写死。
+已有启用版本旁的新草稿不影响 Workflow 返回的有效 key。流程以后启用不会自动提交旧记录；打开表单及保存/发起时重新核实当前配置，不能把首次生成时的快照写死。
 
 ## 字段来源、展示和提交
 
@@ -32,48 +32,52 @@ type BpmStartConfig<FieldSchema> = {
 };
 ```
 
-- 当前 Workflow 可返回 `{ field: "字段key", readable, editable }`。可见字段定义或所需 Lookup 依赖不齐时，Service 用 `/workflow/v1/bpm-node-form-metadata` 的 START 场景（部署 appKey、启动配置 processKey）读取一次节点 fields/relations，按 key 补齐；核验 entityKey/processKey/nodeKey 与当前启动配置一致。不从普通 entity 或 Schema fields/createFields 补定义。旧完整字段对象格式继续兼容，但只有本次编排内字段定义、所需 Lookup 关系及目标 key/type 均完整且定位一致，才省略额外 START 请求，见 [完整性判定](lookup-metadata.md#start-何时可以省略额外请求)。字段对象完整而 relations 缺失时仍须读取 START；隐藏 key 不要求查到定义，也不因新接口含更多字段扩大授权。
+- Workflow 返回 `{ field: "字段key", readable, editable }` 与同次响应的 `data.formMetadata`。Service 按 key 匹配完整定义，校验应用、entityKey/processKey/startNodeKey；只用本次内嵌 fields/relations，不另请求元数据、不兼容旧字段对象、不从普通 entity/Schema 的 fields/createFields 补定义。隐藏 key 不要求定义，元数据额外字段不扩大授权。
 - 交给 UI 的 `field` 包含完整字段定义，保留稳定 key、名称、类型、必填、校验、选项、精度、关联和文件属性。按启动配置顺序返回可见字段，复用宿主标准字段渲染器，不只支持文本或示例业务的几种类型。响应定位、类型或可见字段定义不完整时停止，保留原错误，不回退普通字段。
 - `readable: true` 才展示；可见且 `editable: true`、宿主支持该字段的新建写入时才提供输入和提交能力。只读用详情展示，隐藏字段不注册、不提交；保存前按最新授权清理失效值。
 - 审批新建的可见/可写字段**不与**普通 `createFields`、`fields` 或 IAM 字段集合求交。即使普通新建不包含某字段，只要启动配置授权且类型支持，也应在审批新建中正确展示和保存。不要将审批字段写回全局 Schema/权限缓存来放宽其他页面。
 - 应用访问、对象可见与 `data.record.create` 仍需校验；关联候选目标权限、平台数据约束和最终后端写入校验继续保留。审批字段授权不等于通用 CRUD 授权。
-- UI 与 Service 必须选择同一场景：Service 用权威 Schema 判定绑定，再读取启动配置并按需用 START 节点元数据补字段定义，按审批可写白名单验证普通值、关联值和附件。Schema 只承担绑定及普通权限场景，不能作为审批基础字段来源；不能相信 UI 传来的 `approvalMode`、字段授权或流程 key。
+- UI 与 Service 必须选择同一场景：Service 用权限过滤 Schema 校验对象，再通过 Workflow 独立查询当前绑定，读取启动配置并使用同次 data.formMetadata 的字段定义，按审批可写白名单验证普通值、关联值和附件。Schema 只承担对象及普通权限场景，不能作为绑定或审批基础字段来源；不能相信 UI 传来的 `approvalMode`、字段授权或流程 key。
 - 复用完整字段类型注册表。ID 的准确类型是 `Make.Field.ID`，系统 ID、系统流程状态和锁不成为可写输入；未知类型或缺失关键元数据明确报错，不能当文本、静默丢字段或伪造定义。
 - 适配器可能取得标准 Schema 字段，也可能取得 Workflow 的 `fieldKey/fieldName/makeFieldType` 及类型专用属性。仅在 Service 边界依据已确认合同统一成宿主字段类型；保留原始 `selection.fieldSelections` 与规范化 `properties.options` 等选项及属性，不从中文名称猜类型。非法权限布尔值、`editable && !readable`、重复 key 或缺少类型应报告配置错误。
-- 此前完整对象版的 `bpm-start-config` 样例中，字段定义位于 `fields[].field`；一份样例外层是 `data.fields`，另一份直接从 `fields` 开始。以宿主 Service 已确认的响应合同解析外层，不把任一样例的包装层假定为全部应用的固定协议。两份样例的 `type` 都是 `Make.Field.*` 字符串，`makeFieldType` 是 `NUMBER` 等枚举字符串。对此端点，优先采用已识别的 `Make.Field.*` 作为宿主标准类型，再依据该端点已确认的映射核对 `makeFieldType` 的一致性；映射不明或两者冲突时报告合同错误，不让其中一个值静默遮蔽另一个。以下为实际响应的精简摘录，省略了业务标识和无关属性：
+- 原始 Workflow 信封固定在 data.formMetadata 提供定义；宿主规范化结果按自身 API 合同交给 UI，不兼容 fields[].field 对象或猜测外层包装。当前端点若同时提供已识别的 `Make.Field.*` 宿主标准类型和 `makeFieldType`，两者必须核对一致性；数字 type 不作控件类型。新读取示例：
 
 ```json
 {
-  "field": {
-    "type": "Make.Field.Number",
-    "makeFieldType": "NUMBER",
-    "number": { "precision": 1 },
-    "properties": { "precision": 1 }
-  },
-  "readable": true,
-  "editable": true
+  "code": 200,
+  "data": {
+    "processKey": "sample_flow",
+    "processName": "示例流程",
+    "startNodeKey": "start",
+    "startNodeName": "提交申请",
+    "fields": [{ "field": "amount", "readable": true, "editable": true }],
+    "formMetadata": {
+      "appKey": "sample_app", "entityKey": "sample_entity",
+      "processKey": "sample_flow", "nodeKey": "start", "nodeName": "提交申请",
+      "fields": [{ "fieldKey": "amount", "fieldName": "金额", "makeFieldType": "NUMBER", "number": { "precision": 1 } }],
+      "relations": []
+    }
+  }
 }
 ```
 
-- 样例中的多选字段同时有 `selection.fieldSelections` 与 `properties.options`；Lookup 有 `lookup.relationKey/targetFieldKey`，文件有 `file.maxCount`，金额有 `currency.decimalPlaces/symbol/useGrouping`，百分比有 `percent.decimalPlaces`。规范化应保留这些类型专属元数据和校验信息，不能只留下 `fieldKey`、名称及类型。新的 bpm-node-form-metadata 已实测返回数字 `type: 1` 和字符串 makeFieldType；按 [完整映射与转换样例](node-form-metadata.md) 处理，数字不能直接拼成 `Make.Field.*`。ID 对应 Make.Field.ID，encoding 原样保留。两类字段在同一 Service 转换边界核验类型与配置一致性；请求方式见 [节点元数据合同](workflow-api.md#审批节点字段元数据)。
-- 两个保存动作均沿用必填和字段类型校验；不能用普通保存绕过必填。发起还需通过 Workflow 的资格、人员解析及流程可执行性检查。平台自动生成的 ID/审计字段不注册为待填写项；业务必填字段因不可编辑而缺值、且后台返回约束失败时，明确反馈配置问题，不代填、默认通过或暗中赋予编辑权。
+- 常见类型的配置按合同保留：选项配置存在时，将 `selection.fieldSelections` 映射为 `properties.options`；Lookup 使用 `lookup.relationKey/targetFieldKey`，文件使用 `file.maxCount`，金额使用 `currency.decimalPlaces/symbol/useGrouping`，百分比使用 `percent.decimalPlaces`。规范化应保留这些类型专属元数据和校验信息，不能只留下 `fieldKey`、名称及类型。内嵌 formMetadata 的 FieldVo 可带数字 `type: 1` 和字符串 makeFieldType；按 [完整映射与转换样例](form-metadata.md) 处理，数字不能直接拼成 `Make.Field.*`。ID 对应 Make.Field.ID，encoding 原样保留。字段在同一 Service 转换边界核验类型与配置一致性；请求方式见 [节点元数据合同](workflow-api.md#审批节点字段元数据)。
+- “保存”和“保存并提交”均沿用完整必填和字段类型校验；仅用户明确启用的“保存草稿”按草稿合同跳过必填，其余校验与字段授权保留。不能用普通保存绕过必填。发起还需通过 Workflow 的资格、人员解析及流程可执行性检查。平台自动生成的 ID/审计字段不注册为待填写项；业务必填字段因不可编辑而缺值、且后台返回约束失败时，明确反馈配置问题，不代填、默认通过或暗中赋予编辑权。
 
 ### 文件与关联
 
 复用宿主控件、值序列化和 Service 创建编排，审批改变的是源字段授权，不另造业务写入格式。
 
 - File：使用已确认的不依赖 recordID 的预上传合同，完成上传后将后端认可的附件数组随创建数据保存。只有依赖已保存记录的旧上传接口时，先补合法的预上传合同，不为了上传先建一条空记录。支持原始 `File[]` 与已上传元数据同时回显；不得只按已有附件对象解析而丢掉新选文件。保存或发起失败后复用已确认上传结果，保留追加、移除、上限和预览行为。
-- Lookup：新接口返回 relationKey/targetFieldKey/targetFieldType 和 data.relations，关系及最小目标描述见 [Lookup 边界](workflow-api.md#lookup-依赖边界)。候选与目标读权限沿用既有链路；提交稳定的字符串 ID 或 ID 数组，沿用宿主 `relations` 输入，Service 按当前审批源字段授权、基数和目标身份检查后构造后端关系数据。UI 不直接传原始 `qfei_relation`，不能为了审批绕过目标对象授权。
+- Lookup：新接口返回 relationKey/targetFieldKey/targetFieldType 和 formMetadata.relations，关系及最小目标描述见 [Lookup 边界](workflow-api.md#lookup-依赖边界)。候选与目标读权限沿用既有链路；提交稳定的字符串 ID 或 ID 数组，沿用宿主 `relations` 输入，Service 按当前审批源字段授权、基数和目标身份检查后构造后端关系数据。UI 不直接传原始 `qfei_relation`，不能为了审批绕过目标对象授权。
 - 多个独立关系指向同一目标实体时，创建载荷的 `qfei_relation: [{ entityKey, id }]` 不能凭字段名区分关系；按 [Service 关系合同](../../make-app-service/references/service-api-contracts.md#lookup-relation-updates) 核对明确的后台映射。任务 recordPatch 可按 fieldKey 区分，不代表首次创建也支持同样的关系组合；没有已确认映射时不猜测或合并两次选择。
 - 日期、数值、选项、人员、部门等使用业务字段原有格式。不要仅为审批引入第二套控件、精度或序列化规则。
 
 ## 保存与首次发起
 
-桌面/平板按 [审批头部布局](../../makeui/references/drawer-layout.md#approval-header-placement) 放置按钮：左侧为全屏、模式标记与标题，右侧按“保存 → 保存并提交 → 关闭 X”排列，仅在符合下述条件时显示双按钮。保存成功后的恢复状态复用该操作区，不增加底部操作栏；按钮文案与可用性继续按本合同处理。
+保存动作统一使用 [表单保存意图矩阵](../../makeui/references/mobile-form-controls.md#表单保存意图矩阵)：没有草稿需求时保留“保存”和符合资格的“保存并提交”；用户明确启用时再加入“保存草稿”。桌面/平板按 [审批头部布局](../../makeui/references/drawer-layout.md#approval-header-placement) 放在头部并保留最右关闭；手机按矩阵组合一个保存区。所有意图复用同一 Controller，恢复状态使用原操作区，不增加重复底栏。
 
-提供两个独立意图，按钮统一为“保存”“保存并提交”。新建保存并提交使用一次合并接口；已有记录编辑后提交才先更新原记录再发起。沿用宿主现有操作位置，桌面/手机一致；不将仅保存偷偷改为自动审批，也不根据“生成了我的审批导航”就展示提交按钮。
-
-手机双按钮是普通单按钮保存栏的审批例外，具体宿主组合方式见 [手机表单控件](../../makeui/references/mobile-form-controls.md)。若已安装的 `MobileFormActionBar` 仅公开一个 `onSubmit`，不能向它传不存在的 secondary action API，也不能为满足单按钮规范删掉“保存”；使用该参考中明确允许的宿主双按钮组合，复用同一保存 Controller。
+新建保存并提交使用一次合并接口；已有记录编辑后提交才先更新原记录再发起。不将仅保存偷偷改为自动审批，也不根据“生成了我的审批导航”就展示提交按钮。
 
 1. 重新检查当前对象、权限、配置及字段校验。选择“保存并提交”时，先按下节确认发起部门；取消选择时不创建、不更新、不发起，保留输入。
 2. 完成必要附件预上传，复用原有字段序列化、关系转换与 Service 授权校验。新建“保存并提交”将最终创建载荷作为 `data` 交给 `/workflow/v1/bpm-process-submit`，只调用一次；不能先普通创建、再补发旧发起请求。
@@ -96,6 +100,8 @@ HTTP/网络异常继续由既有请求层处理；写请求超时、中断或成
 | 发起成功或服务端返回复用结果 | 同步真实状态，不再次首次发起 |
 
 同一保存会话拦截重复点击；前端互斥不能替代后端跨终端的原子校验和幂等。切换对象、用户、租户、应用或环境时取消/忽略旧读取结果。配置刷新不能丢失已经保存的 ID 或将结果未知状态重置为可再次创建。
+
+绑定刷新即使返回相同 key，也按 [会话代次与结果确认顺序](entity-bindings.md#刷新取消与写入结果的顺序) 停止旧步骤；已经发出的写请求先按所有权保留可靠成功结果或未知结果保护，再判断后续发起能否继续，不能套用附件预上传的“过期即丢弃结果”规则。
 
 发起前确认配置停用时刷新能力，仅保留当前仍有权的普通保存；若发起时发生配置冲突，报告真实错误，已有记录保留原 ID 并刷新，不自动改用另一流程。
 
@@ -142,3 +148,11 @@ Workflow 均为 `POST`，由 Service 设置 `X-Make-Target`：
 首次发起最终资格由 Workflow 校验，不额外附加普通创建/读取/编辑权限作为已经保存记录的发起前置条件；普通创建和更新仍各自执行原操作权限。只有创建权限、没有普通读取权限的用户不能因前端强制读回而无法处理刚保存的记录；结果未知的核查方式须遵守该权限边界。
 
 新边界函数记录入口、失败和普通/审批分支、保存是否已确认等安全上下文；不记录表单内容、凭据或附件地址。纯字段转换及状态辅助函数不加日志。
+
+## 按需业务草稿
+
+按 [草稿写入合同](../../make-app-service/references/business-record-drafts.md#写入协议与意图) 接入项目业务状态：表单隐藏，由 Service 在当前 START 白名单内生成；START 提供的顶层 defaultValue 按节点元数据合同保留，不从普通 Schema 补授权或默认值。动作数量与校验分工沿用上文矩阵。
+
+保存草稿走 Data Record 创建/更新 URL `isDraft=true`，不查询发起部门、不发起流程。Workflow 不接收 isDraft；新建合并提交由 Service 在合法 `data` 内显式注入项目正常保存值，已有发起和任务办理不自动改业务状态。已有草稿须按原 ID 完整校验、正常保存，再走已有记录发起；不能把 isDraft=false 或 UNSUBMITTED 当作完整性证明。
+
+Service 及真正执行发起的后端消费方核查正式业务资格；不能只隐藏按钮。保存状态正常也不授予发起资格，不修改系统流程状态或锁。普通无草稿项目保持本文件原行为；已有草稿正常保存后发起失败，继续复用原 ID/上传结果，合并提交及未知写入的保护规则保持不变。

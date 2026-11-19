@@ -1,6 +1,6 @@
 # Make Data Adapter
 
-本文件描述 Make Data 普通记录适配。审批任务办理的 recordPatch 属于 Workflow：按 [审批接口合同](../../make-app-approval/references/workflow-api.md) 保留任务字段格式与节点授权，不进入这里的普通 Lookup 关系合成和记录更新链路。任务字段基础定义及附件类型核验读取 bpm-node-form-metadata 的 TASK 场景，不使用下文普通权限 Schema 的字段来源，不回退普通 entity 补源字段，也不以节点元数据扩大节点授权。
+本文件描述 Make Data 普通记录适配。审批任务办理的 recordPatch 属于 Workflow：按 [审批接口合同](../../make-app-approval/references/workflow-api.md) 保留任务字段格式与节点授权，不进入这里的普通 Lookup 关系合成和记录更新链路。任务字段基础定义及附件类型核验读取 bpm-task 响应的 data.formMetadata，不使用下文普通权限 Schema 的字段来源，不回退普通 entity 补源字段，也不以节点元数据扩大节点授权。
 
 Use this reference when implementing Service adapters that call Make platform APIs.
 
@@ -144,6 +144,7 @@ Schema adapter should:
 - fetch remote runtime schema from Make/backend API
 - call the runtime-mode schema path with `POST`, `X-Make-Target: MakeService.GetResource`, JSON `Content-Type`, and body `{ appKey: config.appKey }`
 - normalize app display name, entities, relations, options, lookup metadata, and the independent permission-trimmed field collections `fields` and `createFields`
+- preserve field-level top-level `defaultValue` independently of `properties`, including explicit 0, empty string/array and null; never materialize defaults into existing record reads or metrics. Apply the same preservation to authorized START/TASK metadata normalization when supplied, without ordinary-Schema fallback
 - support known backend variants such as `entity.properties.fields` and `entity.fields` for the visible collection without using that visible collection as a fallback for `createFields`
 - expose `getAppSchema()` and `getEntityFields(entityKey)` or host-equivalent methods
 - cache or reuse in-flight schema requests when the host project needs it, but provide a clear invalidation path for permission refresh
@@ -172,8 +173,8 @@ type MakeRecordAdapter = {
   listRecords(entityKey, params): Promise<{ records: unknown[]; total: number }>;
   listRecordGroups(entityKey, params): Promise<{ groups: unknown[]; total: number }>;
   getRecord(entityKey, recordID): Promise<unknown>;
-  createRecord(entityKey, data): Promise<string>;
-  updateRecord(entityKey, recordID, data): Promise<void>;
+  createRecord(entityKey, data, options?: { isDraft?: boolean }): Promise<string>;
+  updateRecord(entityKey, recordID, data, options?: { isDraft?: boolean }): Promise<void>;
   deleteRecords(entityKey, recordIDs): Promise<unknown[]>;
 };
 ```
@@ -194,11 +195,15 @@ Rules:
 - ordinary grouped leaf records should call records mode with `group` omitted or `null`; never send `group: []`
 - do not mutate formatted UI display labels into submit payloads
 
+对明确启用草稿的对象，创建/整单保存的参数、状态注入、权限、完整性及局部编辑分流见 [业务草稿合同](business-record-drafts.md)。Record 适配器仅将 `options.isDraft` 映射到 Record URL，不写入 body，也不把该参数扩展到字段、文件或 Workflow 接口。新建合并提交的上层编排仍按该合同向 `bpm-process-submit.data` 写入正常状态；已有发起和任务办理不自动改状态。
+
 ## Aggregate statistics
 
 For dashboard metrics, charts, or AI analysis over matching Make records, prefer the server-side aggregate API when it expresses the requested calculation. Read the bundled [Data API aggregate contract](../../makedsl/references/DataAPIDesign.md#聚合统计-record-数据); the [upstream design](https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/DataAPIDesign.md#聚合统计-record-数据) records provenance and is not required for using the bundled contract.
 
 Call `POST /data/v1/aggregate` with `X-Make-Target: MakeService.ListResources` through the existing Make adapter. Reuse its runtime path scope, configured `appKey`, login context, cancellation, and response handling. Push supported calculations down, then perform any needed result combination or reasonably sized detail calculation in the Service; UI consumes the resulting business metrics. Read [query-planning examples](../../makedsl/references/DataAPIDesign.md#不能直接表达时的方案选择) when a single aggregate cannot meet the requirement. Record-list expansion and `groupFilter` remain the separate `make-app-group` workflow.
+
+启用业务草稿的对象，正式分析执行 [资格与消费者检查](business-record-drafts.md#排除草稿的业务范围)：聚合、各实体输入、明细和导出在计算前过滤；未启用对象保持原合同。不得仅在 UI 删除结果中的草稿行。
 
 ## User and department adapters
 

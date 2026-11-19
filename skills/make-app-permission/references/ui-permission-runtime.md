@@ -2,7 +2,7 @@
 
 权限及 Schema 初次加载、刷新校验的占位遵循 [区域加载态](../../makeui/references/app-shell-layout.md#区域加载态)：Shell 已挂载时填满主内容区并水平、垂直居中，尚未挂载时使用有完整高度的启动 fallback；禁止左上角裸文本。布局不得提前开放受保护内容，不改变 Provider 顺序、失败关闭及错误出口。
 
-以下普通编辑/更新字段规则不用于我的审批节点办理。任务表单按 [审批任务详情](../../make-app-approval/references/task-detail.md) 消费当前节点 fieldPermission/actions，字段定义读取 bpm-node-form-metadata 的 TASK 场景，不从普通 entity 或权限过滤的 Schema 补齐；节点定义不并入普通权限缓存。任务附件重查节点权限并用同一节点元数据来源校验类型，任务写入交 Workflow，不经普通记录更新门禁，也不以此放宽普通 CRUD。
+以下普通编辑/更新字段规则不用于我的审批节点办理。任务表单按 [审批任务详情](../../make-app-approval/references/task-detail.md) 消费当前节点 fieldPermission/actions，字段定义读取 bpm-task 响应的 data.formMetadata，不从普通 entity 或权限过滤的 Schema 补齐；节点定义不并入普通权限缓存。任务附件重查节点权限并用同一节点元数据来源校验类型，任务写入交 Workflow，不经普通记录更新门禁，也不以此放宽普通 CRUD。
 
 Use this reference for frontend permission providers, matching, route/action gates, field sets, payloads, and refresh.
 
@@ -109,7 +109,7 @@ When metadata is authorized but record read is denied, keep the authorized navig
 
 ## Create flow
 
-先判断普通新建或审批新建。以下计算、提交步骤及普通 create 的就绪检查适用于无有效 `bpmDefinitionKey` 的场景；有效审批的新建字段、附件和 Lookup 源字段白名单按 [审批发起合同](../../make-app-approval/references/initiation-contract.md) 切换，UI/Service 同步执行，不能把本文件的普通源字段交集再次套到审批字段。目标对象授权、类型能力与已有记录编辑规则保持不变。
+先按 [独立绑定查询](../../make-app-approval/references/entity-bindings.md) 判断普通新建或审批新建，不从 Schema 取 key。以下计算、提交步骤及普通 create 的就绪检查适用于绑定查询成功而无有效 `bpmDefinitionKey` 的场景，绑定加载／失败暂停创建并允许重试；有效审批的新建字段、附件和 Lookup 源字段白名单按 [审批发起合同](../../make-app-approval/references/initiation-contract.md) 切换，UI/Service 同步执行，不能把本文件的普通源字段交集再次套到审批字段。目标对象授权、类型能力与已有记录编辑规则保持不变。
 
 Compute create fields only from the create collection and create permission:
 
@@ -206,3 +206,5 @@ Fail closed when either permission or Schema refresh fails.
 Read `scoped-route-feedback.md` for App guard -> shell -> object/fixed-route guard composition. React uses a shared host adapter for `MakeAppPermissionNotice` from `@qfei-design/make-app-observability/react`; read `makeui/references/permission-feedback.md` for verified exports/CSS, visual variants and the package release gate. Scope, retry state, allowed return targets and protected-request invalidation remain host-owned; the component cannot authorize or refresh data by itself. Administrator contacts must work without a business request: follow `make-app-auth/references/access-help.md`. If embedded contacts are absent and the installed SDK supports it, use `auth.getAppAdministrators()` independently; a supplied empty list remains authoritative. For a local denial, do not fetch data merely to obtain a 403; retain authorized navigation and replace the business content. Record-read-only denial remains distinct from metadata/App entry denial. Existing non-React host helpers remain compatible without a forced framework migration.
 
 业务字段编辑遵循 [统一规则](permission-boundaries.md#业务数据编辑统一规则)：单条更新使用 `data.record.update`，批量使用独立的 `data.record.bulkUpdate`，并校验该操作返回的字段访问态。`meta.field.update` 只用于字段结构变更，不能作为业务数据编辑授权或兜底。前端控件、提交白名单与 Service 写入校验必须一致，覆盖 readonly、hidden、脱敏、显式拒绝及撤权，禁止通过管理员或扩大为 `*.*.*` 绕过。
+
+已明确启用业务草稿时，TASK 的节点授权之后还要执行 [项目管理字段约束](../../make-app-service/references/business-record-drafts.md#task-管理字段与引用)：先校验原始权限再收紧，不增加节点或普通 CRUD 权限；未登记同名字段保持原规则。

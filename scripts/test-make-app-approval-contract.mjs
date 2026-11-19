@@ -79,19 +79,25 @@ assert.match(serviceAdapter, /In ordinary create mode[^\n]*`createFields`/,
 assert.match(serviceAdapter, /审批新建 START[^\n]*任务 TASK[^\n]*lookup-metadata\.md[^\n]*启动字段\/任务授权/,
   'BPM Lookup 候选应交接节点依赖合同并重验对应场景授权');
 
-assert.match(initiation, /"type": "Make\.Field\.Number"/,
-  '实际启动字段样例应保留 Make.Field.Number 类型');
-assert.match(initiation, /"makeFieldType": "NUMBER"/,
-  '实际启动字段样例应保留并列的 Workflow 类型枚举');
-assert.match(initiation, /已识别的 `Make\.Field\.\*`[^\n]*宿主标准类型[^\n]*`makeFieldType`[^\n]*一致性/,
-  '当前端点两个类型标识并存时须写明归一化顺序');
-assert.match(initiation, /"precision": 1/,
-  '实际启动字段样例应保留数字精度元数据');
-assert.match(initiation, /`data\.fields`[^\n]*`fields`[^\n]*Service[^\n]*响应合同/,
-  '启动配置示例的包装层不得被误当作固定协议');
+const startExample = [...initiation.matchAll(/```json\n([\s\S]*?)\n```/g)].map(match => JSON.parse(match[1])).find(value => value.data?.formMetadata);
+assert.ok(startExample, '新建示例必须给出同次响应的内嵌元数据');
+assert.equal(startExample.data.fields[0].field, startExample.data.formMetadata.fields[0].fieldKey);
+assert.equal(startExample.data.formMetadata.fields[0].makeFieldType, 'NUMBER');
+assert.equal(startExample.data.formMetadata.fields[0].number.precision, 1);
+assert.deepEqual(startExample.data.formMetadata.relations, []);
+// 对示例内容的明确描述必须能从 JSON 找到依据，不能残留已删除的多选样例说明。
+const verifySampleNarration = document => {
+  if (/(?:样例|示例)中的多选字段/.test(document)) {
+    assert.ok(startExample.data.formMetadata.fields.some(field => field.makeFieldType === 'MULTI_SELECT'),
+      '示例未提供 MULTI_SELECT，说明不能声称包含多选字段');
+  }
+};
+verifySampleNarration(initiation);
+assert.throws(() => verifySampleNarration(`${initiation}\n样例中的多选字段同时有两种选项配置`), /示例未提供 MULTI_SELECT/);
+assert.match(initiation, /`Make\.Field\.\*`[^\n]*宿主标准类型[^\n]*`makeFieldType`[^\n]*一致性/);
 assert.match(initiation, /`selection\.fieldSelections`[^\n]*`properties\.options`/,
   '选项字段应保留原始与规范化的选项信息');
-assert.match(initiation, /bpm-node-form-metadata[^\n]*已实测[^\n]*数字 `type: 1`[^\n]*makeFieldType/,
+assert.match(initiation, /formMetadata[^\n]*数字 `type: 1`[^\n]*makeFieldType/,
   '新节点接口已确认的数字 type 不能套用旧启动配置的字符串类型规则');
 assert.match(initiation, /数字不能直接拼成 `Make\.Field\.\*`/,
   '数值标识不能被猜测为控件类型');

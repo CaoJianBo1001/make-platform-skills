@@ -1,11 +1,15 @@
 ---
 name: make-app-service
-description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts, including server-side aggregation for dashboards, charts and 统计/汇总. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema normalization including independent fields/createFields collections, record CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
+description: "Use when generating, refactoring, reviewing, or debugging Make App apps/service APIs and UI-Service contracts, including server-side aggregation for dashboards, charts and 统计/汇总. Covers route design, apps/docs/api.md, layered structure, Make adapters, direct Make response passthrough, schema fields/createFields and defaultValue, opt-in record drafts, CRUD, record-write-permission and records/bulk, list filter/sort/groupFilter parsing, record groups, Entity Preset, candidate/lookup/file proxies, runtime config, login-context forwarding, AbortSignal propagation, validation, logging, and tests. Always coordinate /api/make/app/principal/permission through make-app-permission. Use make-app-actions for action semantics, make-app-sort for sorting, make-app-filter for filtering, and make-app-group for grouping. Does not own UI layout, auth, permission policy, build/runtime, DSL, Make CLI deployment, or CanvasTable internals."
 metadata:
-  version: 0.2.26
+  version: 0.2.31
 ---
 
 # make-app-service
+
+仅在用户明确需要持久化业务草稿时读取 [业务草稿合同](references/business-record-drafts.md)：接入按钮意图、Record URL 参数、项目保存状态及正式业务消费者资格。无此需求不生成草稿功能。字段固定默认值独立支持，Schema 归一化保留字段顶层 `defaultValue`；见 [字段合同](../makedsl/references/FieldDesign.md#字段默认值--default-value)。
+
+审批对象的 `bpmDefinitionKey` 按 [独立绑定查询合同](../make-app-approval/references/entity-bindings.md) 从 Workflow 获取；先限定当前可访问对象，再查询绑定，不读取 Schema 旧属性。保持 UI → Service → Make 的可信配置、错误透传及取消链路，失败不能降级普通创建。
 
 应用显示名称从运行时接口归一为共享 appName，后台改名后随既有刷新更新，禁止用配置或 DSL 固定名称覆盖；见 [应用名称来源](references/make-data-adapter.md#应用名称来源)。
 
@@ -31,7 +35,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 10. If Schema is cached, isolate permission-trimmed results by tenant, principal/session, App, and access generation, and expose explicit invalidation for permission refresh.
 11. For Make record actions, implement the documented `record-write-permission` route before edit UI and the `records/bulk` route for batch edit; use `make-app-actions` for target, permission, one-request semantics, and the established complete UI-Service response contract. Keep its success, HTTP200 partial-denial and select-all403 projections; other completed HTTP failures preserve status, Content-Type and body, including reason, permissionKey and administrator contacts, rather than a generic code/message wrapper.
 12. For cancellable or supersedable requests, propagate a request-scoped `AbortSignal` from the Service boundary into every downstream adapter; read `references/service-api-contracts.md` before implementation.
-13. If the Service change concerns Make AI 助手 or Agent chat, first use `make-ai-assistant` for its current official package baseline and Agent Public API v1 contract; Service owns explicit routes, validation, runtime config, safe errors, logging, cancellation and tests.
+13. If the Service change concerns Make AI 助手 or Agent chat, first use `make-ai-assistant` for the official 0.4.2 Agent Public API v1 contract; Service owns explicit routes, validation, runtime config, safe errors, logging, cancellation and tests.
 14. Add or update Service tests for every changed route, adapter, validation path, and error path.
 15. Read only the needed reference files from the map below.
 
@@ -44,7 +48,9 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 | Schema 缓存刷新、进行中请求复用与取消的组合场景 | `references/service-api-contracts.md`、`references/testing-and-safety.md` |
 | Service folder structure, layering, logging, errors | `references/service-layering.md` |
 | Make Data API adapter rules, schema `fields` / `createFields`, records, files, lookup, candidates | `references/make-data-adapter.md` |
+| Optional persisted business drafts, save-state injection, formal-data eligibility and consumer coverage | `references/business-record-drafts.md` |
 | Dashboards, charts, counts, sums, averages, grouped statistics / 聚合统计 | [Aggregate statistics](references/make-data-adapter.md#aggregate-statistics) |
+| Opt-in draft TASK management fields, Lookup eligibility and final numeric JSON host verification | `references/draft-host-verification.md`、`scripts/verify-draft-host-boundaries.mjs` |
 | Test requirements, contract checks, safety review | `references/testing-and-safety.md` |
 | Single-app permission proxy, Make IAM principal permission, app-scope permission payloads | Use `make-app-permission` |
 | Auth proxy, cookies, unified login, 401/403 behavior | Use `make-app-auth` |
@@ -73,7 +79,7 @@ It does not own record-action behavior (`make-app-actions`), sorting behavior (`
 
 ## Default Service responsibilities
 
-审批新建、`bpmDefinitionKey`、发起/撤回、我的审批任务查询/办理/继续提交、历史和状态传输使用 [make-app-approval](../make-app-approval/SKILL.md)。Service 保留对象顶层 key 及记录系统状态/锁字段；审批新建的可写字段来自权威启动配置，普通新建仍用原 `createFields`/IAM 合同，已有记录编辑仍用原更新链路。不要让普通源字段交集二次裁掉审批授权，也不要信任客户端声明的审批模式。BPM 源字段基础信息及任务附件类型核验使用 `/workflow/v1/bpm-node-form-metadata` 的 GetResource：新建 START 使用部署 appKey/启动配置 processKey，任务 TASK 仅使用 processInstanceId/taskId；不从普通 entity 或权限过滤的 Schema 补源字段，不覆盖普通 Schema 缓存。任务动作及其 recordPatch 走 [Workflow 接口合同](../make-app-approval/references/workflow-api.md)，不经过普通记录 PATCH 或 Lookup 关系转换；任务附件按当前节点授权预上传。保留完整上游信封、业务错误与 Trace，不把任务办理改成普通 IAM 更新。
+审批新建、`bpmDefinitionKey`、发起/撤回、我的审批任务查询/办理/继续提交、历史和状态传输使用 [make-app-approval](../make-app-approval/SKILL.md)。Service 从 Workflow 独立查询对象绑定，保留记录系统状态/锁字段；审批新建的可写字段来自权威启动配置，普通新建仍用原 `createFields`/IAM 合同，已有记录编辑仍用原更新链路。不要让普通源字段交集二次裁掉审批授权，也不要信任客户端声明的审批模式。BPM 源字段基础信息及任务附件类型核验使用 对应 bpm-start-config、bpm-task、bpm-process GetResource 响应的 data.formMetadata；不另请求元数据；不从普通 entity 或权限过滤的 Schema 补源字段，不覆盖普通 Schema 缓存。任务动作及其 recordPatch 走 [Workflow 接口合同](../make-app-approval/references/workflow-api.md)，不经过普通记录 PATCH 或 Lookup 关系转换；任务附件按当前节点授权预上传。保留完整上游信封、业务错误与 Trace，不把任务办理改成普通 IAM 更新。
 
 Generated or refactored Make App Service code should provide these capabilities when the UI needs them and the host project does not already have equivalent routes:
 
@@ -111,7 +117,7 @@ Keep route handlers small. Put Make/backend calls in adapter modules, cross-rout
 - If neither `MAKE_API_BASE_URL` nor `MAKE_SERVER_URL` is configured for a Make-backed Service, config loading must fail with a clear non-secret error before the Service is reported ready.
 - Published `MAKE_API_BASE_URL` / `MAKE_SERVER_URL` values are strict k8s gateway origins such as `http://make-gateway.make-dev`. New generated Service code must not put `/make`, `/api/make`, `/meta`, `/data`, `/auth`, or another service path scope in this env var. Local-preview resolve output must be consumed as `make_api_origin`; if older makecli fallback returns or reads a path-scoped public `/api/make` API base, normalize that only inside the local-preview adapter.
 - Make platform adapters own the service path scope. Generated Service code derives upstream URLs from an explicit runtime mode: local preview uses public gateway origin + `/api/make/**`; published uses k8s gateway origin + `/make/**`, such as `http://make-gateway.make-dev/make/meta/**` and `http://make-gateway.make-dev/make/data/**`.
-- Agent Service contract follows `make-ai-assistant`: browser `/api/make/app/agent/v1/**`; preview upstream `make_api_origin + /api/make/agent/v1/**`; published upstream trusted Gateway origin + `/make/agent/v1/**`. No new Agent-only origin or token. Validate all POST Origin, deploy-owned App scope (never concatenate unparsed CEL; use the AI Skill restricted-filter policy or a trusted AST composer), content/query/body using the public `assertAgentRequest` from the same exact package version as the UI, as defined by the Agent Skill. Preserve `{code,msg,data,pagination?}`, HTTP status, extensible reason, SSE and download bytes; sanitize malformed/private diagnostics. Multipart uses POST /content, not legacy chunks. Keep auth, Trace, forwarded Host/Proto and AbortSignal on the shared request chain.
+- Agent Service contract follows `make-ai-assistant`: browser `/api/make/app/agent/v1/**`; preview upstream `make_api_origin + /api/make/agent/v1/**`; published upstream trusted Gateway origin + `/make/agent/v1/**`. No new Agent-only origin or token. Validate all POST Origin, deploy-owned App scope (never concatenate unparsed CEL; use the AI Skill restricted-filter policy or a trusted AST composer), content/query/body using the same 0.4.2 public `assertAgentRequest`. Preserve `{code,msg,data,pagination?}`, HTTP status, extensible reason, SSE and download bytes; sanitize malformed/private diagnostics. Multipart uses POST /content, not legacy chunks. Keep auth, Trace, forwarded Host/Proto and AbortSignal on the shared request chain.
 - If the same Service calls other gateway services, those adapters define their own explicit service scopes from the same gateway origin. Do not strip `/make` out of `MAKE_API_BASE_URL`, and do not overload a path-scoped base URL to reach unrelated services.
 - Service-to-gateway calls inside the cluster must not use the browser-facing `/api/make` prefix. `/api/make/**` belongs to same-origin browser access, Service ingress, and local-preview public gateway calls; published Service internal upstream URLs use gateway-origin plus `/make`.
 - Service source must not hard-code concrete Make dev/test/prod domains, infer namespace-local gateway addresses, or map deployment environments to domains.

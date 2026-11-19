@@ -193,12 +193,12 @@ export function composeApprovalNavigation({ businessItems, approvalItem, assista
 - 使用 `MobilePageHeader`：返回按钮必需；关闭按钮只在宿主任务容器确实支持关闭时显示；更多操作按需显示。
 - host chrome 存在时可以通过 `MobileHostChromeBridge` 委托页头；注册失败必须回退到应用页头。
 - 手机表单与详情在页面层级使用单列内容区；这不表示普通字段的标签和值要上下堆叠。普通字段仍按 `mobile-form-controls.md` 同行展示为左侧标签、右侧值，详情值尾端对齐；字段顺序、权限和业务校验仍来自共享 Controller。
-- 手机新建／编辑通过独立字段展示适配层选择移动安全控件；禁止原样复用桌面 DatePicker、RangePicker、Select 等弹层后仅调整宽度。保存／提交使用 `MobileFormActionBar`：单个主按钮无图标、在底部靠右，并保留安全区；详情记录操作继续使用 `MobileBottomActionBar`。
+- 手机新建／编辑通过独立字段展示适配层选择移动安全控件；禁止原样复用桌面 DatePicker、RangePicker、Select 等弹层后仅调整宽度。保存／提交按 [表单保存意图矩阵](mobile-form-controls.md#表单保存意图矩阵) 组合：单动作使用 `MobileFormActionBar`，多动作使用已确认的公开能力或同一宿主 footer，均无图标、靠右并保留安全区；详情记录操作继续使用 `MobileBottomActionBar`。
 - 手机详情使用字段 display adapter 的单列标签／值展示，不把桌面编辑表单切成 disabled 状态冒充详情。
 - 严格只读记录不展示普通写操作；详情发起和撤回独立遵守审批合同，不从普通字段只读推断。可写卡片提供 `make-app-actions` 支持的单条编辑、删除；手机端不使用选择操作栏或批量编辑。
 - 手机详情默认使用 `MobileBottomActionBar` 展示编辑和删除；两者读取独立权限并分别复用与卡片相同的单记录 action、冻结目标、确认、共用预检策略和最终接口鉴权。详情点击编辑时，预检通过后直接进入当前记录的编辑路由，不经过对象列表；具体单记录生命周期见 `make-app-actions` 的 `mobile-card-actions.md`。卡片已有操作不能替代或取消详情操作；编辑与删除都不可用时，有合法发起或撤回动作仍保留操作栏；全部普通与审批动作均不可用时才移除整条底部操作栏。
 - 删除等破坏性操作使用 `MobileConfirmDialog`，异步确认期间禁止重复提交，失败时保持弹窗并允许重试。
-- 上述单按钮规则只适用于普通单动作表单。[make-app-approval](../../make-app-approval/SKILL.md) 的有效审批新建保留“保存 / 保存并提交”双按钮，按 [手机表单双按钮例外](mobile-form-controls.md#审批新建的双按钮例外) 复用宿主控件；不删掉任一动作，不虚构移动包 API。
+- 审批保存资格由 [make-app-approval](../../make-app-approval/SKILL.md) 提供，草稿按明确需求启用；动作数量与组合统一读取上述矩阵，不再为不同页面维护单／双按钮分支。
 
 ## 搜索选择抽屉
 

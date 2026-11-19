@@ -56,3 +56,9 @@ export function getSavedRecordApprovalIntents({ hasDefinition, status, locked, c
 ## 状态读取不一致
 
 操作响应、Workflow 实例与 Data 记录可能出现不一致，须记录安全诊断和 Trace 并提示核查。消费本次已确认动作结果刷新同一记录，保留 [状态展示](status-display.md) 的首次发起即时回显边界；不无限保留旧状态、伪造系统锁、强插业务列表，或额外普通 PATCH 补写后端应处理的关系/状态。后端成功写入与可读性是联调验收项，前端回归通过不能替代。
+
+## 已启用业务草稿时的附加资格
+
+上文仅基于系统流程状态的入口矩阵和 `getSavedRecordApprovalIntents` 示例，用于没有业务草稿或已核实为正常保存的记录。项目明确启用业务草稿后，还须执行 [正式业务资格](../../make-app-service/references/business-record-drafts.md#排除草稿的业务范围)：draft、历史未分类及未知值不直接首次发起。先在有原编辑资格的链路补齐内容、正常保存，再发起原 ID；详情独立发起不偷偷做普通 PATCH，也不新增普通 CRUD 读写权限要求。资格读取/验证使用当前已授权的可信上下文或后端校验，不能用高权限账号代读；无法核实时明确报告缺口。
+
+该附加条件只约束已启用草稿的业务记录，不改变正常记录独立发起、任务 SUBMIT、撤回或当前流程禁编合同；不能把业务草稿与流程设计草稿、UNSUBMITTED 或 RETURNING 混用。

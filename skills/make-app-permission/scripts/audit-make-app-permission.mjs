@@ -9,7 +9,7 @@ import { auditCreatePayloads, defaultCreateCalls } from './create-payload-signal
 import { auditScopedRouteFeedback } from './scoped-route-feedback-audit.mjs';
 
 const USAGE = `Usage:
-  node skills/make-app-permission/scripts/audit-make-app-permission.mjs <project-root> [--config <json-file>]
+  node "<skill-dir>/scripts/audit-make-app-permission.mjs" "<project-root>" [--config <json-file>]
 
 Checks Make App single-app permission enforcement, including record operations and operation-specific field states. This is a static contract audit; it does not replace Service/UI tests.`;
 

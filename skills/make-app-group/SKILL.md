@@ -2,10 +2,12 @@
 name: make-app-group
 description: "Use when integrating, generating, refactoring, reviewing, or debugging Make App record-list grouping with @qfei-design/make-app-group and @qfei-design/canvas-table GroupTableComponent. Triggered by 列表分组, 高级分组, 多级分组, 分组条件, 拖拽分组, 表头分组, 表头分组 openWithField, capabilities.groupable, Entity Preset group save/load/echo, record-groups, groupFilter, grouped leaf pagination, or grouping tests. Covers one integrated toolbar, CanvasTable grouped rendering, Entity Preset, Service group contracts, Make Data ListResources grouping mode, groupFilter expression composition, and leaf-record pagination. When make-app-actions is present, a successfully applied group must clear its selection and invalidate pending action work; draft edits and failures preserve selection. Statistical aggregation uses make-app-service. Does not own page shell/layout, CanvasTable internals, package internals, permission policy, auth, runtime packaging, DSL modeling, Make CLI execution, filtering, sorting, or cell editing."
 metadata:
-  version: 0.1.9
+  version: 0.1.10
 ---
 
 # make-app-group
+
+明确启用业务草稿的项目，正式业务分组、叶子、total、下钻和跨页全选消费同一后端资格范围，见 [Service 草稿合同](../make-app-service/references/business-record-drafts.md#查询批量与直接动作)。保留原 `filter` / `groupFilter` 分离及 Preset 合同；草稿管理分组可包含草稿，未启用对象不附加条件。
 
 Treat toolbar grouping, optional CanvasTable header grouping entry, Entity Preset
 persistence, Service `record-groups` requests, records `groupFilter`, and
