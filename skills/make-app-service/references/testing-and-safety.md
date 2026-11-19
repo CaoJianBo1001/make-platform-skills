@@ -141,6 +141,18 @@ Before reporting Service work as ready:
 - auth/session changes were handled by `make-app-auth`
 - build/start/port changes were handled by `make-app-runtime`
 
+## 分析请求的调用次数与性能回归
+
+按 [聚合查询规划](aggregate-query-planning.md) 写调用预算和受控 HTTP 测试，而非仅匹配文档关键字。用真实 Service 路由、现有适配器与可计数上游夹具断言：
+
+- 同范围 count/sum/avg 等合并，多个图形复用标准结果，重复总体的同 analysisId／参数仅执行一次；不同参数、条件及范围不错误合并。新的业务查询仍读取当前值，失败不缓存成成功。
+- 无权限时零业务读取；请求内复用保留真实开始与结束复核，身份／权限／Schema 改变后丢弃结果。故障注入删除最终复核后测试应失败；只返回允许的假守卫不能过关。
+- 如已有跨请求元数据复用：初始化各资源的必要次数、命中后零重复元数据读取、筛选／路由返回不重复初始化、显式刷新重取、不同身份及代次隔离；业务聚合每次新读。缺少代次／会话保留原路径，客户端代次不授予匿名访问。
+- 元数据失败及刷新竞态、单个／全部等待者取消、共享工作中断、正常完成不 abort、Set-Cookie 不入共享响应缓存；普通资源拒绝与整份身份失效分别处理，业务网络重试不破坏其他合法页面。
+- 唯一聚合与分页数、最大在途量、必要字段补读、超时及总分组预算均可观察；不因输入万条就逐记录／逐部门扩张请求，不以无限并发或全量浏览器下载通过测试。
+
+将同口径真实接口答案、顺序耗时、生产构建页面和并发／高基数压测分开记录；本地 preview 的身份链路不同，不能直接与线上 published 请求数／耗时混算。性能优化前后保留原业务结果、NULL、单位、完整性与权限错误合同。
+
 ## Suggested commands
 
 For new Make Apps and explicit runtime migrations, use the `make-app-runtime` baseline (Node.js `22.20.0`, Corepack `0.34.0`, and `pnpm@10.20.0`) and actual package names. Existing Apps retain their declared runtime during Service work. Common examples:

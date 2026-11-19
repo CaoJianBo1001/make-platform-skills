@@ -83,7 +83,8 @@ Codex 判断优先级：
 | 分组、高级分组、多级分组、分组条件、拖拽分组、表头分组、`capabilities.groupable`、Entity Preset group、record-groups、groupFilter、分组叶子明细分页、`@qfei-design/make-app-group` | `make-app-group` | 负责分组模型、Preset、Service group 合同和 CanvasTable 分组渲染；desktop/tablet 显示分组能力，手机使用普通卡片记录查询、不挂载分组表格且不清除已保存的分组 Preset；不负责页面 Shell、CanvasTable 内部或筛选/排序模型 |
 | 助手、AI助手、MakeAI AI 助手、Make AI 助手、AI 对话框、SSE、Agent Gateway、`@qfei-design/make-ai-assistant`、make-ai-assistant 包 | `make-ai-assistant` | 负责 Make App AI 助手接入：官方 0.4.6 公开契约、受限 webchat 发现、25 项 App 代理组合、多会话/队列/停止/问题/流式响应/文件图片与包内 UI；不负责普通 Dialog、业务 Agent 提示词、权限算法、认证实现、发布或 DSL |
 | Service 接口、`apps/service` API、UI-Service 合同、`apps/docs/api.md`、schema `fields/createFields`、records/users/departments/lookup/file 代理接口、Make Data API adapter、Service 网关 origin 与服务 scope 配置语义 | `make-app-service` | 只负责 Service API、薄编排、Schema 集合无损传输和按主体隔离缓存，不负责 UI、认证、权限算法、打包发布、端口/构建产物、DSL 建模、Make CLI、CanvasTable |
-| 统计、汇总、分组统计、指标卡、图表、仪表盘 | 临时数据查询用 `makecli`；Vibe App 用 `make-app-service` + `makeui` | 优先使用 Data API 的单 Entity 聚合能力；列表折叠与展开仍由 `make-app-group` 负责 |
+| Make App 业务报表、分析指标卡、图表、趋势、构成、排名、数据分析 | [make-app-analytics](skills/make-app-analytics/SKILL.md) + `make-app-service` + `makeui` | 仅在 PRD 或迭代已提出分析需求时进入；按业务问题、口径和实际数据选择最小展示，实际制品按接入合同核验 |
+| 临时查数、现有列表总数、记录列表折叠分组、打印／导出明细 | 查询用 `makecli`；列表及导出用现有链路，折叠分组用 `make-app-group` | 不因“统计／报表”词语默认接入分析模块；统计实现仍优先复用 Data API 聚合能力 |
 | 权限、单应用权限、App 权限、`/principal/permission`、`/api/make/app/principal/permission`、菜单权限、对象导航、路由权限、按钮权限、字段可新建、可见、可编辑、`creatable`、`createFields`、read/create/update/delete、URL 防绕过、刷新权限 | `make-app-permission` | Make 项目默认必须接入；负责单个 App 权限链路、Service 调 Make IAM、App scope、`meta.entity.read` 对象导航、`meta.field.read` 表头和 `data.record.read` 数据行的独立权限，以及 `createFields` 与字段 `creatable/readable/editable` 独立权限、创建提交白名单、路由和按钮权限、刷新重取和测试；不负责平台管理权限、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 或部署 |
 | 登录、认证、Token、统一登录、OAuth、Cookie、Session、logout、401/403、current-context 身份、`tenantName`、飞书容器退出可见性、`/api/make/**` 鉴权请求 | `make-app-auth` | 负责认证、身份上下文与宿主环境信号，不负责账户抽屉布局和打包发布 |
 | Trace ID、`traceparent`、`X-Log-Id`、请求关联日志、网络/HTTP/业务错误卡片、`@qfei-design/make-app-observability` | `make-app-observability` | 所有新建 Make App 默认接入；负责 UI 到 Gateway 的 Trace ID 链路和公共错误展示，不负责认证、Service 路由、AI 协议或 Trace 后端部署 |
@@ -93,6 +94,10 @@ Codex 判断优先级：
 | 发票、票据、OCR、验真、识别金额/税号/票据内容 | `make-integration` | 只负责 Make 集成服务能力 |
 
 常见组合：
+
+- 已触发的分析接入或慢页优化：先用 [聚合查询规划](skills/make-app-service/references/aggregate-query-planning.md) 列唯一来源、合并兼容指标并明确授权复核与并发／分页预算；页面按 [请求与大数据验收](skills/make-app-analytics/references/query-performance.md) 按需加载、复用结果和记录真实下游次数。不把元数据缓存等同于业务数据缓存，不因性能诉求改变统计口径或权限生效规则。
+
+- Make App 已提出分析需求：`make-app-analytics` 指导业务口径、选图和范围，`make-app-service` 实现数据链路，`makeui` 组合宿主界面，权限沿用 `make-app-permission`。单图／单卡不默认生成分析中心，普通项目初始化不触发分析探查；PRD 明确要求分析时纳入初始范围。页面级需求先形成宿主分析方案，多来源对照和逐月比例使用包的分组序列，业务目标、分母与群体仍归宿主。列表联动配合 `make-app-filter`，完整条件无法映射时停止对应统计，不扩大范围或改变原列表筛选。
 
 - 方案确认后新建或迭代 Make App：先用 `make-app-approval` 判定是否生成一个“我的审批”入口；业务新增/录入/编辑保存或明确审批处理触发，纯查询/看板/登录/搜索/筛选不触发，不要求预先绑定流程。审批新建和状态展示组合 `makeui` + `make-app-permission` + `make-app-service`；审批新建使用启动字段授权，任务办理使用当前节点权限；普通 IAM 规则保持不变。完整任务中心按审批 skill 接入包、provider、Service 与历史，不能停在导航占位。
 
@@ -125,6 +130,35 @@ Codex 判断优先级：
 固定默认值独立支持，见 [字段 defaultValue 合同](skills/makedsl/references/FieldDesign.md#字段默认值--default-value) 与 [UI 初始化](skills/makeui/references/record-drafts-and-defaults.md)。它只补创建时缺 key 的值，不回填历史、不覆盖显式空值、不在编辑/统计时补齐；模型和环境需实际读回验证。
 
 ## 可用 Skill 列表
+
+### make-app-analytics
+
+在 PRD 或迭代明确提出分析需求后，指导 Agent 选择业务指标、可信统计来源及固定展示，再由宿主接入 `@qfei-design/make-app-analytics`。普通项目初始化不启用分析；npm 包安装与 Skill 安装是两件事。
+
+当前已验证制品与升级规则统一维护在[接入合同](skills/make-app-analytics/references/integration-contract.md#先核对可用制品)，扩展模板按[可执行示例](skills/make-app-analytics/references/release-017.md)接入；DateTime五粒度与自然日范围见[配套合同](skills/make-app-analytics/references/datetime.md)。旧宿主需要同步依赖、注册与页面，更新Skill不自动迁移App。
+
+安装或验证时确认 [SKILL.md](skills/make-app-analytics/SKILL.md)、全部 references 及需要的 Service、UI、筛选、权限 Skill 实际可读。安装后只依赖各 Skill 的分发目录，不要求存在仓库根 README 或仓库维护脚本。
+
+首次添加新增的 `make-app-analytics` 并更新关联 Skill，来源沿用所选 stable／beta 通道。`npx skills update` 只更新已安装技能，新增入口使用 `makecli skills update` 或前述 `npx skills add`；makecli 内嵌快照不等于已安装文件。可发现 Skill 只代表开发引导就绪，是否安装 npm 包及生成分析区域仍按需求触发。
+
+维护者在本仓库执行 `node scripts/check-installed-make-platform-skills-sync.mjs <source-skills-dir> <installed-skills-dir>`，检查完整文件一致和安装布局中本地链接／锚点可达。检查涵盖内联与引用式链接，拒绝不可移植的 file URL、越出技能根目录、缺失目标和错误章节；代码围栏中的示例不参与检查，合法关联 Skill 必须同样存在。此命令属于仓库维护工具，不是安装后 Agent 的接入依赖。
+
+#### 分析 Skill 维护验收（仅仓库内）
+
+维护者按接入合同准备正式npm制品，实际安装须有React及ReactDOM依赖。在本仓库根目录执行：
+
+```bash
+MAKE_ANALYTICS_PACKAGE_ROOT="<正式npm包安装目录>" \
+  node scripts/test-analytics-release-examples.mjs
+```
+
+脚本直接执行Skill中的配置并核对独立答案；它检查实际安装版本，未提供制品时明确跳过运行时验证。CI的隔离安装命令见[工作流](.github/workflows/skill-metadata-lint.yml)，仓库回归同时检查CI制品与接入基线一致。
+
+需要额外验证DateTime候选时，可在同一命令中另设`MAKE_ANALYTICS_DATETIME_PACKAGE_ROOT`为候选目录；该检查不替代正式制品验收。以上脚本及环境变量仅用于仓库维护，不属于分发Skill或其他App的接入依赖，不复制到宿主。
+
+周显示候选使用`MAKE_ANALYTICS_WEEK_PACKAGE_ROOT="<候选包目录>" node scripts/test-analytics-week-example.mjs`执行文档原配置，核对公开轴、半周提示与同份明细；使用正式0.1.9目录并加`--expect-unsupported`，验证分桶支持与候选显示参数的边界。未提供目录时仅执行配置模块，明确跳过运行时验收；该维护检查不替代宿主或浏览器验收。
+
+Skill源规范、通道分发、安装文件和宿主验收分别记录；维护验证通过不代表已发布、已覆盖全局安装或已完成浏览器验收。
 
 ### make-app-approval
 
@@ -416,6 +450,12 @@ npx skills update make-app-permission
 - 刷新时重新获取权限，再决定是否刷新数据或关闭已打开工作区
 - 使用 `scripts/audit-make-app-permission.mjs` 做权限合同检查
 - 不负责后台权限策略配置、认证机制、通用 Service API、UI 布局、CanvasTable 内部、DSL 建模或部署
+
+#### 权限 Skill 维护验证（仅源仓库）
+
+在仓库根目录运行 `node scripts/test-permission-installed-guidance.mjs`。测试从含空格的独立安装及应用目录执行入口与参考文档中的四类验证命令，检查审计帮助路径，恢复旧相对路径时必须失败；项目工具在移除 Skill 安装目录后仍可运行。该测试验证命令可移植性及原失败结果的保留，不代表生成 App 的权限行为已经验收。
+
+本地宿主验证按 [安装路径说明](skills/make-app-permission/references/testing-and-audit.md#验证命令与安装路径) 定位随包脚本；持续门禁按 [项目工具接入](skills/make-app-permission/references/testing-and-audit.md#host-gate-integration) 保留完整工具依赖，不引用维护者本机路径。
 
 ### make-app-runtime
 指导 Make App 运行态和打包发布契约，覆盖 `apps/` workspace、`apps/ui/dist`、`apps/service` 构建产物、Service 端口、镜像启动入口和发布前契约检查。

@@ -25,6 +25,8 @@ This skill owns the consumer-side package integration contract, advanced-filter 
 
 ## Capability modes
 
+已有列表旁分析且要求跟随筛选时，配合 [make-app-analytics 的筛选交接](../make-app-analytics/references/list-filter-integration.md) 提供成功应用的完整条件与原始值；本 Skill 继续拥有列表编译和 Preset，不为分析丢弃关键词、改变 AND／OR 或清空已应用条件。统计无法完整表达条件时只停止对应统计，原列表筛选链路继续工作。
+
 Choose the mode before following the workflow. Panel, controller, filter Preset and mobile-layout requirements below apply only to `advanced-filter` unless explicitly stated otherwise.
 
 | Mode | Query | Filter Preset | UI and package gate |

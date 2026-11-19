@@ -30,6 +30,16 @@ const cases = [
   ['empty_legacy_claims_reach_iam', response(200, JSON.stringify({
     ...identity, roles: [], permissions: [], grantVersion: '',
   })), response(200, iamBody)],
+  ...[
+    ['missing', { userId: identity.userId, tenantId: identity.tenantId }],
+    ['empty', { ...identity, appId: '' }],
+    ['null', { ...identity, appId: null }],
+    ['blank', { ...identity, appId: '   ' }],
+  ].map(([label, context]) => [`${label}_app_context_uses_configured_iam_scope`,
+    response(200, JSON.stringify(context)), response(200, iamBody)]),
+  ['unbound_app_context_does_not_bypass_iam_denial',
+    response(200, JSON.stringify({ ...identity, appId: '' })),
+    response(403, '{"reason":"permission_denied","permissionKey":"meta.entity.read"}')],
   // Historical Mock claims are a negative fixture, never an authorization grant.
   ['legacy_mock_claims_do_not_bypass_iam_denial', response(200, JSON.stringify({
     ...identity, roles: ['app_admin'], permissions: [`${appKey}.access`], grantVersion: 'fallback:contract-fixture',
@@ -40,7 +50,8 @@ const cases = [
     ['invalid_json', '{'], ['null', 'null'], ['array', '[]'], ['primitive', '7'],
     ['missing_user', JSON.stringify({ tenantId: 'tenant-1', appId: appKey })],
     ['missing_tenant', JSON.stringify({ userId: 'user-1', appId: appKey })],
-    ['missing_app', JSON.stringify({ userId: 'user-1', tenantId: 'tenant-1' })],
+    ['numeric_app', JSON.stringify({ ...identity, appId: 7 })],
+    ['object_app', JSON.stringify({ ...identity, appId: {} })],
     ['blank_user', JSON.stringify({ ...identity, userId: ' ' })],
     ['numeric_tenant', JSON.stringify({ ...identity, tenantId: 1 })],
     ['other_app', JSON.stringify({ ...identity, appId: 'OtherApp' })],
@@ -98,6 +109,7 @@ async function runCase(authResponse, iamResponse, malformed) {
     assert.equal(calls.length, iamResponse ? 2 : 1, 'IAM must run only after a valid authenticated context');
     assert.equal(calls[0].url.origin, gatewayOrigin);
     assert.equal(calls[0].url.pathname, '/make/auth/current-context');
+    assert.deepEqual(calls[0].url.searchParams.getAll('appKey'), [appKey], 'internal auth queries must use the configured App, not browser selectors');
     assert.equal(calls[0].init.method ?? 'GET', 'GET');
     for (const call of calls) {
       const headers = new Headers(call.init.headers);
@@ -117,6 +129,7 @@ async function runCase(authResponse, iamResponse, malformed) {
       const iam = calls[1];
       assert.equal(iam.url.origin, gatewayOrigin);
       assert.equal(iam.url.pathname, '/api/make/iam/v1/principal/permission', 'published IAM retains /api/make');
+      assert.deepEqual(iam.url.searchParams.getAll('appKey'), [appKey], 'internal IAM queries must use exactly one configured App');
       assert.equal(iam.init.method, 'POST');
       assert.equal(new Headers(iam.init.headers).get('x-make-target'), 'MakeService.GetResource');
       assert.deepEqual(JSON.parse(iam.init.body), { scope: `make://${identity.tenantId}/meta/app/${appKey}` });

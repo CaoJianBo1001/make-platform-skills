@@ -2,7 +2,7 @@
 name: makedsl
 description: Use when designing or generating Make platform DSL YAML — defining apps, entities, fields, relations, views, record schemas, fixed field defaults, or opt-in business drafts. Also triggered by requests like "建模", "建表", "加字段", "字段默认值", "保存草稿", "定义关联", or "生成 DSL". Does not deploy resources (use makecli), build frontend UI (makeui), implement Service/API code (make-app-service), handle auth (make-app-auth), runtime packaging (make-app-runtime), OCR integration (make-integration), or canvas-table behavior (use canvas-table-integration).
 metadata:
-  version: 0.2.13
+  version: 0.2.15
 ---
 
 # makedsl usage

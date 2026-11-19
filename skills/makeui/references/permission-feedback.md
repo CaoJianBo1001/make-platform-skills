@@ -87,7 +87,7 @@ type Props = Omit<MakeAppPermissionNoticeProps, 'administrators' | 'administrato
   auth: AdministratorApi; contextKey: string; payload?: DenialPayload;
 };
 type Help = { auth: AdministratorApi; contextKey: string; payload?: DenialPayload;
-  contacts: MakeAppAdministratorContact[]; status: MakeAppAdministratorStatus };
+  contacts: MakeAppAdministratorContact[]; status: MakeAppAdministratorStatus; failure?: unknown };
 
 export function AppPermissionFeedback({ auth, contextKey, payload, ...view }: Props) {
   const embedded = payload?.data?.appAdministrators;
@@ -101,9 +101,7 @@ export function AppPermissionFeedback({ auth, contextKey, payload, ...view }: Pr
     Promise.resolve().then(() => query.call(auth)).then(
       contacts => { if (active) setHelp({ ...snapshot, contacts: contacts.map(contact => ({ ...contact, avatarUrl: contact.avatarUrl ?? undefined })), status: 'ready' }); },
       error => {
-        // An undeployed optional endpoint is a quiet generic-help fallback.
-        const endpointMissing = error !== null && typeof error === 'object' && 'status' in error && error.status === 404;
-        if (active) setHelp({ ...snapshot, contacts: [], status: endpointMissing ? 'ready' : 'error' });
+        if (active) setHelp({ ...snapshot, contacts: [], status: 'error', failure: error });
       },
     );
     return () => { active = false; };
@@ -112,12 +110,15 @@ export function AppPermissionFeedback({ auth, contextKey, payload, ...view }: Pr
   return <MakeAppPermissionNotice {...view}
     retryStatus={view.retryStatus === 'denied' ? 'idle' : view.retryStatus}
     administrators={Array.isArray(embedded) ? embedded : current?.contacts ?? []}
-    administratorStatus={Array.isArray(embedded) ? 'ready' : current?.status ?? (typeof auth.getAppAdministrators === 'function' ? 'loading' : 'ready')}
+    administratorStatus={Array.isArray(embedded) || current?.status === 'error'
+      ? 'ready' : current?.status ?? (typeof auth.getAppAdministrators === 'function' ? 'loading' : 'ready')}
   />;
 }
 ```
 
 Embedded contacts render immediately; an explicit empty array is authoritative and triggers no query. Missing contacts use `auth.getAppAdministrators()` only when installed and available. SDK lookup has its own deadline and login/logout lifecycle; the host ignores stale responses on unmount or context changes. Missing capability or endpoint keeps generic guidance and does not block App readiness; report independent contact lookup as degraded, not verified. No permanent unsupported-capability cache prevents a later entry from discovering backend rollout. Never query protected records to obtain contacts, query IAM/Console from UI, or invent an SDK version supporting the method.
+
+Follow [the lookup fallback contract](../../make-app-auth/references/access-help.md#staggered-release-fallback) for every contact-query failure: keep `help.status = 'error'` and its cause internally, but project only the component's contact presentation to `administratorStatus="ready"` with an empty list. This preserves the generic authorization guidance without contact-unavailable copy. Do not render or serialize raw `failure`; existing redacted Trace/log diagnostics remain separate from the component and real auth/permission retry errors remain unchanged.
 
 The `api` member is an existing SDK client member used only for structural type compatibility, never a contact-query fallback. Keep the helper optional so a client compiled against older SDK declarations can pass to this adapter. Verify both old/new SDK types as well as runtime behavior; a JavaScript `typeof` test alone does not prove TypeScript compatibility.
 
@@ -139,5 +140,7 @@ compatibility, and a local component fix is not proof of a new npm release.
 - Known `permission_denied` uses scoped feedback once while retaining diagnostic Trace handling. Do not duplicate it as a generic network failure card. Preserve the independent error outlet for 401/unknown403/503, permission/Schema load failures and other request errors.
 
 ## Required host evidence
+
+Contact integration is required for new or explicitly upgraded feedback; only the query's runtime capability/result may degrade. Use the [administrator feedback audit gate](../../make-app-permission/references/testing-and-audit.md#administrator-feedback-gate) with the real production host adapter in the App's default test/CI/publish command. A bare `MakeAppPermissionNotice`, source keywords or a passing package verifier do not prove contact wiring.
 
 Assert mounted navigation/global identity header and the absence of every original business title/toolbar/header/card/form/dialog on resource denial; cover both table and non-table layouts, initial denial and post-load revocation. Also assert zero subsequent denied business requests, record/cache invalidation, ignored late responses without remount loops, preserved allowed input for operation-only refusal, no automatic mutation after recovery, meaningful retry failure, embedded/empty/missing contacts and context-race cancellation. Cover generic page/inline/Toast rendering with no SDK method, an undeployed endpoint and failed/timed-out contact lookup; no help failure may become a global auth/request error. Test the real package after installation and at desktop/mobile widths. A CSS import, SSR verifier or scope attribute alone is not a complete Make App permission acceptance.
