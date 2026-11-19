@@ -338,3 +338,9 @@ Before reporting an editable Make table as done, verify at least:
 - `Escape` cancels without writing the candidate value
 - clicking inside a popup does not close the editor because the popup root is included in `relatedElements()`
 - `destroy()` removes editor and popup DOM roots
+
+## 项目业务草稿的状态保持
+
+仅在宿主明确启用业务草稿时，按 [业务草稿合同](../../make-app-service/references/business-record-drafts.md) 将项目保存状态列设为只读；普通单元格、附件或局部修改使用对应接口，既不附加 isDraft，也不注入 normal/draft，不调用会转正常的整单保存 Controller。单元格清空传原合同要求的显式空值，不能因 undefined 被 JSON 丢掉而误报成功。
+
+表格展示和读取旧数据时不套字段 defaultValue；新建初始化由 makeui 负责。状态列仍遵循当前读权限，普通草稿字段可否编辑继续按权限、锁及流程判断。

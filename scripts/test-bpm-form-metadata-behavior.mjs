@@ -27,6 +27,11 @@ for (const mutate of [
 await assert.rejects(verifyFormMetadata((data, expected) => normalizeBpmFormMetadata(data, {
   ...expected, appKey: data.appKey, entityKey: data.entityKey, processKey: data.processKey, nodeKey: data.nodeKey,
 })));
+// 默认值专用负例：宿主桥接不能在保留类型时静默丢失顶层默认值。
+await assert.rejects(verifyFormMetadata((data, expected) => {
+  const result = normalizeBpmFormMetadata(data, expected);
+  return { ...result, fields: result.fields.map(({ defaultValue, ...field }) => field) };
+}), /defaultValue/);
 // 单独复制 Skill 后仍可运行，并验证宿主桥接入口及失败退出码。
 const temp = mkdtempSync(path.join(tmpdir(), 'bpm-node-metadata-skill-'));
 try {
@@ -44,4 +49,4 @@ try {
 } finally {
   rmSync(temp, { recursive: true, force: true });
 }
-console.log(`PASS：${result.passed} 项节点元数据行为、5 项故障注入、文档样例及独立随包/宿主桥接验证`);
+console.log(`PASS：${result.passed} 项节点元数据行为、6 项故障注入、文档样例及独立随包/宿主桥接验证`);

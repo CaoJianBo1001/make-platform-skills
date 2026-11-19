@@ -123,6 +123,12 @@ Codex 判断优先级：
 - 新项目没有既定组件库时，组件库选择弹窗提供 Ant Design、Arco Design、shadcn/ui 三个建议选项，并允许用户自行指定其他兼容的 React 组件库；用户未选择时默认 Ant Design。已有项目沿用现有组件库。
 - 用户明确指定其他图标库时遵从其要求；否则新建 Make App 的图标默认统一使用 [Lucide](https://lucide.dev/icons/)。React UI 组件库由用户选择或沿用项目现有约定，不限于 Ant Design、Arco Design、shadcn/ui。桌面／平板字段类型图标按 [`makeui` 默认映射](skills/makeui/references/field-type-icons.md) 覆盖 CanvasTable 表头、新建／编辑／详情字段标签及已有字段选择列表，手机字段名保持纯文本，不需用户再次提示。
 
+## 按需业务草稿与字段默认值
+
+仅在用户需要持久化业务草稿时组合 `makedsl` + `make-app-service` + `makeui`，审批、批量和分析入口再读对应 Skill。没有此需求时不要求选择、不添加按钮或字段。核心规则见 [业务草稿合同](skills/make-app-service/references/business-record-drafts.md)：项目保存状态默认正常保存，草稿从正式业务分析和消费者中排除，但授权管理列表/详情仍可展示和修改；不是平台全局自动隔离。
+
+固定默认值独立支持，见 [字段 defaultValue 合同](skills/makedsl/references/FieldDesign.md#字段默认值--default-value) 与 [UI 初始化](skills/makeui/references/record-drafts-and-defaults.md)。它只补创建时缺 key 的值，不回填历史、不覆盖显式空值、不在编辑/统计时补齐；模型和环境需实际读回验证。
+
 ## 可用 Skill 列表
 
 ### make-app-analytics

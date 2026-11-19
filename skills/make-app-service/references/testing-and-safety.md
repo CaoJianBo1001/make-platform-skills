@@ -193,3 +193,11 @@ When route docs changed, also run any UI/service integration tests that consume 
 ## 筛选表达式无损透传
 
 记录 filter.expression 与 Entity Preset filter.expression 必须保留表达式原文及括号，不解析、扁平化、去括号或重写 CEL。对非空表达式不要 trim 后覆盖原值；只可用 trim 判断是否空白。测试 Preset PATCH → Make → GET 与记录查询 payload 的原文相等，包含双层条件组括号。编译错误不是空筛选，不应由 Service 兜底为全量查询；宿主先停止失败请求。筛选生成、回显、结构错误和版本门槛交接 make-app-filter 的 [无损回显合同](../../make-app-filter/references/roundtrip-and-errors.md)。filter 与 groupFilter 仍独立透传。
+
+## 业务草稿与默认值的专项验证
+
+变更涉及这些能力时，按 [业务草稿验收](business-record-drafts.md#验证与交付) 补宿主行为测试；不能用文本关键词断言替代以下行为：未启用对象不受影响；Record URL/Target/body 正确；缺必填草稿允许、非法非空值拒绝；转正常完整校验及原 ID 复用；单元格/批量/附件保持状态；权限、锁、流程限制、确定失败可重试及未知写入保护。
+
+数据夹具包含正常、草稿、历史 null、未知、无权及关联草稿；检查正式聚合、分母、分页 total、分组/叶子、导出、选择预检/执行、直接动作、回调与缓存失效。默认值检查缺 key、显式 null/空值/0、更新不补、历史读取不补、对象/数组独立副本、普通与 START 元数据保留和拒写。没有执行真实后端/浏览器/外部消费者验收的项明确列为未验证。
+
+TASK 管理字段、草稿引用及三种保存意图的最终 JSON 按 [草稿宿主验收](draft-host-verification.md) 接入真实宿主，不用纯内存对象断言冒充已发出请求。

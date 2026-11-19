@@ -2,10 +2,12 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、BPM 独立新建与任务页、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成/已发起、任务及实例详情和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.42
+  version: 0.2.43
 ---
 
 # Make App 前台审批完整接入
+
+业务 Record 草稿仅在用户要求时启用，按 [Service 草稿合同](../make-app-service/references/business-record-drafts.md) 与 [发起侧草稿边界](references/initiation-contract.md#按需业务草稿) 接入。它与流程配置草稿、正常记录的 `UNSUBMITTED` 不同；不作为默认审批功能生成，不向 Workflow 添加 `isDraft`；TASK 按 Service 合同收紧已登记管理字段并检查正式引用，不用节点 editable 放开保存状态。
 
 把已确认的功能方案转为应用级审批入口，完成业务记录发起/撤回、我的审批列表与办理、历史和状态同步。每个应用只保留一个“我的审批”；业务对象仍使用自己的记录列表。本文及参考文件为可移植合同，不依赖某个示例项目、私人路径或业务字段。
 

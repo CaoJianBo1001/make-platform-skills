@@ -166,3 +166,9 @@ never automatically retry or replay delete/update after recovery.
   record values.
 - Use a request-scoped `AbortSignal` where the host stack supports cancellation.
 - Update `apps/docs/api.md` before or with route changes.
+
+## 已启用业务草稿的业务资格
+
+按 [草稿查询与动作合同](../../make-app-service/references/business-record-drafts.md#查询批量与直接动作) 实施。通用草稿管理的普通 edit/delete/bulk edit 保持原权限，项目保存状态不进入字段选择或载荷；不向 `/data/v1/field` 加 isDraft。草稿也可有业务禁编限制，不能仅凭可读就编辑。
+
+正式批量业务动作的资格由后端策略附加；显式模式保持原 ID 集合、无 filter/groupFilter，验证整个集合并按明确合同拒绝不合资格记录，不静默删除 ID。全选模式在原查询上附加资格，预检与执行复用同一冻结范围及排除 ID；不改变一请求权限预检、一请求字段批量写入及原错误映射，不发明新的 Make permission。不要把该条件无差别套入所有普通草稿管理动作。

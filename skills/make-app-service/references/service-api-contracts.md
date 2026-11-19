@@ -383,3 +383,17 @@ Rules:
 ## 筛选表达式无损透传
 
 记录 filter.expression 与 Entity Preset filter.expression 必须保留表达式原文及括号，不解析、扁平化、去括号或重写 CEL。对非空表达式不要 trim 后覆盖原值；只可用 trim 判断是否空白。测试 Preset PATCH → Make → GET 与记录查询 payload 的原文相等，包含双层条件组括号。编译错误不是空筛选，不应由 Service 兜底为全量查询；宿主先停止失败请求。筛选生成、回显、结构错误和版本门槛交接 make-app-filter 的 [无损回显合同](../../make-app-filter/references/roundtrip-and-errors.md)。filter 与 groupFilter 仍独立透传。
+
+明确启用业务草稿且用途为正式业务的接口，存在文档化的后端资格附加：最终有效 filter 可由可信构造器在原用户表达式外增加资格条件与 AND 分组，但原用户表达式作为不透明子表达式逐字保留，不重新序列化、trim、分配或扁平化。原 Preset 不变，原 groupFilter 仍独立且逐字透传；普通管理接口维持上文完整透传。缺少可信组合边界时先实现并验证该边界，不在各路由散落字符串拼接。API 文档和测试分别记录原用户表达式、最终有效范围及 total/导出/全选的一致性。
+
+## 按需草稿与字段默认值
+
+明确需要业务草稿时，先在宿主 API 文档约定记录创建/整单更新 URL 的可选 `isDraft=true|false`，省略按 false，保持原业务 body 与响应。Service 在边界拒绝空值、重复值、非小写 true/false 等非法参数，并映射到 Make Record URL；上游原生参数错误是 HTTP200/code400，不得当成功。状态同次注入并授权，不新增平台草稿字段。完整合同见 [业务草稿](business-record-drafts.md)。
+
+普通无草稿项目不生成按钮、字段或过滤。单元格、批量、附件和关系局部修改不继承整单保存的参数或状态注入；拒绝用这些接口改变保存状态。Workflow 不接收 `isDraft`，但新建合并提交 `/workflow/v1/bpm-process-submit` 必须由 Service 在 START 授权范围内向 `data` 显式注入项目正常保存值。已有记录发起 `/workflow/v1/bpm-process` 与任务办理 `/workflow/v1/bpm-task` 不自动注入或改写保存状态，继续遵循各自请求体与资格合同。
+
+正式业务资格由后端策略选择，不接受浏览器通过参数绕过；原记录管理路由可以按权限继续读取草稿。新增资格检查的失败属于已文档化的 Service 前置业务拒绝，不能伪造 IAM 的 denied 行 ID 或覆盖 Make 已完成错误。
+
+Schema/节点字段归一化保留上游提供的顶层 `defaultValue`，按 [字段默认值合同](../../makedsl/references/FieldDesign.md#字段默认值--default-value) 处理。任何读、聚合或更新接口都不隐式用它替换旧记录空值。
+
+TASK 项目管理字段的原始权限校验、只读收紧、非 RETURN 补丁拒写及正式 Lookup 资格，统一交接 [TASK 管理字段合同](business-record-drafts.md#task-管理字段与引用)。RETURN 保持空补丁与零业务预上传，不复用普通 CRUD 过滤器。

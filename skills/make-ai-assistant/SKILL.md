@@ -2,10 +2,12 @@
 name: make-ai-assistant
 description: "Use when integrating, upgrading, debugging, or reviewing @qfei-design/make-ai-assistant in a Make App: restricted Agent discovery, sessions, streaming, queue/stop/questions, file/image input, authenticated Service routes, and package-owned UI. Does not own Agent configuration, model behavior, generic dialogs, auth/permission policy, DSL, or deployment."
 metadata:
-  version: 0.4.6
+  version: 0.4.7
 ---
 
 # Make AI Assistant
+
+若宿主业务明确启用 Record 草稿，正式业务分析、检索、RAG 和工具数据按 [Service 草稿消费者合同](../make-app-service/references/business-record-drafts.md#排除草稿的业务范围) 在实际数据源/工具执行端排除草稿，更新已有索引与缓存；提示词不能替代过滤。不要修改 Agent 发现过滤、聊天输入暂存、会话协议或包内状态机来实现业务数据资格。草稿编辑助手只能通过明确授权的草稿管理工具访问，不混入正式分析。
 
 本 Skill 面向 Make App 宿主。基线是正式 npm 包 **0.4.6** 与 Agent Public API v1（合同提交 `1238c719e70ed80fd26976aedbc174bdff7998b4`），Skill 版本与 npm 版本独立。旧的私有 Chat 协议不再作为新接入依据。
 
