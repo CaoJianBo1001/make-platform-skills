@@ -10,13 +10,13 @@
 
 ## 包接入与边界
 
-新项目和本次移动端改造的最低 API 基线为 `0.1.7`：它提供普通选项、日期控件、人员／部门字段、附件字段和专用表单提交栏 `MobileFormActionBar`。通用视觉交付基线为 `0.1.9`，其中附件上传入口固定为 48px；手机高级筛选另需移动组件包 `0.1.11+` 与筛选包 `1.1.0+`。API 兼容不等于 iOS 输入与附件视觉合同已经满足，以实际安装产物的校验结果为准。只有 registry 能解析所需版本时才执行安装；不可用时不得改装 Git URL、本地目录或复制源码，应报告 package release blocker。新 Make App 或已明确进行运行时迁移的项目先满足 `make-app-runtime` 的固定基线；再在已解析的 UI package 工作目录中通过项目声明的包管理器安装。标准 pnpm 工作区例如：
+新项目和本次移动端改造的最低 API 基线为 `0.1.7`：它提供普通选项、日期控件、人员／部门字段、附件字段和专用表单提交栏 `MobileFormActionBar`。通用视觉交付基线为 `0.1.9`，其中附件上传入口固定为 48px；手机高级筛选另需移动组件包 `0.1.11+` 与筛选包 `1.1.0+`。API 兼容不等于 iOS 输入与附件视觉合同已经满足，以实际安装产物的校验结果为准。只有 registry 能解析所需版本时才执行安装；不可用时不得改装 Git URL、本地目录或复制源码，应报告 package release blocker。新 Make App 或已明确进行运行时迁移的项目先满足 `make-app-runtime` 的固定基线；再在已解析的 UI package 工作目录中通过项目声明的包管理器安装。新接入使用已核验正式版本 `0.1.14`，其中多动作表单底栏支持 [单行与更多操作](mobile-detail-components.md#单行与更多操作)；历史 API／视觉最低版本不能证明支持此能力。标准 pnpm 工作区例如：
 
 ```bash
-corepack pnpm add @qfei-design/make-app-mobile@^0.1.9
+corepack pnpm add @qfei-design/make-app-mobile@0.1.14
 ```
 
-若同时交付手机高级筛选，在通过同一兼容性门禁后，按 [`make-app-filter`](../../make-app-filter/) 的要求安装 `@qfei-design/make-app-mobile@^0.1.11` 与 `@qfei-design/make-app-filter@^1.1.0`；不要沿用上述通用版本示例作为该能力的验收门槛。
+若同时交付手机高级筛选，在通过同一兼容性门禁后，按 [`make-app-filter`](../../make-app-filter/) 的要求同时安装 `@qfei-design/make-app-filter@^1.1.0`；该 Skill 中移动包 `^0.1.11` 表示高级筛选的能力下限，新接入保留上述 `0.1.14`，不为筛选降级。
 
 仅当宿主源码直接从 `lucide-react` 导入图标，且 UI package 尚未声明可复用的兼容直接依赖时，才单独安装：
 
@@ -31,11 +31,11 @@ corepack pnpm add lucide-react@^1.28.0
 存量 App 在安装或升级前必须先完成兼容性门禁，不得为了通过门禁改写运行时声明、包管理器或锁文件类型：
 
 1. 定位实际安装目标（通常是 `apps/ui/package.json` 或宿主 UI package），读取 workspace 根的 `packageManager`、Node `engines`、React/React DOM 版本及现有 lockfile。
-2. 以当前解析到的 `@qfei-design/make-app-mobile` `package.json` 为准，验证 Node、React 和 React DOM 满足其 `engines` 与 peer dependencies；当前 `0.1.9` 包要求 Node `>=22.12.0`，React/React DOM 为 `^18.2.0 || ^19.0.0`。
+2. 以当前解析到的 `@qfei-design/make-app-mobile` `package.json` 为准，验证 Node、React 和 React DOM 满足其 `engines` 与 peer dependencies；已核验的 `0.1.14` 包要求 Node `>=22.12.0`，React/React DOM 为 `^18.2.0 || ^19.0.0`。
 3. 使用现有 workspace/package-manager 流程在该 UI package 安装；不要在 pnpm 项目生成 `package-lock.json`，也不要在 npm/yarn 项目引入 Corepack 或 pnpm。宿主直接导入图标时才声明直接依赖 `lucide-react`；保留已有兼容版本，不做无关图标迁移。
 4. 若 Node/peer 版本、workspace 位置、包管理器或 lockfile 不满足，停止安装并报告兼容性 blocker；运行时或 package-manager 迁移必须交给 `make-app-runtime`，只有用户明确要求迁移时才能进行。
 
-已有项目若实际安装版本低于通用视觉基线 `0.1.9`，仅在以上门禁通过后升级，并复跑宿主测试、类型检查和构建。手机高级筛选应单独核对实际安装版本是否达到移动包 `0.1.11` 与筛选包 `1.1.0`。下述字段、选择、日期控件及表单提交栏合同仍以 `0.1.7` 为最低 API 版本，但移动视觉交付须满足 `0.1.9` 基线及安装产物校验；包内通用安装示例若仍使用更低版本范围，不得据此降低本 Skill 的视觉基线。
+已有项目若实际安装版本低于通用视觉基线 `0.1.9`，仅在以上门禁通过后升级，并复跑宿主测试、类型检查和构建。手机高级筛选应单独核对实际安装版本是否达到移动包 `0.1.11` 与筛选包 `1.1.0`。本次新增或改造多动作表单底栏时须安装 `0.1.14` 或已验证具备同等能力的后续正式版本，并按单行与更多操作合同验收；不要求无关的既有单动作页面同时迁移。下述字段、选择、日期控件及表单提交栏合同仍以 `0.1.7` 为最低 API 版本，但移动视觉交付须满足 `0.1.9` 基线及安装产物校验；包内通用安装示例若仍使用更低版本范围，不得据此降低本 Skill 的视觉基线。
 
 在目标 UI package 工作目录运行 `node -p "require('node:path').dirname(require('node:path').dirname(require.resolve('@qfei-design/make-app-mobile')))"`，定位该 App 实际安装的包根目录；再在本 Skill 安装目录运行 `node scripts/verify-mobile-package-surface.mjs <已安装包根目录>`。该脚本检查安装版本不低于 `0.1.9`、可编辑输入的字号声明及聚焦覆盖、已选区 `pinch-zoom`、附件上传入口的 48px 固定高度，并用包公开组件渲染无状态、待上传和失败附件。静态校验不能替代聚焦状态的实际计算字号检查；真实 iOS Safari 与飞书 WebView 页面验收仍是交付条件。不要用组件包源码工作树或另一个 App 的 `node_modules` 代替目标 App 的安装产物。校验失败是 package 依赖阻断，不得声称移动端适配完成或符合当前 iOS 输入要求；也不得通过覆盖包内部 class、禁用 viewport 缩放或复制组件来绕过。等待符合合同的包版本发布并在目标 App 安装后重跑校验，再继续真实 iOS Safari、飞书 WebView、Android 与桌面回归。
 
@@ -200,7 +200,7 @@ export function composeApprovalNavigation({ businessItems, approvalItem, assista
 - 严格只读记录不展示普通写操作；详情发起和撤回独立遵守审批合同，不从普通字段只读推断。可写卡片提供 `make-app-actions` 支持的单条编辑、删除；手机端不使用选择操作栏或批量编辑。
 - 手机详情默认使用 `MobileBottomActionBar` 展示编辑和删除；两者读取独立权限并分别复用与卡片相同的单记录 action、冻结目标、确认、共用预检策略和最终接口鉴权。详情点击编辑时，预检通过后直接进入当前记录的编辑路由，不经过对象列表；具体单记录生命周期见 `make-app-actions` 的 `mobile-card-actions.md`。卡片已有操作不能替代或取消详情操作；编辑与删除都不可用时，有合法发起或撤回动作仍保留操作栏；全部普通与审批动作均不可用时才移除整条底部操作栏。
 - 删除等破坏性操作使用 `MobileConfirmDialog`，异步确认期间禁止重复提交，失败时保持弹窗并允许重试。
-- 上述单按钮规则只适用于普通单动作表单。[make-app-approval](../../make-app-approval/SKILL.md) 的有效审批新建保留“保存 / 保存并提交”双按钮，按 [手机表单双按钮例外](mobile-form-controls.md#审批新建的双按钮例外) 复用宿主控件；不删掉任一动作，不虚构移动包 API。
+- 上述单按钮规则只适用于普通单动作表单。[make-app-approval](../../make-app-approval/SKILL.md) 的有效审批新建保留“保存 / 保存并提交”双按钮，按 [手机表单双按钮例外](mobile-form-controls.md#审批新建的双按钮例外) 使用公共多动作底栏；两动作均须可达，窄屏可进入“更多”，不删掉任一动作，不虚构移动包 API。
 
 ## 搜索选择抽屉
 

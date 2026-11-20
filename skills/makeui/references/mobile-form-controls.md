@@ -31,9 +31,9 @@
 
 ### 审批新建的双按钮例外
 
-按 [make-app-approval](../../make-app-approval/SKILL.md) 取得有效启动配置时，手机和桌面都保留“保存”（次按钮）与“保存并提交”（主按钮）。这只调整动作数量，不改变全屏任务页、图标与安全区规范。
+按 [make-app-approval](../../make-app-approval/SKILL.md) 取得有效启动配置时，手机和桌面都保留“保存”（次按钮）与“保存并提交”（主按钮）。两个意图均须可达；手机窄屏允许收进“更多”，不要求始终同时内联展示，不改变全屏任务页、图标与安全区规范。
 
-先检查已安装移动包的公开 API：支持多个表单动作时使用其公开能力；仅提供单个 `label/onSubmit` 的 `MobileFormActionBar` 时，审批新建允许在宿主既有表单 footer 中复用当前 UI 库的两个 Button，保持无图标、整体靠右和底部安全区。不要修改包私有样式、虚构 props、并排挂载两个固定底栏，或将详情 `MobileBottomActionBar` 改作保存栏。普通单动作表单继续使用 `MobileFormActionBar`。
+本次新增或改造按 [单行与更多操作](mobile-detail-components.md#单行与更多操作) 安装正式 `0.1.14` 并使用 `MobileFormActionBar actions`，由包自动将溢出动作收进右侧“更多”。不继续生成宿主双 Button 布局或另一套溢出算法；仅有旧单动作 API 时报告依赖缺口，不虚构 props、修改包私有样式、并排挂载两个固定底栏，或将详情 `MobileBottomActionBar` 改作保存栏。普通单动作表单继续使用原公开 API。
 
 两个动作共享字段值、校验及保存会话；任一保存/发起进行时同时禁用重复操作。仅保存不发起，保存并提交失败时保留原记录和恢复入口，不在“记录保存成功”这一中间阶段提前退出表单。
 
@@ -125,7 +125,7 @@
 - 软键盘打开后当前字段、错误信息和必要操作仍可到达；关闭后滚动位置合理。
 - 在真实 iOS Safari 与飞书 WebView 中逐一聚焦文本、数值、长文本及弹层搜索框：页面不应自动放大或横向偏移，左侧标签保持完整，关闭键盘后保存按钮可点击，并能手动双指缩放；同时回归 Android 与桌面。
 - 使用键盘 Tab 检查输入、选择触发器与 Sheet 操作的 `:focus-visible` 指示可见；手机常态仍无盒状边框，焦点变化不改变字段行高。
-- 普通保存／提交使用 `MobileFormActionBar`，按钮无图标并靠右；安全区、loading、disabled 和防重复提交正确。审批表单另验两个动作均存在、共享互斥和失败恢复；详情编辑／删除操作才使用 `MobileBottomActionBar`。
+- 普通保存／提交使用 `MobileFormActionBar`，按钮无图标并靠右；安全区、loading、disabled 和防重复提交正确。审批表单另验两个动作均可达（含“更多”）、共享互斥和失败恢复，具体按 [单行与更多操作](mobile-detail-components.md#单行与更多操作)；详情编辑／删除操作才使用 `MobileBottomActionBar`。
 - 返回 desktop/tablet 后，原 Drawer、桌面控件和表单值保持正常。
 
 仅验证“全屏页头出现”、静态 DOM、单元测试、类型检查或构建通过，不能证明手机表单已完成。无法进入真实业务页面或无法打开实际字段弹层时，必须记录 blocker，不得宣称移动端新建／编辑／详情适配完成。

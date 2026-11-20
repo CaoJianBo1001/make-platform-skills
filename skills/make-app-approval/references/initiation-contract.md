@@ -79,7 +79,7 @@ type BpmStartConfig<FieldSchema> = {
 
 提供两个独立意图，按钮统一为“保存”“保存并提交”。新建保存并提交使用一次合并接口；已有记录编辑后提交才先更新原记录再发起。沿用宿主现有操作位置，桌面/手机一致；不将仅保存偷偷改为自动审批，也不根据“生成了我的审批导航”就展示提交按钮。
 
-手机双按钮是普通单按钮保存栏的审批例外，具体宿主组合方式见 [手机表单控件](../../makeui/references/mobile-form-controls.md)。若已安装的 `MobileFormActionBar` 仅公开一个 `onSubmit`，不能向它传不存在的 secondary action API，也不能为满足单按钮规范删掉“保存”；使用该参考中明确允许的宿主双按钮组合，复用同一保存 Controller。
+手机保留两个保存意图是普通单按钮保存栏的审批例外，按 [手机表单控件](../../makeui/references/mobile-form-controls.md#审批新建的双按钮例外) 使用正式移动包多动作接口，复用同一保存 Controller；窄屏依 [单行与更多操作](../../makeui/references/mobile-detail-components.md#单行与更多操作) 收纳，不要求两个按钮始终同时内联。旧包缺少能力时先升级并验证，不再生成宿主双按钮兜底、虚构 props 或删掉保存动作。
 
 1. 重新检查当前对象、权限、配置及字段校验。选择“保存并提交”时，先按下节确认发起部门；取消选择时不创建、不更新、不发起，保留输入。
 2. 完成必要附件预上传，复用原有字段序列化、关系转换与 Service 授权校验。新建“保存并提交”将最终创建载荷作为 `data` 交给 `/workflow/v1/bpm-process-submit`，只调用一次；不能先普通创建、再补发旧发起请求。
