@@ -143,8 +143,10 @@ for (const file of [mobilePath,
     `stale fixed-two-action guidance in ${file}`);
   checks++;
 }
-requireText(mobile, /两个或三个 Button/,
-  'single-action public APIs need a documented two/three-action host composition');
+assert.doesNotMatch(mobile, /允许[^\n]*宿主[^\n]*两个或三个 Button/,
+  'mobile multiple actions must not restore the host Button fallback');
+requireText(mobile, /多动作使用 `MobileFormActionBar actions`[^\n]*单行与更多操作/,
+  'mobile multiple actions must use the public overflow API and shared contract');
 const example = [...mobile.matchAll(/```js\n([\s\S]*?)```/g)]
   .map(match => match[1]).find(code => code.includes('function resolveSaveFormIntents'));
 assert.ok(example, 'the shared matrix needs an executable host intent example');

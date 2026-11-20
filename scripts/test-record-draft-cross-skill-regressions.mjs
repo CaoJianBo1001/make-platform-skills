@@ -40,9 +40,10 @@ const cases = [
     text => text.replace('已有记录发起 `/workflow/v1/bpm-process` 与任务办理 `/workflow/v1/bpm-task` 不自动注入或改写保存状态',
       '已有记录发起 `/workflow/v1/bpm-process` 与任务办理 `/workflow/v1/bpm-task` 也自动注入正常保存状态'),
     /existing starts and tasks must keep their own payloads/],
-  ['two-only host fallback', controls,
-    text => text.replace('两个或三个 Button', '两个 Button'),
-    /stale fixed-two-action guidance|single-action public APIs need a documented two\/three-action host composition/],
+  ['restored host Button fallback', controls,
+    text => text.replace(/^单动作使用公开 `MobileFormActionBar`；多动作使用[^\n]+/m,
+      '单动作使用公开 `MobileFormActionBar`；多动作允许在一个宿主 footer 内组合两个或三个 Button。'),
+    /mobile multiple actions must not restore the host Button fallback/],
 ];
 
 try {

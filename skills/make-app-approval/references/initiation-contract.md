@@ -75,7 +75,7 @@ type BpmStartConfig<FieldSchema> = {
 
 ## 保存与首次发起
 
-保存动作统一使用 [表单保存意图矩阵](../../makeui/references/mobile-form-controls.md#表单保存意图矩阵)：没有草稿需求时保留“保存”和符合资格的“保存并提交”；用户明确启用时再加入“保存草稿”。桌面/平板按 [审批头部布局](../../makeui/references/drawer-layout.md#approval-header-placement) 放在头部并保留最右关闭；手机按矩阵组合一个保存区。所有意图复用同一 Controller，恢复状态使用原操作区，不增加重复底栏。
+保存动作统一使用 [表单保存意图矩阵](../../makeui/references/mobile-form-controls.md#表单保存意图矩阵)：没有草稿需求时保留“保存”和符合资格的“保存并提交”；用户明确启用时再加入“保存草稿”。桌面/平板按 [审批头部布局](../../makeui/references/drawer-layout.md#approval-header-placement) 放在头部并保留最右关闭；手机按矩阵组合一个保存区，多动作使用正式移动包 0.1.14 的 `MobileFormActionBar actions`，按 [单行与更多操作](../../makeui/references/mobile-detail-components.md#单行与更多操作) 自动收纳；全部授权意图均可达，旧包缺少能力时先升级并验证。所有意图复用同一 Controller，恢复状态使用原操作区，不增加重复底栏。
 
 新建保存并提交使用一次合并接口；已有记录编辑后提交才先更新原记录再发起。不将仅保存偷偷改为自动审批，也不根据“生成了我的审批导航”就展示提交按钮。
 
