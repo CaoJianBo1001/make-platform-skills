@@ -62,7 +62,7 @@ type BpmStartConfig<FieldSchema> = {
 ```
 
 - 常见类型的配置按合同保留：选项配置存在时，将 `selection.fieldSelections` 映射为 `properties.options`；Lookup 使用 `lookup.relationKey/targetFieldKey`，文件使用 `file.maxCount`，金额使用 `currency.decimalPlaces/symbol/useGrouping`，百分比使用 `percent.decimalPlaces`。规范化应保留这些类型专属元数据和校验信息，不能只留下 `fieldKey`、名称及类型。内嵌 formMetadata 的 FieldVo 可带数字 `type: 1` 和字符串 makeFieldType；按 [完整映射与转换样例](form-metadata.md) 处理，数字不能直接拼成 `Make.Field.*`。ID 对应 Make.Field.ID，encoding 原样保留。字段在同一 Service 转换边界核验类型与配置一致性；请求方式见 [节点元数据合同](workflow-api.md#审批节点字段元数据)。
-- 两个保存动作均沿用必填和字段类型校验；不能用普通保存绕过必填。发起还需通过 Workflow 的资格、人员解析及流程可执行性检查。平台自动生成的 ID/审计字段不注册为待填写项；业务必填字段因不可编辑而缺值、且后台返回约束失败时，明确反馈配置问题，不代填、默认通过或暗中赋予编辑权。
+- “保存”和“保存并提交”均沿用完整必填和字段类型校验；仅用户明确启用的“保存草稿”按草稿合同跳过必填，其余校验与字段授权保留。不能用普通保存绕过必填。发起还需通过 Workflow 的资格、人员解析及流程可执行性检查。平台自动生成的 ID/审计字段不注册为待填写项；业务必填字段因不可编辑而缺值、且后台返回约束失败时，明确反馈配置问题，不代填、默认通过或暗中赋予编辑权。
 
 ### 文件与关联
 
@@ -75,11 +75,9 @@ type BpmStartConfig<FieldSchema> = {
 
 ## 保存与首次发起
 
-桌面/平板按 [审批头部布局](../../makeui/references/drawer-layout.md#approval-header-placement) 放置按钮：左侧为全屏、模式标记与标题，右侧按“保存 → 保存并提交 → 关闭 X”排列，仅在符合下述条件时显示双按钮。保存成功后的恢复状态复用该操作区，不增加底部操作栏；按钮文案与可用性继续按本合同处理。
+保存动作统一使用 [表单保存意图矩阵](../../makeui/references/mobile-form-controls.md#表单保存意图矩阵)：没有草稿需求时保留“保存”和符合资格的“保存并提交”；用户明确启用时再加入“保存草稿”。桌面/平板按 [审批头部布局](../../makeui/references/drawer-layout.md#approval-header-placement) 放在头部并保留最右关闭；手机按矩阵组合一个保存区。所有意图复用同一 Controller，恢复状态使用原操作区，不增加重复底栏。
 
-提供两个独立意图，按钮统一为“保存”“保存并提交”。新建保存并提交使用一次合并接口；已有记录编辑后提交才先更新原记录再发起。沿用宿主现有操作位置，桌面/手机一致；不将仅保存偷偷改为自动审批，也不根据“生成了我的审批导航”就展示提交按钮。
-
-手机双按钮是普通单按钮保存栏的审批例外，具体宿主组合方式见 [手机表单控件](../../makeui/references/mobile-form-controls.md)。若已安装的 `MobileFormActionBar` 仅公开一个 `onSubmit`，不能向它传不存在的 secondary action API，也不能为满足单按钮规范删掉“保存”；使用该参考中明确允许的宿主双按钮组合，复用同一保存 Controller。
+新建保存并提交使用一次合并接口；已有记录编辑后提交才先更新原记录再发起。不将仅保存偷偷改为自动审批，也不根据“生成了我的审批导航”就展示提交按钮。
 
 1. 重新检查当前对象、权限、配置及字段校验。选择“保存并提交”时，先按下节确认发起部门；取消选择时不创建、不更新、不发起，保留输入。
 2. 完成必要附件预上传，复用原有字段序列化、关系转换与 Service 授权校验。新建“保存并提交”将最终创建载荷作为 `data` 交给 `/workflow/v1/bpm-process-submit`，只调用一次；不能先普通创建、再补发旧发起请求。
@@ -150,3 +148,11 @@ Workflow 均为 `POST`，由 Service 设置 `X-Make-Target`：
 首次发起最终资格由 Workflow 校验，不额外附加普通创建/读取/编辑权限作为已经保存记录的发起前置条件；普通创建和更新仍各自执行原操作权限。只有创建权限、没有普通读取权限的用户不能因前端强制读回而无法处理刚保存的记录；结果未知的核查方式须遵守该权限边界。
 
 新边界函数记录入口、失败和普通/审批分支、保存是否已确认等安全上下文；不记录表单内容、凭据或附件地址。纯字段转换及状态辅助函数不加日志。
+
+## 按需业务草稿
+
+按 [草稿写入合同](../../make-app-service/references/business-record-drafts.md#写入协议与意图) 接入项目业务状态：表单隐藏，由 Service 在当前 START 白名单内生成；START 提供的顶层 defaultValue 按节点元数据合同保留，不从普通 Schema 补授权或默认值。动作数量与校验分工沿用上文矩阵。
+
+保存草稿走 Data Record 创建/更新 URL `isDraft=true`，不查询发起部门、不发起流程。Workflow 不接收 isDraft；新建合并提交由 Service 在合法 `data` 内显式注入项目正常保存值，已有发起和任务办理不自动改业务状态。已有草稿须按原 ID 完整校验、正常保存，再走已有记录发起；不能把 isDraft=false 或 UNSUBMITTED 当作完整性证明。
+
+Service 及真正执行发起的后端消费方核查正式业务资格；不能只隐藏按钮。保存状态正常也不授予发起资格，不修改系统流程状态或锁。普通无草稿项目保持本文件原行为；已有草稿正常保存后发起失败，继续复用原 ID/上传结果，合并提交及未知写入的保护规则保持不变。

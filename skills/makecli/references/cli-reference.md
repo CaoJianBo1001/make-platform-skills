@@ -424,7 +424,7 @@ makecli diff -f <path> [--max-depth <n>] [--output table|json]
 Compare local DSL YAML with remote definitions. App inferred from the Make.App manifest or entity `app` field. Shares `--max-depth` with `apply` so both agree on which files constitute an app.
 
 - Statuses: `added` (local only), `removed` (remote only), `changed`, `unchanged`; detects unique-constraint drift
-- **Exit codes: 0 = no differences, 1 = differences found** (also in JSON mode)
+- For a completed, verified diff, exit `0` means no differences and `1` means differences (also in JSON mode). Execution errors can also exit `1`; never infer success from that code alone. Use the [Schema preview verifier](schema-change-verification.md#目标与差异) to validate structured output and diagnostics before interpreting it; unverified output stops the workflow.
 
 ---
 
@@ -494,3 +494,11 @@ makecli version list [--limit <n>] [--output table|json]
 - `--check`: report availability without installing; `--force`: allow downgrade
 - Channel: `makecli settings set channel beta` makes bare `update` track pre-releases (default `stable`)
 - `version list`: historical GitHub releases
+
+## 按需草稿与固定默认值的能力验证
+
+依据随包 [Data API 草稿合同](../../makedsl/references/DataAPIDesign.md#record-草稿保存约定) 与 [字段默认值合同](../../makedsl/references/FieldDesign.md#字段默认值--default-value)。先核查当前安装 CLI 的 help 与序列化能力，不凭平台 API 支持就假定 CLI 已有参数。原生 API 的 isDraft 是 Record Create/Update URL 参数，不写业务 data，不扩展到批量/附件/Workflow；确需直接 API 验证时沿用已授权认证和环境，不输出令牌。
+
+模型变更执行原 diff/apply 流程及宿主日志要求。apply 成功或 diff 无差异不足以证明默认值已生效：还要读回元数据，并在获授权的隔离测试范围创建缺 key 记录、验证实际默认值及显式空值、更新不补齐；按原流程清理自己的验收记录。CLI/环境忽略属性时报告实际缺口，不写成平台永久不支持，也不把应用显式传值说成默认值补齐成功。
+
+对启用业务草稿的正式统计，使用项目已确认的资格条件；普通管理查询保留授权草稿。不要在无草稿需求的对象自动加字段或过滤。

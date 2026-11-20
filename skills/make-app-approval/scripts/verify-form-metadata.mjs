@@ -45,6 +45,24 @@ export async function verifyFormMetadata(normalize) {
     }
   });
 
+  for (const [makeFieldType, defaultValue] of [
+    ['NUMBER', 18], ['NUMBER', 0], ['NUMBER', null], ['TEXT', ''],
+    ['MULTI_SELECT', []], ['DATE_RANGE', { begin: '2026-01-01', end: '2026-01-02' }],
+  ]) {
+    await check(`${makeFieldType} 顶层 defaultValue 保留 ${JSON.stringify(defaultValue)}`, async () => {
+      const raw = field({ makeFieldType, defaultValue }); const before = clone(raw);
+      const [actual] = await readFields([raw]);
+      assert.equal(Object.hasOwn(actual, 'defaultValue'), true);
+      assert.deepEqual(actual.defaultValue, defaultValue);
+      assert.equal(Object.hasOwn(actual.properties, 'defaultValue'), false);
+      assert.deepEqual(raw, before);
+    });
+  }
+  await check('未提供 defaultValue 时保持属性缺失', async () => {
+    const [actual] = await readFields([field({ makeFieldType: 'NUMBER' })]);
+    assert.equal(Object.hasOwn(actual, 'defaultValue'), false);
+  });
+
   // 独立声明期望，不从被测转换器的映射表计算预期值。
   const types = [
     ['ID', 'Make.Field.ID', 'encoding', { type: 1, encodings: [{ prefix: 'REQ', digit: 6 }] }],

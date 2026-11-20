@@ -2,10 +2,12 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, fieldAccess, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.4.8
+  version: 0.4.9
 ---
 
 # make-app-permission
+
+业务草稿和字段默认值不新增权限点、不扩大当前字段授权。对明确启用草稿的对象，项目生成的保存状态仍通过当前普通创建/编辑或 BPM START 白名单，隐藏输入不等于免检；详见 [草稿业务字段](../make-app-service/references/business-record-drafts.md#项目业务字段)。TASK 先验证原始节点授权，再将已登记管理字段收紧为只读；不新增权限点或套用普通 CRUD 字段集。默认值只用于当前有权创建的字段，见 [默认值合同](../makedsl/references/FieldDesign.md#字段默认值--default-value)。
 
 流程绑定按 [实体绑定合同](../make-app-approval/references/entity-bindings.md) 独立查询；Workflow 不过滤对象权限，必须先限定当前权限过滤 Schema 的对象范围。绑定不代表发起授权，不能替代 IAM／节点权限，也不能用 Schema 残留 key 兜底。
 

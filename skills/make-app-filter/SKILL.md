@@ -2,10 +2,12 @@
 name: make-app-filter
 description: "Use when generating, integrating, reviewing, or debugging Make App record-list keyword search through Service filter.expression or advanced/conditional/table/header filtering with @qfei-design/make-app-filter. Triggered by 列表搜索, 关键词搜索, 筛选, 高级筛选, 条件筛选, 表格/表头/列头/按字段筛选, CEL/DNF, field-type operators, candidate values, and filter Preset save/echo. In search-only mode, use the package compiler without a filter panel or Preset lifecycle. In advanced-filter mode, use the package panel, permission-aware Entity Preset, and desktop/tablet CanvasTable header linkage; phone uses the mobile panel layout. Consume make-app-permission list access. When make-app-actions is present, a successfully applied filter must clear its selection and invalidate pending work; drafts and failures preserve selection. Does not own page layout, CanvasTable internals, Service route implementation, sorting, grouping, auth, runtime, DSL, Make CLI, or table cell editing."
 metadata:
-  version: 0.1.23
+  version: 0.1.24
 ---
 
 # make-app-filter
+
+项目明确启用业务草稿时，正式业务范围由 [Service 草稿合同](../make-app-service/references/business-record-drafts.md#查询批量与直接动作) 在可信后端附加；用户筛选及 Preset 保持独立，清空或 OR 条件不能撤掉强制业务资格。普通草稿管理列表仍按其用途展示草稿，不把本地筛选草稿解释为业务 Record 草稿。
 
 Use this skill for Make App filtering. A keyword-search-only list that sends `filter.expression` uses the package compiler without enabling advanced filtering. Desktop/tablet lists that use advanced filters, condition builders, table filtering, or CanvasTable header "按该字段筛选" deliver one integrated feature:
 

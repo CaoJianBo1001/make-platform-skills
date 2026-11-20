@@ -1,11 +1,13 @@
 ---
 name: makeui
-description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata, 字段类型图标/field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
+description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata/defaults, optional draft-save UI, field-type icons, and UI states. New Apps use `@qfei-design/make-app-mobile` and default Lucide icons unless the user chooses another icon library; the React UI library remains user-selected. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.73
+  version: 0.4.74
 ---
 
 # makeui
+
+用户明确需要业务草稿，或任务涉及字段固定默认值时，读取 [草稿与默认值交互](references/record-drafts-and-defaults.md)。未要求草稿时不添加按钮、状态字段或功能选项；默认值可独立使用。数据资格及写入合同由 `make-app-service` 主责。
 
 PRD 或本次迭代已提出分析指标、趋势、构成、排名或可视化报表时，用 [make-app-analytics](../make-app-analytics/SKILL.md) 澄清业务口径、规划固定视图和最小接入范围，再由本 Skill 组合界面、`make-app-service` 提供统计链路。一个指标／图形优先嵌入已有业务区域；普通初始化、列表总数、打印导出、业务入口工作台或存在日期／金额字段不触发分析模块。PRD 明确要求分析时纳入初始范围；图形在实施阶段确定，不生成用户选图器。多来源序列、面积和堆叠复用分析包专用合同，宿主保留业务布局及基础交互适配。以实际可读 Skill 和核验制品为准，缺失时说明接入缺口，不阻断无关 UI 工作。
 

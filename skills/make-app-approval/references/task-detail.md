@@ -6,11 +6,15 @@
 
 每次 `loadDetail`（包括办理前重读）只读取一次 bpm-task，校验当前任务、实例和 appKey，从同次 `data.formMetadata` 获取字段和关系；保留取消信号并核验 entityKey/appKey：
 
-- `formData`、`fieldPermission`、`actions` 来自 `bpm-task / GetResource`；**当前节点授权**是唯一审批字段与动作依据。
+- `formData`、`fieldPermission`、`actions` 来自 `bpm-task / GetResource`；**当前节点授权**是审批字段与动作的授权上限；项目已登记管理字段还受下述业务只读约束，不因此扩大任何权限。
 - 字段名、类型、必填、选项、精度和附件限制，从同次响应的 `data.formMetadata.fields` 按 `task.entityKey + fieldKey` 精确补齐，保留字段 properties/validations。组装包的 `fields: { key, label, required, fullWidth?, schema? }[]`；这里的 schema 是字段定义，不是调用 `/api/schema`，fields 也是宿主组合结果，不要求 Workflow 原本返回同名字段。
 - 不使用普通 IAM 裁剪后的 Schema、普通 editFields 或 `bpm-start-config` 代替当前任务权限或补字段定义。节点元数据只提供定义，不扩大授权；仅把节点可见字段的定义和值交给包。授权自定义字段定义缺失/重复时报告具体对象和字段，不静默丢字段，也不回退 entity/Schema 或猜测类型。
 - 只适配已知枚举：Workflow `field/none` → 包 `FIELDS/NONE`，`optional/required` → `OPTIONAL/REQUIRED`。`NONE` 的空 fields 可规范为省略；未知范围、重复字段、editable 不属于 visible 都应报错。缺省权限为无权限，缺省 actions 为无动作，不能理解为全部允许。
 - 调用 `readApprovalTaskDetail` 校验，再用 `getApprovalTaskFields` 取得可见/可编辑字段；系统状态和锁字段永远不可写。无授权动作时只读展示，不能根据用户角色或流程状态自行添加按钮；宿主必须落实下述只读归一化，不能仅靠 actions 为空。
+
+### 项目管理字段约束
+
+当前节点授权仍须先通过原始响应校验；项目明确登记的保存状态管理字段随后按 [TASK 管理字段合同](../../make-app-service/references/business-record-drafts.md#task-管理字段与引用) 收紧为只读，不因节点 editable 而放开。保留其他可编辑字段和办理动作，不改变原元数据 required，不让只读管理字段参与可编辑必填校验。Service 对 APPROVE／REJECT／SUBMIT 的管理字段补丁拒绝整次动作；RETURN 继续空补丁并跳过业务字段处理。未登记对象及同名普通字段不受此约束。
 
 ### 已完成任务与无动作任务的只读归一化
 
@@ -33,6 +37,8 @@ Workflow 已完成任务可能仍返回历史 `editPermission: { scope: "field",
 Lookup 从节点字段保留 relationKey/targetFieldKey/targetFieldType，从 `data.formMetadata.relations` 读取两端和基数；按 [Lookup 节点依赖](lookup-metadata.md) 生成局部最小目标描述，不补查普通 entity/relation/Schema。仅装配可见 Lookup 必需的关系与目标描述，自关联补充不扩展 view/editPermission。缺失或冲突时报错，不以元数据代替候选数据的读取权限。
 
 ### 任务 Lookup 候选
+
+正式业务引用的候选及提交按 [TASK 草稿资格](../../make-app-service/references/business-record-drafts.md#task-管理字段与引用)：可信目标策略在分页和 total 前过滤，提交前重查本次选择；不补查源 Schema、不增加源 CRUD 权限，RETURN 不执行引用检查。人员/部门及未启用目标不自动增加过滤。
 
 任务字段控件复用宿主关联选择器，但注入任务候选 provider，不沿用普通 CRUD 的源字段授权接口。`POST /api/bpm/tasks/lookup-options` 接收 `{ processInstanceId, taskId, fieldKey, keyword?, pagination: { page, size } }`，返回 `{ options, searchable, total }`。仅携带任务定位与当前字段，Service 从任务取得应用/对象，不接受客户端替换。
 
