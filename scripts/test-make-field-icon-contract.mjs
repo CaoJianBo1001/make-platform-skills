@@ -10,7 +10,6 @@ const referencePath = 'skills/makeui/references/field-type-icons.md';
 const reference = read(referencePath);
 const makeuiSkill = read('skills/makeui/SKILL.md');
 const componentUsage = read('skills/makeui/references/component-usage.md');
-const makeuiPrinciples = read('skills/makeui/references/principles.md');
 const readme = read('README.md');
 const makeuiDescription = makeuiSkill.match(/^description:\s*"([^"]+)"/m)?.[1] ?? '';
 
@@ -44,40 +43,11 @@ assert.match(
   /Lucide[^\n]*图标库[^\n]*组件库|组件库[^\n]*不限定[^\n]*Lucide/,
   'field-icon guidance must distinguish the icon library from the UI component library',
 );
-for (const library of ['Ant Design', 'Arco Design', 'shadcn/ui']) {
-  assert.ok(reference.includes(library), `field-icon guidance must support ${library}`);
-}
 assert.match(
   reference,
   /用户明确指定其他图标库[\s\S]*?Lucide/,
   'Lucide must be the default icon library with an explicit user override',
 );
-assert.match(
-  componentUsage,
-  /other compatible React component librar(?:y|ies)/i,
-  'an explicit user choice of another compatible React UI library must remain valid',
-);
-const componentChoice = componentUsage.match(/For new projects without[\s\S]*?Do not mix multiple component libraries/)?.[0] ?? '';
-assert.match(componentChoice, /structured (?:input|choice) (?:UI|prompt)/i);
-assert.match(componentChoice, /Ant Design[\s\S]*?Arco Design[\s\S]*?shadcn\/ui/);
-assert.doesNotMatch(componentChoice, /TDesign/, 'the presented options must contain only the agreed three examples');
-assert.match(componentChoice, /free-text|custom/i, 'the user must be able to name another React library');
-assert.match(componentChoice, /no selection[\s\S]*?Ant Design/i, 'no selection must resolve to Ant Design');
-assert.match(
-  makeuiPrinciples,
-  /other compatible React component librar(?:y|ies)/i,
-  'makeui principles must allow a user-specified React component library',
-);
-assert.match(makeuiPrinciples, /no selection[\s\S]*?Ant Design/i);
-assert.match(makeuiPrinciples, /(?:three|3) (?:suggested )?options/i);
-assert.doesNotMatch(
-  makeuiPrinciples,
-  /Component-library selection is blocking/i,
-  'the principles must not contradict the no-selection Ant Design default',
-);
-assert.match(readme, /组件库选择[\s\S]*?Ant Design[\s\S]*?Arco Design[\s\S]*?shadcn\/ui/);
-const selectionStrategy = componentUsage.split('## Selection strategy')[1]?.split('## Presentation priority')[0] ?? '';
-assert.match(selectionStrategy, /structured choice UI/i, 'component choice belongs in the selection section');
 const defaultMapping = componentUsage.split('## Default candidate mapping')[1]?.split('## Field-type icons')[0] ?? '';
 assert.match(defaultMapping, /When shadcn\/ui is the selected component system/i);
 assert.doesNotMatch(

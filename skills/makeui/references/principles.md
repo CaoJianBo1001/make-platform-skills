@@ -25,7 +25,6 @@
 - Desktop/tablet Make record tables and list tables use `@qfei-design/canvas-table` through `canvas-table-integration`. Phone object lists use the card View from `mobile-defaults.md` and must not render CanvasTable. If desktop/tablet cell editing is needed, use `canvas-table-integration` for the editing design too.
 - Do not add product capabilities that were not requested, especially pagination, views, advanced filters, grouping, sorting, column settings, import, or export.
 - Do not force Ant Design or Less when the user or project already has another UI/styling system.
-- For a new project with no established or user-specified component library, present the selection described in Decision order; accept a custom compatible React library and use Ant Design if the user does not choose after a reasonable opportunity to respond.
 - Do not skip the Make App shell for generated object-list UI. Start from the shell unless the project already has one.
 - Do not silently downgrade `Date`, `User`, `Department`, `Select`, `File`, or `Lookup` Make fields to plain text inputs. Use type-appropriate UI controls or show an explicit unsupported-field UI fallback.
 - Do not show attachment upload controls in create flows when upload requires a saved record identity. New records do not have a persisted id; omit file upload until edit/detail after persistence.
@@ -95,7 +94,7 @@ Use the host's existing component library button for a page retry action, or its
 
 If a detail is not requested and not present in the project, choose the simplest useful UI.
 
-For a new project with no established or user-specified component library, show a selection pop-up through the available structured input UI. Offer three suggested options in order: Ant Design, Arco Design, shadcn/ui. Let the user specify another compatible React component library through the custom answer. If structured input is unavailable, ask the same question in chat. Honor an explicit choice; if the user delegates or makes no selection after a reasonable opportunity to respond, default to Ant Design and state that assumption. Existing projects keep their current library unless the user requests a change. If the user chooses shadcn/ui, follow the host project's chosen setup path and add only the UI components needed by the generated screens. The default Lucide icon library is a separate decision and does not constrain the UI component library.
+For a new UI, apply the [MakeDesign or component library decision](component-usage.md#selection-strategy) before scaffolding. An explicit detail choice in the selected plan counts as a user request.
 
 ## Dynamic object routes
 

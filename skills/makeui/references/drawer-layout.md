@@ -15,7 +15,7 @@
 
 ## Default mode
 
-Desktop and tablet create, edit, and detail UIs use a right-side Drawer by default. For generated Make App object create/edit/detail on those presentation modes, this is a hard layout rule unless the user explicitly requests a different surface. Phone CRUD uses the package-backed full-screen task route from `mobile-defaults.md`; it is not a resized Drawer.
+Desktop and tablet create, edit, and detail UIs use a right-side Drawer by default. An explicit surface choice for ordinary record detail in a [MakeDesign plan](component-usage.md#makedesign-branch) takes precedence over the default placement and width. Phone CRUD uses the package-backed full-screen task route from `mobile-defaults.md`; it is not a resized Drawer.
 
 - placement: right; use `placement="right"` for Drawer components and `side="right"` for shadcn/ui Sheet
 - default width: `60%`
@@ -28,10 +28,6 @@ Desktop and tablet create, edit, and detail UIs use a right-side Drawer by defau
 Do not use bottom Drawer/Sheet, mobile bottom sheet, or centered Modal/Dialog for object create/edit/detail unless the user explicitly requests that different presentation. The standard phone full-screen task route is the deliberate page-level exception defined in `mobile-defaults.md`.
 
 Mask click uses the same close path as the header close control. If a form has an explicit unsaved-change guard, apply that same guard to mask close instead of silently ignoring the mask click.
-
-Treat these as desktop/tablet Make UI defaults. For Make object create/edit/detail in those modes, right-side placement is not overridden by a generic existing bottom-sheet pattern; use a different surface only when the user explicitly asks for it or the task is not an object CRUD Drawer.
-
-Use route pages on desktop/tablet only when the user explicitly asks for an independent page, route, navigation, page jump, or standalone screen. Phones use full-screen route task pages by default according to `mobile-defaults.md`.
 
 On desktop/tablet, Drawer presentation can still be driven by dynamic child routes when URL-addressable create/edit/detail state is required. In that case, keep the Drawer UI and use route params for object and record identity. Phone task routes remain full-screen even when they are URL-addressable.
 
@@ -91,7 +87,7 @@ Form layout:
 - create/edit forms use a dedicated modifier class or style scope when their visual treatment differs from detail Drawers
 - default to vertical labels in a two-column grid for metadata-driven forms, because field labels may be long or unpredictable
 - horizontal label/value alignment remains acceptable when labels are short, stable, or already established by the project
-- use a subtle neutral Drawer body with one lightweight white form panel or section panels; avoid visually heavy cards and nested cards
+- use the active theme’s background for the Drawer body and its surface color for form panels
 - keep form panels compact: moderate padding, 6-8px radius, thin neutral border, and low shadow at most
 - common fields use a two-column grid on desktop; do not render every field as full-width one-column rows unless the user explicitly asks
 - long text, descriptions, URL/link fields, attachments, lookup/relation controls, and rich content span full width
@@ -104,7 +100,7 @@ Unless the user or existing project asks otherwise, use the platform create/edit
 - `Drawer` on the right, width `60%`, fullscreen toggle can expand to `100%`
 - `layout="vertical"` form, `colon={false}`
 - header badge shows mode such as `新建` or `编辑`; right side contains primary save and final close
-- one white form panel for normal writable fields, and a second section panel for relation/association fields when needed
+- one form panel for normal writable fields, and a second section panel for relation/association fields when needed
 - panel padding around `16px`, thin neutral border, 8px radius, low shadow at most
 - grid `repeat(2, minmax(0, 1fr))` with roughly `10px 18px` gaps
 - field item margin around `10px`, label padding around `6px`, 36px controls, and textarea min-height around `96px`

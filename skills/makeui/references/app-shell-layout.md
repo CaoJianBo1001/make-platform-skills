@@ -42,7 +42,7 @@ For generated Make App UI, the application shell is mandatory. Start layout work
 Default Make App shell:
 
 - left full-height sidebar for app branding, section labels, modules, and Make object navigation
-- right-side vertical workspace on a light neutral background
+- right-side vertical workspace using the active theme’s background color (light neutral in the default light theme)
 - fixed flat top header inside the workspace
 - content region below the header
 - no body-level or whole-page scroll
