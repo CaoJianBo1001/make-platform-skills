@@ -120,7 +120,7 @@ Codex 判断优先级：
 - 打包发布失败或 Service 启动失败：`make-app-runtime`
 - 新增对象字段并部署：`makedsl` + `makecli`
 - 新建完整 Make App：默认包含 `make-app-observability`、`make-app-permission` 和 `make-app-actions`，通常组合 `makedsl` + `makecli` + `make-app-auth` + `make-app-service` + `make-app-permission` + `make-app-observability` + `makeui` + `canvas-table-integration` + `make-app-actions`
-- 新项目已有明确方案或组件库时直接沿用。尚未选择时，在 PRD／DSL 确认后进入 [MakeDesign 或组件库选择流程](skills/makeui/references/component-usage.md#selection-strategy)。选择 MakeDesign 的用户把最终方案链接粘贴回会话后，再按方案搭建界面。已有项目沿用现有组件库。
+- 每个新项目在 PRD／DSL 确认后、搭建 UI 前，都必须询问用户是否使用 MakeDesign 并等待答复。只有 PRD 或用户描述已明确指定 UI 组件库，或已提供有效的 MakeDesign 方案链接时，才直接采用该选择。选择 MakeDesign 后，主动打开选择页面，同时在会话中提供可点击链接及复制回传步骤。交互细节见 [MakeDesign 或组件库选择流程](skills/makeui/references/component-usage.md#selection-strategy)。已有项目沿用现有组件库。
 - 用户明确指定其他图标库时遵从其要求；否则新建 Make App 的图标默认统一使用 [Lucide](https://lucide.dev/icons/)。桌面／平板字段类型图标按 [`makeui` 默认映射](skills/makeui/references/field-type-icons.md) 覆盖 CanvasTable 表头、新建／编辑／详情字段标签及已有字段选择列表，手机字段名保持纯文本，不需用户再次提示。
 
 ## 按需业务草稿与字段默认值
