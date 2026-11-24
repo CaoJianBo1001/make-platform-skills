@@ -18,11 +18,11 @@
 
 ## Selection strategy
 
-Honor an explicitly requested library or MakeDesign plan. Otherwise preserve the existing UI stack, including styling tools. Treat dependencies supplied only by a starter template as scaffold defaults. For a new project with no explicit choice or established UI, after the PRD/DSL is confirmed and before installing UI dependencies or scaffolding components, ask once through the available structured input UI (plain chat fallback):
+For every new project, after PRD/DSL confirmation and before installing UI dependencies or scaffolding components, check the PRD and the user's description. If either explicitly selects the project's UI component library, use that library directly. If either supplies a selected MakeDesign plan URL, verify it through the MakeDesign branch below and use the resolved plan directly. Dependencies or UI supplied by a starter template, a library mentioned only as an example, a style name, and the gallery URL alone still require the question.
 
-**要使用 MakeDesign 选择项目风格吗？**
+In all other cases, ask **要使用 MakeDesign 选择项目风格吗？** using the available structured input UI (`request_user_input_async` or `request_user_input`). If unavailable, ask the same question in chat. Wait for an explicit answer before starting UI work. Silence or dismissal leaves the choice pending. The Ant Design default applies only after the user chooses the component-library branch. Reuse an answer already given for this project when resuming the same task.
 
-- 使用 MakeDesign → open [MakeDesign](https://test-make.qtech.cn/design/) in the user's browser when available, otherwise show that link. Ask the user to choose a style, adjust it if needed, then click 复制方案链接 in the upper-right corner and paste that URL in this conversation. Wait for it before generating the UI. A valid link supplied up front also satisfies this step.
+- 使用 MakeDesign → immediately perform both actions in the same handoff. Open [MakeDesign](https://test-make.qtech.cn/design/) in a visible, focused tab in the user's browser and send a clickable link to that page in the conversation, including when opening succeeds. Tell the user to choose a style, adjust it if needed, click 复制方案链接 in the upper-right corner, and paste the URL back into this conversation. Verify the target URL and visible style-gallery content before reporting that the page is open. If the tab is blank or hidden, recover the navigation or bring it into view. If browser control is unavailable or opening fails, explain the opening problem in the same message with the clickable link and instructions. Wait for a valid plan and read its handoff before generating UI.
 - 选择组件库 → use the library selection below. A user who chooses MakeDesign can return to this branch explicitly.
 
 ### MakeDesign branch
