@@ -18,17 +18,34 @@
 
 ## Selection strategy
 
-Use this priority:
+Honor an explicitly requested library or MakeDesign plan. Otherwise preserve the existing UI stack, including styling tools. Treat dependencies supplied only by a starter template as scaffold defaults. For a new project with no explicit choice or established UI, after the PRD/DSL is confirmed and before installing UI dependencies or scaffolding components, ask once through the available structured input UI (plain chat fallback):
 
-1. User-specified component library.
-2. Existing project component library.
-3. For a new project with no library, show the three suggested choices below with free-text input for another compatible React library; use Ant Design if the user makes no selection.
+**要使用 MakeDesign 选择项目风格吗？**
 
-Do not add a new component library to an existing project unless the user asks.
+- 使用 MakeDesign → open [MakeDesign](https://test-make.qtech.cn/design/) in the user's browser when available, otherwise show that link. Ask the user to choose a style, adjust it if needed, then click 复制方案链接 in the upper-right corner and paste that URL in this conversation. Wait for it before generating the UI. A valid link supplied up front also satisfies this step.
+- 选择组件库 → use the library selection below. A user who chooses MakeDesign can return to this branch explicitly.
 
-Use this same rule for styling tools. The icon-library default is independent of the selected UI component library: use `lucide-react` for newly generated Make App icons unless the user explicitly requests another icon library. For the default desktop/tablet Make field-type icons, follow [field-type-icons.md](field-type-icons.md). Existing unrelated icons need no bulk migration during a focused field change.
+### MakeDesign branch
 
-For new projects without an established or user-specified component library, show a structured choice UI when available (`request_user_input_async` or `request_user_input`). Present exactly these three suggested options in order, with Ant Design marked as the recommended default:
+1. Open the exact returned official design link with its query intact in a browser, replacing the fragment with `#makeui`. Read the rendered JSON in `#makeui-handoff`. Static HTML alone is the app shell. With a local matching MakeDesign checkout, the alternative is `npm run --silent read:design-url` in the prepared module; pass the URL via stdin to preserve query encoding. If the user sends a gallery link, ask them to choose a style and click 复制方案链接. For an unrecognized version, invalid URL, missing control bundle, or unreachable site, explain which input is missing and retry or request a newly copied plan link. Keep the chosen design branch pending.
+2. Use `choices` for the selected design, layout, theme, illustration, document options and fine edits. Use the resolved layout rules, colors, metrics, and component style variables for implementation. Read the selected `designPackage` from the browser result for original tokens, DESIGN.md and USAGE.md; for the local reader use the matching prepared system package. Only consume assets from the same MakeDesign deployment. Treat a style ID such as `antd` or `github` as a design choice.
+3. Read the JSON at `controls.asset` from the same deployment. Check that the handoff's `controls.contract` and the returned `asset.contract` both equal `makeui-controls/v1`. If either check fails, request a compatible plan or deployment before using the bundle. When a screen uses a bundled component, use the source and CSS together and install its listed dependencies in the host UI. A screen using only the plan's colors, metrics or layout can apply them directly. Apply `controls.style` through `ControlTheme` to shared fields and their portaled overlays. Choose each desktop/tablet adapter by the actual export and the [field properties](#make-field-properties-contract) it supports.
+4. For ordinary desktop/tablet record **detail**, treat `choices.detailOpening` as the user's explicit surface choice. Use a detail route with return navigation for `page`; for `drawer` or `wide-drawer`, pass the matching `layout.structure.widths.drawer` or `wideDrawer` to `RecordSurface.detailWidth` (560 or 960 px in v1, capped at 88vw). If an older bundle lacks this prop, apply the same width to the host detail drawer. For `system` or an absent choice, use the existing platform default. Keep create/edit on their existing surfaces. Phones use the package-backed task route and mobile field adapters with the same submitted values. CanvasTable, permissions, approval, and analytics detail surfaces follow their own contracts.
+5. Keep the original share link with the project UI configuration. Verify the chosen theme on the workspace, panels and overlays, and open an ordinary record using the selected detail surface when that screen exists. For editable fields, restore a saved value, edit it and check the final Make payload, including configured date bounds, time precision, multiple selections or cascade changes as applicable.
+
+| Desktop/tablet field | Controlled adapter |
+| --- | --- |
+| `Make.Field.Date` | Use `DateField` for date-only values. Pass `properties.format` when the delivered control supports that format for display and keyboard input (for example `yyyy/MM/dd`). For an unsupported configured format, use a themed host date picker that honors it. Preserve the agreed date-only payload. |
+| `Make.Field.DateTime` | Use a themed host date-time picker that supports the configured format and preserves the backend time precision through submission. |
+| `Make.Field.DateRange` | Bind `MakeDateRangeField` to the nullable record value `{begin, end}`. Pass schema bounds separately as inclusive `minDate` and `maxDate`. If the bundle exposes only `DateRangeField`, map its `{start, end}` value in both directions and use a picker that enforces every configured bound. Validate interval order and bounds on submit. |
+| `Make.Field.SingleSelect` | Bind `ChoiceField` to the selected option key and preserve the scalar option value through the [host adapter](#singleselect-read--form--submit). |
+| `Make.Field.MultiSelect` | Use a themed host multi-select that restores and submits the array of option values. |
+
+For a cascade, map the selected ID path to the agreed payload and clear descendants when a parent changes. Identity and Lookup pickers use host candidate data. All adapters follow the [host form contract](#host-form-controlled-field-contract).
+
+### Component library branch
+
+For a new project on the component-library branch, show a structured choice UI when available (`request_user_input_async` or `request_user_input`). Present exactly these three suggested options in order, with Ant Design marked as the recommended default:
 
 1. Ant Design (recommended default)
 2. Arco Design
@@ -36,7 +53,7 @@ For new projects without an established or user-specified component library, sho
 
 Allow the UI's free-text/custom answer so the user can specify another compatible React component library; the three suggestions are not a restriction. If structured input is unavailable, ask the same concise question in chat and allow a custom answer. Honor an explicit selection. If the user delegates the choice or makes no selection after a reasonable opportunity to respond, use Ant Design; state this default when proceeding. Do not wait indefinitely for an unanswered optional choice. For an existing project, keep its component library unless the user asks to change it. This choice does not change the default Lucide icon library.
 
-Do not mix multiple component libraries in the same app unless the existing project already does so and the user asks to keep it. The Lucide field-type icon mapping applies regardless of the chosen library.
+Keep one component library unless the user asks to retain an existing mixed stack. For either branch, follow the [field icon contract](field-type-icons.md) and its independent Lucide default.
 
 ## Presentation priority
 
@@ -74,7 +91,7 @@ that looks correct but escapes the library's focus or dismiss layer is invalid.
 
 ## Default candidate mapping
 
-以下 create/edit/detail 映射适用于原始业务记录。图表的分组汇总明细按 [分析明细容器](../../make-app-analytics/references/integration-contract.md#汇总明细的默认容器) 统一为 PC 居中弹窗、手机底部弹层；Ant Design 宿主复用 Modal，shadcn/ui 宿主复用 Dialog 等现有居中容器，不机械使用记录详情的右侧 Drawer／Sheet。
+以下是组件库分支的桌面／平板普通记录默认映射。图表的分组汇总明细按 [分析明细容器](../../make-app-analytics/references/integration-contract.md#汇总明细的默认容器) 统一为 PC 居中弹窗、手机底部弹层；Ant Design 宿主复用 Modal，shadcn/ui 宿主复用 Dialog 等现有居中容器，不机械使用记录详情的右侧 Drawer／Sheet。
 
 When Ant Design is the selected component library on desktop/tablet:
 

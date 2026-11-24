@@ -70,7 +70,7 @@ Avoid:
 ## Form Drawer polish
 
 - keep create/edit form Drawer styling scoped away from list and detail views
-- use a subtle neutral Drawer body with lightweight white form panels when grouping helps readability
+- use the active theme’s background and surface colors for the Drawer body and grouped panels. The default light theme can use white panels
 - keep panel styling restrained: thin neutral border, 6-8px radius, moderate padding, low shadow at most
 - in percentage-based Drawers, prefer stable two-column grids such as `repeat(2, minmax(0, 1fr))` with `min-width: 0` children
 - keep common fields in two columns on desktop; avoid one full-width row per field unless the user explicitly asks
@@ -94,7 +94,7 @@ Avoid:
 - use the container-width presentation model and package components in `mobile-defaults.md` for new Make Apps and mobile/responsive work
 - phone record lists use cards rather than CanvasTable and do not reuse desktop toolbar/table fragments through CSS; standard phone toolbars omit group, sort, record selection and batch actions
 - tablet navigation may become an overlay while preserving the desktop information architecture
-- phone create/edit/detail surfaces use full-screen route task pages; desktop/tablet CRUD remains a right-side Drawer
+- phone create/edit/detail surfaces use full-screen route task pages; desktop/tablet CRUD defaults to a right-side Drawer, with ordinary record detail following any explicit [MakeDesign surface choice](component-usage.md#makedesign-branch)
 - On desktop/tablet, form grids may collapse from two columns to one when their owning Drawer becomes narrow; this is not the phone task-page field layout.
 - On desktop/tablet, toolbar actions may wrap, but create/new should remain easy to find; the phone toolbar is separately composed in `mobile-defaults.md`.
 - On desktop/tablet, table horizontal overflow belongs inside the table container; phone card lists must not inherit table overflow styles.

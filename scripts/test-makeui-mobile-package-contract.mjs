@@ -253,7 +253,9 @@ assert.match(
   'phone attachment fields must use the package presentation while the host owns requests',
 );
 assert.match(mobileVisualStandard, /冻结 Make App 手机端的通用视觉与交互基线/);
-assert.match(mobileVisualStandard, /表单容器为白色平面[\s\S]{0,100}不加外层边框/);
+assert.match(mobileVisualStandard, /表单容器[^\n]*主题[^\n]*默认浅色[^\n]*白色[^\n]*不加外层边框/);
+assert.match(mobileVisualStandard, /边界当天可选[^\n]*仅禁用越界日期/);
+assert.doesNotMatch(mobileVisualStandard, /边界日禁用/);
 assert.match(mobileVisualStandard, /所有字段值内容靠右对齐/);
 assert.match(mobileVisualStandard, /calc\(100%\s*-\s*8px\)[\s\S]{0,100}(4px|4 px)/i);
 assert.match(mobileVisualStandard, /(清除|clear)[^\n]*(左侧|left)[^\n]*(确定|confirm)[^\n]*(右侧|right)/i);
@@ -274,6 +276,7 @@ assert.match(
   /`DateRange`[\s\S]{0,760}(反向|早于)[^\n]*(重置|reset)[^\n]*(开始|start)[\s\S]{0,300}(完整|complete)[^\n]*(确认|confirm)[\s\S]{0,220}\{\s*begin\s*,\s*end\s*\}/i,
   'phone DateRange must reset reverse selection and commit only a complete structured range',
 );
+assert.doesNotMatch(mobileFormControls, /`Date`、`DateTime`、`DateRange` 都必须读取 Schema 的 `begin`／`end`/);
 assert.doesNotMatch(
   mobileFormControls,
   /`Date`、`DateTime`、`Time` 使用受控原生输入|`DateRange` 使用开始 `begin` 和结束 `end` 两个上下／纵向堆叠/,
@@ -376,7 +379,7 @@ assert.match(
 );
 assert.match(
   listPageLayout,
-  /(手机卡片|phone card)[\s\S]{0,260}(扁平白底|flat white)[^\n]*(无边框|no border)[^\n]*(无阴影|no shadow)[\s\S]{0,220}(8[^\n]*12px|8–12px)[^\n]*(间隔|gap)/i,
+  /手机卡片[^\n]*主题[^\n]*扁平[^\n]*无边框[^\n]*无阴影[^\n]*8–12px[^\n]*间隔[^\n]*默认浅色[^\n]*白底[^\n]*灰底/,
   'phone record cards must use the flat separated standard',
 );
 assert.match(

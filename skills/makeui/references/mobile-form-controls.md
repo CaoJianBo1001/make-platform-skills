@@ -91,8 +91,8 @@ function resolveSaveFormIntents({ canSave, canSaveAndSubmit, draftEnabled }) {
 - 宿主已声明的 `Time` 控件按其时间精度使用时／分或时／分／秒滚轮；不据此发明 `Make.Field.Time` Schema 类型。分钟步长只在 Schema 或业务合同明确时覆盖。
 - `DateTime` 按 Schema `format` 和后端精度合同选择滚轮：分钟精度使用年／月／日／时／分五列滚轮；含秒（如 `yyyy-MM-dd HH:mm:ss`）使用年／月／日／时／分／秒六列滚轮。日期与时间组成一个草稿并一次确认提交；不要因手机展示降低值精度。
 - 回填已有非零秒值必须原样保留；仅打开后确认、不修改秒，或只修改其他字段时，不得将秒归零、截断或隐式改变时区。取消或关闭不写回。`format` 未声明时沿用宿主统一精度合同；不支持所需精度时报告适配 blocker，不静默降级。
-- `DateRange` 使用单月日历 Sheet，提供上一个月和下一个月切换；分别显示开始、结束和区间选中样式。第一次点击设为开始，第二次点击设为结束；第二次选择早于开始时视为反向选择并重置开始。只有开始和结束完整时确认按钮才可用，并提交 `{ begin, end }`。
-- `Date`、`DateTime`、`DateRange` 都必须读取 Schema 的 `begin`／`end` 有效边界，禁用越界日期；显示格式与提交格式继续遵循字段 `format` 和后端合同。
+- `DateRange` 使用单月日历 Sheet，提供上一个月和下一个月切换；分别显示开始、结束和区间选中样式。第一次点击设为开始，第二次点击设为结束；第二次选择早于开始时视为反向选择并重置开始。起止完整且在允许范围内时才能确认。宿主把控件返回的日期元组映射为记录值 `{ begin, end }`。
+- 普通 `DateRange` 的 `properties.begin` 和 `properties.end` 分别作为可选的最早、最晚日期传给手机控件的 `begin` 和 `end`，两端均包含；只配置一端时只限制该端。普通 `Date` 和 `DateTime` 按 Schema 的 `format` 展示并保留后端值格式；若宿主业务或节点元数据另有日期限制，按实际约束接入。
 
 人员／部门远程候选默认使用包 `/fields` 入口的 `MobileIdentityField`；它组合了标准字段触发器和 `MobileSearchPickerSheet`。只有超出公共字段 API 的明确特殊定制才直接组合底层搜索 Sheet。普通选项不继承搜索选择器：`SingleSelect` / `MultiSelect` 使用包内 `MobileOptionPickerSheet`；该底层受控组件要求宿主从已提交值初始化 `selectedKeys` 草稿，`onSelectedKeysChange` 只更新草稿，单选即时 `onConfirm`、多选点击“确定”后的 `onConfirm` 才写真实表单，取消或关闭丢弃草稿；交互结束时由宿主字段适配器仅转发一次 `onBlur`，不在草稿回调中触发。不得重新用 AntD `Select` 或宿主原生 `<select>` 实现手机默认选项面板。
 

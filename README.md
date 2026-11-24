@@ -75,7 +75,7 @@ Codex 判断优先级：
 | --- | --- | --- |
 | 方案确认后新建/迭代项目、BPM、保存并提交、发起/撤回、继续提交、我的审批 npm 包、节点办理、历史与流程状态 | [make-app-approval](skills/make-app-approval/SKILL.md) | 按实际业务能力生成入口，完整接入审批表单、记录生命周期、任务中心与历史；不负责 Console、流程设计器、引擎或未确认的终态重新发起 |
 | Make 环境安装、更新 Make 环境、makecli 登录校验、Node/pnpm/git/makecli 版本检查 | `make-env-setup` | 只负责本地开发环境准备、工具链更新、Make skills 更新、环境选择和登录校验；不负责 PRD、DSL、Service、UI、apply、deploy 或 git 提交 |
-| 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、字段类型图标、移动端卡片列表、工作台、底部导航、人员/部门选择抽屉、响应式、UI 状态、`@qfei-design/make-app-mobile` | `makeui` | 新 App 图标默认用 Lucide，用户明确指定其他图标库时遵从其要求；React UI 组件库由用户选择。桌面／平板字段类型图标默认覆盖表头、字段标签及字段选择列表；手机使用独立卡片 View 和纯文本字段名；不负责认证、打包、Service、业务 API 设计和发布 |
+| 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、字段类型图标、移动端卡片列表、工作台、底部导航、人员/部门选择抽屉、响应式、UI 状态、`@qfei-design/make-app-mobile` | `makeui` | 新 App 图标默认用 Lucide，用户明确指定其他图标库时遵从其要求；新项目先选 MakeDesign 方案或组件库。桌面／平板字段类型图标默认覆盖表头、字段标签及字段选择列表；手机使用独立卡片 View 和纯文本字段名；不负责认证、打包、Service、业务 API 设计和发布 |
 | CanvasTable、表格渲染、字段类型展示、表格编辑、序号列、行头详情图标、`showSN`、`bodyRowHeadSuffixOptions`、`GroupTableComponent` 底层接入 | `canvas-table-integration` | 只负责 `@qfei-design/canvas-table` 消费侧接入，不负责页面 Shell 和业务 API；Make 记录分组完整能力交给 `make-app-group` |
 | 操作按钮、行操作、手机卡片单条编辑/删除、复选框选择、批量编辑、暂无可用操作、行级写权限预检、`selectAllMode`、`@qfei-design/make-app-actions` | `make-app-actions` | 手机卡片复用 headless 单条操作；desktop/tablet CanvasTable 使用选择操作栏和批量能力。负责独立操作权限、预检、选择意图和批量写入编排，不负责 CanvasTable 内部、IAM 权限策略或 Service 分层实现 |
 | 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | `search-only` 仅用包 core 编译关键词为 `filter.expression`，不读写筛选 Preset、不挂载 Controller／面板；`advanced-filter` 才共用 Controller、Preset 与表达式，desktop/tablet 配套 CanvasTable 表头联动，手机使用顶部筛选入口和移动安全面板、不挂载 CanvasTable；不负责页面 Shell、Service 实现、认证或发布 |
@@ -120,8 +120,8 @@ Codex 判断优先级：
 - 打包发布失败或 Service 启动失败：`make-app-runtime`
 - 新增对象字段并部署：`makedsl` + `makecli`
 - 新建完整 Make App：默认包含 `make-app-observability`、`make-app-permission` 和 `make-app-actions`，通常组合 `makedsl` + `makecli` + `make-app-auth` + `make-app-service` + `make-app-permission` + `make-app-observability` + `makeui` + `canvas-table-integration` + `make-app-actions`
-- 新项目没有既定组件库时，组件库选择弹窗提供 Ant Design、Arco Design、shadcn/ui 三个建议选项，并允许用户自行指定其他兼容的 React 组件库；用户未选择时默认 Ant Design。已有项目沿用现有组件库。
-- 用户明确指定其他图标库时遵从其要求；否则新建 Make App 的图标默认统一使用 [Lucide](https://lucide.dev/icons/)。React UI 组件库由用户选择或沿用项目现有约定，不限于 Ant Design、Arco Design、shadcn/ui。桌面／平板字段类型图标按 [`makeui` 默认映射](skills/makeui/references/field-type-icons.md) 覆盖 CanvasTable 表头、新建／编辑／详情字段标签及已有字段选择列表，手机字段名保持纯文本，不需用户再次提示。
+- 新项目已有明确方案或组件库时直接沿用。尚未选择时，在 PRD／DSL 确认后进入 [MakeDesign 或组件库选择流程](skills/makeui/references/component-usage.md#selection-strategy)。选择 MakeDesign 的用户把最终方案链接粘贴回会话后，再按方案搭建界面。已有项目沿用现有组件库。
+- 用户明确指定其他图标库时遵从其要求；否则新建 Make App 的图标默认统一使用 [Lucide](https://lucide.dev/icons/)。桌面／平板字段类型图标按 [`makeui` 默认映射](skills/makeui/references/field-type-icons.md) 覆盖 CanvasTable 表头、新建／编辑／详情字段标签及已有字段选择列表，手机字段名保持纯文本，不需用户再次提示。
 
 ## 按需业务草稿与字段默认值
 

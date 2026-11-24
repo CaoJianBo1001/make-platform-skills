@@ -12,7 +12,7 @@
 
 ## When to use
 
-On desktop/tablet, use route-based pages only when the user explicitly asks for:
+For ordinary desktop/tablet record detail, `page` in the [selected MakeDesign plan](component-usage.md#makedesign-branch) is an explicit request for a full page. Other explicit route requests include:
 
 - independent page
 - route page
@@ -41,7 +41,7 @@ When create/edit/detail must be URL-addressable, use dynamic child routes:
 /objects/:objectKey/:recordId/edit
 ```
 
-On desktop/tablet, presentation is still right-side Drawer by default for create/edit/detail. URL-addressable Drawer state does not change placement; keep `placement="right"` or `side="right"`. Only render these child routes as full pages when the user explicitly asks for page-route mode. On phones, render the same routes with the full-screen task-page presentation from `mobile-defaults.md`.
+On desktop/tablet, a child URL can drive either a right-side Drawer or the requested full page. For a Drawer, use `placement="right"` or `side="right"`. For a full page, provide return navigation. On phones, render the same routes with the full-screen task-page presentation from `mobile-defaults.md`.
 
 Do not generate a separate hard-coded route per object such as `/customers`, `/orders`, and `/opportunities` unless the host project already uses that convention or the user explicitly requests it.
 
