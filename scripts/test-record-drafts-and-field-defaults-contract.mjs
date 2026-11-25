@@ -143,8 +143,17 @@ for (const file of [mobilePath,
     `stale fixed-two-action guidance in ${file}`);
   checks++;
 }
-requireText(mobile, /两个或三个 Button/,
-  'single-action public APIs need a documented two/three-action host composition');
+requireText(mobile, /正式移动包 0\.1\.14[^\n]*`MobileFormActionBar actions`/,
+  'all save-intent combinations must use the released mobile multi-action API');
+assert.doesNotMatch(mobile, /两个或三个 Button|允许在[^\n]*宿主[^\n]*Button/,
+  'released multi-action guidance must not restore the legacy host Button fallback');
+for (const file of [mobilePath,
+  'skills/makeui/references/mobile-defaults.md',
+  'skills/makeui/references/mobile-visual-standard.md',
+  'skills/make-app-approval/references/initiation-contract.md']) {
+  requireText(read(file), /mobile-detail-components\.md#单行与更多操作/,
+    `save-intent guidance must route to the shared overflow contract in ${file}`);
+}
 const example = [...mobile.matchAll(/```js\n([\s\S]*?)```/g)]
   .map(match => match[1]).find(code => code.includes('function resolveSaveFormIntents'));
 assert.ok(example, 'the shared matrix needs an executable host intent example');
