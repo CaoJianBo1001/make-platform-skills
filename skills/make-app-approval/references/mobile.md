@@ -43,6 +43,7 @@
 - 审批包的 sections.application 已拥有标题、字段 label、必填及错误布局；renderField 只返回值控件，不在其内再套 MobileFieldRow，也不为整个 application 再添加同名 MobileDetailSection 标题。宿主自建普通业务字段行/区块才使用这两个公共组件。连续任务详情用 MobileDetailPage 保留原 application/history ReactNode，opinion 和 feedback 进入尾部正文。只替换公开插槽；缺少必要结构或样式能力时报告包缺口，不复制 Controller、不删除包节点或修改 PC 共用模板。
 - 审批意见/撤回原因使用 MobileTextArea 默认两到五行、实际测量自动增高与内部滚动，字段 TextArea 使用 inline 外观；保留原受控值、字数、必填与错误，PC 不变。
 - 编辑/办理底栏使用 MobileFormActionBar size="small"。从 actionItems 映射 key=actionType，保留原 label/onClick/loading，disabled 合并包状态与宿主字段错误；APPROVE/SUBMIT 为 primary，其余为 default，沿用原动作语义。无动作不留空底栏；记录详情的编辑/删除等图标操作仍使用原 MobileBottomActionBar。
+- 新增或改造多动作底栏按 makeui 的 [单行与更多操作](../../makeui/references/mobile-detail-components.md#单行与更多操作) 使用已核验的移动包 `0.1.14`；不需要升级审批 npm 包来实现菜单。溢出由移动包测量，主操作优先、更多最右；全部授权动作仍可达，不因进入菜单改变 actionType、回调、禁用或校验语义。菜单打开／取消不提交，不另写办理请求；实例详情仍无办理底栏。
 - actionItems 回调直接复用包控制器，保留 loading/disabled、本地数字校验门禁、最新权限复核、重复提交保护与失败恢复。RETURN 不受业务数字错误阻断，仍只提交意见及唯一目标、空 recordPatch；不根据截图增加撤回/终止等动作。
 
 ## 手机布局接线参考

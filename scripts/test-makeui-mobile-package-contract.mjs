@@ -151,8 +151,8 @@ assert.match(
 );
 assert.match(
   mobileDefaults,
-  /corepack pnpm add @qfei-design\/make-app-mobile@\^0\.1\.9/,
-  'mobile defaults must install the current 0.1.9 visual baseline',
+  /corepack pnpm add @qfei-design\/make-app-mobile@0\.1\.14/,
+  'new mobile integrations must install the verified 0.1.14 artifact',
 );
 assert.match(mobileDefaults, /最低 API 基线为 `0\.1\.7`/);
 assert.match(mobileDefaults, /0\.1\.9[^\n]*视觉/);

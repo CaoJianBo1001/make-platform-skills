@@ -40,7 +40,7 @@
 | 是 | 否 | 保存 → 保存并提交 | 2 |
 | 是 | 是 | 保存草稿 → 保存 → 保存并提交 | 3 |
 
-单动作使用公开 `MobileFormActionBar`；多动作先核对已安装移动包公开 API，支持时使用其公开能力。若仅提供单个 `label/onSubmit`，允许在**一个**宿主表单 footer 内复用当前 UI 库的两个或三个 Button，保持无图标、整体靠右与底部安全区。不要虚构包 props、改包私有样式、挂多个固定底栏或将详情 `MobileBottomActionBar` 改作保存栏；不能为迁就单动作组件删掉合法保存意图。
+单动作使用公开 `MobileFormActionBar` 承载保存／提交，保留安全区；多动作使用正式移动包 0.1.14 的 `MobileFormActionBar actions`，按 [单行与更多操作](mobile-detail-components.md#单行与更多操作) 由包自动将溢出动作收进右侧“更多”。矩阵中的全部授权意图均须可达，不要求始终同时内联；保持无图标、整体靠右与底部安全区。旧包缺少能力时先升级并验证，不继续生成宿主 Button 组合或另一套溢出算法，不虚构包 props、改包私有样式、挂多个固定底栏或将详情 `MobileBottomActionBar` 改作保存栏；不能为迁就单动作组件删掉合法保存意图。
 
 宿主纯意图选择示例（不是移动包 API）；输入来自已核实的项目配置及现有保存资格，不替代权限或提交校验：
 
@@ -145,7 +145,7 @@ function resolveSaveFormIntents({ canSave, canSaveAndSubmit, draftEnabled }) {
 - 软键盘打开后当前字段、错误信息和必要操作仍可到达；关闭后滚动位置合理。
 - 在真实 iOS Safari 与飞书 WebView 中逐一聚焦文本、数值、长文本及弹层搜索框：页面不应自动放大或横向偏移，左侧标签保持完整，关闭键盘后保存按钮可点击，并能手动双指缩放；同时回归 Android 与桌面。
 - 使用键盘 Tab 检查输入、选择触发器与 Sheet 操作的 `:focus-visible` 指示可见；手机常态仍无盒状边框，焦点变化不改变字段行高。
-- 保存动作按上述矩阵覆盖 1／2／2／3 种组合，按钮无图标并靠右；安全区、loading、disabled、共享互斥和失败恢复正确；详情编辑／删除操作才使用 `MobileBottomActionBar`。
+- 保存动作按上述矩阵覆盖 1／2／2／3 种组合，全部授权意图均可达（含“更多”），按钮无图标并靠右；按 [单行与更多操作](mobile-detail-components.md#单行与更多操作) 验证底栏单行、更多最右、安全区、loading、disabled、共享互斥和失败恢复；详情编辑／删除操作才使用 `MobileBottomActionBar`。
 - 返回 desktop/tablet 后，原 Drawer、桌面控件和表单值保持正常。
 
 仅验证“全屏页头出现”、静态 DOM、单元测试、类型检查或构建通过，不能证明手机表单已完成。无法进入真实业务页面或无法打开实际字段弹层时，必须记录 blocker，不得宣称移动端新建／编辑／详情适配完成。
