@@ -2,7 +2,7 @@
 name: make-app-permission
 description: "Use when generating, refactoring, reviewing, or debugging Make App single-app permission enforcement: /principal/permission, App-scoped IAM matching, permission-aware Schema, entity/field/operation guards, or permission refresh. Triggered by 单应用权限, 权限范围, 字段可新建、可见、可编辑, creatable, createFields, data.record.*, fieldAccess, meta.entity.*, meta.field.*, route guards, or URL bypass. Use make-app-actions for selection and batch actions. Does not own platform-admin permissions, auth, generic Service APIs, UI layout, CanvasTable internals, DSL, deployment, or runtime packaging."
 metadata:
-  version: 0.4.9
+  version: 0.4.10
 ---
 
 # make-app-permission
@@ -11,7 +11,7 @@ metadata:
 
 流程绑定按 [实体绑定合同](../make-app-approval/references/entity-bindings.md) 独立查询；Workflow 不过滤对象权限，必须先限定当前权限过滤 Schema 的对象范围。绑定不代表发起授权，不能替代 IAM／节点权限，也不能用 Schema 残留 key 兜底。
 
-Direct URL and runtime resource denial follow `references/scoped-route-feedback.md`: App guard outside shell, object/fixed-route guards inside shell. Replace the entire denied business content, not just table rows; keep authorized navigation and the global identity header. Require rendered-tree and zero-denied-request regression tests. React renders the verified package through `makeui/references/permission-feedback.md`; this Skill decides scope and access lifecycle, not component styling. Read `make-app-auth/references/access-help.md` for current-App personnel contacts without sending denied business requests.
+Direct URL and runtime resource denial follow [scoped route feedback](references/scoped-route-feedback.md). Place the App guard outside the shell and object/fixed-route guards inside it. Replace the entire denied business content. Keep authorized navigation, the global identity header and any independently authorized App-level Agent in the shell. Require rendered-tree and zero-denied-request regression tests. React renders the verified package through `makeui/references/permission-feedback.md`; this Skill decides scope and access lifecycle, not component styling. Read `make-app-auth/references/access-help.md` for current-App personnel contacts without sending denied business requests.
 
 For new or explicitly upgraded React permission feedback, contact wiring is required even when the query capability is optional. The permission audit rejects unverified missing contact bindings and requires the [production-host feedback gate](references/testing-and-audit.md#administrator-feedback-gate); a successful package verifier, source keyword or pure permission model is not a substitute. Old SDKs and unavailable endpoints keep the documented generic fallback, proven through the host behavior gate rather than rejected by source shape alone.
 

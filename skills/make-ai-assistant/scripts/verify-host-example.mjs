@@ -42,8 +42,10 @@ assert.ok(example, 'public host example is missing');
 const declarations = `
 import type { AgentClient } from "@qfei-design/make-ai-assistant/agent";
 declare const client: AgentClient;
-declare const appId: string, appName: string, pathname: string, assistantTitle: string;
-declare const entityKey: string | undefined, recordId: string | undefined;
+declare const appId: string, appName: string, appRootPath: string, assistantTitle: string;
+declare const currentPage:
+  | { kind: "allowed"; pathname: string; resource?: { entityKey: string; recordId?: string } }
+  | { kind: "pending" | "forbidden" | "unavailable" };
 declare const assistantOpen: boolean;
 declare const setAssistantOpen: (next: boolean) => void;
 `;

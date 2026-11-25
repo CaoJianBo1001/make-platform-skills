@@ -396,7 +396,7 @@ npx skills update make-app-sort
 - 页面位置交给 `makeui`，CanvasTable 表头菜单机制交给 `canvas-table-integration`，Service 路由和 Make adapter 交给 `make-app-service`
 
 ### make-ai-assistant
-指导 Make App 使用正式 `@qfei-design/make-ai-assistant@0.4.6` 的 Agent 公共能力。Skill 0.4.6 以包公开类型及随包固定合同为基线，覆盖 23 个数据面操作与 Agent Get/List 共 25 项 Service 组合。
+指导 Make App 接入正式 `@qfei-design/make-ai-assistant@0.4.6`。接入以包公开类型及随包固定合同为基线，覆盖 23 个数据面操作与 Agent Get/List 共 25 项 Service 组合。
 
 ```bash
 makecli skills update
