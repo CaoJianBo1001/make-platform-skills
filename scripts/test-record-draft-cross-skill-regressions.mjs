@@ -40,9 +40,13 @@ const cases = [
     text => text.replace('已有记录发起 `/workflow/v1/bpm-process` 与任务办理 `/workflow/v1/bpm-task` 不自动注入或改写保存状态',
       '已有记录发起 `/workflow/v1/bpm-process` 与任务办理 `/workflow/v1/bpm-task` 也自动注入正常保存状态'),
     /existing starts and tasks must keep their own payloads/],
-  ['two-only host fallback', controls,
-    text => text.replace('两个或三个 Button', '两个 Button'),
-    /stale fixed-two-action guidance|single-action public APIs need a documented two\/three-action host composition/],
+  ['legacy host Button fallback', controls,
+    text => text.replace(/^单动作使用公开[^\n]+/m,
+      '单动作使用公开 MobileFormActionBar；多动作允许在一个宿主表单 footer 内使用两个或三个 Button。'),
+    /all save-intent combinations must use the released mobile multi-action API/],
+  ['missing shared overflow handoff', 'skills/make-app-approval/references/initiation-contract.md',
+    text => text.replace('mobile-detail-components.md#单行与更多操作', 'mobile-detail-components.md'),
+    /save-intent guidance must route to the shared overflow contract/],
 ];
 
 try {
