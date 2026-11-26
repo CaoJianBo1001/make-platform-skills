@@ -2,7 +2,7 @@
 name: make-app-approval
 description: "当新建、迭代或检查 Make App 前台审批接入时使用：需求确认后的默认审批导航、BPM/bpmDefinitionKey、审批新建字段、BPM 独立新建与任务页、保存并提交、未提交记录发起、撤回、退回后继续提交、流程状态与标题 Tag，以及 @qfei-design/make-app-approval 我的审批包、待处理/已完成/已发起、任务及实例详情和审批历史。不负责流程设计器、Console 审批管理、后端审批引擎或未经确认的终态重新发起。"
 metadata:
-  version: 0.2.44
+  version: 0.2.46
 ---
 
 # Make App 前台审批完整接入
@@ -10,6 +10,8 @@ metadata:
 业务 Record 草稿仅在用户要求时启用，按 [Service 草稿合同](../make-app-service/references/business-record-drafts.md) 与 [发起侧草稿边界](references/initiation-contract.md#按需业务草稿) 接入。它与流程配置草稿、正常记录的 `UNSUBMITTED` 不同；不作为默认审批功能生成，不向 Workflow 添加 `isDraft`；TASK 按 Service 合同收紧已登记管理字段并检查正式引用，不用节点 editable 放开保存状态。
 
 把已确认的功能方案转为应用级审批入口，完成业务记录发起/撤回、我的审批列表与办理、历史和状态同步。每个应用只保留一个“我的审批”；业务对象仍使用自己的记录列表。本文及参考文件为可移植合同，不依赖某个示例项目、私人路径或业务字段。
+
+URL 只读字段复用宿主共享注册表并遵循 [跨端链接字段](../makeui/references/url-field-display.md)，覆盖任务／实例和独立页；包的字段外框不能代替链接颜色、href 与独立导航的验收。
 
 ## 工作顺序
 
@@ -31,7 +33,7 @@ metadata:
 | 飞书等深链的 BPM 独立新建、待处理／已完成任务页及存量迁移 | [独立页面合同](references/standalone-pages.md)（与 makeui 配合，复用表单及公共任务状态机） |
 | 独立页对象定位与逐次附件预上传的边界参考 | [安全边界参考](assets/standalone-page-boundaries.mjs)（非 npm API；宿主仍须验证自身真实链路） |
 | 未提交发起、失败恢复、发起人撤回、重新发起边界 | [记录生命周期](references/record-lifecycle.md) |
-| 包版本、公开入口、控件适配、我的审批列表与筛选 | [包与列表](references/package-and-list.md) |
+| 包版本、公开入口、主题能力与边界、控件适配、我的审批列表与筛选 | [包与列表](references/package-and-list.md) |
 | 已发起页签、实例只读详情及实例独立链接 | [已发起与实例详情](references/initiated-instances.md) |
 | 节点字段、同意/拒绝/退回/继续提交、任务附件及失败恢复 | [任务详情与办理](references/task-detail.md) |
 | Service 路由、Workflow Target、DTO、Long ID 与信封 | [接口合同](references/workflow-api.md) |
@@ -59,7 +61,7 @@ metadata:
 - **恢复与继续提交分开。** 已有记录仅明确 UNSUBMITTED 且未锁定时首次发起；RETURNING 通过当前任务 SUBMIT“继续提交”继续原实例。已撤回/拒绝/通过的记录不生成终态重新发起。
 - **撤回由真实发起人资格决定。** 读取最新流程及 starter，确认时重查；使用 appKey/entityKey/recordId 定位，不需要 bpmKey，不以业务申请人或普通编辑权限推断资格。
 - **状态来自记录。** `qfei_process_instance_status` 是只读系统字段；不新建同名 DSL 业务字段，不用业务状态、任务结果、锁字段或当前绑定推导流程状态。
-- **审批运行态及三种终态禁止普通编辑。** `IN_APPROVAL`、`RETURNING`、`APPROVED`、`REJECTED`、`CANCELLED` 或明确锁定的记录隐藏普通编辑按钮/菜单，单元格不得进入编辑或接受迟到提交；已通过、已拒绝、已撤回即使解锁也保持只读。入口、保存及后台写入共同执行 [禁编合同](references/status-display.md#锁与范围)。公共包 0.2.13 尚未原生覆盖已拒绝、已撤回，须统一宿主适配；不把普通禁编套到当前节点授权的任务办理，删除资格仍独立判断。
+- **审批运行态及三种终态禁止普通编辑。** `IN_APPROVAL`、`RETURNING`、`APPROVED`、`REJECTED`、`CANCELLED` 或明确锁定的记录隐藏普通编辑按钮/菜单，单元格不得进入编辑或接受迟到提交；已通过、已拒绝、已撤回即使解锁也保持只读。入口、保存及后台写入共同执行 [禁编合同](references/status-display.md#锁与范围)。公共包 0.2.13、0.2.14 尚未原生覆盖已拒绝、已撤回，须统一宿主适配；不把普通禁编套到当前节点授权的任务办理，删除资格仍独立判断。
 
 ## 与现有 Skill 配合
 

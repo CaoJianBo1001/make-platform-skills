@@ -2,7 +2,7 @@
 name: make-ai-assistant
 description: "Use when integrating, upgrading, debugging, or reviewing @qfei-design/make-ai-assistant in a Make App: restricted Agent discovery, sessions, streaming, queue/stop/questions, file/image input, authenticated Service routes, and package-owned UI. Does not own Agent configuration, model behavior, generic dialogs, auth/permission policy, DSL, or deployment."
 metadata:
-  version: 0.4.7
+  version: 0.4.8
 ---
 
 # Make AI Assistant
@@ -15,7 +15,7 @@ metadata:
 
 1. 同批安装时优先读取本技能仓库/安装根下的关联技能；若本机旧副本仍指导旧私有协议，先报告版本差异并更新对应技能，不混用。确认当前 App、认证身份、包管理器、UI → Service → Gateway 调用链及平台侧 Agent/应用内渠道配置。保留存量运行时，不因接入助手迁移 Node、包管理器或登录。
 2. 读 [包契约](references/package-integration.md)，在实际消费包的 UI、Service workspace 安装并锁定官方 `0.4.6`，核对公开导出与类型。未来升级需重新核对契约；不得仅提高版本号或照抄其他 App。
-3. 读 [宿主接线](references/make-app-host-integration.md)，在认证后的稳定 Shell 挂载 `MakeAppAssistantEntry`。使用 `/agent` 的 `createAgentClient` 与 `AgentAuthenticatedTransport`；由包负责受限发现和内部 UI。宿主不再自行分页挑 Agent 或回退管理接口。
+3. 读 [宿主接线](references/make-app-host-integration.md)，在通过 App 访问检查的稳定 Shell 中挂载一个 `MakeAppAssistantEntry`，各对象页面共用这个对话框。使用 `/agent` 的 `createAgentClient` 与 `AgentAuthenticatedTransport`，由包负责受限发现和内部 UI。宿主不再自行分页挑 Agent 或回退管理接口。
 4. 先更新宿主 API 文档，再按 [Service 协议](references/make-app-protocol.md) 和 [操作清单](references/service-operations.json) 实现同源显式代理。完整 App 数据面为 23 项，另有 Agent Get/List 共 25 项组合；不是开放整个控制面。
 5. 文件/图片或流式问题读 [流与附件](references/make-app-stream-and-attachments.md)，布局与手机入口读 [UI 边界](references/ui-and-templates.md)。只修负责该问题的一层，包内缺陷交由包修复，不在宿主复制状态机或 CSS。
 6. 按 [验证与交付](references/testing-and-pitfalls.md) 做 TDD；[可移植工具](references/validation-tools.md)提供编译器 API 兼容、独立终态通知和公开 UI 夹具。运行审计、宿主 UI/Service 测试、类型检查、构建和经授权的已登录 Dev 验收，分别报告各项结果。

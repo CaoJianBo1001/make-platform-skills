@@ -2,7 +2,9 @@
 
 ## Contents
 
+- [设计方案与组件实现的维护边界](#设计方案与组件实现的维护边界)
 - [Selection strategy](#selection-strategy)
+- [完整方案应用与差异记录](#完整方案应用与差异记录)
 - [Overlay portal contract](#overlay-portal-contract)
 - [Default candidate mapping](#default-candidate-mapping)
 - [Make field-metadata-driven components](#make-field-metadata-driven-components)
@@ -16,29 +18,42 @@
 - [Action hierarchy](#action-hierarchy)
 - [Optional action policy](#optional-action-policy)
 
+## 设计方案与组件实现的维护边界
+
+MakeDesign 负责风格、布局选择、预览和方案交接，交付完整设计数据及其来源；makeui 统一维护组件行为和 Make 表单／详情标准。Ant Design 基座的唯一实现来源是本 Skill 的 [assets/antd-foundation/](../assets/antd-foundation/index.tsx)，字段、值适配、授权结果和业务接口仍按各自合同接入。
+
+MakeDesign 的 `src/foundation/antd/` 是生成快照，不得手工修改组件行为；组件修复与行为回归先在 makeui 完成，再显式同步固定版本供预览和下载使用。同步需核对完整文件集合、来源版本、逐文件哈希及运行依赖，普通官网构建只消费已固定快照，不读取某台电脑的兄弟仓库。远端 `foundation` 是 makeui 资产的同部署分发，不建立另一套组件标准；旧来源字段仅作兼容读取，新快照不以独立 `localPatch` 维护分叉。源仓库、安装副本、官网快照和实际部署分别核对，不能把任一处更新当成全部同步。
+
+设计器内的示例字段、静态候选、保存演示和 `components.html` 仅作视觉参考，不作为真实 Make Schema、候选、权限、校验或提交规则。新项目继续使用本 Skill 的表单／详情与字段适配合同。旧 `makeui-controls/v1` 保留历史兼容，新项目不默认消费其 React Aria 实现或安装相关依赖；原方案 URL 与设计数据仍可完整恢复。其他公共包的自有 UI 按 [主题范围](#完整方案应用与差异记录) 后续单独同步。
+
 ## Selection strategy
+
+选定唯一主组件库和视觉来源后，所有新 POC／模板先执行 [页面设计基线与视觉验收](page-design-quality.md)，检查本项目需要的表单、详情、日期、选择、反馈和弹层均有公开组件支撑，再生成代表页面。完整组件库不要求安装无关组件，也不扩展 Make 公共包的职责。
 
 For every new project, after PRD/DSL confirmation and before installing UI dependencies or scaffolding components, check the PRD and the user's description. If either explicitly selects the project's UI component library, use that library directly. If either supplies a selected MakeDesign plan URL, verify it through the MakeDesign branch below and use the resolved plan directly. Dependencies or UI supplied by a starter template, a library mentioned only as an example, a style name, and the gallery URL alone still require the question.
 
-In all other cases, ask **要使用 MakeDesign 选择项目风格吗？** using the available structured input UI (`request_user_input_async` or `request_user_input`). If unavailable, ask the same question in chat. Wait for an explicit answer before starting UI work. Silence or dismissal leaves the choice pending. The Ant Design default applies only after the user chooses the component-library branch. Reuse an answer already given for this project when resuming the same task.
+In all other cases, ask **要使用 MakeDesign 选择项目风格吗？** using the available structured input UI (`request_user_input_async` or `request_user_input`). If unavailable, ask the same question in chat. Wait for an explicit answer before starting UI work. Silence or dismissal leaves the choice pending. Reuse an answer already given for this project when resuming the same task.
+
+视觉来源与唯一组件基座是两项配置：视觉来源是 MakeDesign 方案或组件库默认主题，组件基座是承载真实业务控件的一套 React 库。设计路线未确认前不安装依赖或生成 UI。MakeDesign 分支默认使用 Ant Design，告知用户“采用所选 MakeDesign 风格，业务控件使用 Ant Design 基座”，不增加新的必答问题；已明确指定 Arco Design、shadcn/ui 或其他兼容 React 库时保留该选择。模板自带依赖不是用户已选择该基座的证据。已有项目保留其既有库，用户要求迁移时另行确认迁移范围。
 
 - 使用 MakeDesign → immediately perform both actions in the same handoff. Open [MakeDesign](https://test-make.qtech.cn/design/) in a visible, focused tab in the user's browser and send a clickable link to that page in the conversation, including when opening succeeds. Tell the user to choose a style, adjust it if needed, click 复制方案链接 in the upper-right corner, and paste the URL back into this conversation. Verify the target URL and visible style-gallery content before reporting that the page is open. If the tab is blank or hidden, recover the navigation or bring it into view. If browser control is unavailable or opening fails, explain the opening problem in the same message with the clickable link and instructions. Wait for a valid plan and read its handoff before generating UI.
-- 选择组件库 → use the library selection below. A user who chooses MakeDesign can return to this branch explicitly.
+- 选择组件库 → use the library selection below；此分支使用所选库的默认主题。用户可明确从 MakeDesign 返回此分支，或在已有唯一基座上应用 MakeDesign 风格，不因此并装另一套库。
 
 ### MakeDesign branch
 
-1. Open the exact returned official design link with its query intact in a browser, replacing the fragment with `#makeui`. Read the rendered JSON in `#makeui-handoff`. Static HTML alone is the app shell. With a local matching MakeDesign checkout, the alternative is `npm run --silent read:design-url` in the prepared module; pass the URL via stdin to preserve query encoding. If the user sends a gallery link, ask them to choose a style and click 复制方案链接. For an unrecognized version, invalid URL, missing control bundle, or unreachable site, explain which input is missing and retry or request a newly copied plan link. Keep the chosen design branch pending.
-2. Use `choices` for the selected design, layout, theme, illustration, document options and fine edits. Use the resolved layout rules, colors, metrics, and component style variables for implementation. Read the selected `designPackage` from the browser result for original tokens, DESIGN.md and USAGE.md; for the local reader use the matching prepared system package. Only consume assets from the same MakeDesign deployment. Treat a style ID such as `antd` or `github` as a design choice.
-3. Read the JSON at `controls.asset` from the same deployment. Check that the handoff's `controls.contract` and the returned `asset.contract` both equal `makeui-controls/v1`. If either check fails, request a compatible plan or deployment before using the bundle. When a screen uses a bundled component, use the source and CSS together and install its listed dependencies in the host UI. A screen using only the plan's colors, metrics or layout can apply them directly. Apply `controls.style` through `ControlTheme` to shared fields and their portaled overlays. Choose each desktop/tablet adapter by the actual export and the [field properties](#make-field-properties-contract) it supports.
-4. For ordinary desktop/tablet record **detail**, treat `choices.detailOpening` as the user's explicit surface choice. Use a detail route with return navigation for `page`; for `drawer` or `wide-drawer`, pass the matching `layout.structure.widths.drawer` or `wideDrawer` to `RecordSurface.detailWidth` (560 or 960 px in v1, capped at 88vw). If an older bundle lacks this prop, apply the same width to the host detail drawer. For `system` or an absent choice, use the existing platform default. Keep create/edit on their existing surfaces. Phones use the package-backed task route and mobile field adapters with the same submitted values. CanvasTable, permissions, approval, and analytics detail surfaces follow their own contracts.
-5. Keep the original share link with the project UI configuration. Verify the chosen theme on the workspace, panels and overlays, and open an ordinary record using the selected detail surface when that screen exists. For editable fields, restore a saved value, edit it and check the final Make payload, including configured date bounds, time precision, multiple selections or cascade changes as applicable.
+1. Open the exact returned official design link with its query intact in a browser, replacing the fragment with `#makeui`. Read the rendered JSON in `#makeui-handoff`. Static HTML alone is the app shell. With a local matching MakeDesign checkout, the alternative is `npm run --silent read:design-url` in the prepared module; pass the URL via stdin to preserve query encoding. If the user sends a gallery link, ask them to choose a style and click 复制方案链接. For an unrecognized version, invalid URL or unreachable site, explain which input is missing and retry or request a newly copied plan link. Keep the chosen design branch pending.
+2. Use `choices` for the selected design, layout, theme, illustration, document options and fine edits. Use the resolved layout rules, colors, metrics, typography roles and component style variables for implementation. Read the selected `designPackage` from the browser result for original tokens, DESIGN.md and USAGE.md; for the local reader use the matching prepared system package. Only consume assets from the same MakeDesign deployment. Treat a style ID such as `antd` or `github` as a design choice.
+3. 先记录唯一基座，AntD 宿主再读取可选的 `foundation`：校验 `foundation.contract` 与资产 `asset.contract` 均为 `makeui-antd-foundation/v1`，`foundation.library` 与资产 `library` 均为 `antd`，`foundation.asset` 必须属于当前方案的同一部署。按 [AntD 基座接入](antd-foundation.md) 消费源码与样式。缺少 `foundation` 的旧部署可使用已安装 Skill 的同版资产读取 v1 方案主题，必须记录资产来自本机安装副本，不能声称远端已提供新基座资产。声明了 `foundation` 却合同不符、资产无法读取或来源不符时，不消费该声明，说明问题并请求兼容资产；不静默回退另一来源。非 AntD 宿主跳过 AntD 资产消费，不能因方案附带该声明改变已指定的库。
+4. 旧 `controls.asset` 继续兼容：读取时校验 `controls.contract` 与返回的 `asset.contract` 都是 `makeui-controls/v1`。其 `controls.style` 可提供 v1 主题映射，不再默认复制 React Aria 的 `fields.tsx`/`fields.css`，也不自动安装该原型包依赖。指定 Arco、shadcn/ui 或其他库时，沿所选基座的公开主题和控件 API 接入 `choices`、颜色、尺寸及已支持能力，不因为缺少 AntD 基座而安装 AntD、复制 AntD 组件或混入 React Aria。旧控件包合同错误时不得消费其中源码或样式；独立有效的设计数据能否继续使用，应说明受影响的具体字段与能力。
+5. 普通桌面／平板记录 **detail** 才消费 `choices.detailOpening`：`page` 使用有返回导航的详情路由；`drawer`／`wide-drawer` 使用对应 `layout.structure.widths.drawer`／`wideDrawer`（v1 为 560／960px，上限 88vw）。`system` 或缺省使用 Make 平台默认。新建／编辑默认仍为 60% 右侧 Drawer，不受详情宽度选择覆盖。无论主题或详情容器如何选择，都遵循 [统一表单与详情骨架](drawer-layout.md) 和 [字段图标](field-type-icons.md)。手机继续使用 Make 移动包的全屏任务页与字段适配；CanvasTable、权限、审批、操作和分析详情遵循各自合同。
+6. 保存原方案 URL、实际加载的 Skill 路径与版本、唯一基座与版本、主题映射及明确的能力差异。先检查 workspace、Form、Detail、禁用态和弹层均消费当前主题，再用真实宿主恢复已保存字段、编辑并检查最终 Make payload，包括日期边界、时间精度、多选和级联变化。页面示例及演示指标不扩展 PRD／DSL 的业务范围。
 
 | Desktop/tablet field | Controlled adapter |
 | --- | --- |
-| `Make.Field.Date` | Use `DateField` for date-only values. Pass `properties.format` when the delivered control supports that format for display and keyboard input (for example `yyyy/MM/dd`). For an unsupported configured format, use a themed host date picker that honors it. Preserve the agreed date-only payload. |
+| `Make.Field.Date` | Use the selected foundation's `DatePicker` for date-only values. Map `properties.format` to its documented display and keyboard format; normalize the result to the agreed date-only payload. |
 | `Make.Field.DateTime` | Use a themed host date-time picker that supports the configured format and preserves the backend time precision through submission. |
-| `Make.Field.DateRange` | Bind `MakeDateRangeField` to the nullable record value `{begin, end}`. Pass schema bounds separately as inclusive `minDate` and `maxDate`. If the bundle exposes only `DateRangeField`, map its `{start, end}` value in both directions and use a picker that enforces every configured bound. Validate interval order and bounds on submit. |
-| `Make.Field.SingleSelect` | Bind `ChoiceField` to the selected option key and preserve the scalar option value through the [host adapter](#singleselect-read--form--submit). |
+| `Make.Field.DateRange` | Bind the selected foundation's `RangePicker` through a nullable `{begin, end}` record adapter. Treat begin, end schema limits separately as inclusive bounds; enforce interval order and every configured bound on selection and submit. |
+| `Make.Field.SingleSelect` | Bind the selected foundation's `Select` to the selected option key and preserve the scalar option value through the [host adapter](#singleselect-read--form--submit). |
 | `Make.Field.MultiSelect` | Use a themed host multi-select that restores and submits the array of option values. |
 
 For a cascade, map the selected ID path to the agreed payload and clear descendants when a parent changes. Identity and Lookup pickers use host candidate data. All adapters follow the [host form contract](#host-form-controlled-field-contract).
@@ -55,9 +70,27 @@ Allow the UI's free-text/custom answer so the user can specify another compatibl
 
 Keep one component library unless the user asks to retain an existing mixed stack. For either branch, follow the [field icon contract](field-type-icons.md) and its independent Lucide default.
 
+所有新项目的字段包装、表单、详情和 Drawer 都必须读取 [布局合同](drawer-layout.md)；不得把缺失控件直接降级为裸 `input`／`select`／`textarea`，或每个页面临时生成一套互不兼容的控件和校验。字段适配继续消费同一 Make registry、权限字段集和 [受控值合同](#host-form-controlled-field-contract)。
+
 ## Presentation priority
 
 The component-library mapping below is the desktop/tablet default. On phones, `mobile-defaults.md` takes precedence for shell, task pages, account navigation, pickers, and record-list presentation, and `mobile-form-controls.md` defines field adapters and overlay fit. Use public `@qfei-design/make-app-mobile` components where they exist rather than treating a desktop Drawer or Sheet as the mobile CRUD default; do not invent package exports for field types the package does not own.
+
+## 完整方案应用与差异记录
+
+先落实 PC／平板宿主自有的 Shell、导航、页面表面、工具栏、普通表单／详情和所选组件库控件；颜色、布局、字体和细节均消费当前方案。手机只通过 [手机颜色接入](mobile-theme.md) 同步主色／选中强调色，其输入、数字、下拉、日期、人员／部门控件及其余视觉、布局和交互继续遵守冻结移动规范，不能传整份 PC 主题。Canvas、审批等其他引用包的自有 UI 暂沿用正式版本现有外观，完整主题同步须另行明确纳入范围。PC 宿主传给公共包的按钮、字段等展示插槽仍按宿主方案渲染；手机插槽遵守移动规范并只跟随主色。不主动给包自有区域接完整主题 Provider／mapper、不覆盖私有 CSS、不为这轮宿主验收要求修改或发布公共包。将这些差异记为“公共包主题后续同步”，不记作已实现，也不作为宿主交付阻断；Make 业务、权限、字段和手机合同继续生效。下文完整方案要求按此职责和本轮范围验收。
+
+文字按 [业务字号角色](business-typography.md) 消费 `typography.roles`、`tracking` 与来源；页面展示标题、记录容器、字段、辅助文字及手机页头不能共用一个大字号，用户已明确的微调保留原含义。
+
+MakeDesign 分支必须以同一份已解析方案驱动 PC／平板 Shell、导航、页面布局、表面、字体、间距、控件、细节与弹层，覆盖首页、列表、新建／编辑、详情、独立业务页面和各类状态；不能只把主色传给 AntD Provider 就报告完成。`choices` 的整体方案、页面视觉、导航、普通详情、组件语言、字体／密度／控件／圆角微调、插画与已有次级卡片样式按各自作用范围消费，原始设计包提供规范与 Token 来源。手机默认只消费主色／选中强调色，PC 的字体、密度、导航和组件语言不适用于手机；这属于明确平台范围，不是遗漏方案。Make 的权限、字段语义、受控值、操作资格、表单／详情结构及手机包合同保持生效，不用统一结构为理由把外观改回固定模板。
+
+方案明确的导航优先于默认左侧栏；`system` 继承本方案 recipe，而不是统一生成左侧栏。普通详情的显式 page／drawer／wide-drawer 继续按方案执行；新建／编辑、审批任务和分析汇总遵循各自的容器合同。方案未给出对应值时，才使用当前已核验基座的官方 fallback，并记录来源；属于 Make 展示合同的默认行为也记录对应合同，不能把未知能力伪装成方案选择。Intercom、GitHub 等验收样例用于检验映射，不是新项目默认，不得复制它们的固定色值、字体、尺寸或布局来替代另一份方案。
+
+生成前和验收时，逐项记录选择的适用范围、已实现、不适用、未支持及差异。一个选择不适用须有 PRD／页面类型或公开能力依据，例如没有既有统计卡片时不新增演示指标；不能省略记录后声称所有选择都已应用。不支持的选择不得静默忽略，也不能捏造公开 API、Token、组件导出或外部资源；说明原选择、所需效果、当前能力、受影响页面与可选处理，暂停依赖该缺口的实现，等待用户明确取舍或所需能力补齐，不阻塞无关业务。
+
+整体视觉的公开能力按实际安装包与当前资产核验；主题或布局未覆盖公共组件时，明确记录差异，不覆盖其私有 DOM／CSS。旧部署回退仍消费用户的原方案，只替换已明确记录的基座来源，不将本机样例当作用户方案。验收必须比较方案值与真实页面计算样式和布局；源码存在变量、某个主题文件或颜色相似不能证明完整方案已生效。
+
+同一 App 切换完整方案时，不能按设计 ID 重建业务 Controller、Form 或路由树，也不能让下级继续使用初始方案常量；由单个 Provider 提供当前方案，主题、Shell、Surface 与弹层统一继承。AntD 接入按 [当前方案与展示解析](antd-foundation.md#当前方案与展示解析) 使用已核验入口，覆盖 motion 单项变化在内的挂载次数、草稿、数据与请求状态保留验收。
 
 ## Overlay portal contract
 
@@ -371,6 +404,8 @@ Lookup、人员、部门等远程选择器在桌面／平板及手机的候选�
 ## Detail value display
 
 Detail Drawer and route detail pages must use a normalized field-display adapter pattern. The adapter receives normalized field metadata plus the record value and returns a small display model such as `kind`, `text`, `labels`, `empty`, `href`, `attachments`, `users`, and `lookupReferences`. Detail components render that model; they do not call `String(value)`, `JSON.stringify(value)`, or read backend wrapper objects directly in JSX.
+
+URL 字段必须使用 [跨端链接字段合同](url-field-display.md)：保留 href、语义化链接、主题链接色和独立导航，不能仅输出继承文字颜色的裸 anchor。该规则覆盖 PC／手机详情、只读表单与审批字段；手机卡片不能经通用文本格式化丢失链接。
 
 CanvasTable cell rendering still belongs to `canvas-table-integration`. Keep the detail display adapter compatible with the same field-type semantics, but do not implement canvas renderers in `makeui`.
 

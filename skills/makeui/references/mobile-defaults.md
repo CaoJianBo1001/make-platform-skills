@@ -10,13 +10,13 @@
 
 ## 包接入与边界
 
-新项目和本次移动端改造的最低 API 基线为 `0.1.7`：它提供普通选项、日期控件、人员／部门字段、附件字段和专用表单提交栏 `MobileFormActionBar`。通用视觉交付基线为 `0.1.9`，其中附件上传入口固定为 48px；手机高级筛选另需移动组件包 `0.1.11+` 与筛选包 `1.1.0+`。API 兼容不等于 iOS 输入与附件视觉合同已经满足，以实际安装产物的校验结果为准。只有 registry 能解析所需版本时才执行安装；不可用时不得改装 Git URL、本地目录或复制源码，应报告 package release blocker。新 Make App 或已明确进行运行时迁移的项目先满足 `make-app-runtime` 的固定基线；再在已解析的 UI package 工作目录中通过项目声明的包管理器安装。新接入使用已核验正式版本 `0.1.14`，其中多动作表单底栏支持 [单行与更多操作](mobile-detail-components.md#单行与更多操作)；历史 API／视觉最低版本不能证明支持此能力。标准 pnpm 工作区例如：
+新项目和本次移动端改造的最低 API 基线为 `0.1.7`：它提供普通选项、日期控件、人员／部门字段、附件字段和专用表单提交栏 `MobileFormActionBar`。通用视觉交付基线为 `0.1.9`，其中附件上传入口固定为 48px；手机高级筛选另需移动组件包 `0.1.11+` 与筛选包 `1.1.0+`，多动作单行溢出的历史起点为 `0.1.14`。这些能力下限不替代新接入版本：本轮新接入固定使用已核验正式版本 `0.1.15`，包含公共主题 Provider、分层字号、URL 链接样式及 [单行与更多操作](mobile-detail-components.md#单行与更多操作)。API 兼容不等于 iOS 输入与附件视觉合同已经满足，以实际安装产物的校验结果为准。只有 registry 能解析所需版本时才执行安装；不可用时不得改装 Git URL、本地目录或复制源码，应报告 package release blocker。新 Make App 或已明确进行运行时迁移的项目先满足 `make-app-runtime` 的固定基线；再在已解析的 UI package 工作目录中通过项目声明的包管理器安装。标准 pnpm 工作区例如：
 
 ```bash
-corepack pnpm add @qfei-design/make-app-mobile@0.1.14
+corepack pnpm add @qfei-design/make-app-mobile@0.1.15
 ```
 
-若同时交付手机高级筛选，在通过同一兼容性门禁后，按 [`make-app-filter`](../../make-app-filter/) 的要求同时安装 `@qfei-design/make-app-filter@^1.1.0`；该 Skill 中移动包 `^0.1.11` 表示高级筛选的能力下限，新接入保留上述 `0.1.14`，不为筛选降级。
+若同时交付手机高级筛选，在通过同一兼容性门禁后，按 [`make-app-filter`](../../make-app-filter/) 的要求同时安装 `@qfei-design/make-app-filter@^1.1.0`；该 Skill 中移动包 `^0.1.11` 表示高级筛选的能力下限，新接入保留上述 `0.1.15`，不为筛选降级。
 
 仅当宿主源码直接从 `lucide-react` 导入图标，且 UI package 尚未声明可复用的兼容直接依赖时，才单独安装：
 
@@ -31,15 +31,15 @@ corepack pnpm add lucide-react@^1.28.0
 存量 App 在安装或升级前必须先完成兼容性门禁，不得为了通过门禁改写运行时声明、包管理器或锁文件类型：
 
 1. 定位实际安装目标（通常是 `apps/ui/package.json` 或宿主 UI package），读取 workspace 根的 `packageManager`、Node `engines`、React/React DOM 版本及现有 lockfile。
-2. 以当前解析到的 `@qfei-design/make-app-mobile` `package.json` 为准，验证 Node、React 和 React DOM 满足其 `engines` 与 peer dependencies；已核验的 `0.1.14` 包要求 Node `>=22.12.0`，React/React DOM 为 `^18.2.0 || ^19.0.0`。
+2. 以当前解析到的 `@qfei-design/make-app-mobile` `package.json` 为准，验证 Node、React 和 React DOM 满足其 `engines` 与 peer dependencies；已核验的 `0.1.15` 包要求 Node `>=22.12.0`，React/React DOM 为 `^18.2.0 || ^19.0.0`。
 3. 使用现有 workspace/package-manager 流程在该 UI package 安装；不要在 pnpm 项目生成 `package-lock.json`，也不要在 npm/yarn 项目引入 Corepack 或 pnpm。宿主直接导入图标时才声明直接依赖 `lucide-react`；保留已有兼容版本，不做无关图标迁移。
 4. 若 Node/peer 版本、workspace 位置、包管理器或 lockfile 不满足，停止安装并报告兼容性 blocker；运行时或 package-manager 迁移必须交给 `make-app-runtime`，只有用户明确要求迁移时才能进行。
 
-已有项目若实际安装版本低于通用视觉基线 `0.1.9`，仅在以上门禁通过后升级，并复跑宿主测试、类型检查和构建。手机高级筛选应单独核对实际安装版本是否达到移动包 `0.1.11` 与筛选包 `1.1.0`。本次新增或改造多动作表单底栏时须安装 `0.1.14` 或已验证具备同等能力的后续正式版本，并按单行与更多操作合同验收；不要求无关的既有单动作页面同时迁移。下述字段、选择、日期控件及表单提交栏合同仍以 `0.1.7` 为最低 API 版本，但移动视觉交付须满足 `0.1.9` 基线及安装产物校验；包内通用安装示例若仍使用更低版本范围，不得据此降低本 Skill 的视觉基线。
+已有项目若实际安装版本低于通用视觉基线 `0.1.9`，仅在以上门禁通过后升级，并复跑宿主测试、类型检查和构建。手机高级筛选应单独核对移动包 `0.1.11` 与筛选包 `1.1.0` 的历史能力下限；本次新增或改造移动主题、URL 展示或多动作表单底栏固定安装 `0.1.15` 并按对应合同验收，不要求无关的既有单动作页面同时迁移。下述字段、选择、日期控件及表单提交栏合同仍以 `0.1.7` 为最低 API 版本，但移动视觉交付须满足 `0.1.9` 基线及安装产物校验；包内通用安装示例或旧候选文案不得降低本轮新接入版本或冒充实际能力核验。
 
 在目标 UI package 工作目录运行 `node -p "require('node:path').dirname(require('node:path').dirname(require.resolve('@qfei-design/make-app-mobile')))"`，定位该 App 实际安装的包根目录；再在本 Skill 安装目录运行 `node scripts/verify-mobile-package-surface.mjs <已安装包根目录>`。该脚本检查安装版本不低于 `0.1.9`、可编辑输入的字号声明及聚焦覆盖、已选区 `pinch-zoom`、附件上传入口的 48px 固定高度，并用包公开组件渲染无状态、待上传和失败附件。静态校验不能替代聚焦状态的实际计算字号检查；真实 iOS Safari 与飞书 WebView 页面验收仍是交付条件。不要用组件包源码工作树或另一个 App 的 `node_modules` 代替目标 App 的安装产物。校验失败是 package 依赖阻断，不得声称移动端适配完成或符合当前 iOS 输入要求；也不得通过覆盖包内部 class、禁用 viewport 缩放或复制组件来绕过。等待符合合同的包版本发布并在目标 App 安装后重跑校验，再继续真实 iOS Safari、飞书 WebView、Android 与桌面回归。
 
-安装后先读取包内 `package.ai.json`、`PUBLIC_API.md` 和 `package.ai.json.readOrder` 指向的所需文档，并在 UI 入口只导入一次：
+安装后先读取包内 `package.ai.json`、`PUBLIC_API.md`、`capabilities.json` 和 `package.ai.json.readOrder` 指向的所需文档；0.1.15 随包主题 availability 等旧候选文案与真实正式产物的冲突按 [手机主题](mobile-theme.md#先核对真实包能力) 处理，不能只读标记判定发布状态。上述表面脚本不验证新主题38字段或“更多”行为，仍须核验实际公开声明、ESM/CJS、CSS 与宿主行为。在 UI 入口只导入一次：
 
 ```tsx
 import "@qfei-design/make-app-mobile/styles.css";
@@ -48,7 +48,7 @@ import "@qfei-design/make-app-mobile/styles.css";
 按职责使用公共入口：
 
 - 根入口：纯展示模式解析。
-- `/presentation`：容器宽度观察和统一展示模式上下文。
+- `/presentation`：容器宽度观察和统一展示模式上下文，以及 [手机主题](mobile-theme.md) 的 `MakeMobileThemeProvider`、`useMakeMobileTheme`；MakeDesign 默认只经品牌色投影传主色／选中强调，不整份传 PC 字体、字号、密度或细节。根入口不导入主题 React 运行时。
 - `/shell`：移动端应用页头、账户抽屉、底部导航和工作台。
 - `/primitives`：底部弹层、任务页头、确认框、表单提交栏 `MobileFormActionBar`、详情操作栏 `MobileBottomActionBar`、悬浮新建和列表结束状态。
 - `/fields`：默认字段级适配器 `MobileIdentityField` 与 `MobileAttachmentField`；宿主传入受控值、候选或附件状态和业务回调，不复制其标签、头像／部门简称、附件卡片、确认框和上传入口。
@@ -63,6 +63,8 @@ import "@qfei-design/make-app-mobile/styles.css";
 - AI 助手 transport 和内部行为。
 - 飞书运行环境判断与退出登录动作。
 - 对象字段到卡片内容的业务映射。
+
+字号静态门禁只识别已核验的公开字体变量链：主题 `controlText`／`contentSize` 必须有可验证回退；无回退的旧 `--make-mobile-sheet-body-size` 叶必须来自无条件 Sheet 根中的正数 px 默认。默认 14px 与外层 `max(16px, …)` 配合仍合法；未知变量、拼写错误、缺失默认或仅在条件／无关选择器中的声明不能证明 16px 下限。该检查不执行宿主完整 CSS 级联，也不替代实际主题值和聚焦后的计算字号验收。
 
 ## 多端切换
 
@@ -195,7 +197,7 @@ export function composeApprovalNavigation({ businessItems, approvalItem, assista
 - 使用 `MobilePageHeader`：返回按钮必需；关闭按钮只在宿主任务容器确实支持关闭时显示；更多操作按需显示。
 - host chrome 存在时可以通过 `MobileHostChromeBridge` 委托页头；注册失败必须回退到应用页头。
 - 手机表单与详情在页面层级使用单列内容区；这不表示普通字段的标签和值要上下堆叠。普通字段仍按 `mobile-form-controls.md` 同行展示为左侧标签、右侧值，详情值尾端对齐；字段顺序、权限和业务校验仍来自共享 Controller。
-- 手机新建／编辑通过独立字段展示适配层选择移动安全控件；禁止原样复用桌面 DatePicker、RangePicker、Select 等弹层后仅调整宽度。保存／提交按 [表单保存意图矩阵](mobile-form-controls.md#表单保存意图矩阵) 组合：单动作使用 `MobileFormActionBar`，多动作使用正式移动包 0.1.14 的 `MobileFormActionBar actions`，按 [单行与更多操作](mobile-detail-components.md#单行与更多操作) 自动收纳溢出动作；全部授权意图均可达，均无图标、靠右并保留安全区；详情记录操作继续使用 `MobileBottomActionBar`。
+- 手机新建／编辑通过独立字段展示适配层选择移动安全控件；禁止原样复用桌面 DatePicker、RangePicker、Select 等弹层后仅调整宽度。保存／提交按 [表单保存意图矩阵](mobile-form-controls.md#表单保存意图矩阵) 组合：单动作使用 `MobileFormActionBar`，多动作使用正式移动包 0.1.15 的 `MobileFormActionBar actions`，按 [单行与更多操作](mobile-detail-components.md#单行与更多操作) 自动收纳溢出动作；全部授权意图均可达，均无图标、靠右并保留安全区；详情记录操作继续使用 `MobileBottomActionBar`。
 - 手机详情使用字段 display adapter 的单列标签／值展示，不把桌面编辑表单切成 disabled 状态冒充详情。
 - 严格只读记录不展示普通写操作；详情发起和撤回独立遵守审批合同，不从普通字段只读推断。可写卡片提供 `make-app-actions` 支持的单条编辑、删除；手机端不使用选择操作栏或批量编辑。
 - 手机详情默认使用 `MobileBottomActionBar` 展示编辑和删除；两者读取独立权限并分别复用与卡片相同的单记录 action、冻结目标、确认、共用预检策略和最终接口鉴权。详情点击编辑时，预检通过后直接进入当前记录的编辑路由，不经过对象列表；具体单记录生命周期见 `make-app-actions` 的 `mobile-card-actions.md`。卡片已有操作不能替代或取消详情操作；编辑与删除都不可用时，有合法发起或撤回动作仍保留操作栏；全部普通与审批动作均不可用时才移除整条底部操作栏。
@@ -224,7 +226,7 @@ export function composeApprovalNavigation({ businessItems, approvalItem, assista
 ## 图标、主题与可访问性
 
 - 新生成的 Make App 和新增 Make App 图标默认使用 `lucide-react`，用户明确指定其他图标库时遵从其要求；现有项目除非用户要求，不进行无关的全量图标迁移。字段类型图标按 [桌面／平板字段图标规范](field-type-icons.md) 接入，手机字段标签、字段选项和卡片不显示字段类型图标。
-- 颜色、分隔线、安全区和尺寸通过 `--make-app-*` / `--make-mobile-*` 变量覆盖，不复制组件内部 class 后重写结构。
+- MakeDesign 手机主题只通过公开 Provider 的品牌色投影传递主色、选中强调及相应链接／焦点／实心主操作颜色；分隔线、安全区、尺寸、字体、字号、密度、圆角、阴影及控件交互保留原手机规范。不整份传 PC 主题，不复制组件内部 class 后重写结构；用户明确手机定制时另列公开变量及范围。
 - 图标按钮必须有中文 `aria-label`；当前底部入口使用 `aria-current="page"`。
 - 弹层必须有 dialog 语义、焦点约束、关闭后焦点恢复和可预测的 Escape 顺序。
 - 支持 `prefers-reduced-motion`，不要为基础业务操作添加阻塞性动画。

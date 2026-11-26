@@ -94,7 +94,7 @@ Use the host's existing component library button for a page retry action, or its
 
 If a detail is not requested and not present in the project, choose the simplest useful UI.
 
-For a new UI, apply the [MakeDesign or component library decision](component-usage.md#selection-strategy) before scaffolding. An explicit detail choice in the selected plan counts as a user request.
+For a new UI, apply the [视觉来源与唯一组件基座选择](component-usage.md#selection-strategy) before scaffolding. An explicit detail choice in the selected plan counts as a user request.
 
 ## Dynamic object routes
 

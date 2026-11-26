@@ -10,6 +10,8 @@
 
 `context.app.id`、appKey 与显示名各自独立。上下文只提供必要页面信息，不传 Token、Cookie、完整业务记录或个人信息集合，不作为授权依据。
 
+下例的 `currentPage` 来自宿主本次渲染的[路由授权结果](../../make-app-permission/references/scoped-route-feedback.md#mounting-boundary)。仅当权限和 Schema 对应当前身份、目标和校验代次，且该页面所需的访问已获准时，才使用 `allowed`。其中 `pathname` 是可分享的页面路径，`resource` 只选取已获权的对象标识，具体记录已获权时才带 `recordId`。授权待定、拒绝、撤销或页面不可用时，在当次渲染将传给 Agent 的路径设为不含对象或记录标识的 `appRootPath`，省略资源及选中项。浏览器保留当前地址。不要从原始 URL、上一页缓存或迟到响应补值。
+
 ```tsx
 import { MakeAppAssistantEntry } from "@qfei-design/make-ai-assistant/react";
 import "@qfei-design/make-ai-assistant/styles.css";
@@ -21,8 +23,8 @@ import "@qfei-design/make-ai-assistant/styles.css";
     app: { id: appId, name: appName },
     locale: navigator.language || "zh-CN",
     timezone: Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC",
-    location: { pathname },
-    resource: entityKey ? { entityKey, recordId } : undefined,
+    location: { pathname: currentPage.kind === "allowed" ? currentPage.pathname : appRootPath },
+    resource: currentPage.kind === "allowed" ? currentPage.resource : undefined,
   }}
   title={assistantTitle}
   open={assistantOpen}
@@ -32,7 +34,7 @@ import "@qfei-design/make-ai-assistant/styles.css";
 
 客户端由 effect 创建并在 cleanup dispose，不在 render/useMemo 中创建具有副作用的资源。绑定状态同时记录 scopeKey，渲染只接受当前 scopeKey；StrictMode 的创建/清理/重建不得留下已释放客户端。scopeKey 使用 App key、真实 ID、租户、用户组成的无歧义元组，不包含 displayName、路由或打开状态。
 
-身份或 App 切换先隔离旧绑定，取消旧 I/O、dispose client；迟到结果不得挂载到新身份。普通页面导航仅更新 context；关闭面板仅改变 open，不销毁 Shell/client，不发送 stop。
+身份或 App 切换先隔离旧绑定，取消旧 I/O、dispose client；迟到结果不得挂载到新身份。同一 App 内，只要 App 和 Agent 的使用资格仍有效，切换对象或失去当前对象的读取权限只更新传给助手的页面上下文。将共享入口放在对象守卫外，保持 client、助手标题和组件 key 稳定，保留已打开的对话、会话和运行中的 Task。关闭面板仅改变 open，不发送 stop。
 
 ## 入口发现由包拥有
 
@@ -42,6 +44,8 @@ import "@qfei-design/make-ai-assistant/styles.css";
 - 唯一：用资源 agentId 绑定 WebChat。
 - 多个：服务端 `409/webchat_entry_conflict`，包显示“配置冲突”，不挑第一个。
 - `403`、`409/channel_unavailable`、依赖错误：读取失败，不当作零个入口，也不回退管理列表/详情。
+
+按发起请求的功能处理错误。对象读取被明确拒绝时，在对象内容区反馈。仅当 webchat 发现请求自身失败时，才由包显示入口发现错误，并保留既有终态通知。两者同时发生时分别保留，宿主不要因为进入无权页面而打开助手或另弹一份 AI 错误。
 
 `view:"webchat"` 不能与 sort 同传。管理列表省略 view，详情按 `key + appKey`，需要额外管理权限；App 使用资格不等于配置查看资格。受限返回的 agentId 不能当业务 key 再查详情。一般不传显式 agentId；公开参数只能匹配受限发现的唯一入口，不能绕过冲突和授权。
 

@@ -5,13 +5,27 @@ import os from 'node:os';
 import path from 'node:path';
 import test from 'node:test';
 import { spawnSync } from 'node:child_process';
-import {
+import { fileURLToPath, pathToFileURL } from 'node:url';
+
+// Run the same contract against either the source or a complete installed Skill.
+// Usage: node scripts/test-makeui-mobile-package-surface.mjs [--skill=<makeui-dir>]
+const [skillArgument, ...extraArguments] = process.argv.slice(2);
+if (extraArguments.length || (skillArgument !== undefined && (!skillArgument.startsWith('--skill=') || skillArgument === '--skill='))) {
+  throw new Error('Usage: node scripts/test-makeui-mobile-package-surface.mjs [--skill=<makeui-dir>]');
+}
+const makeuiRoot = skillArgument
+  ? path.resolve(skillArgument.slice('--skill='.length))
+  : fileURLToPath(new URL('../skills/makeui/', import.meta.url));
+const {
   assertAttachmentHtml,
   assertIosPackageCss,
   verifyMobilePackageSurface,
-} from '../skills/makeui/scripts/verify-mobile-package-surface.mjs';
+} = await import(pathToFileURL(path.join(makeuiRoot, 'scripts/verify-mobile-package-surface.mjs')));
 
 const iosCss = `
+.make-app-mobile-sheet {
+  --make-mobile-sheet-body-size: 14px;
+}
 .make-app-mobile-picker__search input {
   font-size: max(16px, var(--make-mobile-sheet-body-size));
 }
@@ -31,6 +45,234 @@ const attachmentCss = `
 test('iOS package gate accepts an editable search input of at least 16px and pinch zoom', () => {
   assert.doesNotThrow(() => assertIosPackageCss(iosCss));
   assert.doesNotThrow(() => assertIosPackageCss(iosCss.replace('max(16px, var(--make-mobile-sheet-body-size))', '18px')));
+});
+
+test('iOS package gate accepts published theme-role fallbacks while retaining the explicit 16px floor', () => {
+  for (const reference of [
+    'var(--make-mobile-theme-control-text-size, var(--make-mobile-sheet-body-size))',
+    'var(--make-mobile-theme-control-text-size, var(--make-mobile-theme-content-size, 16px))',
+  ]) {
+    const css = iosCss.replace('max(16px, var(--make-mobile-sheet-body-size))', `max(16px, ${reference})`);
+    assert.doesNotThrow(() => assertIosPackageCss(css));
+    assert.throws(() => assertIosPackageCss(css.replace('max(16px,', 'max(15px,')), /16px/);
+    assert.throws(() => assertIosPackageCss(css.replace('max(16px,', 'min(16px,')), /16px/);
+    assert.throws(() => assertIosPackageCss(css.replace(`max(16px, ${reference})`, reference)), /16px/);
+  }
+});
+
+test('iOS package gate rejects unknown font variables even when they resemble the published fallback chain', () => {
+  for (const reference of [
+    'var(--unknown-control-size)',
+    'var(--unknown-control-size, 16px)',
+    'var(--unknown-control-size, var(--also-unknown))',
+    'var(--make-mobile-theme-control-text-size)',
+    'var(--make-mobile-theme-control-text-size, var(--unknown-control-size))',
+    'var(--make-mobile-theme-control-text-size, var(--make-mobile-sheet-body-szie))',
+  ]) {
+    assert.throws(() => assertIosPackageCss(iosCss.replace('var(--make-mobile-sheet-body-size)', reference)), /16px/, reference);
+  }
+});
+
+test('iOS package gate requires the legacy font leaf to have a usable sheet default', () => {
+  const noDefault = iosCss.replace('--make-mobile-sheet-body-size: 14px;', '');
+  assert.throws(() => assertIosPackageCss(noDefault), /16px/);
+  for (const value of ['red', 'initial', 'inherit', 'var(--missing)', '0px', '-14px']) {
+    assert.throws(() => assertIosPackageCss(iosCss.replace('14px;', value + ';')), /16px/, value);
+  }
+  assert.doesNotThrow(() => assertIosPackageCss(iosCss.replace('14px;', '18px;')));
+  assert.doesNotThrow(() => assertIosPackageCss('.unrelated::before { content: "{decorative}"; }' + iosCss));
+  const numericFallback = noDefault.replace('var(--make-mobile-sheet-body-size)', 'var(--make-mobile-theme-control-text-size, 16px)');
+  assert.doesNotThrow(() => assertIosPackageCss(numericFallback));
+});
+
+test('iOS package gate does not trust unrelated or conditional declarations as the sheet default', () => {
+  const noDefault = iosCss.replace('--make-mobile-sheet-body-size: 14px;', '');
+  for (const extra of [
+    '.unrelated { --make-mobile-sheet-body-size: 14px; }',
+    '.make-app-mobile-date-sheet { --make-mobile-sheet-body-size: 14px; }',
+    '@media (max-width: 300px) { .make-app-mobile-sheet { --make-mobile-sheet-body-size: 14px; } }',
+    '@supports (display: grid) { .make-app-mobile-sheet { --make-mobile-sheet-body-size: 14px; } }',
+    '@media (max-width: 300px) { .unrelated::before { content: "}"; } .make-app-mobile-sheet { --make-mobile-sheet-body-size: 14px; } }',
+  ]) {
+    assert.throws(() => assertIosPackageCss(noDefault + extra), /16px/, extra);
+  }
+});
+
+test('iOS package gate never treats quoted at-rule text as a real sheet default', () => {
+  const noDefault = iosCss.replace('--make-mobile-sheet-body-size: 14px;', '');
+  for (const prefix of [
+    '@namespace dummy "urn:x, .make-app-mobile-sheet { --make-mobile-sheet-body-size: 14px; }"; .unrelated {}',
+    '@import "x, .make-app-mobile-sheet { --make-mobile-sheet-body-size: 14px; }.css"; .unrelated {}',
+    '@import url("x, .make-app-mobile-sheet { --make-mobile-sheet-body-size: 14px; }.css"); .unrelated {}',
+  ]) {
+    assert.throws(() => assertIosPackageCss(prefix + noDefault), /16px/, prefix);
+    assert.doesNotThrow(() => assertIosPackageCss(prefix + iosCss), prefix);
+  }
+  assert.doesNotThrow(() => assertIosPackageCss('@namespace dummy "urn:x;{}";' + iosCss));
+});
+
+test('iOS package gate separates real selector commas from attribute and function contents', () => {
+  const noDefault = iosCss.replace('--make-mobile-sheet-body-size: 14px;', '');
+  for (const selector of [
+    '[data-note=", .make-app-mobile-sheet, "]',
+    "[data-note=', .make-app-mobile-sheet, ' ]",
+    ':not(.unrelated, .make-app-mobile-sheet, .other)',
+    String.raw`.unrelated\, .make-app-mobile-sheet\, .other`,
+  ]) {
+    assert.throws(() => assertIosPackageCss(`${selector} { --make-mobile-sheet-body-size: 14px; }` + noDefault), /16px/, selector);
+  }
+  for (const selector of ['.make-app-mobile-sheet', '.make-app-mobile-picker__search input', '.make-app-mobile-picker__selected']) {
+    assert.doesNotThrow(() => assertIosPackageCss(iosCss.replace(`${selector} {`, `.unrelated, ${selector} {`)));
+  }
+  const withoutSearchRule = iosCss.replace('.make-app-mobile-picker__search input', '[data-note=", .make-app-mobile-picker__search input, "]');
+  assert.throws(() => assertIosPackageCss(withoutSearchRule), /missing package CSS rule/);
+  const withoutScrollerRule = iosCss.replace('.make-app-mobile-picker__selected', '[data-note=", .make-app-mobile-picker__selected, "]');
+  assert.throws(() => assertIosPackageCss(withoutScrollerRule), /missing package CSS rule/);
+});
+
+test('iOS package gate ignores declaration-shaped text inside quoted custom properties', () => {
+  const noDefault = iosCss.replace('--make-mobile-sheet-body-size: 14px;', '--sample: "x; --make-mobile-sheet-body-size: 14px; x";');
+  assert.throws(() => assertIosPackageCss(noDefault), /16px/);
+  for (const sample of ['"x; font-size: 14px; x"', "'x; font: inherit !important; x'", '"/* text is not a comment */ { x; y:z }"']) {
+    const css = iosCss + `.make-app-mobile-picker__search input { --sample: ${sample}; font-size: 16px; }`;
+    assert.doesNotThrow(() => assertIosPackageCss(css), sample);
+  }
+});
+
+const stringNewlines = [['LF', '\n'], ['CR', '\r'], ['CRLF', '\r\n'], ['FF', '\f']];
+for (const [name, newline] of stringNewlines) {
+  for (const quote of ['"', "'"]) {
+    const unsafe = '.make-app-mobile-picker__search input { font-size: 14px; }';
+    test(`iOS package gate resumes after an unescaped ${name} in a ${quote} string`, () => {
+      for (const prefix of ['', '\\\\', String.raw`\61` + newline, String.raw`\0000061`]) {
+        const broken = `.unrelated { content: ${quote}unfinished${prefix}${newline}; }`;
+        assert.throws(() => assertIosPackageCss(iosCss + broken + unsafe), /16px/, JSON.stringify(prefix));
+        assert.doesNotThrow(() => assertIosPackageCss(iosCss + broken + unsafe.replace('14px', '16px')));
+      }
+    });
+
+    test(`iOS package gate preserves escaped ${name} and hexadecimal whitespace in a ${quote} string`, () => {
+      for (const escape of ['\\', '\\\\\\', String.raw`\61`, String.raw`\000061`]) {
+        const valid = `.unrelated { content: ${quote}valid${escape}${newline}; } font-size: 14px;${quote}; }`;
+        assert.doesNotThrow(() => assertIosPackageCss(iosCss + valid), JSON.stringify(escape));
+        assert.throws(() => assertIosPackageCss(iosCss + valid + unsafe), /16px/, JSON.stringify(escape));
+      }
+      for (const escape of [String.raw`\22`, String.raw`\27`, String.raw`\a`, String.raw`\d`, String.raw`\c`]) {
+        const valid = `.unrelated { content: ${quote}${escape} ; } font-size: 14px;${quote}; }`;
+        assert.doesNotThrow(() => assertIosPackageCss(iosCss + valid), escape);
+      }
+      for (const character of ['\t', '\v', '\u00a0', '\u2028', '\u2029']) {
+        const valid = `.unrelated { content: ${quote}valid${character}; } font-size: 14px;${quote}; }`;
+        assert.doesNotThrow(() => assertIosPackageCss(iosCss + valid), JSON.stringify(character));
+      }
+    });
+  }
+}
+
+test('iOS package gate still sees unsafe declarations after strings, escaped punctuation and custom blocks', () => {
+  for (const value of [
+    '"{word}"',
+    '"}; font-size: 16px; {"',
+    String.raw`"a\"}; font-size: 16px; {"`,
+    String.raw`escaped\{part\;with\:punctuation\}`,
+    '{ inside: { text: "}; font-size: 16px;"; }; }',
+    'sample("{;:}", nested(a;b:c))',
+  ]) {
+    const css = iosCss + `.make-app-mobile-picker__search input { --sample: ${value}; font-size: 14px; }`;
+    assert.throws(() => assertIosPackageCss(css), /16px/, value);
+    assert.doesNotThrow(() => assertIosPackageCss(
+      iosCss + `.make-app-mobile-picker__search input { --sample: ${value}; font-size: 16px; }`,
+    ), value);
+  }
+  assert.throws(() => assertIosPackageCss(iosCss + '.make-app-mobile-picker__selected { --sample: "{};:"; touch-action: pan-x; }'), /pinch-zoom/);
+});
+
+test('iOS package gate respects real comments and escaped delimiters without changing rule boundaries', () => {
+  const prefix = String.raw`.unrelated\{name { --sample: escaped\;token\:part\}value; content: "/* } ; : */"; }`;
+  assert.doesNotThrow(() => assertIosPackageCss(prefix + iosCss));
+  assert.doesNotThrow(() => assertIosPackageCss('/* " { } ; : fake rule */' + iosCss));
+  assert.doesNotThrow(() => assertIosPackageCss(iosCss.replace('font-size:', 'font-size /* { comment } */ :')));
+  assert.doesNotThrow(() => assertIosPackageCss(iosCss.replace(
+    '--make-mobile-sheet-body-size: 14px;',
+    '--before: "/*"; --make-mobile-sheet-body-size: 14px; --after: "*/";',
+  )));
+  const noDefault = iosCss.replace('--make-mobile-sheet-body-size: 14px;', '');
+  assert.throws(() => assertIosPackageCss('/* .make-app-mobile-sheet { --make-mobile-sheet-body-size: 14px; } */' + noDefault), /16px/);
+});
+
+test('iOS package gate sees real font declarations after comment-shaped unquoted URL data', () => {
+  for (const url of ['/assets/*.svg', 'data:text/plain,a/*b']) {
+    for (const reference of [`url(${url})`, `url("${url}")`, `url('${url}')`]) {
+      assert.throws(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { background-image: ${reference}; font-size: 14px; }`), /16px/, reference);
+      assert.doesNotThrow(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { background-image: ${reference}; font-size: 16px; }`), reference);
+    }
+  }
+});
+
+test('iOS package gate recognizes the decoded ASCII case-insensitive URL function name', () => {
+  for (const name of ['url', 'URL', 'UrL', String.raw`u\72l`, String.raw`\75rl`, String.raw`\000075rl`, String.raw`\75 rl`]) {
+    const reference = `${name}( \t/assets/*.svg\r\n )`;
+    assert.throws(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 14px; }`), /16px/, name);
+    assert.doesNotThrow(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 16px; }`), name);
+  }
+});
+
+test('iOS package gate does not mistake a longer name, dimension, hash or at-keyword for URL', () => {
+  for (const name of ['myurl', 'prefix-url', String.raw`my\75rl`, 'éurl', '1url', '#url', '@url']) {
+    const reference = `${name}(/* literal ); font-size: 14px; */ end)`;
+    assert.doesNotThrow(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 16px; }`), name);
+    assert.throws(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 14px; }`), /16px/, name);
+  }
+});
+
+test('iOS package gate treats URL delimiters as data and consumes CSS-escaped closing parentheses', () => {
+  for (const reference of [
+    'url(data:text/plain,};font-size:14px;{)',
+    'url(data:text/plain,{;font-size:14px;)',
+    String.raw`url(/assets/a\)/*b.svg)`,
+    String.raw`url(/assets/a\(x\)/*b.svg)`,
+    String.raw`url(/assets/a\29 /*b.svg)`,
+    String.raw`url(/assets/a\000029/*b.svg)`,
+  ]) {
+    assert.doesNotThrow(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 16px; }`), reference);
+    assert.throws(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 14px; }`), /16px/, reference);
+  }
+});
+
+test('iOS package gate keeps nested function boundaries around independent URL tokens', () => {
+  for (const reference of [
+    'image-set(url(/assets/*.svg) 1x, url(data:text/plain,a/*b) 2x)',
+    'nested(url(data:text/plain,{;), inner(url(/assets/*.svg), "};font-size:14px;"))',
+  ]) {
+    assert.doesNotThrow(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 16px; }`), reference);
+    assert.throws(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 14px; }`), /16px/, reference);
+  }
+});
+
+test('iOS package gate preserves quoted URL strings and real comments outside URL tokens', () => {
+  for (const reference of [
+    'url(  "/assets/*.svg"  )',
+    "URL(\t'/assets/*.svg'\n)",
+    String.raw`url("/assets/escaped\"};font-size:14px;/*x.svg")`,
+    'url(/assets/*.svg) /* actual comment ) ; } font-size: 14px; */',
+    'url(/assets/*.svg)/* first */ /* second */',
+  ]) {
+    assert.doesNotThrow(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 16px; }`), reference);
+    assert.throws(() => assertIosPackageCss(iosCss + `.make-app-mobile-picker__search input { --sample: ${reference}; font-size: 14px; }`), /16px/, reference);
+  }
+  assert.doesNotThrow(() => assertIosPackageCss(iosCss + '.make-app-mobile-picker__search input { background: url(/assets/x.svg); /* font-size:14px; }'));
+});
+
+test('iOS package gate never promotes URL data into real rules or a sheet default', () => {
+  const noDefault = iosCss.replace('--make-mobile-sheet-body-size: 14px;', '');
+  for (const prefix of [
+    '@import url(/assets/*.css);',
+    '@namespace svg url(urn:x,.make-app-mobile-sheet{--make-mobile-sheet-body-size:14px;});',
+    '.unrelated { --sample: url(x,.make-app-mobile-sheet{--make-mobile-sheet-body-size:14px;}); }',
+  ]) {
+    assert.doesNotThrow(() => assertIosPackageCss(prefix + iosCss), prefix);
+    assert.throws(() => assertIosPackageCss(prefix + noDefault), /16px/, prefix);
+  }
 });
 
 test('iOS package gate rejects the installed 0.1.7 search and touch declarations', () => {
@@ -248,6 +490,29 @@ const detailPackage = (t, { missing, invalid, publicEntry = true, componentExpre
   return root;
 };
 
+test('complete detail CLI rejects real unsafe rules after bad strings and preserves valid continuations', (t) => {
+  const root = detailPackage(t);
+  const verifier = path.join(makeuiRoot, 'scripts/verify-mobile-package-surface.mjs');
+  for (const [name, newline] of stringNewlines) {
+    for (const quote of ['"', "'"]) {
+      const label = `${name} ${quote}`;
+      const broken = `.unrelated { content: ${quote}unfinished${newline}; }`;
+      const unsafe = '.make-app-mobile-picker__search input { font-size: 14px; }';
+      fs.writeFileSync(path.join(root, 'mobile.css'), iosCss + attachmentCss + broken + unsafe);
+      const rejected = spawnSync(process.execPath, [verifier, root, '--detail'], { cwd: root, encoding: 'utf8' });
+      assert.equal(rejected.status, 1, label + rejected.stdout + rejected.stderr);
+      assert.match(rejected.stderr, /16px/, label);
+      assert.doesNotMatch(rejected.stdout, /surface verified/, label);
+
+      const valid = `.unrelated { content: ${quote}valid\\${newline}; } font-size: 14px;${quote}; }`;
+      fs.writeFileSync(path.join(root, 'mobile.css'), iosCss + attachmentCss + valid);
+      const accepted = spawnSync(process.execPath, [verifier, root, '--detail'], { cwd: root, encoding: 'utf8' });
+      assert.equal(accepted.status, 0, label + accepted.stdout + accepted.stderr);
+      assert.match(accepted.stdout, /surface verified: 0\.1\.9/, label);
+    }
+  }
+});
+
 test('detail capability rejects an old package that only passes the attachment baseline', async (t) => {
   const root=detailPackage(t,{publicEntry:false});
   assert.equal(await verifyMobilePackageSurface(root),'0.1.9');
@@ -291,13 +556,13 @@ for (const [label, expression] of [
 }
 
 test('documented detail command runs from an installed Skill without a source checkout', async (t) => {
-  const markdown = fs.readFileSync(new URL('../skills/makeui/references/mobile-detail-components.md', import.meta.url), 'utf8');
+  const markdown = fs.readFileSync(path.join(makeuiRoot, 'references/mobile-detail-components.md'), 'utf8');
   const match = markdown.match(/`node (\S+verify-mobile-package-surface\.mjs) "?<[^>]+>"? (--detail)`/);
   assert.ok(match, '详情文档必须提供可执行的随包校验命令');
   const installRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'makeui installed skill '));
   t.after(() => fs.rmSync(installRoot, { recursive:true, force:true }));
   const skillRoot = path.join(installRoot, '.agents/skills/makeui');
-  fs.cpSync(new URL('../skills/makeui/scripts/', import.meta.url), path.join(skillRoot, 'scripts'), { recursive:true });
+  fs.cpSync(path.join(makeuiRoot, 'scripts'), path.join(skillRoot, 'scripts'), { recursive:true });
   const result = spawnSync(process.execPath, [match[1], detailPackage(t), match[2]], { cwd:skillRoot, encoding:'utf8' });
   assert.equal(result.status, 0, result.stdout + result.stderr);
   assert.match(result.stdout, /mobile package surface verified: 0\.1\.9/);

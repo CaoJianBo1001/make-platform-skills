@@ -51,11 +51,40 @@ jobs:
             --package=@qfei-design/make-app-analytics@0.1.9 --package=react@19.2.9 --package=react-dom@19.2.9 \
             -- node scripts/test-analytics-release-examples.mjs --installed
 
+      - name: Compile and render the distributed Ant Design foundation
+        run: |
+          npm exec --yes --ignore-scripts \
+            --package=typescript@5.9.3 --package=esbuild@0.28.2 \
+            --package=antd@6.7.2 --package=dayjs@1.11.20 --package=lucide-react@1.47.0 \
+            --package=react@19.3.0 --package=react-dom@19.3.0 \
+            --package=@types/react@19.3.0 --package=@types/react-dom@19.3.0 \
+            --package=jsdom@29.1.1 -- sh -ec '
+            makeui_foundation_dependencies="$(dirname "$(dirname "$(command -v tsc)")")"
+            node scripts/test-makeui-antd-foundation.mjs \
+              --dependencies="$makeui_foundation_dependencies" \
+              --dom-dependencies="$makeui_foundation_dependencies"
+          '
+
+      - name: Check Ant Design foundation with React 18 StrictMode
+        run: |
+          npm exec --yes --ignore-scripts \
+            --package=typescript@5.9.3 --package=esbuild@0.28.2 \
+            --package=antd@6.7.2 --package=dayjs@1.11.20 --package=lucide-react@1.47.0 \
+            --package=react@18.2.0 --package=react-dom@18.2.0 \
+            --package=@types/react@18.2.79 --package=@types/react-dom@18.2.25 \
+            --package=jsdom@29.1.1 -- sh -ec '
+            makeui_foundation_peer_dependencies="$(dirname "$(dirname "$(command -v tsc)")")"
+            node scripts/test-makeui-antd-foundation.mjs \
+              --dependencies="$makeui_foundation_peer_dependencies" \
+              --dom-dependencies="$makeui_foundation_peer_dependencies"
+          '
+
       - name: Check feedback package and SDK compatibility
         run: |
           npm exec --yes --ignore-scripts --package=typescript@5.9.3 \
             --package=react@19.2.8 --package=react-dom@19.2.8 --package=jsdom@29.1.1 -- sh -ec '
             export MAKE_FEEDBACK_TEST_DEPENDENCIES="$(dirname "$(dirname "$(command -v tsc)")")"
+            node --test --test-name-pattern="App shell mounts" scripts/test-resource-content-feedback-contract.mjs
             node --test skills/make-app-observability/scripts/test-audit-error-outlets.mjs
             node --test skills/makeui/scripts/test-verify-feedback-package-surface.mjs
             node skills/makeui/scripts/test-feedback-sdk-types.mjs "$(command -v tsc)"
