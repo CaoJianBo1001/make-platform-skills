@@ -34,7 +34,7 @@
 - 附件使用 `MobileAttachmentField`：图片缩略图／文件图标、文件名、状态、圆形删除入口、删除确认和全宽虚线上传区属于标准视觉；上传入口固定高度为 48px，不允许宿主改为裸文件名列表或通用 Upload 默认列表。包不执行上传、重试、删除或持久化请求。
 - 普通 `SingleSelect` 使用无搜索的 `MobileOptionPickerSheet`，选择或清除后立即确认；普通 `MultiSelect` 使用同一组件的多选模式，以“确定”提交草稿。
 - Date／DateTime／DateRange 使用对应日期组件。若当前包版本未公开所需组件或属性，不得伪造深层导入；先升级受支持包或报告依赖缺口。
-- 新建／编辑按 [表单保存意图矩阵](mobile-form-controls.md#表单保存意图矩阵) 组合保存区；单动作使用 `MobileFormActionBar`，多动作复用已确认的公开能力或同一宿主 footer，所有按钮无图标、靠右并保留安全区。审批资格交接 [make-app-approval](../../make-app-approval/SKILL.md)，草稿按需启用；详情记录操作使用 `MobileBottomActionBar`，两类操作栏不能互换。
+- 新建／编辑按 [表单保存意图矩阵](mobile-form-controls.md#表单保存意图矩阵) 组合保存区；单动作使用 `MobileFormActionBar`，多动作使用正式移动包 0.1.14 的 `MobileFormActionBar actions` 并按 [单行与更多操作](mobile-detail-components.md#单行与更多操作) 自动收纳；全部授权意图均可达，不强制始终内联，所有按钮无图标、靠右并保留安全区。审批资格交接 [make-app-approval](../../make-app-approval/SKILL.md)，草稿按需启用；详情记录操作使用 `MobileBottomActionBar`，两类操作栏不能互换。
 - 不复制任何试点应用的业务字段、接口、类名或整页源码。确需宿主样式时，限于 schema adapter 或页面组合，并保证窄选择器命名空间、避免全局控件覆盖。
 
 ## 实际页面验收
