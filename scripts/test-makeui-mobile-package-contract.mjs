@@ -159,8 +159,8 @@ assert.match(
 );
 assert.match(
   mobileDefaults,
-  /corepack pnpm add @qfei-design\/make-app-mobile@0\.1\.15(?:\s|$)/,
-  'new mobile integrations must pin the verified formal 0.1.15 package',
+  /corepack pnpm add @qfei-design\/make-app-mobile@0\.1\.16(?:\s|$)/,
+  'new mobile integrations must pin the verified formal 0.1.16 package',
 );
 assert.match(mobileDefaults, /最低 API 基线为 `0\.1\.7`/);
 assert.match(mobileDefaults, /0\.1\.9[^\n]*视觉/);
@@ -169,7 +169,7 @@ assert.match(mobileDefaults, /PUBLIC_API\.md/);
 assert.match(mobileDefaults, /capabilities\.json/);
 assert.match(mobileDefaults, /0\.1\.14[^\n]*(起点|下限|已支持)/,
   'keep the historically verified action-overflow capability floor distinct from the new install version');
-assert.match(mobileDefaults, /0\.1\.15[^\n]*(不降级|不为筛选降级)/,
+assert.match(mobileDefaults, /0\.1\.16[^\n]*(不降级|不为筛选降级)/,
   'the historical filter minimum must not downgrade a new integration');
 assert.match(mobileTheme, /MakeMobileThemeProvider/);
 assert.match(mobileTheme, /pageHeaderSize[^\n]*fieldLabelSize[^\n]*controlTextSize/);
@@ -193,7 +193,7 @@ for (const [name, guide] of [
   assert.doesNotMatch(guide, /多动作[^\n]*(或同一宿主 footer|或三个 Button|两个或三个 Button)/, name);
 }
 assert.doesNotMatch(mobileDetailComponents, /多动作底栏由包处理窄屏换行/);
-assert.match(mobileDetailComponents, /正式[^\n]*0\.1\.15[^\n]*URL|正式[^\n]*0\.1\.15[^\n]*链接/,
+assert.match(mobileDetailComponents, /正式[^\n]*0\.1\.16[^\n]*URL|正式[^\n]*0\.1\.16[^\n]*链接/,
   'URL-field styling must be described as part of the verified formal artifact');
 assert.match(
   mobileDefaults,
@@ -301,7 +301,7 @@ assert.match(mobileVisualStandard, /MobileAttachmentField[^\n]*48px/);
 assert.match(mobileVisualStandard, /滚轮[^\n]*五行、每行 48px[^\n]*中线/);
 assert.match(mobileVisualStandard, /不使用浏览器原生 `select`/);
 assert.match(mobileVisualStandard, /MobileOptionPickerSheet[\s\S]{0,80}MobileDateField[\s\S]{0,40}MobileDateRangeField/);
-assert.match(readme, /@qfei-design\/make-app-mobile@0\.1\.15/);
+assert.match(readme, /@qfei-design\/make-app-mobile@0\.1\.16/);
 assert.doesNotMatch(readme, /@qfei-design\/make-app-mobile@\^0\.1\.[56]/);
 const filterRoutingRow = readme.split(/\r?\n/).find((line) => line.startsWith('| 筛选'));
 assert.ok(filterRoutingRow, 'README must keep a filter routing row');
@@ -693,7 +693,7 @@ assert.match(
 );
 assert.match(
   readme,
-  /@qfei-design\/make-app-mobile@0\.1\.15/,
+  /@qfei-design\/make-app-mobile@0\.1\.16/,
   'repository routing docs must expose the same mobile package baseline',
 );
 assert.doesNotMatch(
