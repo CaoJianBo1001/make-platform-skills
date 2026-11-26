@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata/defaults, optional draft-save UI, field-type icons, and UI states. New Apps combine one React component foundation with a selected MakeDesign plan or the library theme, use `@qfei-design/make-app-mobile`, and default to Lucide unless the user chooses another icon library. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.92
+  version: 0.4.93
 ---
 
 # makeui
@@ -49,7 +49,7 @@ MakeDesign 负责风格、布局选择、预览和方案交接；组件行为与
 
 所有新 Make App（含 POC、模板项目）在生成表单、详情或字段控件前，必须读取 [统一表单与详情骨架](references/drawer-layout.md)、[组件与主题接入](references/component-usage.md) 和 [字段类型图标](references/field-type-icons.md)。MakeDesign 不是绕过 Form、Detail 和字段图标合同的另一条生成路径；视觉来源与唯一组件基座分开记录，MakeDesign 默认 Ant Design 时读取 [AntD 基座接入](references/antd-foundation.md)，用户指定其他组件库时保留该库并适配同一份 Make 合同。
 
-新接入移动组件使用已核验正式 `@qfei-design/make-app-mobile@0.1.15`，同时核对宿主实际安装产物。MakeDesign 对手机默认仅同步主题主色及对应选中／强调色，按 [手机颜色接入](references/mobile-theme.md) 使用已公开的颜色能力；输入、数字、选项、日期、人员／部门等移动专用控件、字体字号、密度、布局、圆角、阴影及交互继续遵守原手机规范，不能传入整份 PC 主题。Canvas、审批等引用包的完整主题同步仍单独纳入后续范围，不因选择 MakeDesign 自动改包或阻断无关宿主验收。审批包版本与只读兼容另由审批 Skill 核对；保留既有项目的兼容门禁、单行更多操作和业务 Controller。
+新接入移动组件使用已核验正式 `@qfei-design/make-app-mobile@0.1.16`，同时核对宿主实际安装产物。MakeDesign 对手机默认仅同步主题主色及对应选中／强调色，按 [手机颜色接入](references/mobile-theme.md) 使用已公开的颜色能力；输入、数字、选项、日期、人员／部门等移动专用控件、字体字号、密度、布局、圆角、阴影及交互继续遵守原手机规范，不能传入整份 PC 主题。Canvas、审批等引用包的完整主题同步仍单独纳入后续范围，不因选择 MakeDesign 自动改包或阻断无关宿主验收。审批包版本与只读兼容另由审批 Skill 核对；保留既有项目的兼容门禁、单行更多操作和业务 Controller。
 
 MakeDesign 方案是 PC／平板所有页面的完整设计输入，不是只换主色。Shell、导航、页面表面、字体、间距、控件、状态、细节及弹层都从同一份已解析方案和有来源的官方 fallback 生成；方案明确的导航和普通详情选择优先于本 Skill 对应的默认展示。手机只跟随主题主色／选中强调色，其他展示遵守原移动规范，不消费 PC 排版与组件语言。Make 业务语义、权限、字段值和表单／详情结构合同继续生效。按 [完整方案应用与差异记录](references/component-usage.md#完整方案应用与差异记录) 逐项验收，不能把未消费的选择当作已实现。
 

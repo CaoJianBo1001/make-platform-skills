@@ -6,9 +6,9 @@ MakeDesign 默认负责 PC 的完整视觉。手机只跟随当前方案的主�
 
 ## 先核对真实包能力
 
-已核验正式 npm `0.1.15`：从 registry.npmjs.org 取得版本元数据及 tarball，校验 SHA512 integrity 后检查实际解包产物，`/presentation` 提供 `MakeMobileThemeProvider`、`useMakeMobileTheme` 及下述38个可选主题字段，配套构建与 CSS 已包含跨 portal 主题和字段值链接样式。新接入固定使用该正式版本，安装与运行时兼容门禁见 [包接入与边界](mobile-defaults.md#包接入与边界)。历史 `0.1.14` 不提供此主题 Provider，不能向旧版虚构入口；只给祖先写 CSS 别名也不能保证 body 弹层继承。
+已核验正式 npm `0.1.16`：从 registry.npmjs.org 取得版本元数据及 tarball，校验 SHA512 integrity 后检查实际解包产物，`/presentation` 提供 `MakeMobileThemeProvider`、`useMakeMobileTheme` 及下述38个可选主题字段，配套构建与 CSS 已包含跨 portal 主题和字段值链接样式。主题 Provider 与 URL 样式在历史正式 `0.1.15` 已提供，38 个主题字段声明及 `/presentation` ESM/CJS 产物在 `0.1.16` 中保持一致；本轮新接入固定使用 `0.1.16`，安装与运行时兼容门禁见 [包接入与边界](mobile-defaults.md#包接入与边界)。历史 `0.1.14` 不提供此主题 Provider，不能向旧版虚构入口；只给祖先写 CSS 别名也不能保证 body 弹层继承。
 
-`0.1.15` 随包 capabilities.json 的能力项为 true，但 availability 仍标记 local-candidate、published: false；package.ai.json 和 PUBLIC_API.md 也残留“本地候选／未发布”的旧文案。这些旧文案与已核验的真实导出、声明、样式产物不一致，不能据此将该正式版本误判为未发布，也不假设后续版本已经修正文案。发布事实以 registry 版本、通过 integrity 校验的同版 tarball 和实际公开产物共同判定，能力标记或较高版本号单独存在都不充分。
+`0.1.15` 与 `0.1.16` 随包 capabilities.json 的能力项为 true，但 availability 仍标记 local-candidate、published: false；package.ai.json 和 PUBLIC_API.md 也残留“本地候选／未发布”的旧文案，`0.1.16` 新增筛选入口的 availability 也有同类残留。这些旧文案与已核验的真实导出、声明、样式产物不一致，不能据此将该正式版本误判为未发布，也不假设后续版本已经修正文案。发布事实以 registry 版本、通过 integrity 校验的同版 tarball 和实际公开产物共同判定，能力标记或较高版本号单独存在都不充分。
 
 接入前仍核对目标 App 实际安装包的 `/presentation` 类型声明、ESM/CJS 导出、配套 CSS 和公开文档，确保清单、锁文件与解析产物一致；不能以另一 App 或某台电脑的源码绝对路径代替。测试用本地候选不是已发布能力的证据；确需验证候选时单独记录来源提交、未提交差异和临时解析配置，不改锁文件把候选冒充正式版本。
 
@@ -48,7 +48,7 @@ function PhoneView() {
 
 ## 公开主题字段
 
-下表为已核验0.1.15声明中的38个可选主题字段，值均为CSS语义字符串；传入已解析值，不传MakeDesign对象、权限或业务状态。这是公共 API 能力参考，不是 MakeDesign 手机默认映射清单。颜色投影以外的字段只供用户明确手机定制等独立需求使用，不能因 PC 方案含有这些值而自动传入。
+下表为已核验0.1.16声明中的38个可选主题字段，值均为CSS语义字符串；传入已解析值，不传MakeDesign对象、权限或业务状态。这是公共 API 能力参考，不是 MakeDesign 手机默认映射清单。颜色投影以外的字段只供用户明确手机定制等独立需求使用，不能因 PC 方案含有这些值而自动传入。
 
 | 语义 | 字段 |
 | --- | --- |

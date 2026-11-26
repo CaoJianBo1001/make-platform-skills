@@ -42,7 +42,7 @@ Make 字段语义、权限、受控值、验证、候选来源、提交和审批
 
 手机继续由 [冻结产品基线](mobile-product-baseline.md)、[移动默认](mobile-defaults.md)、[字段规范](mobile-form-controls.md)、[视觉标准](mobile-visual-standard.md)、[公共详情组件](mobile-detail-components.md) 和 [表单验收](mobile-form-acceptance.md) 定义。此文不重新定义手机排版或控件，不把桌面表单缩成手机版。共享业务 Controller、草稿与缓存，只挂当前 View；切换宽度不得新增一套业务状态或请求链。
 
-按正式移动 0.1.15 或已等价验证的兼容正式版本检查宿主实际解析产物，不能只读 package.json 声明。手机字段保持既定同行左标签／右值，只有 File 可采用上下全宽；字号角色和可编辑输入的 iOS 安全下限分别检查。全屏任务路由、正文滚动、表单底栏与详情操作栏沿对应公开组件；不能用桌面纵向标签、全行 TextArea、抽屉或日期弹层覆盖它们。
+按正式移动 0.1.16 或已等价验证的兼容正式版本检查宿主实际解析产物，不能只读 package.json 声明。手机字段保持既定同行左标签／右值，只有 File 可采用上下全宽；字号角色和可编辑输入的 iOS 安全下限分别检查。全屏任务路由、正文滚动、表单底栏与详情操作栏沿对应公开组件；不能用桌面纵向标签、全行 TextArea、抽屉或日期弹层覆盖它们。
 
 新质量基线不默认增加公共包完整主题改造，也不覆盖包私有 CSS。手机宿主和已支持的正式移动组件只通过 [颜色投影](../assets/mobile-brand-theme.mjs) 与其 [类型](../assets/mobile-brand-theme.d.mts) 同步主题主色及选中／强调色，组合方式见 [手机颜色接入](mobile-theme.md)；不传整份 PC mapper，不继承 PC Provider 的字体、尺寸、背景／控件表面或导航。Canvas、审批等其他引用包的完整主题仍列后续同步。触控、safe-area、单行多动作／更多、候选确认及取消、远程候选反馈继续按原手机合同验收。涉及记录动作时读取 [手机记录操作](../../make-app-actions/references/mobile-card-actions.md)，审批任务／独立填单读取 [审批移动合同](../../make-app-approval/references/mobile.md)，筛选、AI 等仅在本项目功能已触发时交给对应 Skill；视觉改进不修改其业务资格。
 

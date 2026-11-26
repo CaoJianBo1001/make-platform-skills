@@ -4,7 +4,7 @@
 
 安装包的公开 API 存在不等于默认视觉已满足本规范；iOS 搜索输入、缩放手势、附件状态和上传入口高度须通过 `mobile-defaults.md` 指向的安装产物校验。不满足时报告组件包依赖阻断，不让宿主覆盖包内部样式来制造表面一致。
 
-MakeDesign 默认只给手机提供主题主色与选中强调色，通过 [手机品牌色投影](mobile-theme.md#默认品牌色接入) 和已核验的正式0.1.15公共接口传递。字体、字号、字距、密度、普通表面、圆角、阴影、主按钮实心样式、布局、控件种类及交互继续遵循本冻结规范；PC 的完整主题、描边语言和 raised 阴影不传播到手机。完整主题 Provider 仅包裹 PC View，手机的宿主区域与 portaled 控件使用手机颜色作用域，不继承 PC 变量。用户明确手机定制时另记范围并按公开能力实施，不以选择 PC 风格代替手机定制要求；不得覆盖包私有样式。
+MakeDesign 默认只给手机提供主题主色与选中强调色，通过 [手机品牌色投影](mobile-theme.md#默认品牌色接入) 和已核验的正式0.1.16公共接口传递。字体、字号、字距、密度、普通表面、圆角、阴影、主按钮实心样式、布局、控件种类及交互继续遵循本冻结规范；PC 的完整主题、描边语言和 raised 阴影不传播到手机。完整主题 Provider 仅包裹 PC View，手机的宿主区域与 portaled 控件使用手机颜色作用域，不继承 PC 变量。用户明确手机定制时另记范围并按公开能力实施，不以选择 PC 风格代替手机定制要求；不得覆盖包私有样式。
 
 ## 新建、编辑与详情表单
 
@@ -36,7 +36,7 @@ MakeDesign 默认只给手机提供主题主色与选中强调色，通过 [手�
 - 附件使用 `MobileAttachmentField`：图片缩略图／文件图标、文件名、状态、圆形删除入口、删除确认和全宽虚线上传区属于标准视觉；上传入口固定高度为 48px，不允许宿主改为裸文件名列表或通用 Upload 默认列表。包不执行上传、重试、删除或持久化请求。
 - 普通 `SingleSelect` 使用无搜索的 `MobileOptionPickerSheet`，选择或清除后立即确认；普通 `MultiSelect` 使用同一组件的多选模式，以“确定”提交草稿。
 - Date／DateTime／DateRange 使用对应日期组件。若当前包版本未公开所需组件或属性，不得伪造深层导入；先升级受支持包或报告依赖缺口。
-- 新建／编辑按 [表单保存意图矩阵](mobile-form-controls.md#表单保存意图矩阵) 组合保存区；单动作使用 `MobileFormActionBar`，多动作使用正式0.1.15的 `MobileFormActionBar actions`，按 [单行与更多操作](mobile-detail-components.md#单行与更多操作) 自动收纳至最右侧“更多”，全部授权意图均可达；按钮无图标、靠右并保留安全区。审批资格交接 [make-app-approval](../../make-app-approval/SKILL.md)，草稿按需启用；详情记录操作使用 `MobileBottomActionBar`，两类操作栏不能互换。
+- 新建／编辑按 [表单保存意图矩阵](mobile-form-controls.md#表单保存意图矩阵) 组合保存区；单动作使用 `MobileFormActionBar`，多动作使用正式0.1.16的 `MobileFormActionBar actions`，按 [单行与更多操作](mobile-detail-components.md#单行与更多操作) 自动收纳至最右侧“更多”，全部授权意图均可达；按钮无图标、靠右并保留安全区。审批资格交接 [make-app-approval](../../make-app-approval/SKILL.md)，草稿按需启用；详情记录操作使用 `MobileBottomActionBar`，两类操作栏不能互换。
 - 不复制任何试点应用的业务字段、接口、类名或整页源码。确需宿主样式时，限于 schema adapter 或页面组合，并保证窄选择器命名空间、避免全局控件覆盖。
 
 ## 实际页面验收

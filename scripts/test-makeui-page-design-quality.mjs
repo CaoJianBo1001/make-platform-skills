@@ -31,7 +31,7 @@ test('phone protection routes to existing standards rather than redefining field
   for (const ref of ['mobile-product-baseline.md', 'mobile-defaults.md', 'mobile-form-controls.md', 'mobile-visual-standard.md', 'mobile-detail-components.md', 'mobile-form-acceptance.md']) assert.ok(quality.includes(ref), ref);
   assert.match(quality, /共享[^\n]*Controller/);
   assert.match(quality, /桌面[^\n]*不得[^\n]*覆盖[^\n]*手机/);
-  assert.match(quality, /0\.1\.15/);
+  assert.match(quality, /0\.1\.16/);
   assert.match(quality, /不[^\n]*默认[^\n]*公共包[^\n]*主题/);
 });
 

@@ -1,8 +1,8 @@
 # 审批包与我的审批列表
 
-适用于完整接入或升级任务中心。本文默认描述两个任务页签；新增第三页签先读 [已发起与实例详情](initiated-instances.md)，按实际包能力启用实例 provider。本文基于已核对的 `@qfei-design/make-app-approval@0.2.14` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
+适用于完整接入或升级任务中心。本文默认描述两个任务页签；新增第三页签先读 [已发起与实例详情](initiated-instances.md)，按实际包能力启用实例 provider。本文基于已核对的 `@qfei-design/make-app-approval@0.2.16` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
 
-本次对照正式 tarball：0.2.13 与 0.2.14 的 dist 运行代码、公开类型、CSS、PUBLIC_API 和能力元数据逐字节一致；0.2.14 的变化为 URL 宿主展示指导、详情适配示例及发布校验等待配置／文档，不能据版本升级推断新增主题或禁编能力。两个版本的原有能力和缺口按下文分别保留。
+历史正式 tarball 对照：0.2.13 与 0.2.14 的 dist 运行代码、公开类型、CSS、PUBLIC_API 和能力元数据逐字节一致；0.2.14 的变化为 URL 宿主展示指导、详情适配示例及发布校验等待配置／文档，不能据版本升级推断新增主题或禁编能力。该历史对照不代表 0.2.16 没有新增能力；当前标准间距、手机筛选适配与申请人跨端回显见 [列表展示合同](list-presentation.md)，原有禁编和只读缺口按下文保留。
 
 ## 依赖与职责
 
@@ -10,21 +10,22 @@
 - Service 如消费状态、禁编或撤回校验函数，也安装同一审批包版本，只加载根入口。依赖与锁文件可在干净环境重装；生产不依赖开发机路径、未发布 tgz、node_modules 修改或未随构建分发的补丁。
 - 应用入口一次导入 `@qfei-design/make-app-approval/styles.css`，表格样式沿用宿主 CanvasTable 接入。Ant Design/dayjs 是包的示例依赖，不要求宿主更换 UI 库。
 - 0.2.10 发布包携带 `examples/field-adapters`，包含人员缓存、数值原文校验和 `use-input-modality.ts`。这些是宿主源码适配示例，按 [字段适配回归](../../makeui/references/field-adapter-regressions.md) 复用已有控件与校验，不当作新的 npm 公开子路径导入。
-- 0.2.13、0.2.14 原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
-- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.13、0.2.14 原生检查失败是已知缺口；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
+- 0.2.16 与历史 0.2.13、0.2.14 一样原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
+- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.16 原生检查失败仍是已知缺口（0.2.13、0.2.14 同样存在）；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
 
 | 公开入口 | 使用内容 |
 | --- | --- |
 | 根入口 | `APPROVAL_STATUS_FIELD`、`APPROVAL_LOCK_FIELD`、`getApprovalStatusDisplay`、`hasApprovalDefinition`、`isApprovalSystemField`、`getRecordApprovalWriteRestriction`、撤回意见校验及类型 |
 | `/react` | `ApprovalStatus`，用于只读状态文字/Tag |
 | `/list` | `MyApprovalsPage`、`ApprovalListProvider`、列表 DTO、基础控件适配类型 |
+| `/mobile` | `createMobileApprovalComponents`、`ApprovalMobileToolkit`、申请人 loader 与诊断类型，消费正式移动包公开控件 |
 | `/detail` | `ApprovalTaskDetail`、`readApprovalTaskDetail`、`getApprovalTaskFields`、`buildApprovalTaskAction`、`ApprovalTaskValidationError`、`ApprovalInstanceDetail`、`readApprovalInstanceDetail` 及任务/实例类型 |
 
 业务代码只导入公开入口，不深层导入 src/dist。包负责列表状态、查询草稿、虚拟表格和详情办理状态机；宿主负责导航、应用/身份上下文、Service 请求、字段与控件适配、详情容器、历史查询及错误出口。不要复制公共包源码、构造第二张任务表格或另做一套桌面列表分页状态。
 
 ## 主题能力与边界
 
-0.2.14 未新增 ThemeProvider 或通用 `theme` 参数；根入口、`/react`、`/list`、`/detail` 和样式子路径与 0.2.13 一致。宿主继续提供 Input、Select、DateRangePicker、Button、Tabs 及详情字段控件适配，沿用自身组件库的主题，不把示例依赖变成包的运行时必需依赖。
+0.2.16 未新增 ThemeProvider 或通用 `theme` 参数；根入口、`/react`、`/list`、`/detail` 和样式子路径仍保留，另提供专用 `/mobile` 工厂入口，不能把移动接线工厂当成通用审批主题 Provider。宿主继续提供 Input、Select、DateRangePicker、Button、Tabs 及详情字段控件适配，沿用自身组件库的主题，不把示例依赖变成包的运行时必需依赖。
 
 - `ApprovalStatus` 的公开 `className/style` 及已文档化的 `--make-approval-text/surface/primary/error` 可以对齐状态外观；列表拥有的部分公开 CSS 变量及宿主基控件主题仍按实际产物接入。
 - `themeKey` 只通知 Canvas 重新读取已接入的 CSS 主题，不是完整主题对象，也不负责把颜色、字体或字号转交到所有 DOM／弹层。列表根有自己的默认变量，不能假定只给祖先设置同名变量就一定覆盖包默认。
@@ -95,7 +96,13 @@ onChange={key => {
 
 申请人候选来自宿主 users 接口，可在 Select 适配器远程加载；提供加载、失败重试、取消和已选名称回显，不能用审批当前页的人员反推完整候选。筛选先改草稿，查询后生效，重置清空，切换页签保留已应用条件，由包处理。
 
+正式 0.2.16 的标准模式通过 `selectedOption` 与可选第二参数保存远程人员可读名称，桌面／手机适配器及旧单参兼容边界见 [申请人跨端回显](list-presentation.md#申请人跨端回显)。仅传 ID、仅检查 provider 或在单端缓存名称不能证明跨端回显已通过；旧正式包仍按实际公开类型接线。
+
+新接入或本轮列表外观改造在正式 0.2.16 显式设置 `spacing="standard"`；默认仍为 `spacing="host"`，以保留旧宿主的留白所有权。手机专用基础控件使用 `/mobile` 工厂与正式移动包 `0.1.16` 的公开筛选入口，精确接线见 [列表展示合同](list-presentation.md)，不复制控制器。
+
 列表页用 `className="make-app-approval--fill"` 填满剩余内容区。Shell、Tabs 根节点、中间包装层及活动面板传递确定高度和 `flex: 1; min-height: 0; min-width: 0`，页签栏不收缩；表格自身滚动，页面不滚动，不写固定视口减数。包已提供无外层卡片边框、筛选区下方 12px、页签及内容区间距；其他 Tabs 组件通过公开适配器提供等效间距，避免叠加旧覆盖。
+
+PC 页签栏左右内边距 12px、活动面板四边内边距 12px、筛选区下方 12px；页签、搜索与表格共用内容对齐线，外 Shell 留白独立计算，不叠加第二份面板留白。成功空列表仍保留四列表头和表体，在表体内展示“暂无审批记录”等明确空数据提示，不要求改写现有文案。尺寸所有权、旧产物能力缺口、手机控件外观及真实浏览器验收统一见 [列表展示合同](list-presentation.md)，正式 0.2.16 已提供标准模式与表格体内空提示；0.2.14 不具备全部新增能力，不能向旧产物套用新参数。
 
 非活动 Tabs 面板不得参与布局或占用高度；宿主设置 `display: flex` 等布局样式时，须保留非活动面板的隐藏行为。
 
@@ -108,7 +115,7 @@ onChange={key => {
 
 ## 多端边界
 
-已核验的 0.2.14 发布产物包含 `MyApprovalsPage presentation="mobile"`、详情布局插槽 `detail/sections/actionItems` 及 `ApprovalTaskDetail presentation="mobile"` 字段展示能力。0.2.11 缺少最后一项，0.2.7 不包含这些手机能力；旧版本先核对并升级到具备所需能力的正式产物，不能直接传入不存在的参数。审批包与 `make-app-mobile` 分别核验，不能因审批包升级就认定移动组件包也已支持所有控件。
+已核验的 0.2.16 发布产物包含 `MyApprovalsPage presentation="mobile"`、详情布局插槽 `detail/sections/actionItems` 及 `ApprovalTaskDetail presentation="mobile"` 字段展示能力。0.2.11 缺少最后一项，0.2.7 不包含这些手机能力；旧版本先核对并升级到具备所需能力的正式产物，不能直接传入不存在的参数。审批包与 `make-app-mobile` 分别核验，不能因审批包升级就认定移动组件包也已支持所有控件。
 
 支持该能力的产物中，宿主由已有响应式上下文选择 `presentation="mobile"`，桌面/平板不传或传 `desktop`。手机公共卡片、列表查询状态、滚动追加、失败重试与下拉刷新归审批包；宿主只提供手机基础控件适配、导航、provider 和详情容器，不复制一套列表/分页 Controller。不生成不存在的 `MobileMyApprovalsPage` 导出。
 
