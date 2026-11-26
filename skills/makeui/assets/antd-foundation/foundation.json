@@ -1,0 +1,13 @@
+{
+  "contract": "makeui-antd-foundation/v1",
+  "library": "antd",
+  "dependencies": {
+    "antd": "6.7.2",
+    "dayjs": "1.11.20",
+    "lucide-react": "1.47.0"
+  },
+  "peerDependencies": {
+    "react": ">=18.0.0",
+    "react-dom": ">=18.0.0"
+  }
+}

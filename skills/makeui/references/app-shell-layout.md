@@ -4,6 +4,16 @@
 
 This reference defines the desktop/tablet shell unless a section explicitly says otherwise. On phones, `mobile-defaults.md` takes precedence: use the package-backed header, account drawer, bottom navigation, workbench, task pages, and local scrolling model instead of the desktop sidebar/header shell.
 
+采用 MakeDesign 时，Shell、导航、页面背景、表面、字体、密度与细节都读取同一份完整方案；方案显式导航选择优先于下述默认侧栏，`system` 继承当前方案 recipe，不能统一回退成某个验收样例的侧栏。权限、审批入口和路由语义继续保持原合同，导航位置调整不能漏掉已授权入口、引入额外权限或改写业务路由。按 [完整方案应用与差异记录](component-usage.md#完整方案应用与差异记录) 核对选择适用性及实际效果；不支持的导航或样式能力先说明差异，不通过私有结构覆盖或伪造 API 隐藏缺口。
+
+下述未被方案明确覆盖的尺寸、留白和普通布局使用对应公开组件或 Make 展示合同作为回退来源，并在项目中记录；页面、表单、详情及 portaled 控件必须共用方案。不能把浅色背景、固定宽度或参考截图中的颜色写成所有新项目的产品默认。
+
+新项目的区域划分、密度、页面组合及截图验收按 [页面设计基线与视觉验收](page-design-quality.md) 先记录再实施。下文的侧栏宽度、选中项填色和默认侧栏／顶栏结构仅在当前有效方案没有对应选择时使用；高度链、所属区域滚动、可达导航和业务 Controller 保持原合同。手机仍以移动合同为准，不从桌面 Shell 推导手机版式。
+
+AntD 基座使用 [当前方案与展示解析](antd-foundation.md#当前方案与展示解析)：PC／平板 `MakeDesignProvider` 提供当前完整方案，`MakeAppShell` 和记录 Surface 默认继承；展示解析读取 `resolveAppPresentation` 的有效导航、表面、组件语言、适用性及回退。共享 Controller 放在两端 View 的共同父层，切换方案不按方案 ID 重建；手机沿用手机包的独立结构合同，仅按 [手机颜色接入](mobile-theme.md) 同步主题主色／选中强调色，PC Provider 的字体、密度、导航和控件样式不能级联到手机 View。其他引用包自有 UI 保留已安装正式版本现有外观；只有用户明确提出手机专属定制时才另行记录超出颜色范围的例外，不把包能力自动当作默认。维护入口遵循 [设计方案与组件实现的维护边界](component-usage.md#设计方案与组件实现的维护边界)。
+
+`MakeAppShell` 的品牌与导航内容由宿主提供，宿主须按当前 `resolveAppPresentation` 或公开 `data-makeui-navigation` 结果适配这些插槽。窄图标栏 rail 中使用图标品牌并保留完整可访问名称，应用名称可在已有顶栏或提示中完整展示；菜单使用适合当前宽度的图标／紧凑标签，避免品牌截断或汉字逐字换行。不通过扩大方案导航宽度补救固定横排内容，也不让基座猜测并裁剪宿主 ReactNode 的内部结构；其他导航模式和长名称继续按各自可用槽位展示。
+
 ## Contents
 
 - [动态应用名称](#动态应用名称)
@@ -39,7 +49,7 @@ The shell must prevent body-level and whole-page scrolling. Scrolling happens on
 
 For generated Make App UI, the application shell is mandatory. Start layout work from the shell, not from an isolated list page. Only skip shell generation when an existing project already provides a reusable shell and the task is explicitly to plug a page into that shell.
 
-Default Make App shell:
+Default Make App shell when the effective plan does not specify another supported navigation composition:
 
 - left full-height sidebar for app branding, section labels, modules, and Make object navigation
 - right-side vertical workspace using the active theme’s background color (light neutral in the default light theme)
@@ -47,7 +57,7 @@ Default Make App shell:
 - content region below the header
 - no body-level or whole-page scroll
 
-When no project-specific shell already exists, use the platform dense object-management shell as the default:
+When no project-specific shell already exists and the effective plan does not supply the corresponding values, use the platform dense object-management shell as the fallback:
 
 - sidebar width around 220px
 - compact brand block at the top
@@ -56,6 +66,7 @@ When no project-specific shell already exists, use the platform dense object-man
 - object navigation items are single-line labels with an icon when available
 - active object item uses a clear filled highlight
 - workspace header is flat, compact, and only shows the current title plus global right-side current-user menu/actions
+- MakeDesign typography uses `recordTitle` for this fixed workspace header, following [business typography](business-typography.md); `pageTitle` belongs to an existing content-page heading and must not inflate the global bar or create an extra heading region.
 - content area starts with the local toolbar, then the table region
 - sidebar background color follows the existing project theme or design system; do not default to a dark sidebar unless the project or user asks for it
 

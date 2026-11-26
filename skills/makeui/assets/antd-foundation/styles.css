@@ -1,0 +1,325 @@
+.makeui-antd-foundation {
+  height: 100%;
+  min-height: 0;
+  color: var(--makeui-ink);
+  font-family: var(--makeui-font);
+  font-size: var(--makeui-font-size);
+  line-height: var(--makeui-line-height, 1.5);
+  letter-spacing: var(--makeui-tracking, normal);
+  color-scheme: var(--makeui-mode, light);
+}
+
+/* The public item slot scopes the skin; AntD owns the selected state and keyboard behavior. */
+.makeui-antd-foundation .makeui-antd-tabs-filled-item:has(> [role='tab'][aria-selected='true']) {
+  background: var(--makeui-primary);
+}
+
+.makeui-antd-foundation .makeui-antd-tabs-filled-item:has(> [role='tab'][aria-selected='true']) > [role='tab'],
+.makeui-antd-foundation .makeui-antd-tabs-filled-item:has(> [role='tab'][aria-selected='true']) > [role='tab']:is(:hover, :focus, :active) {
+  color: var(--makeui-on-accent);
+}
+
+.makeui-antd-surface-title {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: calc(var(--makeui-gap, 16px) / 2);
+}
+
+.makeui-antd-surface-heading {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--makeui-ink);
+  font-family: var(--makeui-heading-font);
+  font-size: var(--makeui-role-record-title-size, 16px);
+  font-weight: 600;
+  line-height: 1.5;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  letter-spacing: var(--makeui-heading-tracking, 0em);
+}
+
+.makeui-antd-surface-status {
+  flex: none;
+}
+
+.makeui-antd-surface-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: calc(var(--makeui-gap, 16px) / 2);
+}
+
+.makeui-antd-surface-body {
+  box-sizing: border-box;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+  padding: var(--makeui-content-padding, 24px);
+  background: var(--makeui-surface);
+}
+
+.makeui-antd-page {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  flex-direction: column;
+  background: var(--makeui-surface);
+}
+
+.makeui-antd-page-header {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: calc(var(--makeui-gap, 16px) * .75);
+  border-bottom: 1px solid var(--makeui-border);
+  padding: var(--makeui-header-padding-block, 14px) var(--makeui-header-padding-inline, 20px);
+}
+
+.makeui-antd-page-header > .makeui-antd-surface-title,
+.makeui-antd-page-header > .makeui-antd-surface-title-slot {
+  flex: 1;
+  min-width: 0;
+}
+.makeui-antd-surface-title-slot,
+.makeui-antd-surface-title-content { min-width: 0; }
+.makeui-antd-surface-actions-slot { flex: none; }
+.makeui-antd-page > .makeui-antd-surface-body { flex: 1; height: auto; }
+
+.makeui-antd-surface-slot,
+.makeui-antd-surface-content { height: 100%; min-height: 0; }
+.makeui-antd-page > .makeui-antd-surface-slot { flex: 1; height: auto; }
+
+.makeui-antd-form-container,
+.makeui-antd-detail-container {
+  min-width: 0;
+  container-name: makeui-record;
+  container-type: inline-size;
+}
+
+.makeui-antd-form-container {
+  border: 1px solid var(--makeui-border);
+  border-radius: var(--makeui-radius, 8px);
+  padding: var(--makeui-gap, 16px);
+  background: var(--makeui-surface);
+  box-shadow: var(--makeui-shadow, none);
+}
+
+.makeui-antd-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--makeui-gap, 16px) var(--makeui-column-gap, 20px);
+}
+
+.makeui-antd-form-item {
+  min-width: 0;
+}
+
+.makeui-antd-form-item-wide {
+  grid-column: 1 / -1;
+}
+
+.makeui-antd-field-label {
+  font-size: var(--makeui-role-field-label-size, 14px);
+  display: inline-flex;
+  max-width: 100%;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  color: inherit;
+}
+
+.makeui-antd-field-label > svg {
+  flex: none;
+}
+
+.makeui-antd-field-name {
+  min-width: 0;
+}
+
+.makeui-antd-detail {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: var(--makeui-detail-column-gap, 28px);
+  margin: 0;
+}
+
+.makeui-antd-detail-item {
+  box-sizing: border-box;
+  display: grid;
+  min-height: var(--makeui-detail-row-height, 44px);
+  min-width: 0;
+  grid-template-columns: minmax(100px, 32%) minmax(0, 1fr);
+  align-items: start;
+  gap: calc(var(--makeui-gap, 16px) * .75);
+  border-bottom: 1px solid var(--makeui-border);
+  padding: var(--makeui-detail-row-padding, 11px) 0;
+}
+
+.makeui-antd-detail-item-wide {
+  grid-column: 1 / -1;
+  grid-template-columns: minmax(100px, 16%) minmax(0, 1fr);
+}
+
+.makeui-antd-detail-item > dt {
+  min-width: 0;
+  color: var(--makeui-muted);
+  font-size: var(--makeui-role-meta-size, 12px);
+  line-height: var(--makeui-line-height, 1.5);
+}
+
+.makeui-antd-detail-item > dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: var(--makeui-ink);
+  font-size: var(--makeui-role-body-size, 14px);
+  line-height: var(--makeui-line-height, 1.5);
+  white-space: pre-wrap;
+}
+
+@container makeui-record (max-width: 559px) {
+  .makeui-antd-form-grid,
+  .makeui-antd-detail {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .makeui-antd-detail-item-wide {
+    grid-template-columns: minmax(100px, 32%) minmax(0, 1fr);
+  }
+}
+
+.makeui-antd-shell {
+  box-sizing: border-box;
+  display: grid;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  grid-template-columns: var(--makeui-single-sidebar, 208px) minmax(0, 1fr);
+  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-areas: 'brand header' 'navigation main';
+  overflow: hidden;
+  background: var(--makeui-bg);
+  color: var(--makeui-ink);
+  font-family: var(--makeui-font);
+  font-size: var(--makeui-font-size);
+  line-height: var(--makeui-line-height);
+  letter-spacing: var(--makeui-tracking);
+}
+
+.makeui-antd-shell-region[hidden] { display: none; }
+.makeui-antd-shell-brand { grid-area: brand; }
+.makeui-antd-shell-primary { grid-area: primary; }
+.makeui-antd-shell-navigation { grid-area: navigation; }
+.makeui-antd-shell-header { grid-area: header; }
+.makeui-antd-shell-main { grid-area: main; }
+
+.makeui-antd-shell-brand,
+.makeui-antd-shell-primary,
+.makeui-antd-shell-navigation {
+  box-sizing: border-box;
+  min-width: 0;
+  min-height: 0;
+  overflow: auto;
+  border-inline-end: 1px solid var(--makeui-border);
+  padding: var(--makeui-gap);
+  background: var(--makeui-sidebar-bg);
+  color: var(--makeui-sidebar-fg);
+}
+
+.makeui-antd-shell-brand {
+  display: flex;
+  align-items: center;
+  overflow: hidden;
+}
+
+.makeui-antd-shell-navigation [aria-current='page'],
+.makeui-antd-shell-navigation [aria-current='true'],
+.makeui-antd-shell-primary [aria-current='page'],
+.makeui-antd-shell-primary [aria-current='true'] {
+  border-radius: var(--makeui-radius);
+  background: var(--makeui-sidebar-active);
+  color: var(--makeui-sidebar-fg);
+}
+
+.makeui-antd-shell-header {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: var(--makeui-gap);
+  border-bottom: 1px solid var(--makeui-border);
+  padding: var(--makeui-header-padding-block) var(--makeui-header-padding-inline);
+  background: var(--makeui-surface);
+  color: var(--makeui-ink);
+}
+
+/* A fixed workspace header identifies the container; pageTitle belongs to existing content titles. */
+.makeui-antd-shell-title {
+  flex: 1;
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: inherit;
+  font-family: var(--makeui-heading-font);
+  font-size: var(--makeui-role-record-title-size, 16px);
+  line-height: var(--makeui-line-height);
+  letter-spacing: var(--makeui-heading-tracking, 0em);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.makeui-antd-shell-header-end { flex: none; }
+.makeui-antd-shell-main { box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; min-width: 0; overflow: hidden; }
+.makeui-antd-shell-content { flex: 1; min-width: 0; min-height: 0; overflow: auto; }
+.makeui-antd-shell-illustration,
+.makeui-antd-shell-secondary { margin-block-start: var(--makeui-gap); }
+.makeui-antd-shell-illustration img { max-width: 100%; height: auto; }
+.makeui-antd-shell-secondary { padding: var(--makeui-gap); background: var(--makeui-surface-warm); color: var(--makeui-ink); border-radius: var(--makeui-radius); box-shadow: var(--makeui-shadow); }
+.makeui-antd-shell-secondary[data-secondary-style='outline'] { border: 1px solid var(--makeui-border-strong); background: var(--makeui-surface); box-shadow: none; }
+.makeui-antd-shell-secondary[data-secondary-style='accent'] { border-inline-start: 3px solid var(--makeui-primary); background: color-mix(in srgb, var(--makeui-primary) 10%, var(--makeui-surface)); }
+.makeui-antd-shell-secondary[data-secondary-style='system'] { background: var(--makeui-surface); }
+.makeui-antd-shell-secondary[data-secondary-style='disabled'] { padding: 0; border: 0; background: transparent; box-shadow: none; }
+
+.makeui-antd-shell[data-navigation='double'] { grid-template-columns: var(--makeui-primary-rail, 64px) var(--makeui-secondary-sidebar, 184px) minmax(0, 1fr); grid-template-areas: 'brand navigation header' 'primary navigation main'; }
+.makeui-antd-shell[data-navigation='rail'] { grid-template-columns: var(--makeui-rail, 68px) minmax(0, 1fr); }
+.makeui-antd-shell[data-navigation='workspace'] { grid-template-columns: var(--makeui-workspace-sidebar, 240px) minmax(0, 1fr); }
+.makeui-antd-shell[data-navigation='top'] { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto auto minmax(0, 1fr); grid-template-areas: 'header' 'navigation' 'main'; }
+.makeui-antd-shell[data-navigation='top'] > .makeui-antd-shell-navigation { display: flex; align-items: center; gap: var(--makeui-gap); border-inline-end: 0; border-bottom: 1px solid var(--makeui-border); }
+.makeui-antd-shell[data-navigation='rail'] > .makeui-antd-shell-navigation,
+.makeui-antd-shell[data-navigation='double'] > .makeui-antd-shell-primary { padding-inline: calc(var(--makeui-gap) / 2); }
+
+.makeui-antd-shell[data-surface='boxed'] > .makeui-antd-shell-main,
+.makeui-antd-shell[data-surface='inset'] > .makeui-antd-shell-main { padding: var(--makeui-content-padding); }
+.makeui-antd-shell[data-surface='boxed'] > .makeui-antd-shell-main > .makeui-antd-shell-content { border: 1px solid var(--makeui-border); border-radius: var(--makeui-radius); background: var(--makeui-surface); box-shadow: var(--makeui-shadow); }
+.makeui-antd-shell[data-surface='inset'] > .makeui-antd-shell-main { background: var(--makeui-surface-warm); }
+.makeui-antd-shell[data-surface='inset'] > .makeui-antd-shell-main > .makeui-antd-shell-content { background: var(--makeui-surface); border-radius: var(--makeui-radius); }
+.makeui-antd-form-container[data-component-panels='flat'] { border-color: transparent; background: transparent; }
+.makeui-antd-form-container[data-presentation='aurora'],
+.makeui-antd-shell[data-presentation='aurora'] > .makeui-antd-shell-header { background: linear-gradient(110deg, color-mix(in srgb, var(--makeui-primary) 10%, var(--makeui-surface)), var(--makeui-surface) 70%); }
+.makeui-antd-form-container[data-presentation='editorial'] { border-inline: 0; border-bottom: 0; background: transparent; }
+.makeui-antd-shell[data-presentation='editorial'] > .makeui-antd-shell-header { background: transparent; border-bottom-color: var(--makeui-border-strong); }
+.makeui-antd-form-container[data-presentation='bold'] { border-inline-start: 3px solid var(--makeui-primary); }
+.makeui-antd-shell[data-presentation='bold'] > .makeui-antd-shell-header { border-bottom: 3px solid var(--makeui-primary); }
+.makeui-antd-field-label > svg { stroke-width: var(--makeui-icon-stroke, 1.75); }
+.makeui-antd-shell-navigation svg,
+.makeui-antd-shell-primary svg,
+.makeui-antd-action svg { stroke-width: var(--makeui-icon-stroke, 1.75); }
+.makeui-antd-shell-header,
+.makeui-antd-form-container { transition: background var(--makeui-motion-duration, 160ms), box-shadow var(--makeui-motion-duration, 160ms); }
+.makeui-antd-surface,
+.makeui-antd-page { letter-spacing: var(--makeui-tracking, normal); color-scheme: var(--makeui-mode, light); }
+.makeui-antd-shell code,
+.makeui-antd-surface-body code { font-family: var(--makeui-mono-font); }
+@media (prefers-reduced-motion: reduce) {
+  .makeui-antd-shell-header,
+  .makeui-antd-form-container { transition-duration: 0ms; }
+}
+
+.makeui-antd-field-label[data-font-role='meta'],
+.makeui-antd-surface-status { font-size: var(--makeui-role-meta-size, 12px); }
+.makeui-antd-shell-brand-content { flex: 1; min-width: 0; max-width: 100%; }
+.makeui-antd-shell-top-brand { min-width: 0; max-width: 100%; }
+.makeui-antd-shell-brand-label { display: block; min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.makeui-antd-shell[data-navigation='double'] > .makeui-antd-shell-brand { padding-inline: min(calc(var(--makeui-gap) / 2), calc(var(--makeui-primary-rail, 64px) / 4)); }
+.makeui-antd-shell[data-navigation='rail'] > .makeui-antd-shell-brand { padding-inline: min(calc(var(--makeui-gap) / 2), calc(var(--makeui-rail, 68px) / 4)); }

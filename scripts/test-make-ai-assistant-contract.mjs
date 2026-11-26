@@ -25,6 +25,16 @@ assert.ok(packagePins.length, 'CI must verify the official Agent package');
 for (const [, version] of packagePins)
   assert.equal(version, '0.4.6', 'all Agent CI consumers must use the verified release');
 assert.match(workflow, /node skills\/make-ai-assistant\/scripts\/verify-agent-terminal-notice\.mjs/);
+const service = fs.readFileSync(path.join(root, 'skills/make-app-service/SKILL.md'), 'utf8');
+assert.ok(service.includes('../make-ai-assistant/references/package-integration.md'),
+  'Service must refer to the Agent package baseline');
+assert.doesNotMatch(service, /\b\d+\.\d+\.\d+\s+(?:Agent Public API v1|public `assertAgentRequest`)/u,
+  'the Service Agent instructions must inherit the SDK release from the Agent Skill');
+const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
+const overview = readme.match(/^### make-ai-assistant\n([^\n]+)/mu)?.[1];
+assert.ok(overview?.includes('@qfei-design/make-ai-assistant@' + packagePins[0][1]),
+  'the README introduction must identify the verified SDK release');
+assert.doesNotMatch(overview, /\bSkill\s+\d+\.\d+\.\d+/iu, 'the README must not duplicate Skill metadata');
 for (const file of fs.readdirSync(path.join(skill, 'references'))) {
   assert.ok(
     guide.includes('references/' + file),

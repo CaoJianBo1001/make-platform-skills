@@ -1,6 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { createRequire } from 'node:module';
+import path from 'node:path';
+import { runInNewContext } from 'node:vm';
 
 const read = file => readFile(new URL(`../skills/${file}`, import.meta.url), 'utf8');
 
@@ -27,10 +30,72 @@ test('resource composition checks runtime read denial above arbitrary business c
   assert.ok(example, 'a host composition example is discoverable');
   assert.match(example, /recordAccess\.kind === "forbidden"/u);
   assert.ok(example.indexOf('recordAccess.kind === "forbidden"') < example.indexOf('return <ObjectPage'), 'runtime read rejection returns before the business page mounts');
-  assert.match(example, /<AppShell>[\s\S]*<ObjectRouteGuard/u);
   assert.match(scoped, /business title, toolbar, search, statistics, table headers, rows, forms and dialogs/u);
   assert.match(scoped, /outside the replaced business subtree/u);
   assert.match(scoped, /unknown 403, 401 and service failures are not permission denial/u);
+});
+
+const feedbackDependencies = process.env.MAKE_FEEDBACK_TEST_DEPENDENCIES;
+test('the App shell mounts the assistant outside the object guard', {
+  skip: feedbackDependencies ? false : 'runs in the CI feedback step with TypeScript',
+}, async () => {
+  const require = createRequire(path.resolve(feedbackDependencies, 'resource-feedback-test.cjs'));
+  const ts = require('typescript');
+  const guide = await read('make-app-permission/references/scoped-route-feedback.md');
+  const jsx = guide.match(/```jsx\n([\s\S]*?)\n```/u)?.[1];
+  assert.ok(jsx, 'expected the documented router example');
+  const source = ts.createSourceFile('router.jsx', jsx, ts.ScriptTarget.Latest, true, ts.ScriptKind.JSX);
+  assert.equal(source.parseDiagnostics.length, 0, 'expected valid JSX');
+  const router = source.statements.find(node => ts.isFunctionDeclaration(node) && node.name?.text === 'AppRouter');
+  assert.ok(router?.body, 'expected AppRouter');
+
+  const shells = [];
+  const guards = [];
+  const assistants = [];
+  function visit(node) {
+    if (ts.isJsxElement(node) || ts.isJsxSelfClosingElement(node)) {
+      const name = (node.openingElement ?? node).tagName.getText(source);
+      if (name === 'AppShell') shells.push(node);
+      if (name === 'ObjectRouteGuard') guards.push(node);
+    }
+    if (ts.isJsxExpression(node) && node.expression?.getText(source) === 'assistantEntry'
+        && !ts.isJsxAttribute(node.parent)) assistants.push(node);
+    ts.forEachChild(node, visit);
+  }
+  visit(router.body);
+  assert.equal(shells.length, 1);
+  assert.equal(guards.length, 1);
+  assert.equal(assistants.length, 1);
+  assert.ok(ts.findAncestor(guards[0], node => node === shells[0]), 'the guard is inside the shell');
+  assert.ok(ts.findAncestor(assistants[0], node => node === shells[0]), 'the assistant is inside the shell');
+  assert.ok(!ts.findAncestor(assistants[0], node => node === guards[0]), 'the assistant is outside the guard');
+});
+
+test('the documented Agent context follows the current authorized page', async () => {
+  const guide = await read('make-ai-assistant/references/make-app-host-integration.md');
+  const expression = guide.match(/context=\{(\{[\s\S]*?\n  \})\}/u)?.[1];
+  assert.ok(expression, 'expected the context passed to MakeAppAssistantEntry');
+  const appRootPath = '/apps/sample';
+  const resource = { entityKey: 'Orders', recordId: 'row-7' };
+  const pathname = appRootPath + '/Orders/row-7';
+  const render = (currentPage, route) => JSON.parse(runInNewContext(`JSON.stringify(${expression})`, {
+    currentPage, appRootPath, appId: 'app-1', appName: 'Sample', navigator: { language: 'en' },
+    ...route,
+  }));
+  const allowed = { kind: 'allowed', pathname, resource };
+  const context = render(allowed, { pathname, ...resource });
+  assert.deepEqual(context.resource, resource);
+  assert.equal(context.location.pathname, pathname);
+  for (const kind of ['forbidden', 'pending', 'unavailable']) {
+    // The old page data and the new raw URL can both still be in memory.
+    const context = render({ ...allowed, kind }, {
+      pathname: '/apps/sample/Invoices/row-9', entityKey: 'Invoices', recordId: 'row-9',
+    });
+    assert.equal(context.resource, undefined, kind + ' page exposed its resource');
+    assert.equal(context.location.pathname, appRootPath, kind + ' page exposed its URL');
+    assert.doesNotMatch(JSON.stringify(context), /Orders|Invoices|row-[79]/u);
+  }
+  assert.equal(render({ kind: 'allowed', pathname: '/help' }, { pathname: '/help' }).resource, undefined);
 });
 
 test('UI composition replaces the entire business slot without changing operation feedback', async () => {

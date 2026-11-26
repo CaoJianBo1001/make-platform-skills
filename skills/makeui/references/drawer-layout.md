@@ -15,7 +15,15 @@
 
 ## Default mode
 
+本文件统一维护 Make 表单／详情展示标准；MakeDesign 提供风格、布局选择及预览，不另行定义控件行为或表单规范。实现与快照同步遵循 [维护边界](component-usage.md#设计方案与组件实现的维护边界)。
+
+无论视觉来源是 MakeDesign 还是组件库默认主题，都使用同一套表单与详情骨架。骨架保证字段标签／值／错误、授权内容及动作位置的一致语义；颜色、字体、间距、圆角与状态样式仍从当前方案读取，不能用下文的默认数值替代方案明确给出的值。MakeDesign 依完整方案通过公开能力适配，不解除字段类型图标或 Make 字段合同。默认 AntD 接入见 [AntD 基座](antd-foundation.md)；用户指定其他库时保留该库，按同一合同实现，不混入 AntD。
+
+新项目先形成 [页面设计基线与视觉验收](page-design-quality.md) 中的页面区域、字段分组和密度决策，再复用本骨架。下文桌面列数及视觉数值是缺少对应有效方案值时的回退；以所属容器的实际可用宽度、长标签和复杂控件检查适配，不根据浏览器总宽度强行保留双列。手机继续使用独立的移动字段与任务页合同，不应用本节桌面标签方向、面板或列数。
+
 Desktop and tablet create, edit, and detail UIs use a right-side Drawer by default. An explicit surface choice for ordinary record detail in a [MakeDesign plan](component-usage.md#makedesign-branch) takes precedence over the default placement and width. Phone CRUD uses the package-backed full-screen task route from `mobile-defaults.md`; it is not a resized Drawer.
+
+新建／编辑默认 `60%`，全屏可扩至 `100%`，窄容器按原平台适配；详情选择不得把 `560px` 或 `960px` 套到新建/编辑。只有普通记录详情消费方案显式的 page／drawer／wide-drawer；缺省或 system 不构成改用固定宽度的授权。
 
 - placement: right; use `placement="right"` for Drawer components and `side="right"` for shadcn/ui Sheet
 - default width: `60%`
@@ -83,32 +91,35 @@ Recommended structure:
 
 Form layout:
 
+- 标签、必填、字段图标、帮助与错误槽由同一个字段包装层负责；控件适配器只拥有输入与值转换。使用 `Form.Item` 等基座字段包装时，不在子控件里再重复渲染标签；所有控件填满所属值槽，label 与 control 的布局选择器必须匹配实际宿主 DOM。
 - group fields into sections
 - create/edit forms use a dedicated modifier class or style scope when their visual treatment differs from detail Drawers
 - default to vertical labels in a two-column grid for metadata-driven forms, because field labels may be long or unpredictable
 - horizontal label/value alignment remains acceptable when labels are short, stable, or already established by the project
 - use the active theme’s background for the Drawer body and its surface color for form panels
-- keep form panels compact: moderate padding, 6-8px radius, thin neutral border, and low shadow at most
-- common fields use a two-column grid on desktop; do not render every field as full-width one-column rows unless the user explicitly asks
+- keep form panels compact; padding, radius, border, and shadow follow the selected plan, with moderate padding, 6-8px radius, thin neutral border, and low shadow as unconfigured fallbacks
+- common fields default to a two-column grid on desktop when the owning container has enough space; narrow containers, long labels, or complex controls may use one column without an additional user instruction
 - long text, descriptions, URL/link fields, attachments, lookup/relation controls, and rich content span full width
-- collapse to one column on small screens
+- collapse the desktop grid to one column when its owning content area is too narrow; phone fields still use the independent mobile contract
 - show form-level save errors as a compact `Alert` above the first form panel
-- keep control height and radius consistent, for example 36px controls with 6px radius when using Ant Design
+- keep control height and radius consistent with the selected plan; 36px controls with 6px radius are an unconfigured Ant Design fallback, not a theme override
 
-Unless the user or existing project asks otherwise, use the platform create/edit Drawer as the default visual baseline:
+Preserve the default create/edit container below unless the user or existing project requests another one. Visual dimensions, panel treatment, and column count are unconfigured fallbacks; consume effective plan values first and record their source in the page design baseline:
 
 - `Drawer` on the right, width `60%`, fullscreen toggle can expand to `100%`
 - `layout="vertical"` form, `colon={false}`
 - header badge shows mode such as `新建` or `编辑`; right side contains primary save and final close
-- one form panel for normal writable fields, and a second section panel for relation/association fields when needed
+- group authorized fields by the confirmed business task; normal writable fields may share one panel, with a relation/association section only when it improves the actual content organization
 - panel padding around `16px`, thin neutral border, 8px radius, low shadow at most
 - grid `repeat(2, minmax(0, 1fr))` with roughly `10px 18px` gaps
 - field item margin around `10px`, label padding around `6px`, 36px controls, and textarea min-height around `96px`
-- normal metadata-driven fields occupy one grid column by default
+- normal metadata-driven fields occupy one grid column by default while the available content width supports two readable columns
 - full-span rows only for wide controls: `Make.Field.TextArea`, URL/link fields, `Make.Field.File`, `Make.Field.Lookup`, relation/association selectors, long text, attachment-heavy values, or otherwise wide controls
 - body scrolls inside the Drawer; the page behind it does not scroll
 
 Default create/edit field span mapping:
+
+The mapping describes the desktop two-column default. It does not forbid a one-column desktop layout when the owning content area needs it, and does not define phone field rows.
 
 | Field type / group | Desktop span |
 | --- | --- |
@@ -175,7 +186,7 @@ Apply the zero-field state above before selecting a detail grid, list, card, or 
 
 Use horizontal label/value alignment by default on desktop:
 
-- two-column grid for common fields
+- two-column grid for common fields when the owning content area supports it; narrow areas, long labels, and complex values may use one column without an additional user instruction
 - user fields render read-only avatar/name values; department fields render read-only tag/name values
 - detail identity fields should use labels from the record or host candidate source and should not degrade to raw ids or disabled text inputs without an explicit dependency/error state
 - every value is rendered through a field-type display adapter before JSX. Detail components must not display raw arrays, objects, or JSON wrappers directly.

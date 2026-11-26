@@ -4,7 +4,7 @@
 
 ## 安装产物门禁
 
-以下公开组件及表单底栏单行溢出能力已核验正式 npm `0.1.14` 产物。接入前仍须核对目标 App 实际安装的版本、exports、声明与运行行为，依赖清单、锁文件和实际解析结果一致；不以组件源码工作树或另一 App 的安装结果代替。依赖不可用时报告 package release blocker，不改用本地路径、复制组件或向旧包虚构 props。保留旧的 `MobileFormActionBar label/onSubmit` 兼容路径，不要求其他既有页面同时迁移。
+以下公开组件、表单底栏单行溢出、移动主题与字段值链接样式已核验正式 npm `0.1.15` 产物。新接入固定使用该版本，接入前仍须核对目标 App 实际安装的版本、exports、声明与运行行为，依赖清单、锁文件和实际解析结果一致；不以组件源码工作树或另一 App 的安装结果代替。依赖不可用时报告 package release blocker，不改用本地路径、复制组件或向旧包虚构 props。保留旧的 `MobileFormActionBar label/onSubmit` 兼容路径，不要求其他既有页面同时迁移。主题 Provider、38个字段及随包旧候选文案的判定见 [手机主题](mobile-theme.md)。
 
 ```tsx
 import {
@@ -32,7 +32,7 @@ import '@qfei-design/make-app-mobile/styles.css';
 
 ## 单行与更多操作
 
-新增或改造手机多动作表单底栏，使用正式 `@qfei-design/make-app-mobile@0.1.14`，或经过同等验证的后续正式版本。按包内 `package.ai.json` 的阅读顺序核对 `capabilities.json` 中的 `capabilities.mobileFormActionOverflow`、公开类型及 ESM/CJS/样式入口；版本或能力标记单独存在不能证明交互正确。上面的 `--detail` 脚本只检查既有表面合同，不验证此能力标记、溢出行为或类型，不能把通过该命令当作“更多”验收完成。
+新增或改造手机多动作表单底栏，新接入固定使用正式 `@qfei-design/make-app-mobile@0.1.15`；`0.1.14` 是单行溢出能力的历史起点，不作为本轮新接入版本。按包内 `package.ai.json` 的阅读顺序核对 `capabilities.json` 中的 `capabilities.mobileFormActionOverflow`、公开类型及 ESM/CJS/样式入口；版本或能力标记单独存在不能证明交互正确。上面的 `--detail` 脚本只检查既有表面合同，不验证此能力标记、溢出行为或类型，不能把通过该命令当作“更多”验收完成。
 
 - 使用原 `actions` 数组，每项仍为 `{ key, label, onClick, disabled?, loading?, variant? }`，主操作由宿主显式传 `variant="primary"`，紧凑栏传 `size="small"`。没有新增的 overflow、maxVisible 或 moreActions props，也无需宿主拆分数组。
 - 包按容器、按钮实际宽度及间距自动分配：能放下时全部在一行；放不下时最右侧显示“更多”。优先保留第一个显式 primary，再按传入顺序选择其他动作；最终可见动作与菜单动作各自保持原顺序。极窄或单动作文案过长时允许只显示“更多”，全部授权动作仍可访问。不得固定“最多两个按钮”、强制折成两行、压窄按钮截字，或覆盖包私有 CSS。
@@ -41,6 +41,12 @@ import '@qfei-design/make-app-mobile/styles.css';
 - 只传当前宿主已存在且已授权的动作；“更多”不默认增加保存草稿、取消、撤回等业务能力。旧单动作 API 保持可用；普通详情编辑／删除的 `MobileBottomActionBar` 不因本合同被整体替换。
 
 宿主验收先挂载实际页面／共享布局及已安装公共包，沿用真实控制器，模拟外部请求覆盖展开菜单、执行、禁用／loading、连击、取消及宽度往返：断言原业务请求种类、次数、载荷和错误恢复，而不只检查传入 props。尺寸替身可用于可重复的分配和交互测试，不能证明实际布局。真实浏览器另验 320／390／767px、长标签、字体缩放、横竖屏、正文滚动及软键盘：底栏单行、更多位于最右、标签完整、弹层可滚动且不被安全区遮挡、关闭／重排焦点合理，桌面布局保持原设计。已安装产物、宿主组件、真实浏览器与飞书真机结果分别记录，未执行的项目标记待验。
+
+## URL 字段
+
+详情、只读字段及手机卡片按 [跨端链接字段](url-field-display.md) 保留 URL 语义及当前主题链接色，不能只在 PC 详情局部加色。使用当前包实际公开的链接能力；不能假定所有旧版 `MobileFieldRow` 或卡片都会自动把字符串识别为 URL。
+
+`MobileFieldRow` 使用原有 `children`，不会自动把字符串转为 URL。宿主传入经过校验的语义 anchor，包负责字段值内 `a[href]` 的链接色、长值换行和 hover／键盘 focus。链接色公开主题变量为 `--make-mobile-link-color`，默认 `#1677ff`；显式主题覆盖应仍可识别为链接。正式 `0.1.15` 已包含该 URL 链接样式；历史 `0.1.14` 尚未包含，接入须核验目标安装产物，不向旧版虚构 props、不用包源码版本或本地 tgz 宣称已发布。审批 `renderField` 及普通详情值仍复用宿主 Link，包不解析协议、不代管路由或审批动作。
 
 ## 间距归属与常见误用
 

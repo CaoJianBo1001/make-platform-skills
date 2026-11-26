@@ -10,6 +10,8 @@ Use this priority:
 
 Do not force Less if the project already uses CSS Modules, Tailwind, styled-components, or another convention.
 
+新项目先按 [页面设计基线与视觉验收](page-design-quality.md) 记录视觉来源、区域间距、内容密度和桌面／手机页面组合。所选方案明确的视觉值优先；本文件的圆角、间距及列数仅作对应值缺失时的回退。布局稳定性、字段／权限／受控值、独立手机 View 及公开弹层合同不随视觉选择取消。
+
 ## Layout stability
 
 For app shells and list pages:
@@ -71,11 +73,11 @@ Avoid:
 
 - keep create/edit form Drawer styling scoped away from list and detail views
 - use the active theme’s background and surface colors for the Drawer body and grouped panels. The default light theme can use white panels
-- keep panel styling restrained: thin neutral border, 6-8px radius, moderate padding, low shadow at most
-- in percentage-based Drawers, prefer stable two-column grids such as `repeat(2, minmax(0, 1fr))` with `min-width: 0` children
-- keep common fields in two columns on desktop; avoid one full-width row per field unless the user explicitly asks
+- keep panel styling restrained and consume the selected plan; thin neutral border, 6-8px radius, moderate padding, and low shadow are only unconfigured fallbacks
+- in percentage-based Drawers, default to stable two-column grids such as `repeat(2, minmax(0, 1fr))` with `min-width: 0` children when the owning content area has enough room
+- keep common fields in two columns on desktop by default; narrow containers, long labels, or complex controls may use one column without an additional user instruction
 - treat fixed minimum column widths as an overflow risk; use them only after checking the target Drawer width and breakpoint behavior
-- align label typography, control height, border radius, and focus ring with existing project tokens or Ant Design defaults before adding custom values
+- align label typography, control height, border radius, and focus ring with the effective plan and selected component library's public tokens; use verified library defaults only for missing values
 - let `TextArea`, long text, URL/link, file, lookup/relation, description, attachment-heavy, and rich controls span full width when it improves readability
 - omit file upload fields in create mode when upload needs a saved record identity; show attachment controls only after a persisted record exists
 - header button density can be slightly more relaxed when a form needs it, but changes should stay scoped away from list and detail action styling
@@ -83,7 +85,7 @@ Avoid:
 ## Detail Drawer polish
 
 - use compact horizontal label/value rows on desktop
-- use a two-column detail grid for common fields
+- use a two-column detail grid for common fields by default, adapting to one column when the actual content width or value complexity requires it
 - make `TextArea`, long text, file, lookup/relation, URL/link-rich, and attachment-heavy values span full width
 - prefer subtle row dividers over card-per-field layouts
 - keep labels subdued and values readable with safe wrapping

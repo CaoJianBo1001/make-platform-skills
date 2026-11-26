@@ -40,10 +40,19 @@ const cases = [
     text => text.replace('已有记录发起 `/workflow/v1/bpm-process` 与任务办理 `/workflow/v1/bpm-task` 不自动注入或改写保存状态',
       '已有记录发起 `/workflow/v1/bpm-process` 与任务办理 `/workflow/v1/bpm-task` 也自动注入正常保存状态'),
     /existing starts and tasks must keep their own payloads/],
-  ['restored host Button fallback', controls,
-    text => text.replace(/^单动作使用公开 `MobileFormActionBar`；多动作使用[^\n]+/m,
-      '单动作使用公开 `MobileFormActionBar`；多动作允许在一个宿主 footer 内组合两个或三个 Button。'),
-    /mobile multiple actions must not restore the host Button fallback/],
+  ['legacy host Button fallback', controls,
+    text => text.replace(/^(单动作使用公开[^\n]+)/m,
+      '$1 允许在一个宿主表单 footer 内使用两个或三个 Button。'),
+    /must not restore the legacy host Button fallback/],
+  ['missing public multi-action API', controls,
+    text => text.replace('`MobileFormActionBar actions`', '`MobileFormActionBar`'),
+    /all save-intent combinations must use the public mobile multi-action API/],
+  ['obsolete new-integration mobile baseline', controls,
+    text => text.replace('正式移动包 0.1.15', '正式移动包 0.1.14'),
+    /new save-intent integrations must use the verified formal mobile 0\.1\.15 baseline/],
+  ['missing shared overflow handoff', 'skills/make-app-approval/references/initiation-contract.md',
+    text => text.replace('mobile-detail-components.md#单行与更多操作', 'mobile-detail-components.md'),
+    /save-intent guidance must route to the shared overflow contract/],
 ];
 
 try {

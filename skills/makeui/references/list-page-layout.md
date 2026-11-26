@@ -17,6 +17,8 @@ They must live inside the Make App shell. Do not generate a list page that owns 
 
 Default object-list scaffold:
 
+以下侧栏／顶栏描述是没有对应有效方案选择时的桌面回退；所选导航及视觉值按 [Shell 展示优先级](app-shell-layout.md#presentation-priority) 应用，不能因复用列表模板而改回固定左侧栏。新项目先按 [页面设计基线与视觉验收](page-design-quality.md) 记录实际区域、工具栏和密度，再组合列表。手机列表仍使用下文独立 View，不继承桌面 Shell 和工具栏片段。
+
 1. App shell
 2. Left sidebar with module/object navigation
 3. Workspace header with selected object name on the left and current user shown on the right as a 32px circular avatar plus plain display name

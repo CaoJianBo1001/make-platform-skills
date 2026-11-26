@@ -9,7 +9,7 @@ Read this when generating or changing App/object/fixed-page guards. This owns la
 - If any authorized entry exists, the shell sits **outside** object/fixed-route guards. A denied destination replaces the **entire business content slot**, keeping the global identity header and authorized navigation (desktop sidebar or the host's mobile navigation). Unmount the business title, toolbar, search, statistics, table headers, rows, forms and dialogs; do not leave a disabled or empty business shell around the feedback.
 - Never infer an App-wide denial from the current object's absence, a record 403, or `data.record.read=false`. Never mount the shell only inside the allowed business page and return a standalone resource panel from the router.
 - Reuse authorized Schema/navigation data to build the shell independently of the denied object. Do not request denied records to obtain shell metadata or administrator help; do not expose the unavailable object's name/fields from stale or untrimmed Schema.
-- Keep target-bound business loaders and AI surfaces unmounted when route access or the resource's required read is denied. Independently authorized App-level features remain governed by their own gates.
+- On resource denial, unmount the target's loaders and AI surfaces such as “summarize this record”. App-level features follow their own access gates. In Apps that integrate the shared `MakeAppAssistantEntry`, keep it in the stable shell outside the object guard while App access holds. The package resolves Agent availability independently. Update its [page context](../../make-ai-assistant/references/make-app-host-integration.md#app-与身份) as soon as the target becomes unavailable.
 - Metadata/field authorization does not require keeping business headers mounted. If record read is denied locally, revoked on refresh, or explicitly refused by a current target's request, replace the same whole business content. Keep denial state outside the replaced business subtree, keyed by identity/App/target/access generation, so unmounting does not reset it and cause a fetch loop. Ignore stale target responses and clear cached records/counts/selections. This is resource denial, not App denial.
 - Only an object/page read refusal replaces the business content. A rejected save/export/create remains operation feedback, preserving allowed input. Independent create-only routes use their own operation/field requirements, not a blanket record-read gate.
 
@@ -17,14 +17,17 @@ Read this when generating or changing App/object/fixed-page guards. This owns la
 
 `AppPermissionFeedback` below is the App-owned adapter example from `makeui/references/permission-feedback.md`, not an npm/SDK export. Its `feedbackProps` carry established auth/context, contact payload, controlled retry status and the host refresh callback. `route` comes from the host's tested resolver; only explicit permission denial yields `forbidden`. Metadata allowed but Schema missing yields `unavailable`, not permission denial. This example is a record-reading object destination: `recordAccess` combines its current permission with classified request denial, and is owned above the business page. Other route kinds use their own required permissions.
 
+`appAccessReady` covers App-level checks. Object navigation and object-only permission checks update the guarded content and the optional assistant's page context within the mounted shell.
+
 ```jsx
-function AppRouter({ accessReady, hasAuthorizedEntry, route, recordAccess, feedbackProps, navigate }) {
-  if (!accessReady) return <AccessLoadingOrError />;
+function AppRouter({ appAccessReady, hasAuthorizedEntry, assistantEntry, route, recordAccess, feedbackProps, navigate }) {
+  if (!appAccessReady) return <AccessLoadingOrError />;
   if (!hasAuthorizedEntry) {
     return <AppPermissionFeedback {...feedbackProps} variant="page" scope="app" />;
   }
   return (
     <AppShell>
+      {assistantEntry}
       <ObjectRouteGuard route={route} recordAccess={recordAccess} feedbackProps={feedbackProps} navigate={navigate} />
     </AppShell>
   );
@@ -61,5 +64,6 @@ Use the host's existing browser/component test stack with isolated permission/Sc
 4. Post-load read revocation or a classified read 403: unmount the entire affected business content, remove cached records/counts/selections, and reject late responses without remount/fetch loops; retain authorized navigation/global identity header and access to another allowed destination. The rejecting request itself is not a forbidden subsequent request. Full-page App denial is permitted only when no authorized entry remains.
 5. No authorized object or fixed page: App-scope feedback, no shell/business route or protected request.
 6. Record-read-only denial retains authorized navigation, not business headers; unknown 403, 401 and service failures are not permission denial. Operation-only refusal keeps the business page and allowed draft, and recovery never replays the mutation.
+7. For Apps with the shared assistant, run the [Agent navigation and 403 scenarios](../../make-ai-assistant/references/testing-and-pitfalls.md#对象权限与全局对话) with the host router and the package entry.
 
 Missing these runtime assertions is a delivery blocker even if a static audit passes. Existing Apps do not inherit this behavior automatically; the generation guidance affects Apps using this Skill version, and older Apps require regeneration or a scoped migration.

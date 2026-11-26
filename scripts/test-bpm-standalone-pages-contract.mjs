@@ -23,6 +23,11 @@ const verifyRoutes = page => {
   assert.deepEqual(routes, ['/bpm/objects/:entityKey/new', '/bpm/tasks/:processInstanceId/:taskId', '/bpm/instances/:processInstanceId'],
     '地址表必须保留新建、任务和已确认的实例详情入口');
 };
+const verifyInstanceReleaseBaseline = page => {
+  assert.match(page, /0\.2\.14[^\n]*正式产物/,
+    '独立实例页须使用当前正式审批包 0.2.14 基线，历史能力另保留回归');
+  assert.doesNotMatch(page, /新能力为源码候选|源码候选的/);
+};
 
 // 只验证已知的文档冲突及交接边界，不作为宿主成功回调已实现的证据。
 const completionDocuments = () => ({
@@ -148,9 +153,18 @@ test('已发起合同可发现，区分任务和实例定位并保留后端授�
   assert.match(page, /不.*伪造.*taskId/);
   assert.match(page, /不.*普通.*Schema/);
   assert.match(page, /recordId.*未.*支持|未.*recordId/);
-  assert.match(page, /0\.2\.13[^\n]*正式产物/);
-  assert.doesNotMatch(page, /新能力为源码候选|源码候选的/);
+  verifyInstanceReleaseBaseline(page);
   assert.ok(!read('references/standalone-pages.md').includes('此能力不实现飞书配置、通知中心、Bot、流程引擎或实例级详情'));
+});
+
+test('故障注入：独立实例页不能沿用旧接入基线或将正式能力标为候选', () => {
+  const page = read('references/initiated-instances.md');
+  verifyInstanceReleaseBaseline(page);
+  for (const [before, after] of [['0.2.14', '0.2.13'], ['正式产物', '源码候选的产物']]) {
+    const changed = page.replaceAll(before, after);
+    assert.notEqual(changed, page, '故障注入必须改变实例合同');
+    assert.throws(() => verifyInstanceReleaseBaseline(changed), { code: 'ERR_ASSERTION' });
+  }
 });
 
 test('文档一致性：成功回调按普通容器与 BPM 独立页分别交接并保留成功结果', () => {

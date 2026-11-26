@@ -4,18 +4,19 @@
 
 ## 产物与职责
 
-- 当前已核验正式基线 0.2.13 包含手机列表、详情布局插槽与详情字段展示参数，见 [包与列表](package-and-list.md#多端边界)。以实际安装的 exports、类型和行为为门禁；旧版本缺少能力时升级正式依赖，不以本地链接替代交付。审批包和 make-app-mobile 的能力分别核验。
+- 当前已核验正式基线 0.2.14 包含手机列表、详情布局插槽与详情字段展示参数，见 [包与列表](package-and-list.md#多端边界)。以实际安装的 exports、类型和行为为门禁；旧版本缺少能力时升级正式依赖，不以本地链接替代交付。审批包和 make-app-mobile 的能力分别核验。
 - 包拥有 MyApprovalsPage 的查询、列表、追加页、取消和重试，ApprovalInstanceDetail 的只读加载、取消与重试，以及 ApprovalTaskDetail 的草稿、权限复核、校验、预上传与提交状态机。宿主只提供路由、Service provider、控件、字段展示、历史和布局适配。
 - 使用公开入口；不深导入 src/dist，不另写任务列表或办理 Controller。本机预览可以使用模拟接口，但不能当真实后端或真机验收。
+- 主题能力与边界见 [包主题说明](package-and-list.md#主题能力与边界)：0.2.14 未新增审批主题 Provider，移动控件的主题能力不等于审批私有详情外框主题化；控件、状态、Canvas 与包外框分别核验，不传入不存在的 API。
 
-**旧版升级：** 0.2.11 虽有手机列表和详情布局插槽，但不支持详情字段展示参数，字段外框仍为桌面尺寸；`fullWidth` 只能让字段独占一行，`renderField` 只替换值控件。该版本手机字段验收未通过时，升级至 0.2.13 并按下文接线复验，不在宿主覆盖私有结构或另写列表、办理控制器。
+**旧版升级：** 0.2.11 虽有手机列表和详情布局插槽，但不支持详情字段展示参数，字段外框仍为桌面尺寸；`fullWidth` 只能让字段独占一行，`renderField` 只替换值控件。该版本手机字段验收未通过时，升级至 0.2.14 并按下文接线复验，不在宿主覆盖私有结构或另写列表、办理控制器。
 
-**字段展示能力：** 已核验的 0.2.13 正式产物提供 `ApprovalTaskDetail.presentation?: "desktop" | "mobile"`，`ApprovalInstanceDetail.presentation` 使用相同枚举；传 `mobile` 启用下述手机字段外框，不传或传 `desktop` 保持桌面样式。详情和列表的 presentation 是各自组件的参数，必须分别传入；只升级版本不会自动启用详情手机模式。详情参数只调整包拥有的字段外框，宿主仍负责手机控件、路由、页头与底栏，不能期待包自动完成整页适配。
+**字段展示能力：** 已核验的 0.2.14 正式产物提供 `ApprovalTaskDetail.presentation?: "desktop" | "mobile"`，`ApprovalInstanceDetail.presentation` 使用相同枚举；传 `mobile` 启用下述手机字段外框，不传或传 `desktop` 保持桌面样式。详情和列表的 presentation 是各自组件的参数，必须分别传入；只升级版本不会自动启用详情手机模式。详情参数只调整包拥有的字段外框，宿主仍负责手机控件、路由、页头与底栏，不能期待包自动完成整页适配。
 
 ## 列表与筛选
 
 - 由已有响应式上下文显式选择 `presentation="mobile"`；不传时保持桌面。手机卡片不挂 Canvas，桌面/平板仍用原表格和查询/重置/刷新。
-- 启用的“待处理／已完成／已发起”页签栏与搜索区、卡片外缘共用左右留白；当前 0.2.13 包内手机搜索区和卡片列表的左右内边距为 16px。宿主 Tabs 通过公开布局参数与其实际边缘对齐，手机活动面板避免叠加桌面 padding，不覆盖公共组件私有结构；桌面间距保持原样。
+- 启用的“待处理／已完成／已发起”页签栏与搜索区、卡片外缘共用左右留白；当前 0.2.14 包内手机搜索区和卡片列表的左右内边距为 16px。宿主 Tabs 通过公开布局参数与其实际边缘对齐，手机活动面板避免叠加桌面 padding，不覆盖公共组件私有结构；桌面间距保持原样。
 - 通过包的 tabs 显式启用 initiated，与 PC 使用同一 provider；默认两任务页签不变。行类型以 referenceType 分流，不能因所有条目都来自“我的审批”而强制要求 taskId。
 
 | 条目 | 查询与筛选 | 全屏详情 |
@@ -43,7 +44,8 @@
 - 审批包的 sections.application 已拥有标题、字段 label、必填及错误布局；renderField 只返回值控件，不在其内再套 MobileFieldRow，也不为整个 application 再添加同名 MobileDetailSection 标题。宿主自建普通业务字段行/区块才使用这两个公共组件。连续任务详情用 MobileDetailPage 保留原 application/history ReactNode，opinion 和 feedback 进入尾部正文。只替换公开插槽；缺少必要结构或样式能力时报告包缺口，不复制 Controller、不删除包节点或修改 PC 共用模板。
 - 审批意见/撤回原因使用 MobileTextArea 默认两到五行、实际测量自动增高与内部滚动，字段 TextArea 使用 inline 外观；保留原受控值、字数、必填与错误，PC 不变。
 - 编辑/办理底栏使用 MobileFormActionBar size="small"。从 actionItems 映射 key=actionType，保留原 label/onClick/loading，disabled 合并包状态与宿主字段错误；APPROVE/SUBMIT 为 primary，其余为 default，沿用原动作语义。无动作不留空底栏；记录详情的编辑/删除等图标操作仍使用原 MobileBottomActionBar。
-- 新增或改造多动作底栏按 makeui 的 [单行与更多操作](../../makeui/references/mobile-detail-components.md#单行与更多操作) 使用已核验的移动包 `0.1.14`；不需要升级审批 npm 包来实现菜单。溢出由移动包测量，主操作优先、更多最右；全部授权动作仍可达，不因进入菜单改变 actionType、回调、禁用或校验语义。菜单打开／取消不提交，不另写办理请求；实例详情仍无办理底栏。
+- 新增或改造多动作底栏按 makeui 的 [单行与更多操作](../../makeui/references/mobile-detail-components.md#单行与更多操作) 使用已核验的移动包 `0.1.15`；不需要升级审批 npm 包来实现菜单。溢出由移动包测量，主操作优先、更多最右；全部授权动作仍可达，不因进入菜单改变 actionType、回调、禁用或校验语义。菜单打开／取消不提交，不另写办理请求；实例详情仍无办理底栏。
+- 单行与更多操作的能力从 `0.1.14` 起提供；新接入以已核验正式 `0.1.15` 为基线，存量项目仍核对锁定版本和实际能力，不因版本变化修改动作语义或新增草稿功能。
 - actionItems 回调直接复用包控制器，保留 loading/disabled、本地数字校验门禁、最新权限复核、重复提交保护与失败恢复。RETURN 不受业务数字错误阻断，仍只提交意见及唯一目标、空 recordPatch；不根据截图增加撤回/终止等动作。
 
 ## 手机布局接线参考
