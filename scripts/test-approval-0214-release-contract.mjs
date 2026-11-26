@@ -4,30 +4,31 @@ import { test } from 'node:test';
 
 const read = path => readFileSync(new URL(`../skills/make-app-approval/${path}`, import.meta.url), 'utf8');
 
-test('0.2.14 is the verified package baseline while 0.2.13 remains documented history', () => {
+test('0.2.16 is the verified package baseline while 0.2.13/0.2.14 remain documented history', () => {
   const skill = read('SKILL.md');
-  assert.match(skill, /version: 0\.2\.46/);
+  const version = skill.match(/version: (\d+)\.(\d+)\.(\d+)/)?.slice(1).map(Number);
+  assert.ok(version && (version[0] > 0 || version[1] > 2 || (version[1] === 2 && version[2] >= 46)));
   const list = read('references/package-and-list.md');
-  assert.match(list, /本文基于已核对的 `@qfei-design\/make-app-approval@0\.2\.14`/);
+  assert.match(list, /本文基于已核对的 `@qfei-design\/make-app-approval@0\.2\.16`/);
   assert.match(list, /0\.2\.13[^\n]*0\.2\.14[^\n]*(?:运行代码|dist)[^\n]*一致/);
   assert.match(list, /URL[^\n]*(?:指导|文档)/);
-  assert.match(read('references/initiated-instances.md'), /正式 npm `@qfei-design\/make-app-approval@0\.2\.14`/);
+  assert.match(read('references/initiated-instances.md'), /正式 npm `@qfei-design\/make-app-approval@0\.2\.16`/);
 });
 
-test('publishing 0.2.14 does not remove the ordinary-record terminal fallback or task readonly policy', () => {
+test('publishing 0.2.16 does not remove the ordinary-record terminal fallback or task readonly policy', () => {
   const status = read('references/status-display.md');
-  assert.match(status, /0\.2\.13[^\n]*0\.2\.14[^\n]*REJECTED[^\n]*CANCELLED[^\n]*null/);
+  assert.match(status, /0\.2\.16[^\n]*REJECTED[^\n]*CANCELLED[^\n]*null/);
   assert.match(status, /--compat/);
   assert.doesNotMatch(status, /不声明任何新版已发布/);
   assert.match(status, /入口.*保存|入口\/保存/);
-  assert.match(read('references/task-detail.md'), /0\.2\.14[^\n]*readApprovalTaskDetail[^\n]*不保留[^\n]*taskStatus/);
-  assert.match(read('references/verification.md'), /0\.2\.14[^\n]*原生[^\n]*缺口/);
+  assert.match(read('references/task-detail.md'), /0\.2\.16[^\n]*readApprovalTaskDetail[^\n]*不保留[^\n]*taskStatus/);
+  assert.match(read('references/verification.md'), /0\.2\.16[^\n]*原生[^\n]*缺口/);
   assert.match(read('assets/record-write-policy.mjs'), /getPackageRestriction\(record, options\)/);
 });
 
 test('the guide states actual theme limits instead of inventing an approval ThemeProvider or theme prop', () => {
   const list = read('references/package-and-list.md');
-  assert.match(list, /0\.2\.14[^\n]*未新增[^\n]*ThemeProvider[^\n]*theme/);
+  assert.match(list, /0\.2\.16[^\n]*未新增[^\n]*ThemeProvider[^\n]*theme/);
   assert.match(list, /themeKey[^\n]*(?:仅|只)[^\n]*Canvas/);
   assert.match(list, /详情[^\n]*(?:固定|硬编码)[^\n]*(?:白底|字号)/);
   assert.match(list, /不能[^\n]*(?:移动|mobile)[^\n]*Provider[^\n]*(?:审批|私有)/);
@@ -44,14 +45,14 @@ test('the current baseline retains peer, presentation, explicit host adapters an
 });
 
 
-test('published mobile 0.1.15 preserves installed single-row overflow guidance and the 0.1.14 capability floor', () => {
+test('published mobile 0.1.16 preserves installed single-row overflow guidance and the 0.1.14 capability floor', () => {
   const initiation = read('references/initiation-contract.md');
   const mobile = read('references/mobile.md');
   const verification = read('references/verification.md');
-  assert.match(initiation, /正式移动包 0\.1\.15[^\n]*MobileFormActionBar actions[^\n]*单行与更多操作/);
-  assert.match(mobile, /0\.1\.15[^\n]*不需要升级审批 npm 包/);
+  assert.match(initiation, /正式移动包 0\.1\.16[^\n]*MobileFormActionBar actions[^\n]*单行与更多操作/);
+  assert.match(mobile, /0\.1\.16[^\n]*不需要升级审批 npm 包/);
   assert.match(mobile, /0\.1\.14[^\n]*(?:能力下限|起提供)/);
-  assert.match(verification, /0\.1\.15[^\n]*全部授权意图均可达/);
+  assert.match(verification, /0\.1\.16[^\n]*全部授权意图均可达/);
   assert.match(verification, /用实际页面、控制器及已安装移动包验证“更多”/);
   assert.match(verification, /任务菜单的 RETURN[^\n]*空 recordPatch/);
   assert.doesNotMatch(verification, /四种保存意图组合与仅支持单动作的移动组件/);

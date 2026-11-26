@@ -357,12 +357,12 @@ test('desktop surface references honor the detail choice and use theme backgroun
   assert.match(design, /`page`[^\n]*`drawer`[^\n]*`wide-drawer`[^\n]*`system`/);
 });
 
-test('mobile theme integration uses verified npm 0.1.15 while explaining stale candidate metadata and old-package limits', () => {
+test('mobile theme integration uses verified npm 0.1.16 while explaining stale candidate metadata and old-package limits', () => {
   const mobileTheme = read(references + 'mobile-theme.md');
   assert.match(documents.foundation, /\]\(mobile-theme\.md\)/);
   assert.match(mobileTheme, /MakeMobileThemeProvider/);
   assert.match(mobileTheme, /toMakeMobileTheme\(currentDesign\)/);
-  assert.match(mobileTheme, /正式[^\n]*`0\.1\.15`/);
+  assert.match(mobileTheme, /正式[^\n]*`0\.1\.16`/);
   assert.match(mobileTheme, /registry\.npmjs\.org/);
   assert.match(mobileTheme, /SHA512/);
   assert.match(mobileTheme, /useMakeMobileTheme/);
@@ -381,7 +381,7 @@ test('mobile theme integration uses verified npm 0.1.15 while explaining stale c
     'sheetTitleSize', 'sheetBodySize', 'sheetMetaSize', 'sheetHeadingSize', 'lineHeight', 'letterSpacing',
     'controlRadius', 'actionRadius', 'shadow', 'iconStroke', 'motionDuration',
     'actionBackground', 'actionText', 'actionBorder',
-  ].sort(), 'document the 38 CSS-string fields present in the verified 0.1.15 declaration, including role separation');
+  ].sort(), 'document the 38 CSS-string fields present in the verified 0.1.16 declaration, including role separation');
   assert.match(mobileTheme, /不能[^\n]*私有[^\n]*选择器/);
   assert.match(mobileTheme, /document[^\n]*全局/);
   assert.match(mobileTheme, /Sheet[^\n]*16px[^\n]*48px/);

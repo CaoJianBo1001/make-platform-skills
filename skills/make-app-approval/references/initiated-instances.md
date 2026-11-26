@@ -4,9 +4,9 @@
 
 ## 包能力
 
-正式 npm `@qfei-design/make-app-approval@0.2.14` 的 `/list` 提供 `tabs={["pending", "approved", "initiated"]}`，默认仍为原两个任务页签，旧 provider 不会被动收到实例查询。`/detail` 提供 `ApprovalInstanceDetail`、`ApprovalInstanceProvider`；实例 reference 只有 processInstanceId，provider 只有 loadDetail，固定只读且没有 submitAction。
+正式 npm `@qfei-design/make-app-approval@0.2.16` 的 `/list` 提供 `tabs={["pending", "approved", "initiated"]}`，默认仍为原两个任务页签，旧 provider 不会被动收到实例查询。`/detail` 提供 `ApprovalInstanceDetail`、`ApprovalInstanceProvider`；实例 reference 只有 processInstanceId，provider 只有 loadDetail，固定只读且没有 submitAction。
 
-已核验 0.2.14 正式产物的公开类型和 ESM/CJS 导出。使用精确版本，UI 与 Service 同版，移除本地候选 tgz、file/link/workspace 包替代和 node_modules 补丁；干净安装、宿主回归及构建仍需通过，不以发布记录替代 App 验收。
+已核验 0.2.16 正式产物的公开类型和 ESM/CJS 导出。使用精确版本，UI 与 Service 同版，移除本地候选 tgz、file/link/workspace 包替代和 node_modules 补丁；干净安装、宿主回归及构建仍需通过，不以发布记录替代 App 验收。
 
 ## 列表
 

@@ -145,8 +145,8 @@ for (const file of [mobilePath,
 }
 requireText(mobile, /`MobileFormActionBar actions`/,
   'all save-intent combinations must use the public mobile multi-action API');
-requireText(mobile, /正式移动包\s*0\.1\.15/,
-  'new save-intent integrations must use the verified formal mobile 0.1.15 baseline');
+requireText(mobile, /正式移动包\s*0\.1\.16/,
+  'new save-intent integrations must use the verified formal mobile 0.1.16 baseline');
 assert.doesNotMatch(mobile, /两个或三个 Button|允许在[^\n]*宿主[^\n]*Button/,
   'released multi-action guidance must not restore the legacy host Button fallback');
 for (const file of [mobilePath,
