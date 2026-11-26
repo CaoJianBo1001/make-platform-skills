@@ -1,6 +1,6 @@
 /**
  * 普通记录三终态兼容：保留审批包的原有限制，补齐已通过、已拒绝和已撤回只读。
- * 0.2.11 仅覆盖 APPROVED，REJECTED/CANCELLED 尚须本适配器；不假定新版已发布。
+ * 已核验 0.2.13、0.2.14 仍仅覆盖 APPROVED，REJECTED/CANCELLED 尚须本适配器；未来版本仍按实际行为核验。
  * 不用于 Workflow 任务字段授权或删除；null 仍须通过宿主普通 IAM 检查。
  * @param {Readonly<Record<string, unknown>>} record 最新宿主记录
  * @param {typeof import('@qfei-design/make-app-approval').getRecordApprovalWriteRestriction} getPackageRestriction

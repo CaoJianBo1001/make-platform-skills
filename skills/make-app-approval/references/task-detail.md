@@ -18,7 +18,7 @@
 
 ### 已完成任务与无动作任务的只读归一化
 
-Workflow 已完成任务可能仍返回历史 `editPermission: { scope: "field", fields: [...] }`，这不授予当前编辑资格。已核验的包 0.2.13 中，`readApprovalTaskDetail` 仍不保留 `taskStatus`，字段是否可编辑取决于 editPermission；只传 `actions: []` 会去掉按钮，但不会自动去掉编辑控件。
+Workflow 已完成任务可能仍返回历史 `editPermission: { scope: "field", fields: [...] }`，这不授予当前编辑资格。已核验的包 0.2.13、0.2.14 中，`readApprovalTaskDetail` 仍不保留 `taskStatus`，字段是否可编辑取决于 editPermission；只传 `actions: []` 会去掉按钮，但不会自动去掉编辑控件。
 
 宿主在每次 loadDetail 中先保留原任务 taskStatus，按上述合同组装并用 `readApprovalTaskDetail` 校验原权限/动作。校验通过后，仅 `taskStatus === "PENDING"` 且存在当前有效 actions 时保留编辑权限；其他情况将交给包的 `editPermission` 收紧为 `{ scope: "NONE" }`，actions 置空。保留 viewPermission、可见字段和值；不要在校验前覆盖历史权限而掩盖 editable 越过 visible 等非法响应。可复用 [只读策略参考适配器](../assets/task-detail-policy.mjs)，它接收包公开的 decoder，不复制包实现。
 
@@ -55,6 +55,8 @@ Lookup 从节点字段保留 relationKey/targetFieldKey/targetFieldType，从 `d
 这是宿主已支持的输入形状，不假定所有 Workflow 版本都会展开名称。编辑草稿和最终补丁仍是 ID/null/ID 数组；新选择的名称从已获授权的候选 options 保留。只读或已完成任务不调用要求 PENDING/editPermission 的候选接口；只返回 ID 且没有已知名称时，沿用宿主 ID 文本占位，不能伪造名称、转为空值或偷偷查目标记录。名称必须完整的产品场景需确认合法的只读解析合同后再接入；不得把可编辑候选接口放宽为名称解析器。已删除引用保留原展示信息，不提供可打开的有效记录链接。
 
 ## 字段适配与写入
+
+URL 只读值按 [跨端链接字段](../../makeui/references/url-field-display.md) 复用普通记录字段注册表，PC／手机和已完成任务／实例保留安全 href、主题链接色及键盘导航。`renderField` 已有字段外框，只返回链接值控件；URL 点击不触发记录、卡片或审批动作，不以 disabled URL 输入框代替详情链接。
 
 `renderField` 接收 `field/id/value/readOnly/disabled/error/onChange`。复用宿主业务字段注册表、显示格式、人员/部门候选、关联选择及附件组件；始终受控，保留 id、焦点、候选名称和草稿。可见但不可编辑字段使用详情值，不渲染 disabled 输入框；可编辑字段直接展示控件，不做 hover 时挂载/卸载的切换。
 

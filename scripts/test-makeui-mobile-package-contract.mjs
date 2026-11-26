@@ -22,6 +22,14 @@ const mobileVisualStandard = fs.readFileSync(
   path.join(repoRoot, 'skills/makeui/references/mobile-visual-standard.md'),
   'utf8',
 );
+const mobileDetailComponents = fs.readFileSync(
+  path.join(repoRoot, 'skills/makeui/references/mobile-detail-components.md'),
+  'utf8',
+);
+const mobileTheme = fs.readFileSync(
+  path.join(repoRoot, 'skills/makeui/references/mobile-theme.md'),
+  'utf8',
+);
 const mobileProductBaseline = fs.readFileSync(
   path.join(repoRoot, 'skills/makeui/references/mobile-product-baseline.md'),
   'utf8',
@@ -151,13 +159,42 @@ assert.match(
 );
 assert.match(
   mobileDefaults,
-  /corepack pnpm add @qfei-design\/make-app-mobile@0\.1\.14/,
-  'new mobile integrations must install the verified 0.1.14 artifact',
+  /corepack pnpm add @qfei-design\/make-app-mobile@0\.1\.15(?:\s|$)/,
+  'new mobile integrations must pin the verified formal 0.1.15 package',
 );
 assert.match(mobileDefaults, /最低 API 基线为 `0\.1\.7`/);
 assert.match(mobileDefaults, /0\.1\.9[^\n]*视觉/);
 assert.match(mobileDefaults, /package\.ai\.json/);
 assert.match(mobileDefaults, /PUBLIC_API\.md/);
+assert.match(mobileDefaults, /capabilities\.json/);
+assert.match(mobileDefaults, /0\.1\.14[^\n]*(起点|下限|已支持)/,
+  'keep the historically verified action-overflow capability floor distinct from the new install version');
+assert.match(mobileDefaults, /0\.1\.15[^\n]*(不降级|不为筛选降级)/,
+  'the historical filter minimum must not downgrade a new integration');
+assert.match(mobileTheme, /MakeMobileThemeProvider/);
+assert.match(mobileTheme, /pageHeaderSize[^\n]*fieldLabelSize[^\n]*controlTextSize/);
+const overflowGuide = mobileDetailComponents.split('## 单行与更多操作\n')[1]?.split('\n## ')[0];
+assert.ok(overflowGuide, 'retain the installed Skill single-row overflow guidance in the source');
+for (const invariant of [
+  /capabilities\.mobileFormActionOverflow/,
+  /最右侧[^\n]*“更多”/,
+  /第一个显式 primary[^\n]*原顺序/,
+  /只显示“更多”[^\n]*全部授权动作/,
+  /disabled[^\n]*loading|loading[^\n]*disabled/,
+  /选择只调用一次原回调/,
+  /不重建 Controller[^\n]*不清空/,
+  /--detail[^\n]*不验证/,
+  /真实浏览器[^\n]*320[^\n]*390[^\n]*767/,
+]) assert.match(overflowGuide, invariant);
+for (const [name, guide] of [
+  ['defaults', mobileDefaults], ['form controls', mobileFormControls], ['visual standard', mobileVisualStandard],
+]) {
+  assert.match(guide, /mobile-detail-components\.md#单行与更多操作/, name);
+  assert.doesNotMatch(guide, /多动作[^\n]*(或同一宿主 footer|或三个 Button|两个或三个 Button)/, name);
+}
+assert.doesNotMatch(mobileDetailComponents, /多动作底栏由包处理窄屏换行/);
+assert.match(mobileDetailComponents, /正式[^\n]*0\.1\.15[^\n]*URL|正式[^\n]*0\.1\.15[^\n]*链接/,
+  'URL-field styling must be described as part of the verified formal artifact');
 assert.match(
   mobileDefaults,
   /手机端[^\n]*(业务记录列表|对象列表)[^\n]*(默认|统一)[^\n]*卡片/,
@@ -264,7 +301,7 @@ assert.match(mobileVisualStandard, /MobileAttachmentField[^\n]*48px/);
 assert.match(mobileVisualStandard, /滚轮[^\n]*五行、每行 48px[^\n]*中线/);
 assert.match(mobileVisualStandard, /不使用浏览器原生 `select`/);
 assert.match(mobileVisualStandard, /MobileOptionPickerSheet[\s\S]{0,80}MobileDateField[\s\S]{0,40}MobileDateRangeField/);
-assert.match(readme, /@qfei-design\/make-app-mobile@\^0\.1\.9/);
+assert.match(readme, /@qfei-design\/make-app-mobile@0\.1\.15/);
 assert.doesNotMatch(readme, /@qfei-design\/make-app-mobile@\^0\.1\.[56]/);
 const filterRoutingRow = readme.split(/\r?\n/).find((line) => line.startsWith('| 筛选'));
 assert.ok(filterRoutingRow, 'README must keep a filter routing row');
@@ -656,7 +693,7 @@ assert.match(
 );
 assert.match(
   readme,
-  /@qfei-design\/make-app-mobile@\^0\.1\.9/,
+  /@qfei-design\/make-app-mobile@0\.1\.15/,
   'repository routing docs must expose the same mobile package baseline',
 );
 assert.doesNotMatch(

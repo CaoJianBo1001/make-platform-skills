@@ -1,5 +1,7 @@
 # Make Field Display Patterns
 
+URL 的归一化、安全协议及与详情／手机的职责边界见 [跨端链接字段](../../makeui/references/url-field-display.md)。CanvasTable 保留 canvas 绘制与 shape 事件；链接点击不能同时打开记录详情或触发表单／选择动作，不以蓝色外观代替安全 href 校验。
+
 Use this reference when a canvas-table page must display Make platform schema fields and backend values. This is display guidance, not an editing contract.
 
 ## Goal

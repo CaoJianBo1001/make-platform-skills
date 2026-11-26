@@ -1,6 +1,8 @@
 # 审批包与我的审批列表
 
-适用于完整接入或升级任务中心。本文默认描述两个任务页签；新增第三页签先读 [已发起与实例详情](initiated-instances.md)，按实际包能力启用实例 provider。本文基于已核对的 `@qfei-design/make-app-approval@0.2.13` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
+适用于完整接入或升级任务中心。本文默认描述两个任务页签；新增第三页签先读 [已发起与实例详情](initiated-instances.md)，按实际包能力启用实例 provider。本文基于已核对的 `@qfei-design/make-app-approval@0.2.14` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
+
+本次对照正式 tarball：0.2.13 与 0.2.14 的 dist 运行代码、公开类型、CSS、PUBLIC_API 和能力元数据逐字节一致；0.2.14 的变化为 URL 宿主展示指导、详情适配示例及发布校验等待配置／文档，不能据版本升级推断新增主题或禁编能力。两个版本的原有能力和缺口按下文分别保留。
 
 ## 依赖与职责
 
@@ -8,8 +10,8 @@
 - Service 如消费状态、禁编或撤回校验函数，也安装同一审批包版本，只加载根入口。依赖与锁文件可在干净环境重装；生产不依赖开发机路径、未发布 tgz、node_modules 修改或未随构建分发的补丁。
 - 应用入口一次导入 `@qfei-design/make-app-approval/styles.css`，表格样式沿用宿主 CanvasTable 接入。Ant Design/dayjs 是包的示例依赖，不要求宿主更换 UI 库。
 - 0.2.10 发布包携带 `examples/field-adapters`，包含人员缓存、数值原文校验和 `use-input-modality.ts`。这些是宿主源码适配示例，按 [字段适配回归](../../makeui/references/field-adapter-regressions.md) 复用已有控件与校验，不当作新的 npm 公开子路径导入。
-- 0.2.13 原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
-- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.13 原生检查失败是已知缺口；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
+- 0.2.13、0.2.14 原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
+- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.13、0.2.14 原生检查失败是已知缺口；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
 
 | 公开入口 | 使用内容 |
 | --- | --- |
@@ -19,6 +21,17 @@
 | `/detail` | `ApprovalTaskDetail`、`readApprovalTaskDetail`、`getApprovalTaskFields`、`buildApprovalTaskAction`、`ApprovalTaskValidationError`、`ApprovalInstanceDetail`、`readApprovalInstanceDetail` 及任务/实例类型 |
 
 业务代码只导入公开入口，不深层导入 src/dist。包负责列表状态、查询草稿、虚拟表格和详情办理状态机；宿主负责导航、应用/身份上下文、Service 请求、字段与控件适配、详情容器、历史查询及错误出口。不要复制公共包源码、构造第二张任务表格或另做一套桌面列表分页状态。
+
+## 主题能力与边界
+
+0.2.14 未新增 ThemeProvider 或通用 `theme` 参数；根入口、`/react`、`/list`、`/detail` 和样式子路径与 0.2.13 一致。宿主继续提供 Input、Select、DateRangePicker、Button、Tabs 及详情字段控件适配，沿用自身组件库的主题，不把示例依赖变成包的运行时必需依赖。
+
+- `ApprovalStatus` 的公开 `className/style` 及已文档化的 `--make-approval-text/surface/primary/error` 可以对齐状态外观；列表拥有的部分公开 CSS 变量及宿主基控件主题仍按实际产物接入。
+- `themeKey` 只通知 Canvas 重新读取已接入的 CSS 主题，不是完整主题对象，也不负责把颜色、字体或字号转交到所有 DOM／弹层。列表根有自己的默认变量，不能假定只给祖先设置同名变量就一定覆盖包默认。
+- 包自有详情外框仍有固定白底、中性色和字号；`presentation="mobile"` 只调整已公开的手机字段布局，`renderField` 只替换宿主值控件，不能据此宣称外框完整支持 MakeDesign。
+- 不能因为移动控件包提供了 Provider，便宣称审批包私有详情外框已完整主题化。公开插槽内的宿主组件分别消费已核验主题；尚无公开主题能力的包区域应明确报告缺口，推动包公开能力后再接入，不覆盖私有结构、不改 node_modules，也不复制审批控制器。
+
+升级时分别验证 npm 实际版本、公开导出／类型、CSS 和宿主真实主题结果。包内 capability 文案可能仍写旧版本或“未发布”，以 registry 和实际 tarball 为准；本次正式产物确认不替代业务权限、真实流程或浏览器验收。
 
 ## 页面接线
 
@@ -95,7 +108,7 @@ onChange={key => {
 
 ## 多端边界
 
-已核验的 0.2.13 发布产物包含 `MyApprovalsPage presentation="mobile"`、详情布局插槽 `detail/sections/actionItems` 及 `ApprovalTaskDetail presentation="mobile"` 字段展示能力。0.2.11 缺少最后一项，0.2.7 不包含这些手机能力；旧版本先核对并升级到具备所需能力的正式产物，不能直接传入不存在的参数。审批包与 `make-app-mobile` 分别核验，不能因审批包升级就认定移动组件包也已支持所有控件。
+已核验的 0.2.14 发布产物包含 `MyApprovalsPage presentation="mobile"`、详情布局插槽 `detail/sections/actionItems` 及 `ApprovalTaskDetail presentation="mobile"` 字段展示能力。0.2.11 缺少最后一项，0.2.7 不包含这些手机能力；旧版本先核对并升级到具备所需能力的正式产物，不能直接传入不存在的参数。审批包与 `make-app-mobile` 分别核验，不能因审批包升级就认定移动组件包也已支持所有控件。
 
 支持该能力的产物中，宿主由已有响应式上下文选择 `presentation="mobile"`，桌面/平板不传或传 `desktop`。手机公共卡片、列表查询状态、滚动追加、失败重试与下拉刷新归审批包；宿主只提供手机基础控件适配、导航、provider 和详情容器，不复制一套列表/分页 Controller。不生成不存在的 `MobileMyApprovalsPage` 导出。
 

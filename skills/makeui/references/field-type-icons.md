@@ -1,6 +1,6 @@
 # Make App 字段类型图标
 
-用户明确指定其他图标库时，遵从其要求；否则所有新建 Make App 默认使用 [Lucide 图标库](https://lucide.dev/icons/)。这是图标库规范，不限定 UI 组件库。无论用户[选择 MakeDesign 方案还是组件库](component-usage.md#selection-strategy)，字段图标都遵循以下映射。默认方案的 React 宿主从 `lucide-react` 公开入口导入图标，并在实际 UI package 声明兼容的直接依赖，沿用项目的包管理器和锁文件。存量 App 修改字段展示时，也按本规范处理本次涉及的字段入口；其他历史图标的全量迁移不属于普通字段改动。
+用户明确指定其他图标库时，遵从其要求；否则所有新建 Make App 默认使用 [Lucide 图标库](https://lucide.dev/icons/)。这是图标库规范，不限定 UI 组件库。无论用户[使用 MakeDesign 方案还是组件库默认主题](component-usage.md#selection-strategy)，字段图标都遵循以下映射。默认方案的 React 宿主从 `lucide-react` 公开入口导入图标，并在实际 UI package 声明兼容的直接依赖，沿用项目的包管理器和锁文件。存量 App 修改字段展示时，也按本规范处理本次涉及的字段入口；其他历史图标的全量迁移不属于普通字段改动。
 
 字段类型图标是桌面／平板 View 的默认组成部分，无需用户另行提出。手机 View 的字段名称、字段选择列表和卡片不显示字段类型图标；手机壳层和操作图标仍按所选图标库／移动组件包自身的规范处理。用户明确指定不同的字段图标方案时，以用户要求为准。
 

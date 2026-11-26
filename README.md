@@ -75,7 +75,7 @@ Codex 判断优先级：
 | --- | --- | --- |
 | 方案确认后新建/迭代项目、BPM、保存并提交、发起/撤回、继续提交、我的审批 npm 包、节点办理、历史与流程状态 | [make-app-approval](skills/make-app-approval/SKILL.md) | 按实际业务能力生成入口，完整接入审批表单、记录生命周期、任务中心与历史；不负责 Console、流程设计器、引擎或未确认的终态重新发起 |
 | Make 环境安装、更新 Make 环境、makecli 登录校验、Node/pnpm/git/makecli 版本检查 | `make-env-setup` | 只负责本地开发环境准备、工具链更新、Make skills 更新、环境选择和登录校验；不负责 PRD、DSL、Service、UI、apply、deploy 或 git 提交 |
-| 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、字段类型图标、移动端卡片列表、工作台、底部导航、人员/部门选择抽屉、响应式、UI 状态、`@qfei-design/make-app-mobile` | `makeui` | 新 App 图标默认用 Lucide，用户明确指定其他图标库时遵从其要求；新项目先选 MakeDesign 方案或组件库。桌面／平板字段类型图标默认覆盖表头、字段标签及字段选择列表；手机使用独立卡片 View 和纯文本字段名；不负责认证、打包、Service、业务 API 设计和发布 |
+| 页面、布局、App Shell、侧边栏、顶部栏、列表页、新建/编辑/详情、Drawer、字段类型图标、移动端卡片列表、工作台、底部导航、人员/部门选择抽屉、响应式、UI 状态、`@qfei-design/make-app-mobile` | `makeui` | 新 App 图标默认用 Lucide，用户明确指定其他图标库时遵从其要求；新项目先确认视觉来源与唯一组件基座。桌面／平板字段类型图标默认覆盖表头、字段标签及字段选择列表；手机使用独立卡片 View 和纯文本字段名；不负责认证、打包、Service、业务 API 设计和发布 |
 | CanvasTable、表格渲染、字段类型展示、表格编辑、序号列、行头详情图标、`showSN`、`bodyRowHeadSuffixOptions`、`GroupTableComponent` 底层接入 | `canvas-table-integration` | 只负责 `@qfei-design/canvas-table` 消费侧接入，不负责页面 Shell 和业务 API；Make 记录分组完整能力交给 `make-app-group` |
 | 操作按钮、行操作、手机卡片单条编辑/删除、复选框选择、批量编辑、暂无可用操作、行级写权限预检、`selectAllMode`、`@qfei-design/make-app-actions` | `make-app-actions` | 手机卡片复用 headless 单条操作；desktop/tablet CanvasTable 使用选择操作栏和批量能力。负责独立操作权限、预检、选择意图和批量写入编排，不负责 CanvasTable 内部、IAM 权限策略或 Service 分层实现 |
 | 筛选、高级筛选、表格筛选、表头筛选、筛选条件组、AND/OR、字段类型操作符、CEL/DNF、系统变量、DateRange/File/Lookup 筛选、filter expression、筛选值归一化、表头按字段筛选联动、`@qfei-design/make-app-filter` | `make-app-filter` | `search-only` 仅用包 core 编译关键词为 `filter.expression`，不读写筛选 Preset、不挂载 Controller／面板；`advanced-filter` 才共用 Controller、Preset 与表达式，desktop/tablet 配套 CanvasTable 表头联动，手机使用顶部筛选入口和移动安全面板、不挂载 CanvasTable；不负责页面 Shell、Service 实现、认证或发布 |
@@ -115,12 +115,14 @@ Codex 判断优先级：
 - 做 UI 需要的 Service 接口：`make-app-service` + `makeui`
 - 做 Make 项目默认权限体系：`make-app-permission` + `make-app-service` + `make-app-auth` + `makeui`，涉及表格编辑时加 `canvas-table-integration`
 - 做一个登录后的页面：`makeui` + `make-app-auth`
-- 做新 Make App 的桌面/移动双端 UI：`makeui` + `make-app-permission` + `make-app-auth` + `make-app-observability`；移动端不是可选项，除非用户明确退出或指定特殊定制，否则默认接入 `@qfei-design/make-app-mobile@^0.1.9` 并遵循冻结的 Make App 手机视觉与交互基线。`0.1.7` 只是最低 API 版本，通用视觉交付至少需要 `0.1.9`，手机高级筛选另需移动包 `0.1.11+` 和筛选包 `1.1.0+`；已安装移动包还必须通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs` 的 iOS 输入与附件视觉校验，失败时报告包依赖阻断。手机对象列表默认卡片化，不显示 CanvasTable、分组、排序、记录多选或批量操作；表格、操作、筛选、AI 助手再按对应 Skill 组合
+- 做新 Make App 的桌面/移动双端 UI：`makeui` + `make-app-permission` + `make-app-auth` + `make-app-observability`；移动端不是可选项，除非用户明确退出或指定特殊定制，否则默认接入 `@qfei-design/make-app-mobile@0.1.15` 并遵循冻结的 Make App 手机视觉与交互基线。`0.1.7` 只是最低 API 版本，通用视觉交付至少需要 `0.1.9`，手机高级筛选另需移动包 `0.1.11+` 和筛选包 `1.1.0+`；已安装移动包还必须通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs` 的 iOS 输入与附件视觉校验，失败时报告包依赖阻断。手机对象列表默认卡片化，不显示 CanvasTable、分组、排序、记录多选或批量操作；表格、操作、筛选、AI 助手再按对应 Skill 组合
 - 做 Service-fronted 登录后接口：`make-app-service` + `make-app-auth`
 - 打包发布失败或 Service 启动失败：`make-app-runtime`
 - 新增对象字段并部署：`makedsl` + `makecli`
 - 新建完整 Make App：默认包含 `make-app-observability`、`make-app-permission` 和 `make-app-actions`，通常组合 `makedsl` + `makecli` + `make-app-auth` + `make-app-service` + `make-app-permission` + `make-app-observability` + `makeui` + `canvas-table-integration` + `make-app-actions`
-- 每个新项目在 PRD／DSL 确认后、搭建 UI 前，都必须询问用户是否使用 MakeDesign 并等待答复。只有 PRD 或用户描述已明确指定 UI 组件库，或已提供有效的 MakeDesign 方案链接时，才直接采用该选择。选择 MakeDesign 后，主动打开选择页面，同时在会话中提供可点击链接及复制回传步骤。交互细节见 [MakeDesign 或组件库选择流程](skills/makeui/references/component-usage.md#selection-strategy)。已有项目沿用现有组件库。
+- 每个新项目在 PRD／DSL 确认后、搭建 UI 前，都必须询问用户是否使用 MakeDesign 并等待答复。只有 PRD 或用户描述已明确指定 UI 组件库，或已提供有效的 MakeDesign 方案链接时，才直接采用该选择。选择 MakeDesign 后，主动打开选择页面，同时在会话中提供可点击链接及复制回传步骤。视觉来源与唯一组件基座分开，MakeDesign 默认使用 Ant Design 并告知用户；已指定其他库则保留，不增加必答问题或混入另一套库。完整方案驱动 PC／平板所有页面的布局、导航、颜色、字体、间距、控件及细节；手机只跟主题主色／选中强调色，保留原移动专用控件、布局、字号及交互，验收样例不是新项目默认；不能只应用主色或静默忽略未支持的选择。两条视觉路线都遵守统一 Form／Detail、字段图标及 Make 平台合同，默认不复制原型控件。交互细节见 [视觉来源与组件基座](skills/makeui/references/component-usage.md#selection-strategy)、[完整方案应用](skills/makeui/references/component-usage.md#完整方案应用与差异记录) 和 [AntD 基座接入](skills/makeui/references/antd-foundation.md)。已有项目沿用现有组件库。
+- MakeDesign 的职责为风格、布局选择、预览和方案交接；组件行为及 Make 表单／详情标准由 makeui 统一维护，官网只同步固定版本的生成快照。维护入口与旧控件兼容见 [设计方案与组件实现的维护边界](skills/makeui/references/component-usage.md#设计方案与组件实现的维护边界)。
+- 新项目（含 POC／模板）在确定组件库与视觉来源后，先按 [页面设计基线与视觉验收](skills/makeui/references/page-design-quality.md) 记录区域、视觉尺度、移动适配及差异，再生成代表页面并验证后复用。桌面默认按实际容器适配，所选风格与 Make 稳定合同分别保留；手机继续遵守冻结规范和相关 Skill，不从桌面网格推导。源指导、定向安装及真实项目验收分别记录，本项不要求更新 MakeDesign 或其他 npm 包。
 - 用户明确指定其他图标库时遵从其要求；否则新建 Make App 的图标默认统一使用 [Lucide](https://lucide.dev/icons/)。桌面／平板字段类型图标按 [`makeui` 默认映射](skills/makeui/references/field-type-icons.md) 覆盖 CanvasTable 表头、新建／编辑／详情字段标签及已有字段选择列表，手机字段名保持纯文本，不需用户再次提示。
 
 ## 按需业务草稿与字段默认值
@@ -303,7 +305,7 @@ npx skills update makeui
 **使用场景**
 - 生成或调整 Make App 前端页面
 - 新应用的图标默认使用 Lucide，用户明确指定其他图标库时遵从其要求；桌面／平板字段类型图标按 [`field-type-icons.md`](skills/makeui/references/field-type-icons.md) 自动添加到表头、字段标签和字段选项；手机字段名不加类型图标
-- 所有新 Make App 默认交付移动端；只有用户明确退出或指定特殊定制时才覆盖该默认。新建或改造移动端时接入 `@qfei-design/make-app-mobile@^0.1.9`，并验证目标 App 实际安装产物通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs`；低于 `0.1.9` 的已安装包或不满足 iOS 输入、附件视觉合同的包，应报告包依赖阻断。遵循冻结的 Make App 手机视觉与交互基线，只切换 View 并复用同一个业务 Controller
+- 所有新 Make App 默认交付移动端；只有用户明确退出或指定特殊定制时才覆盖该默认。新建或改造移动端时通过兼容门禁后接入已核验正式 `@qfei-design/make-app-mobile@0.1.15`，保留单行更多操作；MakeDesign 在手机仅通过 [公开颜色接入与颜色投影](skills/makeui/references/mobile-theme.md) 同步主题主色／选中强调色，输入、数字、选择、日期、人员／部门及其余视觉继续遵守原手机规范，不传完整 PC 主题，并验证目标 App 实际安装产物通过 `skills/makeui/scripts/verify-mobile-package-surface.mjs`；低于 `0.1.9` 的已安装包或不满足 iOS 输入、附件视觉合同的包，应报告包依赖阻断。遵循冻结的 Make App 手机视觉与交互基线，只切换 View 并复用同一个业务 Controller
 - 手机业务记录列表无论只读或可写都使用独立卡片 View，不渲染 CanvasTable；可写卡片复用 `make-app-actions` headless core、单条权限、预检和最终写接口合同
 - 手机工具栏默认提供中号搜索；筛选能力已启用或本次明确请求时，才同排显示中号筛选入口。仅搜索若使用 `filter.expression`，复用 `make-app-filter` 编译器，但不读取／回显／写入筛选 Preset，也不挂载高级筛选面板。不展示分组、排序、记录多选或批量操作，也不得直接复用桌面 `listToolbar`/`listContent` 后仅靠 CSS 改样式
 - 手机新建／编辑／详情不仅切换为全屏任务页，还必须使用移动字段适配器：桌面 DatePicker／RangePicker／Select 等弹层不能原样复用；日期时间、候选选择、Lookup、附件、详情值和安全区底部保存栏按 `mobile-form-controls.md` 验收

@@ -10,6 +10,8 @@
 
 本文件的 Drawer 默认和“用户明确要求才使用路由页”规则仅适用于 desktop/tablet。手机端无论是否由 URL 驱动，都优先遵循 `mobile-defaults.md`：创建、编辑和详情默认使用可寻址的全屏任务路由；该规则覆盖本文件其余 Drawer 默认。
 
+先按 [页面设计基线与视觉验收](page-design-quality.md) 记录当前有效容器选择、内容分组和视觉来源。页面内的颜色、字体、区域边距与密度沿用所选方案；桌面双列是可用宽度充足时的默认，按所属内容区、长标签及复杂控件适配，不能因路由页处于宽浏览器中就强制双列。此调整不增加尚未支持的容器选择，也不改变手机任务页、字段行及底栏合同。
+
 ## When to use
 
 For ordinary desktop/tablet record detail, `page` in the [selected MakeDesign plan](component-usage.md#makedesign-branch) is an explicit request for a full page. Other explicit route requests include:
@@ -57,8 +59,8 @@ On desktop/tablet, the content area may scroll inside the app content region whi
 
 Form layout:
 
-- two-column desktop grid for common fields
-- do not render every field as full-width one-column rows on desktop unless the user explicitly asks
+- two-column desktop grid for common fields when the owning content area has enough space
+- narrow content areas, long labels, or complex controls may use one column without an additional user instruction; retain related field groups and readable controls
 - full-width rows for `TextArea`, long text, URL/link fields, `File`, `Lookup`, relation/association selectors, descriptions, and rich controls
 - normal fields such as text, number, date, date-time, date range, select, user, and department occupy one column by default
 - derive fields and control types from host-provided field metadata
@@ -91,7 +93,7 @@ The detail content can scroll inside the content region. Do not introduce a seco
 
 Detail layout:
 
-- use a two-column label/value grid for common fields on desktop
+- use a two-column label/value grid for common fields on desktop when the owning content area supports it; narrow areas or complex values may use one column
 - make `TextArea`, long text, URL/link-rich values, file/attachment values, lookup/relation values, and rich custom values span the full row
 - render values through the same field-type display adapter used by Detail Drawers. Do not display raw objects, arrays, or JSON wrapper strings in route detail pages.
 - `Date`, `DateTime`, and `DateRange` values must use formatted display text. `DateRange` values such as `[begin, end]` or `{ begin, end }` display as `YYYY-MM-DD 至 YYYY-MM-DD`.
