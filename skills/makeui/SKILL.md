@@ -2,7 +2,7 @@
 name: makeui
 description: "Use when designing, generating, modifying, or reviewing Make App frontend UI in `apps/ui`: shell, dynamic object routes, desktop/mobile layout, lists, Drawer, task pages, 新建/编辑/详情 forms, selectors, component-library choice, field metadata/defaults, optional draft-save UI, field-type icons, and UI states. New Apps combine one React component foundation with a selected MakeDesign plan or the library theme, use `@qfei-design/make-app-mobile`, and default to Lucide unless the user chooses another icon library. Route record tables to `canvas-table-integration`, actions to `make-app-actions`, filter/group/sort to their Skills, and permissions to `make-app-permission`. Dashboard/chart metrics use `make-app-service` for aggregation. For AI助手, MakeAiTheme, maxDrawerWidth, or assistant SSE, use `make-ai-assistant` for package behavior; this Skill owns surrounding placement. Does not own auth, Service, runtime, DSL, persistence, CanvasTable internals, or AI assistant package behavior."
 metadata:
-  version: 0.4.94
+  version: 0.4.96
 ---
 
 # makeui
@@ -43,9 +43,13 @@ Use this skill for Make App frontend UI work in `apps/ui`. The default stack is 
 
 MakeDesign 负责风格、布局选择、预览和方案交接；组件行为与 Make 表单／详情标准由 makeui 统一维护。预览使用本 Skill 实现的生成快照，维护入口与同步规则见 [设计方案与组件实现的维护边界](references/component-usage.md#设计方案与组件实现的维护边界)。
 
+明确将公共组件主题同步纳入范围时，读取 [公共组件语义主题](references/public-component-theme.md)：项目固定方案、主动更新，由单一语义适配层驱动各包公开 API；已有颜色／字号／间距值更新无需逐包改代码。语义主题已核验正式 Canvas `1.3.5`／审批 `0.2.17`，按实际安装产物门禁接入，存量锁版保留原兼容路径。手机只投影既有品牌色，不传 PC 的字体、密度、表面或布局。
+
 ## Quick start
 
 所有新项目（含 POC、模板）在确定组件库和视觉来源后，先按 [页面设计基线与视觉验收](references/page-design-quality.md) 将项目设计基线写入项目文档，再生成业务 UI 源码，完成代表页面及手机 View 的视觉／交互验证后复用到其余页面。每个项目使用完整的主 UI 组件库；所选风格、Make 稳定合同与手机冻结规范分别记录，不能用固定默认覆盖方案，也不能用桌面版式重做手机。小迭代复用已有基线，只更新受影响区域。
+
+新项目生成列表或手机 Lookup 前，读取 [宿主组合示例与交付门禁](references/record-page-patterns.md)，复用随包受控示例或沿既有结构实现等价合同。搜索不能因模板简化而省略，立即应用与输入法事件交原 Controller；手机悬浮新建与底部导航必须实际避让、可点击，Lookup 单选保留键盘操作且不能误用普通单选的即时确认。将随包验收工具接入宿主默认测试，并用真实浏览器复核命中、主题及尺寸；示例不替代字段、权限、请求或 Controller 合同。
 
 所有新 Make App（含 POC、模板项目）在生成表单、详情或字段控件前，必须读取 [统一表单与详情骨架](references/drawer-layout.md)、[组件与主题接入](references/component-usage.md) 和 [字段类型图标](references/field-type-icons.md)。MakeDesign 不是绕过 Form、Detail 和字段图标合同的另一条生成路径；视觉来源与唯一组件基座分开记录，MakeDesign 默认 Ant Design 时读取 [AntD 基座接入](references/antd-foundation.md)，用户指定其他组件库时保留该库并适配同一份 Make 合同。
 
@@ -87,6 +91,7 @@ For mobile delivery, verify the actually installed package with [`scripts/verify
 
 | Task / topic | Read |
 | --- | --- |
+| 明确纳入公共组件主题、固定快照、值驱动更新和公开 API 门禁 | [公共组件语义主题](references/public-component-theme.md) |
 | New project design baseline, representative pages, layout precedence and visual acceptance | [页面设计基线与视觉验收](references/page-design-quality.md) |
 | UI scope, boundaries, shell defaults, dynamic routes | `references/principles.md` |
 | Frozen phone product standard and precedence over superseded proposals | `references/mobile-product-baseline.md` |

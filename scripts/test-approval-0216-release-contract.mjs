@@ -5,9 +5,9 @@ import { test } from 'node:test';
 const read = path => readFileSync(new URL(`../${path}`, import.meta.url), 'utf8');
 const presentation = () => read('skills/make-app-approval/references/list-presentation.md');
 
-test('approval standard list integration pins the two verified formal package versions', () => {
+test('approval standard list integration pins the current verified formal package versions', () => {
   const guide = presentation();
-  assert.match(guide, /@qfei-design\/make-app-approval@0\.2\.16/);
+  assert.match(guide, /@qfei-design\/make-app-approval@0\.2\.17/);
   assert.match(guide, /@qfei-design\/make-app-mobile@0\.1\.16/);
   assert.match(guide, /正式[^\n]*(?:接入|产物|发布)/);
   assert.doesNotMatch(guide, /未发布候选|候选合同|申请人跨端回显（候选）/);
@@ -74,6 +74,6 @@ test('new desktop and mobile standard modes retain empty-table and geometry boun
 });
 
 test('the entrypoint and copied adapter document the current native terminal gap', () => {
-  assert.match(read('skills/make-app-approval/SKILL.md'), /公共包 0\.2\.16[^\n]*尚未原生覆盖[^\n]*已拒绝[^\n]*已撤回/);
-  assert.match(read('skills/make-app-approval/assets/record-write-policy.mjs'), /已核验 0\.2\.16[^\n]*0\.2\.13[^\n]*0\.2\.14/);
+  assert.match(read('skills/make-app-approval/SKILL.md'), /公共包 0\.2\.17[^\n]*尚未原生覆盖[^\n]*已拒绝[^\n]*已撤回/);
+  assert.match(read('skills/make-app-approval/assets/record-write-policy.mjs'), /已核验 0\.2\.17[^\n]*0\.2\.13[^\n]*0\.2\.14/);
 });

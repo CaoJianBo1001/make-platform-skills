@@ -63,6 +63,8 @@ This section is the desktop/tablet default. Phone list pages use the package-bac
 
 ## Phone list override
 
+新项目使用 [宿主列表组合示例](record-page-patterns.md)，或在既有结构中满足同一合同。PC／平板搜索必须使用所选主 UI 库的真实受控控件，消费当前方案／库主题，不能临时放入未适配的裸 input；明确选择其他库时使用该库的等效控件，不为此引入 AntD。手机搜索使用独立的冻结移动展示，共享同一 query／应用搜索处理，不把 PC 控件外观带到手机。默认列表组成同时适用于模板与 POC，除非已有明确产品例外，不能省略搜索。查询编译与请求继续由 make-app-filter／宿主 Controller 维护。
+
 The standard phone list is a separate View composition over the shared business Controller:
 
 1. phone page header

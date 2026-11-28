@@ -79,6 +79,24 @@ jobs:
               --dom-dependencies="$makeui_foundation_peer_dependencies"
           '
 
+      - name: Exercise controlled record-page examples and mobile acceptance guards
+        run: |
+          npm exec --yes --ignore-scripts \
+            --package=typescript@5.9.3 --package=esbuild@0.28.2 \
+            --package=antd@6.7.2 --package=dayjs@1.11.20 --package=lucide-react@1.47.0 \
+            --package=react@19.3.0 --package=react-dom@19.3.0 \
+            --package=@types/react@19.3.0 --package=@types/react-dom@19.3.0 \
+            --package=@qfei-design/make-app-mobile@0.1.16 \
+            --package=@testing-library/react@16.3.0 --package=@testing-library/dom@10.4.2 \
+            --package=jsdom@29.1.1 -- sh -ec '
+            makeui_record_dependencies="$(dirname "$(dirname "$(command -v tsc)")")"
+            node scripts/test-makeui-generated-page-acceptance.mjs --dependencies="$makeui_record_dependencies"
+            node scripts/test-makeui-record-page-patterns.mjs --dependencies="$makeui_record_dependencies"
+            node scripts/test-makeui-record-search.mjs --dependencies="$makeui_record_dependencies"
+            node scripts/test-host-mobile-record-value.mjs --dependencies="$makeui_record_dependencies"
+            node scripts/test-makeui-field-label-association.mjs --dependencies="$makeui_record_dependencies"
+          '
+
       - name: Check feedback package and SDK compatibility
         run: |
           npm exec --yes --ignore-scripts --package=typescript@5.9.3 \

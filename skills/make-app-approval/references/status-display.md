@@ -68,7 +68,7 @@ const display = formatApprovalProcessStatus(value, getApprovalStatusDisplay);
 
 ### 公共包与宿主适配
 
-0.2.16 及历史 0.2.13、0.2.14 的 `getRecordApprovalWriteRestriction` 只原生覆盖明确锁定、运行态和 APPROVED；未锁定的 REJECTED、CANCELLED 仍返回 null，不满足三终态只读合同。当前宿主将随包 [兼容适配器](../assets/record-write-policy.mjs) 复制到已有共享模块旁，统一委托包函数；UI 和 Service 的普通编辑入口及保存检查均复用此模块，不混用直调旧包的旁路：
+0.2.17 及历史 0.2.13、0.2.14、0.2.16 的 `getRecordApprovalWriteRestriction` 只原生覆盖明确锁定、运行态和 APPROVED；未锁定的 REJECTED、CANCELLED 仍返回 null，不满足三终态只读合同。当前宿主将随包 [兼容适配器](../assets/record-write-policy.mjs) 复制到已有共享模块旁，统一委托包函数；UI 和 Service 的普通编辑入口及保存检查均复用此模块，不混用直调旧包的旁路：
 
 ```js
 import { getRecordApprovalWriteRestriction as packageRestriction } from '@qfei-design/make-app-approval';
@@ -79,9 +79,9 @@ export const getRecordApprovalWriteRestriction = (record, options) =>
 
 适配器保留公共包原有限制及异常，只在包返回 null 时补齐三种终态；APPROVED 返回 approved，REJECTED/CANCELLED 返回既有公开原因 ended，提示分别为“该数据审批已拒绝，不可编辑”和“该数据审批已撤回，不可编辑”。消费方穷举分支须支持 approved/ended；null 仍需原有 IAM 判断。它是参考源码，不是 npm 新导出，不修改 node_modules。
 
-分别以 UI、Service 包目录为参数执行 [公开入口验证器](../scripts/verify-record-write-policy.mjs)：默认模式检查实际 ESM/CJS 原生行为，0.2.16 对新合同失败仍属于已知缺口；追加 `--compat` 检查实际安装包与随包参考适配器的组合。兼容模式通过不代表真实宿主已接线，必须再按 [禁编矩阵](verification.md#普通编辑禁编矩阵) 验证实际入口、保存和最终写接口。不能把参考测试当成应用验收。
+分别以 UI、Service 包目录为参数执行 [公开入口验证器](../scripts/verify-record-write-policy.mjs)：默认模式检查实际 ESM/CJS 原生行为，0.2.17 对新合同失败仍属于已知缺口；追加 `--compat` 检查实际安装包与随包参考适配器的组合。兼容模式通过不代表真实宿主已接线，必须再按 [禁编矩阵](verification.md#普通编辑禁编矩阵) 验证实际入口、保存和最终写接口。不能把参考测试当成应用验收。
 
-未来升级时同步 UI/Service 依赖与锁文件，只有实际发布产物原生通过完整三终态矩阵后才可移除补充分支，保留宿主统一入口及所有调用点。0.2.16 已发布，但本次核验确认仍未修复上述原生缺口；后续版本另按实际产物验证。
+未来升级时同步 UI/Service 依赖与锁文件，只有实际发布产物原生通过完整三终态矩阵后才可移除补充分支，保留宿主统一入口及所有调用点。0.2.17 已发布，但本次核验确认仍未修复上述原生缺口；后续版本另按实际产物验证。
 
 普通禁编升级不改变 [流程状态名称适配](#展示合同) 和 [已完成任务只读适配](task-detail.md#已完成任务与无动作任务的只读归一化)，不得一并删除。若后端最终写校验尚未发布，明确报告缺口，不把前端已隐藏入口描述为后端已禁止修改。
 

@@ -4,7 +4,7 @@
 
 ## 版本和实现门禁
 
-当前已核验正式审批基线为 `@qfei-design/make-app-approval@0.2.16`，手机标准组合使用 `@qfei-design/make-app-mobile@0.1.16`。已从 registry.npmjs.org 取得两份版本元数据和 tarball，校验 SHA512 integrity 后核对实际公开 exports、类型、CSS 与运行产物；下述标准间距、空表及移动筛选能力已正式发布。旧审批 0.2.14 不具备本次全部新能力，不能向旧包直接传入新参数。
+当前已核验正式审批基线为 `@qfei-design/make-app-approval@0.2.17`，手机标准组合使用 `@qfei-design/make-app-mobile@0.1.16`。已从 registry.npmjs.org 取得版本元数据和 tarball，校验 SHA512 integrity 后核对实际公开 exports、类型、CSS 与运行产物；下述标准间距、空表及移动筛选能力从 0.2.16 已正式提供，0.2.17 新增的语义主题按 [包主题说明](package-and-list.md#主题能力与边界) 接入。旧审批 0.2.14 不具备本次全部新能力，不能向旧包直接传入新参数。
 
 既有 App 没有本轮升级／改造要求时保留锁定依赖。缺少公开能力时报告具体包缺口；不靠深导入、覆盖私有 class、复制列表控制器或虚构 props 实现表面一致。
 

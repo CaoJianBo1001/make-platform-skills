@@ -2,12 +2,14 @@
 name: canvas-table-integration
 description: "Use when integrating `@qfei-design/canvas-table` into an app or page. Covers consumer-side local, virtual, large-data fast-scroll, and grouped tables; public props/methods/events; row-head and header menus; selection, Shift 200 条上限, row colors, drag, fixed columns, summaries, empty states, async row sync, canvas interactions, cell editing, and Make schema field display. Make record lists use make-app-actions for the default selectable record-action workflow. Use make-app-sort for record sorting and header sort controllers. Route Make record-list grouping behavior, Preset, groupFilter, and leaf pagination to make-app-group. Route Service-side AbortSignal propagation to make-app-service. Only supports `@qfei-design/canvas-table`, not UI-library tables. Does not own Make DSL (use makedsl), page layout (use makeui), or table-library maintenance. Read package AI docs, choose Track A or C, layer Track B for editing, and use public APIs only."
 metadata:
-  version: 0.1.25
+  version: 0.1.27
 ---
 
 # canvas-table-integration
 
-URL 字段与宿主详情／手机共享 [值与安全语义](../makeui/references/url-field-display.md)，表格绘制仍按本 Skill 的蓝色、溢出及公开 shape 点击合同；不能将 canvas 表格改为 DOM 链接。
+URL 字段与宿主详情／手机共享 [值与安全语义](../makeui/references/url-field-display.md)，表格默认仍按本 Skill 的蓝色、溢出及公开 shape 点击合同；明确接入公共组件主题后，宿主自有 renderer 读取同一语义链接色并随更新重绘，不能将 canvas 表格改为 DOM 链接。
+
+明确纳入 Canvas 主题同步时，读取 [公共组件语义主题](../makeui/references/public-component-theme.md)，由宿主唯一适配层将固定方案转为公开 `ITableStyle`，沿原 `updateProps({style})` 更新，不销毁表格或按风格 ID 写分支。已核验正式 `@qfei-design/canvas-table@1.3.5` 的语义主题字段和 `CANVAS_TABLE_THEME_CONTRACT`；新主题接入使用此基线，旧项目未要求升级时保留锁版与原兼容路径。保留旧接口默认外观、业务行色优先级、选择／滚动／编辑，未解析 CSS 颜色须在宿主边界求值；不以普通 CSS 覆盖 Canvas 绘制，也不把 PC 表格布局带入手机。
 
 明确启用业务草稿的项目，列表可按权限展示保存状态，但该业务管理字段不可进入单元格编辑；普通单元格提交保持记录原状态，使用原单元格/字段接口，不复用会改变保存状态的整单保存。参见 [业务草稿合同](../make-app-service/references/business-record-drafts.md)，未要求草稿时不新增字段或限制。
 

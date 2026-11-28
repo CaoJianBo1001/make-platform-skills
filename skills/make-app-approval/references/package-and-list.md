@@ -1,22 +1,22 @@
 # 审批包与我的审批列表
 
-适用于完整接入或升级任务中心。本文默认描述两个任务页签；新增第三页签先读 [已发起与实例详情](initiated-instances.md)，按实际包能力启用实例 provider。本文基于已核对的 `@qfei-design/make-app-approval@0.2.16` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
+适用于完整接入或升级任务中心。本文默认描述两个任务页签；新增第三页签先读 [已发起与实例详情](initiated-instances.md)，按实际包能力启用实例 provider。本文基于已核对的 `@qfei-design/make-app-approval@0.2.17` npm 发布产物；版本号是接入基线，不声称永远为最新版。升级时核对实际安装包的 exports、类型及行为；包内文档若仍写“尚未发布”，以 registry 发布记录和实际产物为准。
 
 历史正式 tarball 对照：0.2.13 与 0.2.14 的 dist 运行代码、公开类型、CSS、PUBLIC_API 和能力元数据逐字节一致；0.2.14 的变化为 URL 宿主展示指导、详情适配示例及发布校验等待配置／文档，不能据版本升级推断新增主题或禁编能力。该历史对照不代表 0.2.16 没有新增能力；当前标准间距、手机筛选适配与申请人跨端回显见 [列表展示合同](list-presentation.md)，原有禁编和只读缺口按下文保留。
 
 ## 依赖与职责
 
-- UI 安装审批包和兼容的 `@qfei-design/canvas-table`；本基线使用 CanvasTable `1.3.2`，审批包声明 `^1.3.2` peer，无动画滚动校正依赖此能力，不能沿用 1.3.1。审批包 React peer 为 `^18.2.0 || ^19.0.0`，运行环境兼容性由 `make-app-runtime` 核对，不能为接包擅自迁移整个项目。
+- UI 安装审批包和兼容的 `@qfei-design/canvas-table`；明确接入语义主题时使用已核验的 CanvasTable `1.3.5`，宿主与审批列表复用同版依赖。审批包仍声明 `^1.3.2` peer；旧版非主题接入至少需要 1.3.2 的无动画滚动校正，不能沿用 1.3.1，也不能因宽 peer 推断旧版支持语义主题。审批包 React peer 为 `^18.2.0 || ^19.0.0`，运行环境兼容性由 `make-app-runtime` 核对，不能为接包擅自迁移整个项目。
 - Service 如消费状态、禁编或撤回校验函数，也安装同一审批包版本，只加载根入口。依赖与锁文件可在干净环境重装；生产不依赖开发机路径、未发布 tgz、node_modules 修改或未随构建分发的补丁。
 - 应用入口一次导入 `@qfei-design/make-app-approval/styles.css`，表格样式沿用宿主 CanvasTable 接入。Ant Design/dayjs 是包的示例依赖，不要求宿主更换 UI 库。
 - 0.2.10 发布包携带 `examples/field-adapters`，包含人员缓存、数值原文校验和 `use-input-modality.ts`。这些是宿主源码适配示例，按 [字段适配回归](../../makeui/references/field-adapter-regressions.md) 复用已有控件与校验，不当作新的 npm 公开子路径导入。
-- 0.2.16 与历史 0.2.13、0.2.14 一样原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
-- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.16 原生检查失败仍是已知缺口（0.2.13、0.2.14 同样存在）；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
+- 0.2.17 与历史 0.2.13、0.2.14、0.2.16 一样原生覆盖 APPROVED，但未锁定的 REJECTED/CANCELLED 仍返回 null。产品确认三种终态全部只读，按 [普通编辑接线与旧包兼容](status-display.md#公共包与宿主适配) 统一接入随包适配器，保留锁定优先级、运行态限制及入口/保存检查。
+- UI/Service 的实际安装包分别执行 [普通禁编验证器](../scripts/verify-record-write-policy.mjs)：默认验证原生能力，`--compat` 仅验证包与参考适配器组合。0.2.17 原生检查失败仍是已知缺口（0.2.13、0.2.14、0.2.16 同样存在）；仍须验证宿主实际接线和后端拒写。消费方支持 approved/ended 原因，不改变任务授权及已完成任务只读适配。
 
 | 公开入口 | 使用内容 |
 | --- | --- |
-| 根入口 | `APPROVAL_STATUS_FIELD`、`APPROVAL_LOCK_FIELD`、`getApprovalStatusDisplay`、`hasApprovalDefinition`、`isApprovalSystemField`、`getRecordApprovalWriteRestriction`、撤回意见校验及类型 |
-| `/react` | `ApprovalStatus`，用于只读状态文字/Tag |
+| 根入口 | `APPROVAL_STATUS_FIELD`、`APPROVAL_LOCK_FIELD`、`getApprovalStatusDisplay`、`hasApprovalDefinition`、`isApprovalSystemField`、`getRecordApprovalWriteRestriction`、撤回意见校验；0.2.17 的 `MAKE_APPROVAL_THEME_CONTRACT`、`toMakeApprovalThemeStyle` 和 `MakeApprovalTheme` 类型 |
+| `/react` | `ApprovalStatus`，用于只读状态文字/Tag；0.2.17 的 `MakeApprovalThemeProvider`、`useMakeApprovalThemeStyle` |
 | `/list` | `MyApprovalsPage`、`ApprovalListProvider`、列表 DTO、基础控件适配类型 |
 | `/mobile` | `createMobileApprovalComponents`、`ApprovalMobileToolkit`、申请人 loader 与诊断类型，消费正式移动包公开控件 |
 | `/detail` | `ApprovalTaskDetail`、`readApprovalTaskDetail`、`getApprovalTaskFields`、`buildApprovalTaskAction`、`ApprovalTaskValidationError`、`ApprovalInstanceDetail`、`readApprovalInstanceDetail` 及任务/实例类型 |
@@ -25,12 +25,12 @@
 
 ## 主题能力与边界
 
-0.2.16 未新增 ThemeProvider 或通用 `theme` 参数；根入口、`/react`、`/list`、`/detail` 和样式子路径仍保留，另提供专用 `/mobile` 工厂入口，不能把移动接线工厂当成通用审批主题 Provider。宿主继续提供 Input、Select、DateRangePicker、Button、Tabs 及详情字段控件适配，沿用自身组件库的主题，不把示例依赖变成包的运行时必需依赖。
+0.2.17 正式提供根入口的 `MAKE_APPROVAL_THEME_CONTRACT === "make-app-approval/semantic-theme/v1"`、纯函数 `toMakeApprovalThemeStyle(theme, presentation?)` 及 `/react` 的 `MakeApprovalThemeProvider`、`useMakeApprovalThemeStyle(presentation?)`。按 [唯一主题适配](../../makeui/references/public-component-theme.md) 将项目固定方案转为 `MakeApprovalTheme`，不让审批包读取 MakeDesign。宿主继续提供 Input、Select、DateRangePicker、Button、Tabs 及详情字段控件适配，沿用所选组件库的公开主题，不把示例依赖变成包的运行时必需依赖。
 
-- `ApprovalStatus` 的公开 `className/style` 及已文档化的 `--make-approval-text/surface/primary/error` 可以对齐状态外观；列表拥有的部分公开 CSS 变量及宿主基控件主题仍按实际产物接入。
-- `themeKey` 只通知 Canvas 重新读取已接入的 CSS 主题，不是完整主题对象，也不负责把颜色、字体或字号转交到所有 DOM／弹层。列表根有自己的默认变量，不能假定只给祖先设置同名变量就一定覆盖包默认。
-- 包自有详情外框仍有固定白底、中性色和字号；`presentation="mobile"` 只调整已公开的手机字段布局，`renderField` 只替换宿主值控件，不能据此宣称外框完整支持 MakeDesign。
-- 不能因为移动控件包提供了 Provider，便宣称审批包私有详情外框已完整主题化。公开插槽内的宿主组件分别消费已核验主题；尚无公开主题能力的包区域应明确报告缺口，推动包公开能力后再接入，不覆盖私有结构、不改 node_modules，也不复制审批控制器。
+- Provider 接收 `theme?`、`presentation?: "desktop" | "mobile"` 和 `children`，不新增 DOM 外框；无上级主题时，无主题或空主题保留旧默认。嵌套 Provider 继承并合并父主题，`theme={}` 不清空父主题；未传 presentation 时继承父级，无父级时默认 desktop。主题更新只更新公开视觉上下文，保持原 provider、Controller、字段草稿和审批意见，不以主题 hash 重挂载。
+- PC／平板使用 `desktop` 视觉；独立手机区域显式 `presentation="mobile"`。手机只允许 primary、onPrimary、primarySoft、link、focusRing 五项品牌色，原移动控件、字段布局、字号、尺寸和表面保持原规范。该 Provider 不替代独立的移动控件颜色 Provider，也不改变列表／详情各自的 `presentation` 接线。
+- 包拥有的状态、列表、详情和意见区域消费公开主题；宿主注入的组件仍由其组件库 Provider 负责。Portal 使用公开 hook 或主题插槽获取同份样式，不能假设脱离 CSS 祖先后会自动继承。
+- 未提供新 Provider 的旧接入继续使用 `themeKey`／公开控件插槽。0.2.16 没有新 Provider，其 `themeKey` 只通知 Canvas 重新读取已接入的 CSS 主题，原包外框不能据此宣称完整主题化；旧包缺能力时保留兼容并记录差异，不向旧产物传新参数、不覆盖私有结构或复制控制器。
 
 升级时分别验证 npm 实际版本、公开导出／类型、CSS 和宿主真实主题结果。包内 capability 文案可能仍写旧版本或“未发布”，以 registry 和实际 tarball 为准；本次正式产物确认不替代业务权限、真实流程或浏览器验收。
 
@@ -98,7 +98,7 @@ onChange={key => {
 
 正式 0.2.16 的标准模式通过 `selectedOption` 与可选第二参数保存远程人员可读名称，桌面／手机适配器及旧单参兼容边界见 [申请人跨端回显](list-presentation.md#申请人跨端回显)。仅传 ID、仅检查 provider 或在单端缓存名称不能证明跨端回显已通过；旧正式包仍按实际公开类型接线。
 
-新接入或本轮列表外观改造在正式 0.2.16 显式设置 `spacing="standard"`；默认仍为 `spacing="host"`，以保留旧宿主的留白所有权。手机专用基础控件使用 `/mobile` 工厂与正式移动包 `0.1.16` 的公开筛选入口，精确接线见 [列表展示合同](list-presentation.md)，不复制控制器。
+新接入或本轮列表外观改造在正式 0.2.17 显式设置 `spacing="standard"`；默认仍为 `spacing="host"`，以保留旧宿主的留白所有权。手机专用基础控件使用 `/mobile` 工厂与正式移动包 `0.1.16` 的公开筛选入口，精确接线见 [列表展示合同](list-presentation.md)，不复制控制器。
 
 列表页用 `className="make-app-approval--fill"` 填满剩余内容区。Shell、Tabs 根节点、中间包装层及活动面板传递确定高度和 `flex: 1; min-height: 0; min-width: 0`，页签栏不收缩；表格自身滚动，页面不滚动，不写固定视口减数。包已提供无外层卡片边框、筛选区下方 12px、页签及内容区间距；其他 Tabs 组件通过公开适配器提供等效间距，避免叠加旧覆盖。
 
