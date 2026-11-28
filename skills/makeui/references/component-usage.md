@@ -5,6 +5,7 @@
 - [设计方案与组件实现的维护边界](#设计方案与组件实现的维护边界)
 - [Selection strategy](#selection-strategy)
 - [完整方案应用与差异记录](#完整方案应用与差异记录)
+- [明确纳入公共组件主题时](#明确纳入公共组件主题时)
 - [Overlay portal contract](#overlay-portal-contract)
 - [Default candidate mapping](#default-candidate-mapping)
 - [Make field-metadata-driven components](#make-field-metadata-driven-components)
@@ -91,6 +92,10 @@ MakeDesign 分支必须以同一份已解析方案驱动 PC／平板 Shell、导
 整体视觉的公开能力按实际安装包与当前资产核验；主题或布局未覆盖公共组件时，明确记录差异，不覆盖其私有 DOM／CSS。旧部署回退仍消费用户的原方案，只替换已明确记录的基座来源，不将本机样例当作用户方案。验收必须比较方案值与真实页面计算样式和布局；源码存在变量、某个主题文件或颜色相似不能证明完整方案已生效。
 
 同一 App 切换完整方案时，不能按设计 ID 重建业务 Controller、Form 或路由树，也不能让下级继续使用初始方案常量；由单个 Provider 提供当前方案，主题、Shell、Surface 与弹层统一继承。AntD 接入按 [当前方案与展示解析](antd-foundation.md#当前方案与展示解析) 使用已核验入口，覆盖 motion 单项变化在内的挂载次数、草稿、数据与请求状态保留验收。
+
+### 明确纳入公共组件主题时
+
+用户已将公共组件主题同步纳入范围时，按 [公共组件语义主题](public-component-theme.md) 的正式接入基线和宿主实际安装产物，使用唯一适配资产。默认固定项目方案、主动更新；同一语义合同下只改快照数据，不在各包维护风格分支。旧版缺少能力时保留原公开接入并说明差异；后续未发布扩展仍须隔离候选验收。此例外只扩展已核验的 PC 视觉面，手机仍只同步品牌色，字段、表单／详情、权限和业务行为不变。
 
 ## Overlay portal contract
 

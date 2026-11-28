@@ -1,0 +1,118 @@
+/* Host-owned phone selectors only. Fixed dimensions follow the frozen Make baseline. */
+.makeui-mobile-record-list, .makeui-mobile-lookup, .makeui-mobile-lookup__footer {
+  /* Same public compatibility defaults as the verified 0.1.16 package CSS.
+     useMakeMobileTheme() applies explicit brand values through inline variables. */
+  --make-mobile-primary: var(--make-app-primary, #2878f0);
+  --make-mobile-on-primary: #fff;
+  --make-mobile-primary-soft: var(--make-app-primary-soft, #eef4ff);
+  --make-mobile-focus-ring: var(--make-mobile-primary);
+}
+.makeui-mobile-record-list {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+  background: var(--make-mobile-page, #f5f6f7);
+  color: var(--make-mobile-text, #171a1d);
+  font-size: 14px;
+}
+.makeui-mobile-record-list__toolbar { flex: none; padding: 8px 12px; }
+.makeui-mobile-record-search {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 6px;
+  background: var(--make-mobile-surface, #fff);
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+}
+.makeui-mobile-record-list__scroll {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-height: 0;
+  overflow: auto;
+  padding: 0 12px 64px;
+  touch-action: pan-y pinch-zoom;
+}
+.makeui-mobile-record-list__navigation { flex: none; }
+.makeui-mobile-record-card {
+  flex: none;
+  padding: 12px;
+  border: 0;
+  border-radius: 0;
+  background: var(--make-mobile-surface, #fff);
+  box-shadow: none;
+}
+.makeui-mobile-record-card__heading { display: flex; align-items: center; gap: 8px; }
+.makeui-mobile-record-card__title { min-width: 0; flex: 1; overflow-wrap: anywhere; }
+.makeui-mobile-record-card__actions { display: flex; flex: none; }
+.makeui-mobile-record-card__action {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 8px;
+  border: 0;
+  background: transparent;
+  color: var(--make-mobile-primary);
+  font: inherit;
+  cursor: pointer;
+}
+.makeui-mobile-lookup {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  /* The generic public BottomSheet has max-height:min(76dvh,640px).
+     Its body adds no padding; all chrome below belongs to this host content. */
+  height: min(76vh, 640px);
+  height: min(76dvh, 640px);
+  min-height: 0;
+  overflow: hidden;
+}
+.makeui-mobile-lookup__header { flex: none; padding: 16px; border-bottom: 1px solid var(--make-mobile-line, #e8eaed); text-align: center; }
+.makeui-mobile-lookup__header > h2 { margin: 0; font-size: 16px; font-weight: 600; line-height: 24px; }
+.makeui-mobile-lookup__controls { flex: none; padding: 12px; }
+.makeui-mobile-lookup__selection { padding-block: 8px; overflow-wrap: anywhere; color: var(--make-mobile-primary); }
+.makeui-mobile-lookup__candidates { display: flex; flex: 1; flex-direction: column; min-height: 0; overflow: auto; padding-inline: 12px; }
+.makeui-mobile-lookup__feedback { display: flex; flex: 1; min-height: 100%; align-items: center; justify-content: center; text-align: center; }
+.makeui-mobile-lookup__candidate {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: start;
+}
+.makeui-mobile-lookup__candidate > span { min-width: 0; overflow-wrap: anywhere; }
+.makeui-mobile-lookup__candidate[aria-checked='true'] { background: var(--make-mobile-primary-soft); color: var(--make-mobile-primary); }
+.makeui-mobile-lookup__footer { display: flex; flex: none; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px calc(8px + var(--make-mobile-safe-bottom, env(safe-area-inset-bottom, 0px))); border-top: 1px solid var(--make-mobile-line, #e8eaed); }
+.makeui-mobile-lookup__clear, .makeui-mobile-lookup__confirm {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 6px;
+  font: inherit;
+}
+.makeui-mobile-lookup__clear { background: transparent; color: var(--make-mobile-primary); }
+.makeui-mobile-lookup__confirm { background: var(--make-mobile-primary); color: var(--make-mobile-on-primary); }
+.makeui-mobile-record-search:focus-visible,
+.makeui-mobile-record-card__action:focus-visible,
+.makeui-mobile-lookup__candidate:focus-visible,
+.makeui-mobile-lookup__clear:focus-visible,
+.makeui-mobile-lookup__confirm:focus-visible { outline: 2px solid var(--make-mobile-focus-ring, var(--make-mobile-primary)); outline-offset: -2px; }
+.makeui-mobile-record-card__action:disabled,
+.makeui-mobile-lookup__candidate:disabled,
+.makeui-mobile-lookup__clear:disabled { opacity: .55; cursor: default; }

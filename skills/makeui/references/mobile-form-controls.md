@@ -65,7 +65,9 @@ function resolveSaveFormIntents({ canSave, canSaveAndSubmit, draftEnabled }) {
 - 普通单值控件默认占一行；`TextArea` 从两行高度起步，按内容向下增长，但仍在右侧值槽位。多选值以可换行的内容或标签展示，选值增多时字段行向下撑开，不截断成单行省略号。附件 `File` 因卡片和上传入口需要全宽，使用上方标签、下方内容结构。
 - 内边距、字号、分隔色和交互色使用宿主主题 token；不得复制参考实现中的业务颜色或字段名。
 
-对输入控件和只读值直接应用包样式 `.make-app-mobile-form-value`；对 flex 选择／日期触发器应用 `.make-app-mobile-form-value--trigger`，并保证内部值文本自身 `text-align: right`。组件库把真实 input 嵌套在包装器中时，必须对嵌套 input 设右对齐，不能只对外层 `.ant-form-item-control` 或包装器设 `justify-content: flex-end`。选择器候选行和字段标签不右对齐。
+公开 `.make-app-mobile-form-value` 只提供值槽对齐，`.make-app-mobile-form-value--trigger` 只补充 flex／最小高度等布局；在已核验的正式移动包 0.1.16 中，它们**不提供原生 input／button 的完整视觉重置**。不能只加这两个类就认为控件已完成：宿主自己创建的文本／数字／URL 输入和普通选项／Lookup 触发器仍须使用自有命名空间设置无盒框、透明背景、至少44px触控目标及输入至少16px，并保留禁用与键盘焦点。可复制 [宿主原生值区示例](../assets/record-page-patterns/mobile-record-value.tsx) 及相邻样式，或复用已满足相同合同的现有宿主控件；不要向公共包内部追加覆盖。
+
+只读值继续应用公开对齐样式，flex 触发器须保证内部值文本自身 `text-align: right`。日期、人员、部门、长文本及附件继续使用本页规定的正式包组件，不以宿主示例替换。组件库把真实 input 嵌套在包装器中时，必须对嵌套 input 设右对齐，不能只对外层 `.ant-form-item-control` 或包装器设 `justify-content: flex-end`。选择器候选行和字段标签不右对齐。
 
 共享字段行为及必须执行的初始头像、搜索取消、数值和两端回归见 [字段适配回归](field-adapter-regressions.md)。手机普通可编辑值区不沿用桌面 hover/focus 的灰底或编辑盒边框；禁用态另按 [控件禁用态合同](styling-and-responsive.md#控件禁用态与容器衔接) 复用语义化禁用外观，不能用可编辑态规则清除禁用底色。只对宿主自己的控件限定样式，公共包控件通过公开 API 接入，保留键盘导航焦点；不要把 `:focus-visible` 等同于键盘操作。
 
@@ -107,6 +109,8 @@ function resolveSaveFormIntents({ canSave, canSaveAndSubmit, draftEnabled }) {
 - `MobileIdentityField` 已负责草稿生命周期、顶部横向滚动、勾选标记边界和身份标识。宿主不得覆盖包内部 class 来修补宽度；若公共 API 无法满足需求，报告 package blocker，而不是复制组件或把底层 Sheet 当默认字段。
 - 普通业务 CRUD 中，`Lookup` 只允许在源记录新建 create 时编辑，并且必须同时具备关系元数据、字段权限、候选读取和写入合同；目标对象真正可搜索时才展示搜索，否则展示无搜索候选列表。
 - `Lookup` 即使是单选也必须通过“确定”确认提交快照，关闭或取消不写回；普通业务对象已有记录的编辑 edit 默认只读，直到平台具备原子／条件关系更新合同。审批任务例外按当前节点授权编辑，字段下的 ID/null/ID 数组随 Workflow recordPatch 提交，不经普通关系更新。不得提供伪造的“新建目标”入口，也不得降级为文本输入。
+
+普通新建 Lookup 的受控组合见 [宿主组合示例](record-page-patterns.md)。正式移动包普通单选 Sheet 的 `selectionMode="single"` 会即时触发确认，不能仅把草稿放进 `onSelectedKeysChange` 就声称 Lookup 已隔离；须保留独立“确定”动作。使用公开 BottomSheet 和确认栏组合候选草稿，不复制包内状态机，也不将单关系伪装成多选以强制按钮出现。目标可搜索时才接宿主的搜索输入／回调，候选读取及乱序响应仍归宿主。测试要断言点击候选不调用表单 onChange、取消不调用、确定只调用一次，以及关闭重开采用当前宿主值；普通选项／人员单选仍即时确认。
 
 ### 附件
 

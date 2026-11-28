@@ -96,6 +96,39 @@ test('只读值按水平轴、反向排列和 RTL 判断右端，不能把底部
   assert.throws(() => checks.assertRightAlignedValue(flex({ writingMode: 'vertical-rl', justifyContent: 'flex-end' })), /不支持/);
 });
 
+test('flow与flex别名按实际水平轴等价，覆盖反向排列、LTR／RTL及反向换行，start／end语义独立', () => {
+  // 逐项列出物理右侧，避免以被测实现的布尔公式计算期望。
+  const cases = [
+    ['row', 'ltr', ['end', 'end', 'end']],
+    ['row', 'rtl', ['start', 'start', 'start']],
+    ['row-reverse', 'ltr', ['start', 'start', 'start']],
+    ['row-reverse', 'rtl', ['end', 'end', 'end']],
+    ['column', 'ltr', ['end', 'end', 'start']],
+    ['column', 'rtl', ['start', 'start', 'end']],
+    ['column-reverse', 'ltr', ['end', 'end', 'start']],
+    ['column-reverse', 'rtl', ['start', 'start', 'end']],
+  ];
+  for (const [flexDirection, direction, rightEdges] of cases) {
+    for (const [index, flexWrap] of ['nowrap', 'wrap', 'wrap-reverse'].entries()) {
+      const horizontal = flexDirection.startsWith('column') ? 'alignItems' : 'justifyContent';
+      const vertical = horizontal === 'alignItems' ? 'justifyContent' : 'alignItems';
+      const right = rightEdges[index], left = right === 'end' ? 'start' : 'end';
+      for (const verticalAlignment of ['flow-start', 'flow-end']) {
+        const style = { display: 'flex', flexDirection, direction, flexWrap, textAlign: 'right', [vertical]: verticalAlignment };
+        for (const alias of ['flow', 'flex']) {
+          checks.assertRightAlignedValue(element({ ...style, [horizontal]: `${alias}-${right}` }));
+          assert.throws(() => checks.assertRightAlignedValue(element({ ...style, [horizontal]: `${alias}-${left}` })), /行尾/);
+        }
+        const logicalRight = direction === 'ltr' ? 'end' : 'start';
+        const logicalLeft = direction === 'ltr' ? 'start' : 'end';
+        checks.assertRightAlignedValue(element({ ...style, [horizontal]: logicalRight }));
+        assert.throws(() => checks.assertRightAlignedValue(element({ ...style, [horizontal]: logicalLeft })), /行尾/);
+      }
+    }
+  }
+  assert.throws(() => checks.assertRightAlignedValue(element({ textAlign: 'flow-end' })), /行尾/);
+});
+
 test('禁用颜色来自同主题基线，不固定颜色，也拒绝非禁用和未解析变量', () => {
   const style = { backgroundColor: 'rgb(245, 245, 245)', color: 'rgb(120, 120, 120)' };
   const reference = element(style), control = element(style);

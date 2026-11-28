@@ -46,6 +46,16 @@ function PhoneView() {
 
 `ExistingBusinessControllerProvider` 代表宿主已有的共享 Controller，不是组件包导出。完整 `MakeDesignProvider` 限于桌面／平板 View；手机不是它的后代，不继承 PC 的字体、密度、圆角或 `--makeui-*` 变量。宿主手机元素从同一 `/presentation` 入口调用 `useMakeMobileTheme()`，将返回样式赋给自己拥有的手机根节点；不要为复用手机颜色再把整个 App 包进 PC Provider。该 hook 在 Provider 外返回空样式，不读取 DOM 或发请求。
 
+宿主自绘头像、卡片操作、链接和焦点也消费同一已解析颜色，不能只让公共保存按钮变色。正式 0.1.16 的常用公开 CSS 名称如下；不要凭字段名猜造 `--make-mobile-primary-color`／`--make-mobile-on-primary-color`，也不要用固定蓝色回退掩盖接线错误。可复制组合及真实参照检查见 [宿主示例与门禁](record-page-patterns.md)。
+
+| Provider 语义字段 | 实际公开 CSS 变量 |
+| --- | --- |
+| primary / onPrimary / primarySoft | `--make-mobile-primary` / `--make-mobile-on-primary` / `--make-mobile-primary-soft` |
+| link / focusRing | `--make-mobile-link-color` / `--make-mobile-focus-ring` |
+| actionBackground / actionText / actionBorder | `--make-mobile-action-background` / `--make-mobile-action-text` / `--make-mobile-action-border` |
+
+颜色取值来自既有主题投影；用户未提供颜色时沿正式移动默认，不反向用 PC 表面色填充手机。对比自绘元素与同主题公开组件／参照的实际计算颜色，并对默认及两方案的同状态非颜色属性做独立检查，不能拿两个都回退蓝色的宿主元素互相比对。
+
 ## 公开主题字段
 
 下表为已核验0.1.16声明中的38个可选主题字段，值均为CSS语义字符串；传入已解析值，不传MakeDesign对象、权限或业务状态。这是公共 API 能力参考，不是 MakeDesign 手机默认映射清单。颜色投影以外的字段只供用户明确手机定制等独立需求使用，不能因 PC 方案含有这些值而自动传入。

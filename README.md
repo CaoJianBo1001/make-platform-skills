@@ -122,7 +122,9 @@ Codex 判断优先级：
 - 新建完整 Make App：默认包含 `make-app-observability`、`make-app-permission` 和 `make-app-actions`，通常组合 `makedsl` + `makecli` + `make-app-auth` + `make-app-service` + `make-app-permission` + `make-app-observability` + `makeui` + `canvas-table-integration` + `make-app-actions`
 - 每个新项目在 PRD／DSL 确认后、搭建 UI 前，都必须询问用户是否使用 MakeDesign 并等待答复。只有 PRD 或用户描述已明确指定 UI 组件库，或已提供有效的 MakeDesign 方案链接时，才直接采用该选择。选择 MakeDesign 后，主动打开选择页面，同时在会话中提供可点击链接及复制回传步骤。视觉来源与唯一组件基座分开，MakeDesign 默认使用 Ant Design 并告知用户；已指定其他库则保留，不增加必答问题或混入另一套库。完整方案驱动 PC／平板所有页面的布局、导航、颜色、字体、间距、控件及细节；手机只跟主题主色／选中强调色，保留原移动专用控件、布局、字号及交互，验收样例不是新项目默认；不能只应用主色或静默忽略未支持的选择。两条视觉路线都遵守统一 Form／Detail、字段图标及 Make 平台合同，默认不复制原型控件。交互细节见 [视觉来源与组件基座](skills/makeui/references/component-usage.md#selection-strategy)、[完整方案应用](skills/makeui/references/component-usage.md#完整方案应用与差异记录) 和 [AntD 基座接入](skills/makeui/references/antd-foundation.md)。已有项目沿用现有组件库。
 - MakeDesign 的职责为风格、布局选择、预览和方案交接；组件行为及 Make 表单／详情标准由 makeui 统一维护，官网只同步固定版本的生成快照。维护入口与旧控件兼容见 [设计方案与组件实现的维护边界](skills/makeui/references/component-usage.md#设计方案与组件实现的维护边界)。
+- 明确纳入公共组件主题同步时，按 [公共组件语义主题](skills/makeui/references/public-component-theme.md) 固定项目方案并主动更新。makeui 唯一适配层把语义值传给各包公开 API；更换已有颜色、字号或间距只更新方案数据。Canvas `1.3.5`／审批 `0.2.17` 的语义主题接口已按正式产物核验，旧项目保留锁版与兼容路径，其他组件包保持原接入，手机仅品牌色；正式包核验不替代真实宿主验收。
 - 新项目（含 POC／模板）在确定组件库与视觉来源后，先按 [页面设计基线与视觉验收](skills/makeui/references/page-design-quality.md) 记录区域、视觉尺度、移动适配及差异，再生成代表页面并验证后复用。桌面默认按实际容器适配，所选风格与 Make 稳定合同分别保留；手机继续遵守冻结规范和相关 Skill，不从桌面网格推导。源指导、定向安装及真实项目验收分别记录，本项不要求更新 MakeDesign 或其他 npm 包。
+- 列表、手机新建入口与 Lookup 组合使用 [随包宿主示例和验收门禁](skills/makeui/references/record-page-patterns.md)：搜索不遗漏，悬浮按钮实际避让底部导航，Lookup 保留显式确定，手机自绘元素使用正式公开颜色变量，卡片视觉／触控沿冻结标准。宿主原生输入／触发器还须完成自身无框、44px、16px输入及焦点适配，不能只加包的对齐类。示例保持受控，不包含业务授权或请求；门禁进入宿主默认测试并单独做浏览器命中与交互检查。
 - 用户明确指定其他图标库时遵从其要求；否则新建 Make App 的图标默认统一使用 [Lucide](https://lucide.dev/icons/)。桌面／平板字段类型图标按 [`makeui` 默认映射](skills/makeui/references/field-type-icons.md) 覆盖 CanvasTable 表头、新建／编辑／详情字段标签及已有字段选择列表，手机字段名保持纯文本，不需用户再次提示。
 
 ## 按需业务草稿与字段默认值
@@ -295,6 +297,8 @@ npx skills update make-app-actions
 - 页面布局交给 `makeui`，Canvas 选择 API 交给 `canvas-table-integration`，principal 权限交给 `make-app-permission`，Service 实现交给 `make-app-service`
 
 ### makeui
+
+维护宿主组合示例时，源仓库运行 `node scripts/test-makeui-record-page-patterns.mjs --dependencies=<隔离测试node_modules>`、`node scripts/test-makeui-record-search.mjs --dependencies=<隔离测试node_modules>`、`node scripts/test-makeui-generated-page-acceptance.mjs --dependencies=<隔离测试node_modules>`、`node scripts/test-host-mobile-record-value.mjs --dependencies=<隔离测试node_modules>` 和 `node scripts/test-makeui-field-label-association.mjs --dependencies=<隔离测试node_modules>`；依赖矩阵由 CI 中的 record-page 步骤提供。五者支持 `--skill=<实际makeui目录>` 验证安装版与独立复制，覆盖搜索时序与Lookup键盘草稿等真实交互。默认无外部依赖的契约循环不代替该真实组件／DOM 步骤。生成 App 使用随包 [宿主指引](skills/makeui/references/record-page-patterns.md) 和复制到本项目的验收工具，不依赖仓库根 scripts。
 指导生成或修改 Make App 前端 UI，覆盖桌面/移动页面布局、App Shell、列表页、工作台、底部导航、任务页、选择抽屉、抽屉表单、详情页和响应式样式。
 
 #### 升级 skill
